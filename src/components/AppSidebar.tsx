@@ -107,8 +107,8 @@ export function AppSidebar() {
   const isActive = (path: string) => currentPath === path;
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
     isActive 
-      ? "bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors" 
-      : "hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors";
+      ? "bg-sidebar-accent font-medium transition-colors" 
+      : "hover:bg-sidebar-accent/50 transition-colors";
 
   // Group items by their group
   const groupedItems = Object.entries(groups).map(([groupKey, groupLabel]) => ({
