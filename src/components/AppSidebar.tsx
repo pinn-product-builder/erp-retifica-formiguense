@@ -1,4 +1,4 @@
-import { useState } from "react";
+
 import { 
   Home, 
   FileText, 
@@ -103,13 +103,12 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const currentPath = location.pathname;
-  const [collapsed, setCollapsed] = useState(false);
 
   const isActive = (path: string) => currentPath === path;
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
     isActive 
-      ? "bg-primary text-primary-foreground font-medium hover:bg-primary/90" 
-      : "hover:bg-muted/80 text-muted-foreground hover:text-foreground";
+      ? "bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors" 
+      : "hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors";
 
   // Group items by their group
   const groupedItems = Object.entries(groups).map(([groupKey, groupLabel]) => ({
@@ -121,25 +120,25 @@ export function AppSidebar() {
   return (
     <Sidebar className={state === "collapsed" ? "w-14" : "w-64"}>
       <SidebarContent className="bg-card border-r">
-        {groupedItems.map((group) => (
-          <SidebarGroup key={group.key}>
+        {groupedItems.map((group, index) => (
+          <SidebarGroup key={group.key} className={index > 0 ? "border-t border-border/40 pt-4" : ""}>
             {state !== "collapsed" && (
-              <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2">
+              <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2 mb-1">
                 {group.label}
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="space-y-1">
                 {group.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild size="sm">
                       <NavLink 
                         to={item.url} 
                         end 
                         className={getNavCls}
                       >
-                        <item.icon className="w-4 h-4 flex-shrink-0" />
-                        {state !== "collapsed" && <span className="truncate">{item.title}</span>}
+                        <item.icon className={`flex-shrink-0 ${state === "collapsed" ? "w-5 h-5" : "w-4 h-4"}`} />
+                        {state !== "collapsed" && <span className="truncate font-medium">{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
