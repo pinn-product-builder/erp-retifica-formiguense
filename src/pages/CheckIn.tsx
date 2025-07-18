@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase } from "@/hooks/useSupabase";
-import { Camera, ClipboardList, Settings } from "lucide-react";
+import { Camera, ClipboardList, Settings, AlertCircle, ArrowRight } from "lucide-react";
 
 export default function CheckIn() {
   const [formData, setFormData] = useState({
@@ -44,23 +44,20 @@ export default function CheckIn() {
   });
 
   const [coletaData, setColetaData] = useState<any>(null);
+  const [hasColetaData, setHasColetaData] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { loading, createEngine, createOrder, uploadPhoto } = useSupabase();
 
   useEffect(() => {
-    // Carregar dados da coleta
+    // Verificar se há dados da coleta
     const savedColetaData = sessionStorage.getItem('coletaData');
-    if (!savedColetaData) {
-      toast({
-        title: "Erro",
-        description: "Dados da coleta não encontrados. Volte para a página de coleta.",
-        variant: "destructive"
-      });
-      navigate('/coleta');
-      return;
+    if (savedColetaData) {
+      setColetaData(JSON.parse(savedColetaData));
+      setHasColetaData(true);
+    } else {
+      setHasColetaData(false);
     }
-    setColetaData(JSON.parse(savedColetaData));
   }, []);
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -71,13 +68,17 @@ export default function CheckIn() {
     setFotos(prev => ({ ...prev, [tipo]: file }));
   };
 
+  const handleGoToColeta = () => {
+    navigate('/coleta');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!coletaData) {
       toast({
         title: "Erro",
-        description: "Dados da coleta não encontrados",
+        description: "Dados da coleta não encontrados. Complete a coleta primeiro.",
         variant: "destructive"
       });
       return;
@@ -162,6 +163,52 @@ export default function CheckIn() {
     </div>
   );
 
+  // Se não há dados de coleta, mostrar tela explicativa
+  if (!hasColetaData) {
+    return (
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex items-center gap-3 mb-6">
+          <ClipboardList className="w-8 h-8 text-primary" />
+          <div>
+            <h1 className="text-3xl font-bold">Check-in Técnico</h1>
+            <p className="text-muted-foreground">Identificação e inspeção inicial do motor</p>
+          </div>
+        </div>
+
+        <Card className="max-w-2xl mx-auto">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <AlertCircle className="w-16 h-16 text-amber-500" />
+            </div>
+            <CardTitle className="text-2xl">Coleta Necessária</CardTitle>
+            <CardDescription className="text-lg">
+              Para realizar o check-in técnico, é necessário primeiro registrar os dados da coleta e do cliente.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">O processo completo inclui:</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>• Registro dos dados da coleta (data, hora, local)</li>
+                <li>• Cadastro do cliente e informações de contato</li>
+                <li>• Informações da oficina (quando aplicável)</li>
+                <li>• Definição do consultor responsável</li>
+                <li>• Descrição inicial do problema</li>
+              </ul>
+            </div>
+            <div className="flex justify-center">
+              <Button onClick={handleGoToColeta} size="lg" className="gap-2">
+                Iniciar Processo de Coleta
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Renderizar formulário normal quando há dados de coleta
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center gap-3 mb-6">
