@@ -8,6 +8,7 @@ import CheckIn from "@/pages/CheckIn";
 import Coleta from "@/pages/Coleta";
 import NotFound from "@/pages/NotFound";
 import Workflow from "@/pages/Workflow";
+import Orcamentos from "@/pages/Orcamentos";
 
 function App() {
   const queryClient = new QueryClient();
@@ -21,7 +22,7 @@ function App() {
             <Route path="/checkin" element={<CheckIn />} />
             <Route path="/coleta" element={<Coleta />} />
             <Route path="/workflow" element={<Workflow />} />
-            <Route path="/orcamentos" element={<Index />} />
+            <Route path="/orcamentos" element={<Orcamentos />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

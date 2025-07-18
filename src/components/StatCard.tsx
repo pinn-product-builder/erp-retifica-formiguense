@@ -1,3 +1,4 @@
+
 import { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -41,12 +42,12 @@ export function StatCard({
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <p className={cn(
+            <div className={cn(
               "text-sm font-medium",
               variant === "primary" ? "text-primary-foreground/80" : "text-muted-foreground"
             )}>
               {title}
-            </p>
+            </div>
             <div className="flex items-baseline gap-2 mt-2">
               <h3 className={cn(
                 "text-2xl font-bold",
@@ -65,12 +66,12 @@ export function StatCard({
               )}
             </div>
             {subtitle && (
-              <p className={cn(
+              <div className={cn(
                 "text-xs mt-1",
                 variant === "primary" ? "text-primary-foreground/60" : "text-muted-foreground"
               )}>
                 {subtitle}
-              </p>
+              </div>
             )}
           </div>
           <div className={cn(
