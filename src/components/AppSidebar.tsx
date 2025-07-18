@@ -126,19 +126,13 @@ export function AppSidebar() {
                       asChild
                       tooltip={isCollapsed ? item.title : undefined}
                       isActive={isActive}
-                      className={cn(
-                        "group transition-all duration-200",
-                        isActive && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                      )}
+                      className="group transition-all duration-200"
                     >
                       <NavLink 
                         to={item.url}
                         className="flex items-center gap-3 w-full"
                       >
-                        <item.icon className={cn(
-                          "h-4 w-4 shrink-0 transition-colors",
-                          isActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/70"
-                        )} />
+                        <item.icon className="h-4 w-4 shrink-0 transition-colors" />
                         {!isCollapsed && (
                           <span className="truncate text-sm font-medium">
                             {item.title}
