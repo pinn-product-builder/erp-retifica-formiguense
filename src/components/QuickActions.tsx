@@ -22,7 +22,7 @@ export function QuickActions() {
       icon: Plus,
       description: 'Criar novo orçamento',
       href: '/orcamentos',
-      variant: 'primary' as const,
+      variant: 'default' as const,
       featured: true
     },
     {
@@ -84,7 +84,7 @@ export function QuickActions() {
                     ? 'bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-primary'
                     : 'hover:bg-primary/10 border-primary/20'
                 }`}
-                variant={action.variant}
+                variant={action.featured ? "default" : action.variant}
                 size="lg"
               >
                 <div className="flex items-center gap-3">
