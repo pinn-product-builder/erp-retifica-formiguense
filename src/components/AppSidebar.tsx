@@ -1,3 +1,4 @@
+import React from "react";
 import { Calendar, Home, Inbox, Search, Settings, ClipboardCheck, Truck, DollarSign, Kanban } from "lucide-react"
 import { NavLink } from "react-router-dom"
 

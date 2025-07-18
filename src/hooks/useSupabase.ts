@@ -203,7 +203,7 @@ export function useSupabase() {
     }
   };
 
-  const getWorkflowsByComponent = async (component: string) => {
+  const getWorkflowsByComponent = async (component: 'bloco' | 'eixo' | 'biela' | 'comando' | 'cabecote') => {
     try {
       setLoading(true);
       const { data, error } = await supabase
