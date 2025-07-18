@@ -3,13 +3,13 @@ import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { 
   Home, 
-  Users, 
-  ClipboardCheck, 
   Truck, 
+  ClipboardCheck, 
   Kanban, 
   DollarSign, 
   Building2, 
   UserCheck, 
+  Users, 
   Package, 
   FileText, 
   Settings
@@ -36,19 +36,14 @@ const items = [
     icon: Home,
   },
   {
-    title: "Funcionários",
-    url: "/funcionarios",
-    icon: Users,
+    title: "Coleta de Motor",
+    url: "/coleta",
+    icon: Truck,
   },
   {
     title: "Check-in Técnico",
     url: "/checkin",
     icon: ClipboardCheck,
-  },
-  {
-    title: "Coleta de Motor",
-    url: "/coleta",
-    icon: Truck,
   },
   {
     title: "Workflow Kanban",
@@ -69,6 +64,11 @@ const items = [
     title: "Consultores",
     url: "/consultores",
     icon: UserCheck,
+  },
+  {
+    title: "Funcionários",
+    url: "/funcionarios",
+    icon: Users,
   },
   {
     title: "Estoque/Peças",
@@ -96,7 +96,7 @@ export function AppSidebar() {
     <Sidebar variant="sidebar" collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-3 px-3 py-4">
-          <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center shadow-primary">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <span className="text-sm font-bold text-primary-foreground">RF</span>
           </div>
           {!isCollapsed && (
@@ -126,13 +126,13 @@ export function AppSidebar() {
                       asChild
                       tooltip={isCollapsed ? item.title : undefined}
                       isActive={isActive}
-                      className="group transition-all duration-200"
+                      className="group transition-colors duration-200"
                     >
                       <NavLink 
                         to={item.url}
                         className="flex items-center gap-3 w-full"
                       >
-                        <item.icon className="h-4 w-4 shrink-0 transition-colors" />
+                        <item.icon className="h-4 w-4 shrink-0" />
                         {!isCollapsed && (
                           <span className="truncate text-sm font-medium">
                             {item.title}

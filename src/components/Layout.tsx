@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Bell, User, Search } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationCenter } from "@/components/NotificationCenter";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -15,7 +14,7 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const unreadNotifications = 2; // This would come from your notification state
+  const unreadNotifications = 2;
 
   return (
     <SidebarProvider>
@@ -23,108 +22,74 @@ export function Layout({ children }: LayoutProps) {
         <AppSidebar />
         
         <SidebarInset>
-          {/* Enhanced Header */}
-          <motion.header 
-            initial={{ y: -10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4"
-          >
+          <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
             <div className="flex items-center gap-4 flex-1">
-              <SidebarTrigger className="hover:bg-primary/10 transition-colors rounded-lg" />
+              <SidebarTrigger className="hover:bg-accent transition-colors rounded-lg" />
               
               <div className="flex items-center gap-3">
-                <motion.div 
-                  whileHover={{ scale: 1.05, rotate: 5 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center shadow-primary transform transition-transform cursor-pointer"
-                >
+                <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
                   <span className="text-sm font-bold text-primary-foreground">RF</span>
-                </motion.div>
+                </div>
                 <div className="hidden sm:block">
-                  <h1 className="font-bold text-foreground text-lg tracking-tight">Retífica Formiguense</h1>
-                  <p className="text-xs text-muted-foreground font-medium">Sistema de Gestão Automotiva</p>
+                  <h1 className="font-bold text-foreground text-lg">Retífica Formiguense</h1>
+                  <p className="text-xs text-muted-foreground">Sistema de Gestão Automotiva</p>
                 </div>
               </div>
             </div>
             
             <div className="flex items-center gap-2">
-              {/* Global Search Button */}
-              <motion.div whileTap={{ scale: 0.95 }}>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="relative hover:bg-primary/10 transition-colors group"
-                  onClick={() => setSearchOpen(true)}
-                >
-                  <Search className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                  <span className="sr-only">Buscar (Cmd+K)</span>
-                </Button>
-              </motion.div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="relative hover:bg-accent transition-colors"
+                onClick={() => setSearchOpen(true)}
+              >
+                <Search className="w-5 h-5" />
+                <span className="sr-only">Buscar</span>
+              </Button>
 
-              {/* Notifications Button */}
-              <motion.div whileTap={{ scale: 0.95 }}>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="relative hover:bg-primary/10 transition-colors group"
-                  onClick={() => setNotificationsOpen(!notificationsOpen)}
-                >
-                  <Bell className="w-5 h-5 group-hover:animate-bounce" />
-                  {unreadNotifications > 0 && (
-                    <motion.span 
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-primary rounded-full text-xs text-primary-foreground flex items-center justify-center font-bold animate-pulse-glow"
-                    >
-                      {unreadNotifications}
-                    </motion.span>
-                  )}
-                </Button>
-              </motion.div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="relative hover:bg-accent transition-colors"
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+              >
+                <Bell className="w-5 h-5" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full text-xs text-primary-foreground flex items-center justify-center font-bold">
+                    {unreadNotifications}
+                  </span>
+                )}
+              </Button>
 
-              <div className="w-px h-6 bg-border/50"></div>
+              <div className="w-px h-6 bg-border"></div>
               
-              {/* User Menu */}
-              <motion.div whileTap={{ scale: 0.95 }}>
-                <Button variant="ghost" size="icon" className="hover:bg-primary/10 transition-colors">
-                  <User className="w-5 h-5" />
-                </Button>
-              </motion.div>
+              <Button variant="ghost" size="icon" className="hover:bg-accent transition-colors">
+                <User className="w-5 h-5" />
+              </Button>
             </div>
-          </motion.header>
+          </header>
 
-          {/* Enhanced Main Content */}
-          <main className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-background/95 custom-scrollbar">
-            <motion.div 
-              className="container mx-auto p-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-            >
+          <main className="flex-1 overflow-auto bg-background custom-scrollbar">
+            <div className="container mx-auto p-6">
               {children}
-            </motion.div>
+            </div>
           </main>
         </SidebarInset>
 
-        {/* Global Search Modal */}
-        <AnimatePresence>
-          {searchOpen && (
-            <GlobalSearch 
-              isOpen={searchOpen} 
-              onClose={() => setSearchOpen(false)} 
-            />
-          )}
-        </AnimatePresence>
+        {searchOpen && (
+          <GlobalSearch 
+            isOpen={searchOpen} 
+            onClose={() => setSearchOpen(false)} 
+          />
+        )}
 
-        {/* Notification Center */}
-        <AnimatePresence>
-          {notificationsOpen && (
-            <NotificationCenter 
-              isOpen={notificationsOpen} 
-              onClose={() => setNotificationsOpen(false)} 
-            />
-          )}
-        </AnimatePresence>
+        {notificationsOpen && (
+          <NotificationCenter 
+            isOpen={notificationsOpen} 
+            onClose={() => setNotificationsOpen(false)} 
+          />
+        )}
       </div>
     </SidebarProvider>
   );
