@@ -1,5 +1,6 @@
+
 import React from "react";
-import { Calendar, Home, Inbox, Search, Settings, ClipboardCheck, Truck, DollarSign, Kanban } from "lucide-react"
+import { Calendar, Home, Inbox, Search, Settings, ClipboardCheck, Truck, DollarSign, Kanban, Users, Package, UserCheck, Building2, FileText, Cog } from "lucide-react"
 import { NavLink } from "react-router-dom"
 
 import { cn } from "@/lib/utils"
@@ -11,6 +12,11 @@ const items = [
     title: "Dashboard",
     url: "/",
     icon: Home,
+  },
+  {
+    title: "Funcionários",
+    url: "/funcionarios",
+    icon: Users,
   },
   {
     title: "Check-in Técnico",
@@ -31,6 +37,31 @@ const items = [
     title: "Orçamentos",
     url: "/orcamentos",
     icon: DollarSign,
+  },
+  {
+    title: "Clientes",
+    url: "/clientes",
+    icon: Building2,
+  },
+  {
+    title: "Consultores",
+    url: "/consultores",
+    icon: UserCheck,
+  },
+  {
+    title: "Estoque/Peças",
+    url: "/estoque",
+    icon: Package,
+  },
+  {
+    title: "Relatórios",
+    url: "/relatorios",
+    icon: FileText,
+  },
+  {
+    title: "Configurações",
+    url: "/configuracoes",
+    icon: Cog,
   },
 ];
 
