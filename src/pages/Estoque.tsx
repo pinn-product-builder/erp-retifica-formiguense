@@ -150,25 +150,25 @@ const Estoque = () => {
           title="Total de Peças"
           value={totalPecas}
           icon={Package}
-          description="Itens cadastrados"
+          subtitle="Itens cadastrados"
         />
         <StatCard
           title="Alertas de Reposição"
           value={pecasAbaixoMinimo}
           icon={AlertTriangle}
-          description="Abaixo do mínimo"
+          subtitle="Abaixo do mínimo"
         />
         <StatCard
           title="Valor do Estoque"
           value={`R$ ${valorTotalEstoque.toFixed(2)}`}
           icon={TrendingDown}
-          description="Valor total"
+          subtitle="Valor total"
         />
         <StatCard
           title="Categorias"
           value={categorias.length}
           icon={Filter}
-          description="Tipos diferentes"
+          subtitle="Tipos diferentes"
         />
       </div>
 

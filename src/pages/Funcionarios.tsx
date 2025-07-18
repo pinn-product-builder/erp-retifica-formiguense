@@ -134,25 +134,25 @@ const Funcionarios = () => {
           title="Total de Funcionários"
           value={funcionarios.length}
           icon={Users}
-          description="Ativos e inativos"
+          subtitle="Ativos e inativos"
         />
         <StatCard
           title="Funcionários Ativos"
           value={funcionariosAtivos}
           icon={Users}
-          description="Trabalhando atualmente"
+          subtitle="Trabalhando atualmente"
         />
         <StatCard
           title="Horas Trabalhadas"
           value={totalHorasTrabalhadas}
           icon={Clock}
-          description="Total do mês"
+          subtitle="Total do mês"
         />
         <StatCard
           title="Média por Funcionário"
           value={Math.round(mediaHorasPorFuncionario)}
           icon={Clock}
-          description="Horas/mês"
+          subtitle="Horas/mês"
         />
       </div>
 

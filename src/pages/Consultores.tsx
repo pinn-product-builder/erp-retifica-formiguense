@@ -124,25 +124,25 @@ const Consultores = () => {
           title="Consultores Ativos"
           value={consultoresAtivos}
           icon={UserCheck}
-          description="Trabalhando atualmente"
+          subtitle="Trabalhando atualmente"
         />
         <StatCard
           title="Total de Vendas"
           value={totalVendas}
           icon={TrendingUp}
-          description="Vendas do mês"
+          subtitle="Vendas do mês"
         />
         <StatCard
           title="Valor Total Vendido"
           value={`R$ ${valorTotalVendido.toFixed(2)}`}
           icon={DollarSign}
-          description="Faturamento do mês"
+          subtitle="Faturamento do mês"
         />
         <StatCard
           title="Média por Consultor"
           value={Math.round(mediaVendasPorConsultor || 0)}
           icon={TrendingUp}
-          description="Vendas/consultor"
+          subtitle="Vendas/consultor"
         />
       </div>
 

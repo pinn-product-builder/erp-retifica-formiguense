@@ -74,7 +74,7 @@ const Relatorios = () => {
             title={stat.titulo}
             value={stat.valor}
             icon={stat.icone}
-            description="Período atual"
+            subtitle="Período atual"
           />
         ))}
       </div>

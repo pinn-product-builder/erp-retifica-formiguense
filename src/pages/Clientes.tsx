@@ -154,25 +154,25 @@ const Clientes = () => {
           title="Total de Clientes"
           value={totalClientes}
           icon={Users}
-          description="Ativos no sistema"
+          subtitle="Ativos no sistema"
         />
         <StatCard
           title="Clientes Diretos"
           value={clientesDiretos}
           icon={Users}
-          description="Pessoa física"
+          subtitle="Pessoa física"
         />
         <StatCard
           title="Oficinas Parceiras"
           value={oficinas}
           icon={Building2}
-          description="Pessoa jurídica"
+          subtitle="Pessoa jurídica"
         />
         <StatCard
           title="Total de Serviços"
           value={totalServicos}
           icon={Phone}
-          description="Serviços realizados"
+          subtitle="Serviços realizados"
         />
       </div>
 
