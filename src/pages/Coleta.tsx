@@ -1,13 +1,14 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { useSupabase } from "@/hooks/useSupabase";
 import { MapPin, User, Building, Wrench } from "lucide-react";
 
 export default function Coleta() {
@@ -36,22 +37,71 @@ export default function Coleta() {
     consultor: ""
   });
 
+  const [consultants, setConsultants] = useState<any[]>([]);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { loading, getConsultants, createCustomer } = useSupabase();
+
+  useEffect(() => {
+    loadConsultants();
+  }, []);
+
+  const loadConsultants = async () => {
+    const data = await getConsultants();
+    setConsultants(data);
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // TODO: Salvar dados no Supabase
-    console.log("Dados da coleta:", formData);
+    if (!formData.consultor) {
+      toast({
+        title: "Erro",
+        description: "Selecione um consultor",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Criar cliente
+    const customerData = {
+      type: formData.tipoCliente as 'oficina' | 'direto',
+      name: formData.nomeCliente,
+      document: formData.documento,
+      phone: formData.telefone,
+      email: formData.email || undefined,
+      address: formData.endereco || undefined,
+      workshop_name: formData.tipoCliente === 'oficina' ? formData.nomeOficina || undefined : undefined,
+      workshop_cnpj: formData.tipoCliente === 'oficina' ? formData.cnpjOficina || undefined : undefined,
+      workshop_contact: formData.tipoCliente === 'oficina' ? formData.contatoOficina || undefined : undefined,
+    };
+
+    const customer = await createCustomer(customerData);
+    if (!customer) return;
+
+    // Salvar dados da coleta no sessionStorage para usar no check-in
+    const coletaData = {
+      customer_id: customer.id,
+      consultant_id: formData.consultor,
+      collection_date: formData.dataColeta,
+      collection_time: formData.horaColeta,
+      collection_location: formData.localColeta,
+      driver_name: formData.motorista,
+      failure_reason: formData.motivoFalha || undefined,
+    };
+    
+    sessionStorage.setItem('coletaData', JSON.stringify(coletaData));
     
     toast({
       title: "Coleta registrada",
-      description: "Motor coletado com sucesso. Prossiga para o check-in técnico.",
+      description: "Cliente cadastrado. Prossiga para o check-in técnico.",
     });
+    
+    navigate('/checkin');
   };
 
   return (
@@ -260,9 +310,11 @@ export default function Coleta() {
                   <SelectValue placeholder="Selecione o consultor" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="jose">José Silva</SelectItem>
-                  <SelectItem value="maria">Maria Santos</SelectItem>
-                  <SelectItem value="carlos">Carlos Oliveira</SelectItem>
+                  {consultants.map((consultant) => (
+                    <SelectItem key={consultant.id} value={consultant.id}>
+                      {consultant.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -270,8 +322,8 @@ export default function Coleta() {
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" size="lg">
-            Avançar para Check-in Técnico
+          <Button type="submit" size="lg" disabled={loading}>
+            {loading ? "Salvando..." : "Avançar para Check-in Técnico"}
           </Button>
         </div>
       </form>

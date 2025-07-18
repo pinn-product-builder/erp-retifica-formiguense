@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { useSupabase } from "@/hooks/useSupabase";
 import { Camera, ClipboardList, Settings } from "lucide-react";
 
 export default function CheckIn() {
@@ -41,7 +43,25 @@ export default function CheckIn() {
     etiqueta: null as File | null
   });
 
+  const [coletaData, setColetaData] = useState<any>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { loading, createEngine, createOrder, uploadPhoto } = useSupabase();
+
+  useEffect(() => {
+    // Carregar dados da coleta
+    const savedColetaData = sessionStorage.getItem('coletaData');
+    if (!savedColetaData) {
+      toast({
+        title: "Erro",
+        description: "Dados da coleta não encontrados. Volte para a página de coleta.",
+        variant: "destructive"
+      });
+      navigate('/coleta');
+      return;
+    }
+    setColetaData(JSON.parse(savedColetaData));
+  }, []);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -51,8 +71,17 @@ export default function CheckIn() {
     setFotos(prev => ({ ...prev, [tipo]: file }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!coletaData) {
+      toast({
+        title: "Erro",
+        description: "Dados da coleta não encontrados",
+        variant: "destructive"
+      });
+      return;
+    }
     
     // Verificar fotos obrigatórias
     const fotosObrigatorias = ['frente', 'traseira', 'lateral1', 'lateral2', 'cabecote', 'carter'];
@@ -67,14 +96,52 @@ export default function CheckIn() {
       return;
     }
 
-    // TODO: Salvar dados e fotos no Supabase
-    console.log("Dados do check-in:", formData);
-    console.log("Fotos:", fotos);
+    // Criar motor
+    const engineData = {
+      type: formData.tipo,
+      brand: formData.marca,
+      model: formData.modelo,
+      fuel_type: formData.combustivel,
+      serial_number: formData.numeroSerie || undefined,
+      is_complete: formData.motorCompleto,
+      assembly_state: formData.montado,
+      has_block: formData.temBloco,
+      has_head: formData.temCabecote,
+      has_crankshaft: formData.temVirabrequim,
+      has_piston: formData.temPistao,
+      has_connecting_rod: formData.temBiela,
+      turns_manually: formData.giraManualmente,
+    };
+
+    const engine = await createEngine(engineData);
+    if (!engine) return;
+
+    // Criar ordem de serviço
+    const orderData = {
+      ...coletaData,
+      engine_id: engine.id,
+      initial_observations: formData.observacoes || undefined,
+    };
+
+    const order = await createOrder(orderData);
+    if (!order) return;
+
+    // Upload das fotos
+    const uploadPromises = Object.entries(fotos)
+      .filter(([_, file]) => file !== null)
+      .map(([tipo, file]) => uploadPhoto(file!, order.id, tipo, undefined, 'entrada'));
+
+    await Promise.all(uploadPromises);
+    
+    // Limpar dados da sessão
+    sessionStorage.removeItem('coletaData');
     
     toast({
       title: "Check-in realizado",
-      description: "Ordem de serviço criada com sucesso!",
+      description: `Ordem de serviço ${order.order_number} criada com sucesso!`,
     });
+    
+    navigate('/');
   };
 
   const renderFileInput = (tipo: string, label: string, obrigatorio = true) => (
@@ -295,8 +362,8 @@ export default function CheckIn() {
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" size="lg">
-            Criar Ordem de Serviço
+          <Button type="submit" size="lg" disabled={loading}>
+            {loading ? "Criando OS..." : "Criar Ordem de Serviço"}
           </Button>
         </div>
       </form>
