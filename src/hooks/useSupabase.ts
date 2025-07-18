@@ -203,6 +203,33 @@ export function useSupabase() {
     }
   };
 
+  const getWorkflowsByComponent = async (component: string) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('order_workflow')
+        .select(`
+          *,
+          order:orders(
+            *,
+            customer:customers(*),
+            consultant:consultants(*),
+            engine:engines(*)
+          )
+        `)
+        .eq('component', component)
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      handleError(error, 'Erro ao carregar workflows');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     getConsultants,
@@ -210,6 +237,7 @@ export function useSupabase() {
     createEngine,
     createOrder,
     uploadPhoto,
-    getOrders
+    getOrders,
+    getWorkflowsByComponent
   };
 }
