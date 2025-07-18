@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
@@ -72,23 +73,17 @@ All colors MUST be HSL.
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     --transition-fast: all 0.15s ease-out;
+    --transition-page: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -152,20 +147,31 @@ All colors MUST be HSL.
     @apply bg-background text-foreground font-inter antialiased;
     font-feature-settings: 'cv11', 'ss01';
     font-variation-settings: 'opsz' 32;
+    scroll-behavior: smooth;
   }
 
   html {
     scroll-behavior: smooth;
   }
+
+  /* Performance optimization for animations */
+  * {
+    will-change: auto;
+  }
+
+  .animate-in {
+    will-change: transform, opacity;
+  }
 }
 
 @layer components {
-  /* Enhanced UI Components */
+  /* Enhanced UI Components with improved performance */
   .card-enhanced {
     @apply bg-gradient-to-br from-card to-card/80 border border-border/50 rounded-xl;
     background-image: var(--gradient-card);
     box-shadow: var(--shadow-card);
     transition: var(--transition-smooth);
+    will-change: transform, box-shadow;
   }
 
   .card-enhanced:hover {
@@ -183,6 +189,7 @@ All colors MUST be HSL.
     background: var(--gradient-primary);
     box-shadow: var(--shadow-primary);
     transition: var(--transition-smooth);
+    will-change: transform, box-shadow;
   }
 
   .button-primary-enhanced:hover {
@@ -200,9 +207,11 @@ All colors MUST be HSL.
     @apply opacity-100;
   }
 
+  /* Enhanced sidebar with smooth transitions */
   .sidebar-item-enhanced {
-    @apply relative flex items-center px-3 py-2.5 rounded-lg transition-all duration-200;
+    @apply relative flex items-center px-3 py-2.5 rounded-lg;
     transition: var(--transition-smooth);
+    will-change: transform, background-color;
   }
 
   .sidebar-item-enhanced:hover {
@@ -222,8 +231,36 @@ All colors MUST be HSL.
     background: var(--gradient-primary);
   }
 
+  /* Page transition effects */
+  .page-transition {
+    transition: var(--transition-page);
+    will-change: transform, opacity;
+  }
+
+  .page-enter {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+
+  .page-enter-active {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .page-exit {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .page-exit-active {
+    opacity: 0;
+    transform: translateY(-20px) scale(1.02);
+  }
+
+  /* Enhanced stats cards */
   .stat-card-enhanced {
     @apply card-enhanced p-6 relative overflow-hidden;
+    will-change: transform;
   }
 
   .stat-card-enhanced::before {
@@ -234,9 +271,15 @@ All colors MUST be HSL.
     transform: translate(50%, -50%);
   }
 
+  .stat-card-enhanced:hover {
+    transform: translateY(-4px) scale(1.02);
+  }
+
+  /* Enhanced badges with smooth animations */
   .badge-enhanced {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
     transition: var(--transition-smooth);
+    will-change: transform;
   }
 
   .badge-enhanced:hover {
@@ -263,9 +306,10 @@ All colors MUST be HSL.
     background: var(--gradient-info);
   }
 
-  /* Loading animations */
+  /* Loading animations with better performance */
   .skeleton-enhanced {
     @apply animate-pulse bg-gradient-to-r from-muted via-muted/50 to-muted rounded;
+    will-change: opacity;
   }
 
   .loading-dots::after {
@@ -273,13 +317,15 @@ All colors MUST be HSL.
     animation: loading-dots 1.5s infinite;
   }
 
-  /* Glass morphism effect */
+  /* Enhanced Glass morphism */
   .glass {
     @apply backdrop-blur-md bg-white/10 border border-white/20;
+    backdrop-filter: blur(12px);
   }
 
   .glass-dark {
     @apply backdrop-blur-md bg-black/10 border border-black/20;
+    backdrop-filter: blur(12px);
   }
 
   /* Automotive-inspired patterns */
@@ -308,7 +354,7 @@ All colors MUST be HSL.
     );
   }
 
-  /* Enhanced scrollbar */
+  /* Enhanced scrollbar with smoother interaction */
   .custom-scrollbar::-webkit-scrollbar {
     @apply w-2;
   }
@@ -320,10 +366,35 @@ All colors MUST be HSL.
   .custom-scrollbar::-webkit-scrollbar-thumb {
     @apply rounded-full;
     background: var(--gradient-primary);
+    transition: var(--transition-fast);
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     @apply opacity-80;
+    transform: scaleY(1.1);
+  }
+
+  /* Notification animations */
+  .notification-enter {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  .notification-enter-active {
+    opacity: 1;
+    transform: translateX(0);
+    transition: var(--transition-smooth);
+  }
+
+  .notification-exit {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .notification-exit-active {
+    opacity: 0;
+    transform: translateX(100%);
+    transition: var(--transition-smooth);
   }
 }
 
@@ -345,9 +416,10 @@ All colors MUST be HSL.
     @apply mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl;
   }
 
-  /* Enhanced interaction utilities */
+  /* Enhanced interaction utilities with better performance */
   .interactive {
     transition: var(--transition-smooth);
+    will-change: transform;
   }
 
   .interactive:hover {
@@ -358,12 +430,30 @@ All colors MUST be HSL.
     transform: translateY(0);
   }
 
-  /* Focus utilities */
+  /* Focus utilities with enhanced accessibility */
   .focus-enhanced {
     @apply focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2;
+    transition: var(--transition-fast);
+  }
+
+  /* Smooth page transitions */
+  .smooth-transition {
+    transition: var(--transition-page);
+    will-change: transform, opacity;
+  }
+
+  /* Performance optimization utilities */
+  .gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  .contain-layout {
+    contain: layout style paint;
   }
 }
 
+/* Enhanced keyframe animations with better performance */
 @keyframes loading-dots {
   0%, 20% { content: ''; }
   40% { content: '.'; }
@@ -382,6 +472,83 @@ All colors MUST be HSL.
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 5px hsl(var(--primary) / 0.5); }
-  50% { box-shadow: 0 0 20px hsl(var(--primary) / 0.8), 0 0 30px hsl(var(--primary) / 0.4); }
+  0%, 100% { 
+    box-shadow: 0 0 5px hsl(var(--primary) / 0.5);
+  }
+  50% { 
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.8), 0 0 30px hsl(var(--primary) / 0.4);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .card-enhanced {
+    border-width: 2px;
+  }
+  
+  .button-primary-enhanced {
+    border: 2px solid hsl(var(--primary));
+  }
 }
