@@ -1,12 +1,11 @@
 
 import React, { useState } from 'react';
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Bell, User, Search } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationCenter } from "@/components/NotificationCenter";
-import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface LayoutProps {
@@ -22,15 +21,17 @@ export function Layout({ children }: LayoutProps) {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          {/* Enhanced Header with improved animations */}
+        
+        <SidebarInset>
+          {/* Enhanced Header */}
           <motion.header 
             initial={{ y: -10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="h-16 border-b bg-gradient-to-r from-card via-card to-card/95 flex items-center justify-between px-6 shadow-card backdrop-blur-md relative z-30"
+            className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4"
           >
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-1">
               <SidebarTrigger className="hover:bg-primary/10 transition-colors rounded-lg" />
+              
               <div className="flex items-center gap-3">
                 <motion.div 
                   whileHover={{ scale: 1.05, rotate: 5 }}
@@ -39,14 +40,14 @@ export function Layout({ children }: LayoutProps) {
                 >
                   <span className="text-sm font-bold text-primary-foreground">RF</span>
                 </motion.div>
-                <div>
+                <div className="hidden sm:block">
                   <h1 className="font-bold text-foreground text-lg tracking-tight">Retífica Formiguense</h1>
                   <p className="text-xs text-muted-foreground font-medium">Sistema de Gestão Automotiva</p>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {/* Global Search Button */}
               <motion.div whileTap={{ scale: 0.95 }}>
                 <Button 
@@ -92,10 +93,10 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </motion.header>
 
-          {/* Enhanced Main Content with page transitions */}
-          <main className="flex-1 p-6 overflow-auto bg-gradient-to-br from-background via-background to-background/95 custom-scrollbar relative">
+          {/* Enhanced Main Content */}
+          <main className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-background/95 custom-scrollbar">
             <motion.div 
-              className="container-enhanced"
+              className="container mx-auto p-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
@@ -103,7 +104,7 @@ export function Layout({ children }: LayoutProps) {
               {children}
             </motion.div>
           </main>
-        </div>
+        </SidebarInset>
 
         {/* Global Search Modal */}
         <AnimatePresence>

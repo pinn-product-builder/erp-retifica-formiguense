@@ -1,11 +1,33 @@
 
 import React from "react";
-import { Calendar, Home, Inbox, Search, Settings, ClipboardCheck, Truck, DollarSign, Kanban, Users, Package, UserCheck, Building2, FileText, Cog } from "lucide-react"
-import { NavLink } from "react-router-dom"
+import { NavLink, useLocation } from "react-router-dom";
+import { 
+  Home, 
+  Users, 
+  ClipboardCheck, 
+  Truck, 
+  Kanban, 
+  DollarSign, 
+  Building2, 
+  UserCheck, 
+  Package, 
+  FileText, 
+  Settings
+} from "lucide-react";
 
-import { cn } from "@/lib/utils"
-
-interface AppSidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarHeader,
+  useSidebar,
+} from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 const items = [
   {
@@ -61,43 +83,76 @@ const items = [
   {
     title: "Configurações",
     url: "/configuracoes",
-    icon: Cog,
+    icon: Settings,
   },
 ];
 
-const AppSidebar = React.forwardRef<HTMLDivElement, AppSidebarProps>(
-  ({ className, ...props }, ref) => {
-    return (
-      <div
-        className={cn(
-          "flex flex-col gap-2 bg-secondary text-secondary-foreground rounded-md p-4 w-60",
-          className
-        )}
-        ref={ref}
-        {...props}
-      >
-        <div className="font-bold">Menu</div>
-        <nav className="grid gap-2">
-          {items.map((item) => (
-            <NavLink
-              key={item.title}
-              to={item.url}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-2 rounded-md p-2 hover:bg-muted/80",
-                  isActive ? "bg-muted/50 font-semibold" : "bg-transparent"
-                )
-              }
-            >
-              <item.icon className="w-4 h-4" />
-              {item.title}
-            </NavLink>
-          ))}
-        </nav>
-      </div>
-    )
-  }
-)
-AppSidebar.displayName = "AppSidebar"
+export function AppSidebar() {
+  const location = useLocation();
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
-export { AppSidebar }
+  return (
+    <Sidebar variant="sidebar" collapsible="icon">
+      <SidebarHeader className="border-b border-sidebar-border">
+        <div className="flex items-center gap-3 px-3 py-4">
+          <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center shadow-primary">
+            <span className="text-sm font-bold text-primary-foreground">RF</span>
+          </div>
+          {!isCollapsed && (
+            <div className="flex flex-col min-w-0">
+              <h2 className="text-sm font-semibold text-sidebar-foreground truncate">
+                Retífica Formiguense
+              </h2>
+              <p className="text-xs text-sidebar-foreground/70 truncate">
+                Sistema de Gestão
+              </p>
+            </div>
+          )}
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {items.map((item) => {
+                const isActive = location.pathname === item.url;
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={isCollapsed ? item.title : undefined}
+                      isActive={isActive}
+                      className={cn(
+                        "group transition-all duration-200",
+                        isActive && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                      )}
+                    >
+                      <NavLink 
+                        to={item.url}
+                        className="flex items-center gap-3 w-full"
+                      >
+                        <item.icon className={cn(
+                          "h-4 w-4 shrink-0 transition-colors",
+                          isActive ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/70"
+                        )} />
+                        {!isCollapsed && (
+                          <span className="truncate text-sm font-medium">
+                            {item.title}
+                          </span>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+    </Sidebar>
+  );
+}
