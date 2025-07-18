@@ -27,7 +27,6 @@ import {
   SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
 
 const items = [
   {
@@ -97,12 +96,12 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-3 px-3 py-4">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-sm font-bold text-primary-foreground">RF</span>
+            <span className="text-sm font-bold text-primary-foreground">FM</span>
           </div>
           {!isCollapsed && (
             <div className="flex flex-col min-w-0">
               <h2 className="text-sm font-semibold text-sidebar-foreground truncate">
-                Retífica Formiguense
+                Favarini Motores
               </h2>
               <p className="text-xs text-sidebar-foreground/70 truncate">
                 Sistema de Gestão
