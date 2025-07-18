@@ -10,7 +10,9 @@ import {
   Clock,
   MessageSquare,
   Calculator,
-  TrendingUp
+  TrendingUp,
+  MapPin,
+  ClipboardList
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
@@ -32,6 +34,18 @@ const menuItems = [
     url: "/",
     icon: Home,
     group: "principal"
+  },
+  {
+    title: "Coleta de Motor",
+    url: "/coleta",
+    icon: MapPin,
+    group: "operacao"
+  },
+  {
+    title: "Check-in Técnico",
+    url: "/checkin",
+    icon: ClipboardList,
+    group: "operacao"
   },
   {
     title: "Orçamentos",
@@ -91,6 +105,7 @@ const menuItems = [
 
 const groups = {
   principal: "Dashboard",
+  operacao: "Operação",
   servicos: "Serviços",
   gestao: "Gestão",
   estoque: "Estoque",
