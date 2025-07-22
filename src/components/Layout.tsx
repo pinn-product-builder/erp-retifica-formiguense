@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Bell, User, Search } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,6 +15,7 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const { isMobile } = useBreakpoint();
   const unreadNotifications = 2;
 
   return (
@@ -22,18 +24,22 @@ export function Layout({ children }: LayoutProps) {
         <AppSidebar />
         
         <SidebarInset>
-          <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+          <header className={`sticky top-0 z-40 flex ${isMobile ? 'h-14' : 'h-16'} shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4`}>
             <div className="flex items-center gap-4 flex-1">
               <SidebarTrigger className="hover:bg-accent transition-colors rounded-lg" />
               
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                  <span className="text-sm font-bold text-primary-foreground">FM</span>
+                <div className={`${isMobile ? 'w-8 h-8' : 'w-10 h-10'} bg-primary rounded-lg flex items-center justify-center`}>
+                  <span className={`${isMobile ? 'text-xs' : 'text-sm'} font-bold text-primary-foreground`}>
+                    FM
+                  </span>
                 </div>
-                <div className="hidden sm:block">
-                  <h1 className="font-bold text-foreground text-lg">Favarini Motores</h1>
-                  <p className="text-xs text-muted-foreground">Sistema de Gestão Automotiva</p>
-                </div>
+                {!isMobile && (
+                  <div className="hidden sm:block">
+                    <h1 className="font-bold text-foreground text-lg">Favarini Motores</h1>
+                    <p className="text-xs text-muted-foreground">Sistema de Gestão Automotiva</p>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -41,22 +47,22 @@ export function Layout({ children }: LayoutProps) {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="relative hover:bg-accent transition-colors"
+                className={`relative hover:bg-accent transition-colors ${isMobile ? 'h-8 w-8' : ''}`}
                 onClick={() => setSearchOpen(true)}
               >
-                <Search className="w-5 h-5" />
+                <Search className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
                 <span className="sr-only">Buscar</span>
               </Button>
 
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="relative hover:bg-accent transition-colors"
+                className={`relative hover:bg-accent transition-colors ${isMobile ? 'h-8 w-8' : ''}`}
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
               >
-                <Bell className="w-5 h-5" />
+                <Bell className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
                 {unreadNotifications > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full text-xs text-primary-foreground flex items-center justify-center font-bold">
+                  <span className={`absolute -top-1 -right-1 ${isMobile ? 'w-4 h-4 text-xs' : 'w-5 h-5 text-xs'} bg-primary rounded-full text-primary-foreground flex items-center justify-center font-bold`}>
                     {unreadNotifications}
                   </span>
                 )}
@@ -64,14 +70,18 @@ export function Layout({ children }: LayoutProps) {
 
               <div className="w-px h-6 bg-border"></div>
               
-              <Button variant="ghost" size="icon" className="hover:bg-accent transition-colors">
-                <User className="w-5 h-5" />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={`hover:bg-accent transition-colors ${isMobile ? 'h-8 w-8' : ''}`}
+              >
+                <User className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`} />
               </Button>
             </div>
           </header>
 
           <main className="flex-1 overflow-auto bg-background custom-scrollbar">
-            <div className="container mx-auto p-6">
+            <div className={`container mx-auto ${isMobile ? 'p-4' : 'p-6'}`}>
               {children}
             </div>
           </main>

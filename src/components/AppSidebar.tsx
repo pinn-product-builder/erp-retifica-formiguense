@@ -27,6 +27,7 @@ import {
   SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 
 const items = [
   {
@@ -89,21 +90,24 @@ const items = [
 export function AppSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
+  const { isMobile } = useBreakpoint();
   const isCollapsed = state === "collapsed";
 
   return (
     <Sidebar variant="sidebar" collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-3 px-3 py-4">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-sm font-bold text-primary-foreground">FM</span>
+        <div className={`flex items-center gap-3 px-3 ${isMobile ? 'py-3' : 'py-4'}`}>
+          <div className={`${isMobile ? 'w-6 h-6' : 'w-8 h-8'} bg-primary rounded-lg flex items-center justify-center`}>
+            <span className={`${isMobile ? 'text-xs' : 'text-sm'} font-bold text-primary-foreground`}>
+              FM
+            </span>
           </div>
           {!isCollapsed && (
             <div className="flex flex-col min-w-0">
-              <h2 className="text-sm font-semibold text-sidebar-foreground truncate">
+              <h2 className={`${isMobile ? 'text-xs' : 'text-sm'} font-semibold text-sidebar-foreground truncate`}>
                 Favarini Motores
               </h2>
-              <p className="text-xs text-sidebar-foreground/70 truncate">
+              <p className={`${isMobile ? 'text-xs' : 'text-xs'} text-sidebar-foreground/70 truncate`}>
                 Sistema de Gestão
               </p>
             </div>
@@ -113,7 +117,9 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
+            Menu Principal
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
@@ -126,14 +132,15 @@ export function AppSidebar() {
                       tooltip={isCollapsed ? item.title : undefined}
                       isActive={isActive}
                       className="group transition-colors duration-200"
+                      size={isMobile ? "sm" : "default"}
                     >
                       <NavLink 
                         to={item.url}
                         className="flex items-center gap-3 w-full"
                       >
-                        <item.icon className="h-4 w-4 shrink-0" />
+                        <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
                         {!isCollapsed && (
-                          <span className="truncate text-sm font-medium">
+                          <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
                             {item.title}
                           </span>
                         )}

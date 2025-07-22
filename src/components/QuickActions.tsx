@@ -8,14 +8,16 @@ import {
   Wrench, 
   Clock, 
   Package, 
-  FileText, 
   DollarSign,
   Zap,
   ArrowRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 
 export function QuickActions() {
+  const { isMobile, isTablet } = useBreakpoint();
+
   const actions = [
     {
       title: 'Novo Orçamento',
@@ -55,64 +57,80 @@ export function QuickActions() {
     }
   ];
 
+  const getGridCols = () => {
+    if (isMobile) return 'grid-cols-1';
+    if (isTablet) return 'grid-cols-2';
+    return 'grid-cols-1';
+  };
+
   return (
     <Card className="card-enhanced">
-      <CardHeader className="pb-4">
+      <CardHeader className={`${isMobile ? 'pb-3' : 'pb-4'}`}>
         <CardTitle className="flex items-center gap-3">
           <div className="p-2 bg-gradient-primary rounded-lg">
-            <Zap className="w-5 h-5 text-primary-foreground" />
+            <Zap className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-primary-foreground`} />
           </div>
           <div>
-            <span className="text-lg font-bold">Ações Rápidas</span>
-            <p className="text-sm text-muted-foreground font-normal">Acesso direto</p>
+            <span className={`${isMobile ? 'text-base' : 'text-lg'} font-bold`}>Ações Rápidas</span>
+            <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground font-normal`}>
+              Acesso direto
+            </p>
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
-        {actions.map((action, index) => {
-          const Icon = action.icon;
-          return (
-            <motion.div
-              key={action.title}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <Button
-                className={`w-full justify-between group transition-all duration-300 h-auto py-3 ${
-                  action.featured 
-                    ? 'bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-primary'
-                    : 'hover:bg-primary/10 border-primary/20'
-                }`}
-                variant={action.featured ? "default" : action.variant}
-                size="sm"
+      <CardContent>
+        <div className={`grid ${getGridCols()} gap-2`}>
+          {actions.map((action, index) => {
+            const Icon = action.icon;
+            return (
+              <motion.div
+                key={action.title}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
               >
-                <div className="flex items-center gap-2">
-                  <div className={`p-1.5 rounded-md transition-colors ${
+                <Button
+                  className={`w-full justify-between group transition-all duration-300 ${
+                    isMobile ? 'h-12 py-2' : 'h-auto py-3'
+                  } ${
                     action.featured 
-                      ? 'bg-white/20' 
-                      : 'bg-primary/10 group-hover:bg-primary/20'
-                  }`}>
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="text-left">
-                    <span className="font-medium block text-sm">{action.title}</span>
-                    <span className={`text-xs ${
-                      action.featured ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                      ? 'bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-primary'
+                      : 'hover:bg-primary/10 border-primary/20'
+                  }`}
+                  variant={action.featured ? "default" : action.variant}
+                  size="sm"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`${isMobile ? 'p-1' : 'p-1.5'} rounded-md transition-colors ${
+                      action.featured 
+                        ? 'bg-white/20' 
+                        : 'bg-primary/10 group-hover:bg-primary/20'
                     }`}>
-                      {action.description}
-                    </span>
+                      <Icon className={`${isMobile ? 'w-3 h-3' : 'w-3.5 h-3.5'}`} />
+                    </div>
+                    <div className="text-left">
+                      <span className={`font-medium block ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                        {action.title}
+                      </span>
+                      {!isMobile && (
+                        <span className={`text-xs ${
+                          action.featured ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                        }`}>
+                          {action.description}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                {action.featured && (
-                  <Badge className="bg-white/20 text-primary-foreground hover:bg-white/30 px-2 py-1">
-                    <ArrowRight className="w-3 h-3" />
-                  </Badge>
-                )}
-              </Button>
-            </motion.div>
-          );
-        })}
+                  {action.featured && !isMobile && (
+                    <Badge className="bg-white/20 text-primary-foreground hover:bg-white/30 px-2 py-1">
+                      <ArrowRight className="w-3 h-3" />
+                    </Badge>
+                  )}
+                </Button>
+              </motion.div>
+            );
+          })}
+        </div>
       </CardContent>
     </Card>
   );
