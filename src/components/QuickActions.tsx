@@ -35,19 +35,19 @@ export function QuickActions() {
     {
       title: 'Apontar Horas',
       icon: Clock,
-      description: 'Registrar horas trabalhadas',
+      description: 'Registrar horas',
       href: '/funcionarios',
       variant: 'outline' as const
     },
     {
       title: 'Consultar Peça',
       icon: Package,
-      description: 'Buscar no estoque',
+      description: 'Buscar estoque',
       href: '/estoque',
       variant: 'outline' as const
     },
     {
-      title: 'Relatório Financeiro',
+      title: 'Relatórios',
       icon: DollarSign,
       description: 'Ver relatórios',
       href: '/relatorios',
@@ -64,11 +64,11 @@ export function QuickActions() {
           </div>
           <div>
             <span className="text-lg font-bold">Ações Rápidas</span>
-            <p className="text-sm text-muted-foreground font-normal">Acesso direto às funções principais</p>
+            <p className="text-sm text-muted-foreground font-normal">Acesso direto</p>
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2">
         {actions.map((action, index) => {
           const Icon = action.icon;
           return (
@@ -79,24 +79,24 @@ export function QuickActions() {
               transition={{ delay: index * 0.1 }}
             >
               <Button
-                className={`w-full justify-between group transition-all duration-300 ${
+                className={`w-full justify-between group transition-all duration-300 h-auto py-3 ${
                   action.featured 
                     ? 'bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-primary'
                     : 'hover:bg-primary/10 border-primary/20'
                 }`}
                 variant={action.featured ? "default" : action.variant}
-                size="lg"
+                size="sm"
               >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg transition-colors ${
+                <div className="flex items-center gap-2">
+                  <div className={`p-1.5 rounded-md transition-colors ${
                     action.featured 
                       ? 'bg-white/20' 
                       : 'bg-primary/10 group-hover:bg-primary/20'
                   }`}>
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-3.5 h-3.5" />
                   </div>
                   <div className="text-left">
-                    <span className="font-medium block">{action.title}</span>
+                    <span className="font-medium block text-sm">{action.title}</span>
                     <span className={`text-xs ${
                       action.featured ? 'text-primary-foreground/70' : 'text-muted-foreground'
                     }`}>
@@ -105,7 +105,7 @@ export function QuickActions() {
                   </div>
                 </div>
                 {action.featured && (
-                  <Badge className="bg-white/20 text-primary-foreground hover:bg-white/30">
+                  <Badge className="bg-white/20 text-primary-foreground hover:bg-white/30 px-2 py-1">
                     <ArrowRight className="w-3 h-3" />
                   </Badge>
                 )}

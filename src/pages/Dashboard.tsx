@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { QuickActions } from "@/components/QuickActions";
+import { RecentActivity } from "@/components/RecentActivity";
+import { EnhancedInsights } from "@/components/EnhancedInsights";
 import { useSEO } from "@/hooks/useSEO";
 import { motion } from "framer-motion";
 import { 
@@ -18,7 +20,6 @@ import {
   Filter,
   Download,
   RefreshCw,
-  Target,
   Activity
 } from "lucide-react";
 
@@ -111,7 +112,7 @@ export default function Dashboard() {
 
   return (
     <motion.div 
-      className="space-y-8"
+      className="space-y-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
@@ -190,10 +191,11 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Enhanced Recent Services */}
+      {/* New Optimized Layout with 12-column grid */}
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* Enhanced Recent Services - 8 columns */}
         <motion.div
-          className="lg:col-span-2"
+          className="lg:col-span-8"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
@@ -278,116 +280,96 @@ export default function Dashboard() {
           </Card>
         </motion.div>
 
-        {/* Enhanced Quick Actions & Insights */}
+        {/* Right Column - 4 columns */}
         <motion.div 
-          className="space-y-6"
+          className="lg:col-span-4 space-y-6"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4 }}
         >
-          {/* Quick Actions - Using new component */}
+          {/* Enhanced Quick Actions */}
           <QuickActions />
 
-          {/* Performance Insights */}
-          <Card className="card-enhanced bg-gradient-to-br from-primary/5 via-card to-card border-primary/20">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-primary rounded-lg">
-                  <Target className="w-5 h-5 text-primary-foreground" />
-                </div>
-                <div>
-                  <span className="text-lg font-bold">Insights</span>
-                  <p className="text-sm text-muted-foreground font-normal">Performance hoje</p>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Produtividade</span>
-                  <span className="text-sm font-bold text-success">+12%</span>
-                </div>
-                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                  <motion.div 
-                    className="h-full bg-gradient-success rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: "87%" }}
-                    transition={{ delay: 0.8, duration: 0.8 }}
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Meta Mensal</span>
-                  <span className="text-sm font-bold text-primary">73%</span>
-                </div>
-                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                  <motion.div 
-                    className="h-full bg-gradient-primary rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: "73%" }}
-                    transition={{ delay: 1, duration: 0.8 }}
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 border-t border-border/50">
-                <p className="text-xs text-muted-foreground">
-                  Meta: R$ 45.000 | Atual: R$ 32.850
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Enhanced Performance Insights */}
+          <EnhancedInsights />
         </motion.div>
       </div>
 
-      {/* Enhanced Alerts Section */}
+      {/* New Recent Activity Section */}
       <motion.div 
-        className="grid gap-4 md:grid-cols-2"
+        className="grid gap-6 lg:grid-cols-12"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
+        transition={{ delay: 0.5 }}
       >
-        <Card className="border-warning/30 bg-gradient-to-r from-warning/10 via-warning/5 to-transparent shadow-card hover:shadow-elevated transition-all duration-300">
-          <CardContent className="p-5">
-            <div className="flex items-start gap-4">
-              <div className="p-2 bg-gradient-warning rounded-lg shadow-warning/20">
-                <AlertTriangle className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-foreground mb-1">Atenção Necessária</h4>
-                <p className="text-sm text-muted-foreground mb-3">
-                  3 orçamentos vencem hoje e 2 peças estão em estoque baixo
-                </p>
-                <Button size="sm" variant="outline" className="hover:bg-warning/10 border-warning/30">
-                  <Eye className="w-4 h-4 mr-2" />
-                  Ver detalhes
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-5">
+          <RecentActivity />
+        </div>
 
-        <Card className="border-success/30 bg-gradient-to-r from-success/10 via-success/5 to-transparent shadow-card hover:shadow-elevated transition-all duration-300">
-          <CardContent className="p-5">
-            <div className="flex items-start gap-4">
-              <div className="p-2 bg-gradient-success rounded-lg shadow-success/20">
-                <CheckCircle className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-bold text-foreground mb-1">Sistema Saudável</h4>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Todos os sistemas operando normalmente. Produtividade acima da meta.
-                </p>
-                <div className="flex items-center gap-2 text-xs text-success">
-                  <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-                  <span className="font-medium">Status operacional</span>
+        {/* Enhanced Alerts Section - now in 3 columns */}
+        <div className="lg:col-span-7">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="border-warning/30 bg-gradient-to-r from-warning/10 via-warning/5 to-transparent shadow-card hover:shadow-elevated transition-all duration-300">
+              <CardContent className="p-5">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 bg-gradient-warning rounded-lg shadow-warning/20">
+                    <AlertTriangle className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-foreground mb-1">Atenção</h4>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      3 orçamentos vencem hoje
+                    </p>
+                    <Button size="sm" variant="outline" className="hover:bg-warning/10 border-warning/30 w-full">
+                      <Eye className="w-4 h-4 mr-2" />
+                      Ver
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+
+            <Card className="border-success/30 bg-gradient-to-r from-success/10 via-success/5 to-transparent shadow-card hover:shadow-elevated transition-all duration-300">
+              <CardContent className="p-5">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 bg-gradient-success rounded-lg shadow-success/20">
+                    <CheckCircle className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-foreground mb-1">Sistema OK</h4>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Tudo funcionando
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-success">
+                      <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+                      <span className="font-medium">Online</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent shadow-card hover:shadow-elevated transition-all duration-300">
+              <CardContent className="p-5">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 bg-gradient-primary rounded-lg shadow-primary/20">
+                    <Calendar className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-foreground mb-1">Agenda</h4>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      7 compromissos hoje
+                    </p>
+                    <Button size="sm" variant="outline" className="hover:bg-primary/10 border-primary/30 w-full">
+                      <Eye className="w-4 h-4 mr-2" />
+                      Agenda
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </motion.div>
     </motion.div>
   );
