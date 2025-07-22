@@ -7,8 +7,8 @@ import { useWorkflowUpdate } from '@/hooks/useWorkflowUpdate';
 import { Badge } from '@/components/ui/badge';
 
 const COMPONENTS = [
-  { id: 'bloco', name: 'Bloco', color: 'bg-blue-500' },
-  { id: 'eixo', name: 'Eixo', color: 'bg-green-500' },
+  { id: 'bloco', name: 'Bloco', color: 'bg-green-500' },
+  { id: 'eixo', name: 'Eixo', color: 'bg-orange-500' },
   { id: 'biela', name: 'Biela', color: 'bg-yellow-500' },
   { id: 'comando', name: 'Comando', color: 'bg-purple-500' },
   { id: 'cabecote', name: 'Cabeçote', color: 'bg-red-500' }

@@ -62,7 +62,7 @@ export function WorkflowModal({ workflow, open, onClose }: WorkflowModalProps) {
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       entrada: 'bg-gray-100 text-gray-800',
-      metrologia: 'bg-blue-100 text-blue-800',
+      metrologia: 'bg-orange-100 text-orange-800',
       usinagem: 'bg-orange-100 text-orange-800',
       montagem: 'bg-yellow-100 text-yellow-800',
       pronto: 'bg-green-100 text-green-800',
@@ -128,7 +128,7 @@ export function WorkflowModal({ workflow, open, onClose }: WorkflowModalProps) {
               
               {workflow.completed_at && (
                 <div className="flex items-center gap-2">
-                  <Pause className="w-4 h-4 text-blue-600" />
+                  <Pause className="w-4 h-4 text-orange-600" />
                   <div>
                     <Label className="text-sm text-gray-600">Concluído em</Label>
                     <p>{formatDateTime(workflow.completed_at)}</p>

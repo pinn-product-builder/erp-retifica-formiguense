@@ -289,11 +289,11 @@ export default function Dashboard() {
           <QuickActions />
 
           {/* Performance Insights */}
-          <Card className="card-enhanced bg-gradient-to-br from-info/5 via-card to-card border-info/20">
+          <Card className="card-enhanced bg-gradient-to-br from-primary/5 via-card to-card border-primary/20">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-info rounded-lg">
-                  <Target className="w-5 h-5 text-white" />
+                <div className="p-2 bg-gradient-primary rounded-lg">
+                  <Target className="w-5 h-5 text-primary-foreground" />
                 </div>
                 <div>
                   <span className="text-lg font-bold">Insights</span>

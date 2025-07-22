@@ -94,7 +94,7 @@ export function ComponentCard({ workflow, componentColor }: ComponentCardProps) 
           <div className="flex items-center justify-between">
             <div className="flex gap-1">
               {workflow.photos?.length > 0 && (
-                <div className="flex items-center gap-1 text-xs text-blue-600">
+                <div className="flex items-center gap-1 text-xs text-orange-600">
                   <Camera className="w-3 h-3" />
                   {workflow.photos.length}
                 </div>
