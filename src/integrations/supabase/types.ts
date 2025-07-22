@@ -14,6 +14,183 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts_payable: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string
+          due_date: string
+          expense_category_id: string | null
+          id: string
+          invoice_number: string | null
+          notes: string | null
+          payment_date: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          status: Database["public"]["Enums"]["payment_status"] | null
+          supplier_document: string | null
+          supplier_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description: string
+          due_date: string
+          expense_category_id?: string | null
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          status?: Database["public"]["Enums"]["payment_status"] | null
+          supplier_document?: string | null
+          supplier_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string
+          due_date?: string
+          expense_category_id?: string | null
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          status?: Database["public"]["Enums"]["payment_status"] | null
+          supplier_document?: string | null
+          supplier_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_payable_expense_category_id_fkey"
+            columns: ["expense_category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounts_receivable: {
+        Row: {
+          amount: number
+          budget_id: string | null
+          created_at: string | null
+          customer_id: string
+          discount: number | null
+          due_date: string
+          id: string
+          installment_number: number | null
+          invoice_number: string | null
+          late_fee: number | null
+          notes: string | null
+          order_id: string | null
+          payment_date: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          status: Database["public"]["Enums"]["payment_status"] | null
+          total_installments: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          budget_id?: string | null
+          created_at?: string | null
+          customer_id: string
+          discount?: number | null
+          due_date: string
+          id?: string
+          installment_number?: number | null
+          invoice_number?: string | null
+          late_fee?: number | null
+          notes?: string | null
+          order_id?: string | null
+          payment_date?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          status?: Database["public"]["Enums"]["payment_status"] | null
+          total_installments?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          budget_id?: string | null
+          created_at?: string | null
+          customer_id?: string
+          discount?: number | null
+          due_date?: string
+          id?: string
+          installment_number?: number | null
+          invoice_number?: string | null
+          late_fee?: number | null
+          notes?: string | null
+          order_id?: string | null
+          payment_date?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          status?: Database["public"]["Enums"]["payment_status"] | null
+          total_installments?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_receivable_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_accounts: {
+        Row: {
+          account_number: string
+          account_type: string | null
+          agency: string | null
+          balance: number | null
+          bank_name: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_number: string
+          account_type?: string | null
+          agency?: string | null
+          balance?: number | null
+          bank_name: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_number?: string
+          account_type?: string | null
+          agency?: string | null
+          balance?: number | null
+          bank_name?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       budgets: {
         Row: {
           approved_at: string | null
@@ -69,6 +246,138 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cash_flow: {
+        Row: {
+          accounts_payable_id: string | null
+          accounts_receivable_id: string | null
+          amount: number
+          bank_account_id: string | null
+          category_id: string | null
+          created_at: string | null
+          description: string
+          id: string
+          notes: string | null
+          order_id: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          reconciled: boolean | null
+          transaction_date: string
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          accounts_payable_id?: string | null
+          accounts_receivable_id?: string | null
+          amount: number
+          bank_account_id?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          reconciled?: boolean | null
+          transaction_date: string
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          accounts_payable_id?: string | null
+          accounts_receivable_id?: string | null
+          amount?: number
+          bank_account_id?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          reconciled?: boolean | null
+          transaction_date?: string
+          transaction_type?: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_flow_accounts_payable_id_fkey"
+            columns: ["accounts_payable_id"]
+            isOneToOne: false
+            referencedRelation: "accounts_payable"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_flow_accounts_receivable_id_fkey"
+            columns: ["accounts_receivable_id"]
+            isOneToOne: false
+            referencedRelation: "accounts_receivable"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_flow_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_flow_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_flow_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_flow_projection: {
+        Row: {
+          actual_balance: number | null
+          actual_expenses: number | null
+          actual_income: number | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          projected_balance: number | null
+          projected_expenses: number | null
+          projected_income: number | null
+          projection_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          actual_balance?: number | null
+          actual_expenses?: number | null
+          actual_income?: number | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          projected_balance?: number | null
+          projected_expenses?: number | null
+          projected_income?: number | null
+          projection_date: string
+          updated_at?: string | null
+        }
+        Update: {
+          actual_balance?: number | null
+          actual_expenses?: number | null
+          actual_income?: number | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          projected_balance?: number | null
+          projected_expenses?: number | null
+          projected_income?: number | null
+          projection_date?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       consultants: {
         Row: {
@@ -202,6 +511,75 @@ export type Database = {
           turns_manually?: boolean | null
           type?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      expense_categories: {
+        Row: {
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      monthly_dre: {
+        Row: {
+          created_at: string | null
+          direct_costs: number | null
+          gross_profit: number | null
+          id: string
+          month: number
+          net_profit: number | null
+          operational_expenses: number | null
+          profit_margin: number | null
+          total_revenue: number | null
+          updated_at: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string | null
+          direct_costs?: number | null
+          gross_profit?: number | null
+          id?: string
+          month: number
+          net_profit?: number | null
+          operational_expenses?: number | null
+          profit_margin?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string | null
+          direct_costs?: number | null
+          gross_profit?: number | null
+          id?: string
+          month?: number
+          net_profit?: number | null
+          operational_expenses?: number | null
+          profit_margin?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+          year?: number
         }
         Relationships: []
       }
@@ -437,6 +815,39 @@ export type Database = {
           },
         ]
       }
+      payment_methods: {
+        Row: {
+          created_at: string | null
+          fee_fixed: number | null
+          fee_percentage: number | null
+          id: string
+          is_active: boolean | null
+          method: Database["public"]["Enums"]["payment_method"]
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          fee_fixed?: number | null
+          fee_percentage?: number | null
+          id?: string
+          is_active?: boolean | null
+          method: Database["public"]["Enums"]["payment_method"]
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          fee_fixed?: number | null
+          fee_percentage?: number | null
+          id?: string
+          is_active?: boolean | null
+          method?: Database["public"]["Enums"]["payment_method"]
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       time_logs: {
         Row: {
           component: Database["public"]["Enums"]["engine_component"]
@@ -498,7 +909,24 @@ export type Database = {
       budget_status: "pendente" | "aprovado" | "reprovado" | "em_producao"
       customer_type: "oficina" | "direto"
       engine_component: "bloco" | "eixo" | "biela" | "comando" | "cabecote"
+      expense_category:
+        | "fixed"
+        | "variable"
+        | "tax"
+        | "supplier"
+        | "salary"
+        | "equipment"
+        | "maintenance"
       order_status: "ativa" | "concluida" | "cancelada"
+      payment_method:
+        | "cash"
+        | "pix"
+        | "credit_card"
+        | "debit_card"
+        | "bank_transfer"
+        | "check"
+      payment_status: "pending" | "paid" | "overdue" | "cancelled"
+      transaction_type: "income" | "expense"
       workflow_status:
         | "entrada"
         | "metrologia"
@@ -637,7 +1065,26 @@ export const Constants = {
       budget_status: ["pendente", "aprovado", "reprovado", "em_producao"],
       customer_type: ["oficina", "direto"],
       engine_component: ["bloco", "eixo", "biela", "comando", "cabecote"],
+      expense_category: [
+        "fixed",
+        "variable",
+        "tax",
+        "supplier",
+        "salary",
+        "equipment",
+        "maintenance",
+      ],
       order_status: ["ativa", "concluida", "cancelada"],
+      payment_method: [
+        "cash",
+        "pix",
+        "credit_card",
+        "debit_card",
+        "bank_transfer",
+        "check",
+      ],
+      payment_status: ["pending", "paid", "overdue", "cancelled"],
+      transaction_type: ["income", "expense"],
       workflow_status: [
         "entrada",
         "metrologia",

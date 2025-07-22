@@ -12,7 +12,9 @@ import {
   Users, 
   Package, 
   FileText, 
-  Settings
+  Settings,
+  Receipt,
+  CreditCard
 } from "lucide-react";
 
 import {
@@ -79,6 +81,16 @@ const items = [
     title: "Relatórios",
     url: "/relatorios",
     icon: FileText,
+  },
+  {
+    title: "Financeiro",
+    url: "/financeiro",
+    icon: CreditCard,
+  },
+  {
+    title: "Contas a Receber",
+    url: "/contas-receber",
+    icon: Receipt,
   },
   {
     title: "Configurações",
