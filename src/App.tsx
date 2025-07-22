@@ -16,6 +16,11 @@ import Consultores from "@/pages/Consultores";
 import Clientes from "@/pages/Clientes";
 import Relatorios from "@/pages/Relatorios";
 import Configuracoes from "@/pages/Configuracoes";
+import Financeiro from "@/pages/Financeiro";
+import ContasReceber from "@/pages/ContasReceber";
+import ContasPagar from "@/pages/ContasPagar";
+import FluxoCaixa from "@/pages/FluxoCaixa";
+import DRE from "@/pages/DRE";
 
 function App() {
   const queryClient = new QueryClient();
@@ -36,6 +41,11 @@ function App() {
             <Route path="/estoque" element={<Estoque />} />
             <Route path="/relatorios" element={<Relatorios />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
+            <Route path="/financeiro" element={<Financeiro />} />
+            <Route path="/contas-receber" element={<ContasReceber />} />
+            <Route path="/contas-pagar" element={<ContasPagar />} />
+            <Route path="/fluxo-caixa" element={<FluxoCaixa />} />
+            <Route path="/dre" element={<DRE />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

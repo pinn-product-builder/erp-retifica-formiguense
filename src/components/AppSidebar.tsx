@@ -14,7 +14,10 @@ import {
   FileText, 
   Settings,
   Receipt,
-  CreditCard
+  CreditCard,
+  TrendingUp,
+  Calculator,
+  PiggyBank
 } from "lucide-react";
 
 import {
@@ -82,15 +85,33 @@ const items = [
     url: "/relatorios",
     icon: FileText,
   },
+];
+
+const financialItems = [
   {
-    title: "Financeiro",
+    title: "Dashboard Financeiro",
     url: "/financeiro",
-    icon: CreditCard,
+    icon: TrendingUp,
   },
   {
     title: "Contas a Receber",
     url: "/contas-receber",
     icon: Receipt,
+  },
+  {
+    title: "Contas a Pagar",
+    url: "/contas-pagar",
+    icon: CreditCard,
+  },
+  {
+    title: "Fluxo de Caixa",
+    url: "/fluxo-caixa",
+    icon: PiggyBank,
+  },
+  {
+    title: "DRE Mensal",
+    url: "/dre",
+    icon: Calculator,
   },
   {
     title: "Configurações",
@@ -135,6 +156,43 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
+                const isActive = location.pathname === item.url;
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={isCollapsed ? item.title : undefined}
+                      isActive={isActive}
+                      className="group transition-colors duration-200"
+                      size={isMobile ? "sm" : "default"}
+                    >
+                      <NavLink 
+                        to={item.url}
+                        className="flex items-center gap-3 w-full"
+                      >
+                        <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
+                        {!isCollapsed && (
+                          <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
+                            {item.title}
+                          </span>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
+            Financeiro
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {financialItems.map((item) => {
                 const isActive = location.pathname === item.url;
                 
                 return (
