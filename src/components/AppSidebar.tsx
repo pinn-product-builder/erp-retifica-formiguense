@@ -17,7 +17,8 @@ import {
   CreditCard,
   TrendingUp,
   Calculator,
-  PiggyBank
+  PiggyBank,
+  LogOut
 } from "lucide-react";
 
 import {
@@ -30,14 +31,17 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 const items = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/dashboard",
     icon: Home,
   },
   {
@@ -124,6 +128,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
   const { isMobile } = useBreakpoint();
+  const { user, signOut } = useAuth();
   const isCollapsed = state === "collapsed";
 
   return (
@@ -223,6 +228,27 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      
+      <SidebarFooter>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <div className="px-3 py-2 space-y-2">
+              <div className="text-xs text-muted-foreground truncate">
+                {user?.email}
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={signOut}
+                className="w-full justify-start gap-2"
+              >
+                <LogOut className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                {!isCollapsed && <span className={isMobile ? 'text-xs' : 'text-sm'}>Sair</span>}
+              </Button>
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarFooter>
     </Sidebar>
   );
 }
