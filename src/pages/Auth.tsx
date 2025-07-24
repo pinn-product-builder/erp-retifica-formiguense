@@ -102,6 +102,26 @@ export default function Auth() {
                     Entrar
                   </Button>
                 </form>
+                
+                <div className="mt-6 p-4 bg-muted/50 rounded-lg border">
+                  <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Dados de Acesso para Demonstração:</h4>
+                  <div className="space-y-2 text-xs">
+                    <div>
+                      <span className="font-medium">Administrador:</span>
+                      <br />
+                      Email: admin@retificas.com
+                      <br />
+                      Senha: admin123
+                    </div>
+                    <div>
+                      <span className="font-medium">Funcionário:</span>
+                      <br />
+                      Email: funcionario@retificas.com
+                      <br />
+                      Senha: func123
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
