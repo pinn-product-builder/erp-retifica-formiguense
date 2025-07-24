@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, Building2 } from 'lucide-react';
+import { SetupDemoUsers } from '@/components/SetupDemoUsers';
 
 export default function Auth() {
   const { user, loading, signIn, signUp } = useAuth();
@@ -122,6 +123,8 @@ export default function Auth() {
                     </div>
                   </div>
                 </div>
+                
+                <SetupDemoUsers />
               </CardContent>
             </Card>
           </TabsContent>
