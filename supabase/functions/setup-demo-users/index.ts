@@ -19,14 +19,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('Starting demo users setup...')
+    console.log('🚀 Starting demo users setup...')
 
     // Validate environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing required environment variables')
+      console.error('❌ Missing required environment variables')
       return new Response(
         JSON.stringify({ 
           error: 'Missing environment variables',
@@ -42,6 +42,8 @@ Deno.serve(async (req) => {
       )
     }
 
+    console.log('✅ Environment variables validated')
+
     // Create admin client
     const supabaseAdmin = createClient(
       supabaseUrl,
@@ -53,6 +55,8 @@ Deno.serve(async (req) => {
         }
       }
     )
+
+    console.log('✅ Supabase admin client created')
 
     // Demo users to create
     const demoUsers: CreateUserRequest[] = [
@@ -73,11 +77,44 @@ Deno.serve(async (req) => {
     const results = []
 
     for (const user of demoUsers) {
-      console.log(`Creating user: ${user.email}`)
+      console.log(`👤 Processing user: ${user.email}`)
       
       try {
-        // Simple approach: try to create user and handle "user already exists" error
-        console.log(`Attempting to create auth user for: ${user.email}`)
+        // Check if user already exists first
+        const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+        
+        if (listError) {
+          console.error(`❌ Error listing users:`, listError)
+          results.push({ email: user.email, status: 'error', error: `Failed to check existing users: ${listError.message}` })
+          continue
+        }
+
+        const existingUser = existingUsers.users.find(u => u.email === user.email)
+        
+        if (existingUser) {
+          console.log(`ℹ️ User ${user.email} already exists, updating profile...`)
+          
+          // Update the profile with correct role
+          const { error: profileError } = await supabaseAdmin
+            .from('profiles')
+            .upsert({
+              user_id: existingUser.id,
+              name: user.name,
+              role: user.role
+            })
+
+          if (profileError) {
+            console.error(`❌ Error updating profile for ${user.email}:`, profileError)
+            results.push({ email: user.email, status: 'profile_update_error', error: profileError.message })
+          } else {
+            console.log(`✅ Profile updated for ${user.email}`)
+            results.push({ email: user.email, status: 'already_exists_profile_updated' })
+          }
+          continue
+        }
+
+        // Create new user
+        console.log(`🔨 Creating new user: ${user.email}`)
         const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
           email: user.email,
           password: user.password,
@@ -87,53 +124,49 @@ Deno.serve(async (req) => {
           }
         })
 
-        // Check if user already exists
-        if (createError && createError.message.includes('already')) {
-          console.log(`User ${user.email} already exists, skipping...`)
-          results.push({ email: user.email, status: 'already_exists' })
-          continue
-        }
-
         if (createError) {
-          console.error(`Error creating user ${user.email}:`, createError)
+          console.error(`❌ Error creating user ${user.email}:`, createError)
           results.push({ email: user.email, status: 'error', error: createError.message })
           continue
         }
 
-        console.log(`User ${user.email} created successfully with ID: ${newUser.user?.id}`)
-
-        // Wait a bit for the trigger to create the profile
-        await new Promise(resolve => setTimeout(resolve, 200))
-
-        // Use UPSERT to ensure profile has correct role (handles both new and existing profiles)
-        if (newUser.user) {
-          console.log(`Setting up profile for ${user.email} with role: ${user.role}`)
-          const { error: profileError } = await supabaseAdmin
-            .from('profiles')
-            .upsert({
-              user_id: newUser.user.id,
-              name: user.name,
-              role: user.role
-            })
-
-          if (profileError) {
-            console.error(`Error setting up profile for ${user.email}:`, profileError)
-            results.push({ email: user.email, status: 'created_with_profile_error', error: profileError.message })
-          } else {
-            console.log(`Profile set up successfully for ${user.email} with role: ${user.role}`)
-            results.push({ email: user.email, status: 'created' })
-          }
-        } else {
-          console.error(`No user object returned for ${user.email}`)
+        if (!newUser.user) {
+          console.error(`❌ No user object returned for ${user.email}`)
           results.push({ email: user.email, status: 'error', error: 'No user object returned' })
+          continue
         }
+
+        console.log(`✅ User ${user.email} created successfully with ID: ${newUser.user.id}`)
+
+        // Wait for trigger to create the profile
+        console.log(`⏳ Waiting for profile creation trigger...`)
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // Verify and update profile with correct role
+        console.log(`🔄 Setting up profile for ${user.email} with role: ${user.role}`)
+        const { error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .upsert({
+            user_id: newUser.user.id,
+            name: user.name,
+            role: user.role
+          })
+
+        if (profileError) {
+          console.error(`❌ Error setting up profile for ${user.email}:`, profileError)
+          results.push({ email: user.email, status: 'created_with_profile_error', error: profileError.message })
+        } else {
+          console.log(`✅ Profile set up successfully for ${user.email} with role: ${user.role}`)
+          results.push({ email: user.email, status: 'created' })
+        }
+
       } catch (userError) {
-        console.error(`Unexpected error creating user ${user.email}:`, userError)
+        console.error(`💥 Unexpected error creating user ${user.email}:`, userError)
         results.push({ email: user.email, status: 'error', error: userError.message })
       }
     }
 
-    console.log('Demo users setup completed')
+    console.log('🎉 Demo users setup completed:', results)
 
     return new Response(
       JSON.stringify({ 
@@ -150,7 +183,7 @@ Deno.serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error in setup-demo-users function:', error)
+    console.error('💥 Critical error in setup-demo-users function:', error)
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error', 
