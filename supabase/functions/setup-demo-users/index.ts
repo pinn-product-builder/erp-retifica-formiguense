@@ -54,17 +54,21 @@ Deno.serve(async (req) => {
     for (const user of demoUsers) {
       console.log(`Creating user: ${user.email}`)
       
-      // Check if user already exists
-      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
-      const existingUser = existingUsers?.users?.find(u => u.email === user.email)
+      // Check if user already exists by checking profiles table (more efficient)
+      const { data: existingProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('user_id')
+        .eq('user_id', (await supabaseAdmin.auth.admin.listUsers()).data?.users?.find(u => u.email === user.email)?.id || '')
+        .maybeSingle()
       
-      if (existingUser) {
+      if (existingProfile) {
         console.log(`User ${user.email} already exists, skipping...`)
         results.push({ email: user.email, status: 'already_exists' })
         continue
       }
 
-      // Create user
+      // Create user with metadata
+      console.log(`Creating auth user for: ${user.email}`)
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: user.email,
         password: user.password,
@@ -80,23 +84,33 @@ Deno.serve(async (req) => {
         continue
       }
 
-      console.log(`User ${user.email} created successfully`)
+      console.log(`User ${user.email} created successfully with ID: ${newUser.user?.id}`)
 
-      // Update profile with role
+      // Wait a bit for the trigger to create the profile
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Use UPSERT to ensure profile has correct role (handles both new and existing profiles)
       if (newUser.user) {
+        console.log(`Setting up profile for ${user.email} with role: ${user.role}`)
         const { error: profileError } = await supabaseAdmin
           .from('profiles')
-          .update({ role: user.role })
-          .eq('user_id', newUser.user.id)
+          .upsert({
+            user_id: newUser.user.id,
+            name: user.name,
+            role: user.role
+          })
 
         if (profileError) {
-          console.error(`Error updating profile for ${user.email}:`, profileError)
+          console.error(`Error setting up profile for ${user.email}:`, profileError)
+          results.push({ email: user.email, status: 'created_with_profile_error', error: profileError.message })
         } else {
-          console.log(`Profile updated for ${user.email} with role: ${user.role}`)
+          console.log(`Profile set up successfully for ${user.email} with role: ${user.role}`)
+          results.push({ email: user.email, status: 'created' })
         }
+      } else {
+        console.error(`No user object returned for ${user.email}`)
+        results.push({ email: user.email, status: 'error', error: 'No user object returned' })
       }
-
-      results.push({ email: user.email, status: 'created' })
     }
 
     console.log('Demo users setup completed')
