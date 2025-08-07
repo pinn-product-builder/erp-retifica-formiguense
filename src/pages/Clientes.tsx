@@ -84,21 +84,22 @@ const Clientes = () => {
   const totalServicos = clientes.reduce((sum, c) => sum + c.servicos, 0);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Clientes</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Clientes</h1>
           <p className="text-muted-foreground">Gerencie clientes diretos e oficinas parceiras</p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto">
               <UserPlus className="w-4 h-4" />
-              Novo Cliente
+              <span className="hidden sm:inline">Novo Cliente</span>
+              <span className="sm:hidden">Novo</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] mx-4">
             <DialogHeader>
               <DialogTitle>Cadastrar Cliente</DialogTitle>
               <DialogDescription>
@@ -149,7 +150,7 @@ const Clientes = () => {
       </div>
 
       {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <StatCard
           title="Total de Clientes"
           value={totalClientes}
@@ -185,7 +186,7 @@ const Clientes = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -196,7 +197,7 @@ const Clientes = () => {
               />
             </div>
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <Filter className="mr-2 h-4 w-4" />
                 <SelectValue />
               </SelectTrigger>
@@ -208,7 +209,8 @@ const Clientes = () => {
             </Select>
           </div>
 
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Nome/Razão Social</TableHead>
@@ -223,48 +225,49 @@ const Clientes = () => {
             <TableBody>
               {clientesFiltrados.map((cliente) => (
                 <TableRow key={cliente.id}>
-                  <TableCell>
+                  <TableCell className="min-w-[150px]">
                     <div>
-                      <div className="font-medium">{cliente.nome}</div>
+                      <div className="font-medium truncate">{cliente.nome}</div>
                       {cliente.tipo === 'oficina' && cliente.contatoOficina && (
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-sm text-muted-foreground truncate">
                           Contato: {cliente.contatoOficina}
                         </div>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="min-w-[100px]">
                     <Badge variant={cliente.tipo === 'direto' ? 'default' : 'secondary'}>
                       {cliente.tipo === 'direto' ? 'Direto' : 'Oficina'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-sm">{cliente.documento}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-mono text-sm min-w-[140px]">{cliente.documento}</TableCell>
+                  <TableCell className="min-w-[160px]">
                     <div className="text-sm">
-                      <div>{cliente.telefone}</div>
-                      <div className="text-muted-foreground">{cliente.email}</div>
+                      <div className="truncate">{cliente.telefone}</div>
+                      <div className="text-muted-foreground truncate">{cliente.email}</div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="min-w-[100px]">
                     <Badge variant="outline">
                       {cliente.servicos} serviços
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="min-w-[110px]">
                     <div className="text-sm">
                       {new Date(cliente.ultimoServico).toLocaleDateString('pt-BR')}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">Editar</Button>
-                      <Button variant="outline" size="sm">Histórico</Button>
+                  <TableCell className="min-w-[140px]">
+                    <div className="flex gap-1 sm:gap-2">
+                      <Button variant="outline" size="sm" className="text-xs">Editar</Button>
+                      <Button variant="outline" size="sm" className="text-xs">Histórico</Button>
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

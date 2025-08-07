@@ -166,12 +166,12 @@ export default function CheckIn() {
   // Se não há dados de coleta, mostrar tela explicativa
   if (!hasColetaData) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex items-center gap-3 mb-6">
-          <ClipboardList className="w-8 h-8 text-primary" />
+      <div className="container mx-auto py-4 sm:py-6 px-4 space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 sm:mb-6">
+          <ClipboardList className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">Check-in Técnico</h1>
-            <p className="text-muted-foreground">Identificação e inspeção inicial do motor</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Check-in Técnico</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Identificação e inspeção inicial do motor</p>
           </div>
         </div>
 
@@ -210,16 +210,16 @@ export default function CheckIn() {
 
   // Renderizar formulário normal quando há dados de coleta
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <ClipboardList className="w-8 h-8 text-primary" />
+    <div className="container mx-auto py-4 sm:py-6 px-4 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 sm:mb-6">
+        <ClipboardList className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold">Check-in Técnico</h1>
-          <p className="text-muted-foreground">Identificação e inspeção inicial do motor</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Check-in Técnico</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Identificação e inspeção inicial do motor</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Identificação do Motor */}
         <Card>
           <CardHeader>
@@ -228,7 +228,7 @@ export default function CheckIn() {
               Identificação do Motor
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="tipo">Tipo de Motor</Label>
               <Select value={formData.tipo} onValueChange={(value) => handleInputChange('tipo', value)}>
@@ -301,7 +301,7 @@ export default function CheckIn() {
               Adicione fotos de todos os ângulos obrigatórios
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {renderFileInput('frente', 'Frente')}
             {renderFileInput('traseira', 'Traseira')}
             {renderFileInput('lateral1', 'Lateral Esquerda')}
@@ -344,7 +344,7 @@ export default function CheckIn() {
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="temBloco"
@@ -408,8 +408,8 @@ export default function CheckIn() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
-          <Button type="submit" size="lg" disabled={loading}>
+        <div className="flex justify-center sm:justify-end">
+          <Button type="submit" size="lg" disabled={loading} className="w-full sm:w-auto">
             {loading ? "Criando OS..." : "Criar Ordem de Serviço"}
           </Button>
         </div>

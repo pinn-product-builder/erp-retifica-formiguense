@@ -105,16 +105,16 @@ export default function Coleta() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <MapPin className="w-8 h-8 text-primary" />
+    <div className="container mx-auto py-4 sm:py-6 px-4 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 sm:mb-6">
+        <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold">Coleta e Cadastro do Motor</h1>
-          <p className="text-muted-foreground">Registre os dados da coleta e do cliente</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Coleta e Cadastro do Motor</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Registre os dados da coleta e do cliente</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Dados da Coleta */}
         <Card>
           <CardHeader>
@@ -123,7 +123,7 @@ export default function Coleta() {
               Dados da Coleta
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="dataColeta">Data da Coleta</Label>
               <Input
@@ -197,7 +197,7 @@ export default function Coleta() {
               Cliente
             </CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="nomeCliente">Nome Completo / Razão Social</Label>
               <Input
@@ -262,7 +262,7 @@ export default function Coleta() {
                 Dados da oficina parceira (opcional para cliente direto)
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="nomeOficina">Nome da Oficina</Label>
                 <Input
@@ -321,8 +321,8 @@ export default function Coleta() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
-          <Button type="submit" size="lg" disabled={loading}>
+        <div className="flex justify-center sm:justify-end">
+          <Button type="submit" size="lg" disabled={loading} className="w-full sm:w-auto">
             {loading ? "Salvando..." : "Avançar para Check-in Técnico"}
           </Button>
         </div>

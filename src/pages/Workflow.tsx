@@ -37,10 +37,10 @@ export default function Workflow() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-2xl font-bold">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <CardTitle className="text-xl sm:text-2xl font-bold">
             Painel de Workflow - Kanban
           </CardTitle>
           <Button 
@@ -48,6 +48,7 @@ export default function Workflow() {
             disabled={refreshing}
             variant="outline"
             size="sm"
+            className="w-full sm:w-auto"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Atualizar

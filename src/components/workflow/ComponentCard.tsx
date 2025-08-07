@@ -41,66 +41,66 @@ export function ComponentCard({ workflow, componentColor }: ComponentCardProps) 
   return (
     <>
       <Card 
-        className="cursor-pointer hover:shadow-md transition-shadow bg-white"
+        className="cursor-pointer hover:shadow-md transition-all duration-200 bg-card border hover:border-primary/20"
         onClick={() => setShowModal(true)}
       >
-        <CardContent className="p-4 space-y-3">
+        <CardContent className="p-3 sm:p-4 space-y-2 sm:space-y-3">
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${componentColor}`} />
-              <span className="font-semibold text-sm">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
+              <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${componentColor} flex-shrink-0`} />
+              <span className="font-semibold text-xs sm:text-sm truncate">
                 {workflow.orderNumber}
               </span>
             </div>
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className="text-xs px-1.5 py-0.5 flex-shrink-0">
               OS #{workflow.order.id.slice(-4)}
             </Badge>
           </div>
 
           {/* Customer & Engine */}
           <div className="space-y-1">
-            <p className="font-medium text-sm truncate">
+            <p className="font-medium text-xs sm:text-sm truncate" title={workflow.customerName}>
               {workflow.customerName}
             </p>
-            <p className="text-xs text-gray-600 truncate">
+            <p className="text-xs text-muted-foreground truncate" title={workflow.engineModel}>
               {workflow.engineModel}
             </p>
           </div>
 
           {/* Status Info */}
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1 text-gray-500">
-              <Calendar className="w-3 h-3" />
-              {formatDate(workflow.collectionDate)}
+          <div className="flex items-center justify-between text-xs gap-2">
+            <div className="flex items-center gap-1 text-muted-foreground min-w-0 flex-1">
+              <Calendar className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{formatDate(workflow.collectionDate)}</span>
             </div>
             {workflow.started_at && (
-              <div className={`flex items-center gap-1 ${getProgressColor()}`}>
+              <div className={`flex items-center gap-1 ${getProgressColor()} flex-shrink-0`}>
                 <Clock className="w-3 h-3" />
-                {getDaysInStatus()}d
+                <span>{getDaysInStatus()}d</span>
               </div>
             )}
           </div>
 
           {/* Assigned To */}
           {workflow.assigned_to && (
-            <div className="flex items-center gap-1 text-xs text-gray-600">
-              <User className="w-3 h-3" />
-              {workflow.assigned_to}
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <User className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{workflow.assigned_to}</span>
             </div>
           )}
 
           {/* Action Indicators */}
-          <div className="flex items-center justify-between">
-            <div className="flex gap-1">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex gap-2 min-w-0">
               {workflow.photos?.length > 0 && (
-                <div className="flex items-center gap-1 text-xs text-orange-600">
+                <div className="flex items-center gap-1 text-xs text-orange-600 flex-shrink-0">
                   <Camera className="w-3 h-3" />
-                  {workflow.photos.length}
+                  <span>{workflow.photos.length}</span>
                 </div>
               )}
               {workflow.notes && (
-                <div className="flex items-center gap-1 text-xs text-green-600">
+                <div className="flex items-center gap-1 text-xs text-green-600 flex-shrink-0">
                   <MessageSquare className="w-3 h-3" />
                 </div>
               )}
@@ -108,9 +108,10 @@ export function ComponentCard({ workflow, componentColor }: ComponentCardProps) 
             <Button 
               size="sm" 
               variant="ghost" 
-              className="h-6 px-2 text-xs"
+              className="h-5 sm:h-6 px-1 sm:px-2 text-xs flex-shrink-0"
             >
-              Ver mais
+              <span className="hidden sm:inline">Ver mais</span>
+              <span className="sm:hidden">Ver</span>
             </Button>
           </div>
         </CardContent>

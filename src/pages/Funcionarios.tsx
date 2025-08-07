@@ -65,7 +65,7 @@ const Funcionarios = () => {
   const mediaHorasPorFuncionario = totalHorasTrabalhadas / funcionarios.length;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Funcionários</h1>
@@ -129,7 +129,7 @@ const Funcionarios = () => {
       </div>
 
       {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <StatCard
           title="Total de Funcionários"
           value={funcionarios.length}

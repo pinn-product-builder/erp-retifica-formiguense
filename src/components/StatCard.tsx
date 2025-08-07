@@ -39,25 +39,25 @@ export function StatCard({
       variantStyles[variant],
       className
     )}>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
+      <CardContent className="p-3 sm:p-4 lg:p-6">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex-1 min-w-0">
             <div className={cn(
-              "text-sm font-medium",
+              "text-xs sm:text-sm font-medium truncate",
               variant === "primary" ? "text-primary-foreground/80" : "text-muted-foreground"
             )}>
               {title}
             </div>
-            <div className="flex items-baseline gap-2 mt-2">
+            <div className="flex items-baseline gap-1 sm:gap-2 mt-1 sm:mt-2">
               <h3 className={cn(
-                "text-2xl font-bold",
+                "text-lg sm:text-xl lg:text-2xl font-bold truncate",
                 variant === "primary" ? "text-primary-foreground" : "text-foreground"
               )}>
                 {value}
               </h3>
               {trend && (
                 <span className={cn(
-                  "text-xs font-medium",
+                  "text-xs font-medium whitespace-nowrap",
                   trend.isPositive ? "text-success" : "text-destructive",
                   variant === "primary" && "text-primary-foreground/70"
                 )}>
@@ -67,7 +67,7 @@ export function StatCard({
             </div>
             {subtitle && (
               <div className={cn(
-                "text-xs mt-1",
+                "text-xs mt-1 truncate",
                 variant === "primary" ? "text-primary-foreground/60" : "text-muted-foreground"
               )}>
                 {subtitle}
@@ -75,13 +75,13 @@ export function StatCard({
             )}
           </div>
           <div className={cn(
-            "p-3 rounded-lg",
+            "p-2 sm:p-3 rounded-lg flex-shrink-0",
             variant === "primary" 
               ? "bg-primary-foreground/20" 
               : "bg-muted"
           )}>
             <Icon className={cn(
-              "w-6 h-6",
+              "w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6",
               variant === "primary" ? "text-primary-foreground" : "text-muted-foreground"
             )} />
           </div>

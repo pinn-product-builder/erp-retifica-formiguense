@@ -76,20 +76,20 @@ export default function Financeiro() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard Financeiro</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Dashboard Financeiro</h1>
           <p className="text-muted-foreground">Visão geral das finanças da empresa</p>
         </div>
-        <Button onClick={loadFinancialData} disabled={loading}>
+        <Button onClick={loadFinancialData} disabled={loading} className="w-full sm:w-auto">
           {loading ? 'Atualizando...' : 'Atualizar Dados'}
         </Button>
       </div>
 
       {/* KPIs */}
       {kpis && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Faturamento Mensal</CardTitle>
@@ -146,15 +146,15 @@ export default function Financeiro() {
 
       {/* Tabs com módulos financeiros */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="receivables">A Receber</TabsTrigger>
-          <TabsTrigger value="payables">A Pagar</TabsTrigger>
-          <TabsTrigger value="cashflow">Fluxo de Caixa</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
+          <TabsTrigger value="receivables" className="text-xs sm:text-sm">A Receber</TabsTrigger>
+          <TabsTrigger value="payables" className="text-xs sm:text-sm">A Pagar</TabsTrigger>
+          <TabsTrigger value="cashflow" className="text-xs sm:text-sm">Fluxo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
             {/* Resumo de recebíveis */}
             <Card>
               <CardHeader>

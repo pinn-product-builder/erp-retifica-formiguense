@@ -32,18 +32,18 @@ interface KanbanColumnProps {
 
 export function KanbanColumn({ status, workflows, componentColor }: KanbanColumnProps) {
   return (
-    <div className="bg-gray-50 rounded-lg p-4">
+    <div className="bg-muted/30 rounded-lg p-3 sm:p-4">
       {/* Column Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
         <div className="flex items-center gap-2">
-          <div className={`w-3 h-3 rounded-full ${componentColor}`} />
-          <h3 className="font-semibold text-sm">
+          <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${componentColor}`} />
+          <h3 className="font-semibold text-xs sm:text-sm truncate">
             {STATUS_LABELS[status]}
           </h3>
         </div>
         <Badge 
           variant="secondary" 
-          className={`text-xs ${STATUS_COLORS[status]}`}
+          className={`text-xs ${STATUS_COLORS[status]} px-1.5 py-0.5`}
         >
           {workflows.length}
         </Badge>
@@ -55,8 +55,8 @@ export function KanbanColumn({ status, workflows, componentColor }: KanbanColumn
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`space-y-3 min-h-[400px] ${
-              snapshot.isDraggingOver ? 'bg-blue-50 border-2 border-blue-200 border-dashed' : ''
+            className={`space-y-2 sm:space-y-3 min-h-[300px] sm:min-h-[400px] ${
+              snapshot.isDraggingOver ? 'bg-primary/10 border-2 border-primary/30 border-dashed rounded-lg' : ''
             }`}
           >
             {workflows.map((workflow, index) => (
