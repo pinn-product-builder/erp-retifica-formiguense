@@ -38,12 +38,22 @@ import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 
-const items = [
+// Dashboard & Visão Geral
+const dashboardItems = [
   {
     title: "Dashboard",
     url: "/dashboard",
     icon: Home,
   },
+  {
+    title: "Relatórios",
+    url: "/relatorios",
+    icon: FileText,
+  },
+];
+
+// Operações & Serviços
+const operationsItems = [
   {
     title: "Coleta de Motor",
     url: "/coleta",
@@ -64,6 +74,10 @@ const items = [
     url: "/orcamentos",
     icon: DollarSign,
   },
+];
+
+// Gestão de Pessoas
+const peopleItems = [
   {
     title: "Clientes",
     url: "/clientes",
@@ -79,18 +93,18 @@ const items = [
     url: "/funcionarios",
     icon: Users,
   },
+];
+
+// Estoque & Inventário
+const inventoryItems = [
   {
     title: "Estoque/Peças",
     url: "/estoque",
     icon: Package,
   },
-  {
-    title: "Relatórios",
-    url: "/relatorios",
-    icon: FileText,
-  },
 ];
 
+// Financeiro
 const financialItems = [
   {
     title: "Dashboard Financeiro",
@@ -117,6 +131,10 @@ const financialItems = [
     url: "/dre",
     icon: Calculator,
   },
+];
+
+// Administração
+const adminItems = [
   {
     title: "Configurações",
     url: "/configuracoes",
@@ -154,13 +172,14 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
+        {/* Dashboard & Visão Geral */}
         <SidebarGroup>
           <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
-            Menu Principal
+            Dashboard & Visão Geral
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => {
+              {dashboardItems.map((item) => {
                 const isActive = location.pathname === item.url;
                 
                 return (
@@ -191,6 +210,121 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Operações & Serviços */}
+        <SidebarGroup>
+          <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
+            Operações & Serviços
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {operationsItems.map((item) => {
+                const isActive = location.pathname === item.url;
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={isCollapsed ? item.title : undefined}
+                      isActive={isActive}
+                      className="group transition-colors duration-200"
+                      size={isMobile ? "sm" : "default"}
+                    >
+                      <NavLink 
+                        to={item.url}
+                        className="flex items-center gap-3 w-full"
+                      >
+                        <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
+                        {!isCollapsed && (
+                          <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
+                            {item.title}
+                          </span>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Gestão de Pessoas */}
+        <SidebarGroup>
+          <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
+            Gestão de Pessoas
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {peopleItems.map((item) => {
+                const isActive = location.pathname === item.url;
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={isCollapsed ? item.title : undefined}
+                      isActive={isActive}
+                      className="group transition-colors duration-200"
+                      size={isMobile ? "sm" : "default"}
+                    >
+                      <NavLink 
+                        to={item.url}
+                        className="flex items-center gap-3 w-full"
+                      >
+                        <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
+                        {!isCollapsed && (
+                          <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
+                            {item.title}
+                          </span>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Estoque & Inventário */}
+        <SidebarGroup>
+          <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
+            Estoque & Inventário
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {inventoryItems.map((item) => {
+                const isActive = location.pathname === item.url;
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={isCollapsed ? item.title : undefined}
+                      isActive={isActive}
+                      className="group transition-colors duration-200"
+                      size={isMobile ? "sm" : "default"}
+                    >
+                      <NavLink 
+                        to={item.url}
+                        className="flex items-center gap-3 w-full"
+                      >
+                        <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
+                        {!isCollapsed && (
+                          <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
+                            {item.title}
+                          </span>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Financeiro */}
         <SidebarGroup>
           <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
             Financeiro
@@ -198,6 +332,44 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {financialItems.map((item) => {
+                const isActive = location.pathname === item.url;
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={isCollapsed ? item.title : undefined}
+                      isActive={isActive}
+                      className="group transition-colors duration-200"
+                      size={isMobile ? "sm" : "default"}
+                    >
+                      <NavLink 
+                        to={item.url}
+                        className="flex items-center gap-3 w-full"
+                      >
+                        <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
+                        {!isCollapsed && (
+                          <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
+                            {item.title}
+                          </span>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Administração */}
+        <SidebarGroup>
+          <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
+            Administração
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {adminItems.map((item) => {
                 const isActive = location.pathname === item.url;
                 
                 return (
