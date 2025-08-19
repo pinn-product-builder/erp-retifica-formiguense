@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,7 +8,7 @@ import { TaxRuleManagement } from '@/components/fiscal/TaxRuleManagement';
 import { TaxRateTableManagement } from '@/components/fiscal/TaxRateTableManagement';
 import { CompanyFiscalSettings } from '@/components/fiscal/CompanyFiscalSettings';
 import { ObligationKindManagement } from '@/components/fiscal/ObligationKindManagement';
-import { ObligationManagement } from '@/components/fiscal/ObligationManagement';
+import ObligationManagement from '@/components/fiscal/ObligationManagement';
 import { TaxCalculationPage } from '@/components/fiscal/TaxCalculationPage';
 import { TaxReports } from '@/components/fiscal/TaxReports';
 import { ApuracaoFiscal } from '@/components/fiscal/ApuracaoFiscal';

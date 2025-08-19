@@ -66,7 +66,14 @@ const ObligationManagement = () => {
       return;
     }
 
-    const result = await createObligation(newObligation);
+    // Create the obligation data object with only the required fields for creation
+    const obligationData = {
+      obligation_kind_id: newObligation.obligation_kind_id,
+      period_month: newObligation.period_month,
+      period_year: newObligation.period_year
+    };
+
+    const result = await createObligation(obligationData);
     if (result) {
       setIsCreateDialogOpen(false);
       setNewObligation({

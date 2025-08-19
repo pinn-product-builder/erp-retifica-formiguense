@@ -435,20 +435,37 @@ export const useFiscal = () => {
     }
   };
 
-  const createObligation = async (obligation: Obligation) => {
+  const createObligation = async (obligationData: {
+    obligation_kind_id: string;
+    period_month: number;
+    period_year: number;
+  }) => {
     try {
       setLoading(true);
+      
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        toast.error('Usuário não autenticado');
+        return null;
+      }
+
       const { data, error } = await supabase
         .from('obligations')
-        .insert([obligation])
+        .insert([{
+          ...obligationData,
+          status: 'rascunho', // Default status for new obligations
+          created_by: user.user.id
+        }])
         .select()
         .single();
 
       if (error) throw error;
+
       toast.success('Obrigação criada com sucesso');
       return data;
-    } catch (error) {
-      handleError(error, 'Erro ao criar obrigação');
+    } catch (error: any) {
+      console.error('Error creating obligation:', error);
+      toast.error('Erro ao criar obrigação: ' + error.message);
       return null;
     } finally {
       setLoading(false);
