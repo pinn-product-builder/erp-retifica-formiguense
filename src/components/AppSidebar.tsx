@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Calculator,
   PiggyBank,
+  Gavel,
   LogOut
 } from "lucide-react";
 
@@ -130,6 +131,15 @@ const financialItems = [
     title: "DRE Mensal",
     url: "/dre",
     icon: Calculator,
+  },
+];
+
+// Fiscal
+const fiscalItems = [
+  {
+    title: "Módulo Fiscal",
+    url: "/modulo-fiscal",
+    icon: Gavel,
   },
 ];
 
@@ -332,6 +342,44 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {financialItems.map((item) => {
+                const isActive = location.pathname === item.url;
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={isCollapsed ? item.title : undefined}
+                      isActive={isActive}
+                      className="group transition-colors duration-200"
+                      size={isMobile ? "sm" : "default"}
+                    >
+                      <NavLink 
+                        to={item.url}
+                        className="flex items-center gap-3 w-full"
+                      >
+                        <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
+                        {!isCollapsed && (
+                          <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
+                            {item.title}
+                          </span>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Fiscal */}
+        <SidebarGroup>
+          <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
+            Fiscal
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {fiscalItems.map((item) => {
                 const isActive = location.pathname === item.url;
                 
                 return (
