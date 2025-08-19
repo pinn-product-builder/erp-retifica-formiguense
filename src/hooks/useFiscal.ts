@@ -716,6 +716,211 @@ export const useFiscal = () => {
     }
   };
 
+  // Tax Calculation Analysis
+  const getTaxCalculationsWithSummary = async (period?: { month: number; year: number }) => {
+    try {
+      setLoading(true);
+      let query = supabase.from('tax_calculations').select('*');
+      
+      if (period) {
+        const startDate = `${period.year}-${period.month.toString().padStart(2, '0')}-01`;
+        const endDate = new Date(period.year, period.month, 0).toISOString().split('T')[0];
+        query = query.gte('calculated_at', startDate).lte('calculated_at', endDate);
+      }
+
+      const { data, error } = await query.order('calculated_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      handleError(error, 'Erro ao buscar cálculos de impostos');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getTaxCalculationsSummary = async (period: { month: number; year: number }) => {
+    try {
+      const calculations = await getTaxCalculationsWithSummary(period);
+      
+      const summary = {
+        totalOperations: calculations.length,
+        totalAmount: calculations.reduce((sum, calc) => sum + (calc.amount || 0), 0),
+        totalTaxes: 0,
+        taxBreakdown: {} as Record<string, { total: number; operations: number }>
+      };
+
+      calculations.forEach(calc => {
+        if (calc.result && typeof calc.result === 'object' && 'taxes' in calc.result && Array.isArray(calc.result.taxes)) {
+          calc.result.taxes.forEach((tax: any) => {
+            summary.totalTaxes += tax.amount || 0;
+            if (!summary.taxBreakdown[tax.tax_type]) {
+              summary.taxBreakdown[tax.tax_type] = { total: 0, operations: 0 };
+            }
+            summary.taxBreakdown[tax.tax_type].total += tax.amount || 0;
+            summary.taxBreakdown[tax.tax_type].operations += 1;
+          });
+        }
+      });
+
+      return summary;
+    } catch (error) {
+      handleError(error, 'Erro ao calcular resumo de impostos');
+      return null;
+    }
+  };
+
+  // Tax Ledger Management
+  const getTaxLedgers = async (period?: { month: number; year: number }) => {
+    try {
+      setLoading(true);
+      let query = supabase.from('tax_ledgers').select('*, tax_types(name), tax_regimes(name)');
+      
+      if (period) {
+        query = query.eq('period_month', period.month).eq('period_year', period.year);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      handleError(error, 'Erro ao buscar livros fiscais');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateTaxLedger = async (id: string, updates: any) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('tax_ledgers')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      toast.success('Livro fiscal atualizado com sucesso');
+      return data;
+    } catch (error) {
+      handleError(error, 'Erro ao atualizar livro fiscal');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Period Management
+  const closeTaxPeriod = async (period: { month: number; year: number }) => {
+    try {
+      setLoading(true);
+      
+      // First, get all calculations for the period and compute ledger entries
+      const summary = await getTaxCalculationsSummary(period);
+      if (!summary) throw new Error('Erro ao calcular resumo do período');
+
+      // Get the first calculation to extract regime_id
+      const { data: firstCalculation } = await supabase
+        .from('tax_calculations')
+        .select('regime_id')
+        .limit(1)
+        .single();
+
+      const defaultRegimeId = firstCalculation?.regime_id || '';
+
+      // Update or create ledger entries for each tax type
+      for (const [taxType, breakdown] of Object.entries(summary.taxBreakdown)) {
+        const { data: taxTypeData } = await supabase
+          .from('tax_types')
+          .select('id')
+          .eq('name', taxType)
+          .single();
+
+        if (taxTypeData) {
+          const { data: existingLedger } = await supabase
+            .from('tax_ledgers')
+            .select('id')
+            .eq('period_month', period.month)
+            .eq('period_year', period.year)
+            .eq('tax_type_id', taxTypeData.id)
+            .single();
+
+          const ledgerData = {
+            period_month: period.month,
+            period_year: period.year,
+            tax_type_id: taxTypeData.id,
+            regime_id: defaultRegimeId,
+            total_debits: breakdown.total,
+            total_credits: 0,
+            balance_due: breakdown.total,
+            status: 'fechado' as const
+          };
+
+          if (existingLedger) {
+            await supabase
+              .from('tax_ledgers')
+              .update(ledgerData)
+              .eq('id', existingLedger.id);
+          } else {
+            await supabase.from('tax_ledgers').insert(ledgerData);
+          }
+        }
+      }
+
+      toast.success('Período fiscal fechado com sucesso');
+      return true;
+    } catch (error) {
+      handleError(error, 'Erro ao fechar período fiscal');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const reopenTaxPeriod = async (period: { month: number; year: number }) => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('tax_ledgers')
+        .update({ status: 'aberto' })
+        .eq('period_month', period.month)
+        .eq('period_year', period.year);
+
+      if (error) throw error;
+      toast.success('Período fiscal reaberto com sucesso');
+      return true;
+    } catch (error) {
+      handleError(error, 'Erro ao reabrir período fiscal');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Export functionality
+  const exportTaxCalculationsCSV = (calculations: any[]) => {
+    const csvHeaders = ['Data', 'Operação', 'Valor Base', 'Total Impostos', 'Detalhes'];
+    const csvRows = calculations.map(calc => [
+      new Date(calc.calculated_at).toLocaleDateString('pt-BR'),
+      calc.operation,
+      calc.amount?.toFixed(2) || '0.00',
+      calc.result?.total_taxes?.toFixed(2) || '0.00',
+      calc.result?.taxes?.map((t: any) => `${t.tax_type}: ${t.amount?.toFixed(2)}`).join('; ') || ''
+    ]);
+
+    const csvContent = [csvHeaders, ...csvRows]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `calculos_fiscais_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
   return {
     loading,
     // Tax Types
@@ -743,6 +948,9 @@ export const useFiscal = () => {
     // Tax Calculations
     calculateTax,
     getTaxCalculations,
+    getTaxCalculationsWithSummary,
+    getTaxCalculationsSummary,
+    exportTaxCalculationsCSV,
     // Tax Rate Tables
     getTaxRateTable,
     createTaxRateTable,
@@ -751,6 +959,12 @@ export const useFiscal = () => {
     // Company Fiscal Settings
     getCompanyFiscalSettings,
     createCompanyFiscalSetting,
-    updateCompanyFiscalSetting
+    updateCompanyFiscalSetting,
+    // Tax Ledgers
+    getTaxLedgers,
+    updateTaxLedger,
+    // Period Management
+    closeTaxPeriod,
+    reopenTaxPeriod
   };
 };

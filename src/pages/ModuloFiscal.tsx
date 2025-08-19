@@ -12,6 +12,7 @@ import { ObligationKindManagement } from '@/components/fiscal/ObligationKindMana
 import { ObligationManagement } from '@/components/fiscal/ObligationManagement';
 import { TaxCalculationPage } from '@/components/fiscal/TaxCalculationPage';
 import { TaxReports } from '@/components/fiscal/TaxReports';
+import { ApuracaoFiscal } from '@/components/fiscal/ApuracaoFiscal';
 import { 
   Calculator, 
   FileText, 
@@ -38,7 +39,7 @@ export default function ModuloFiscal() {
       </div>
 
       <Tabs defaultValue="tributos" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10">
+        <TabsList className="grid w-full grid-cols-5 lg:grid-cols-11">
           <TabsTrigger value="tributos" className="flex items-center gap-2">
             <Receipt className="h-4 w-4" />
             Tributos
@@ -74,6 +75,10 @@ export default function ModuloFiscal() {
           <TabsTrigger value="calculos" className="flex items-center gap-2">
             <Calculator className="h-4 w-4" />
             Cálculos
+          </TabsTrigger>
+          <TabsTrigger value="apuracao" className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            Apuração
           </TabsTrigger>
           <TabsTrigger value="relatorios" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -203,6 +208,20 @@ export default function ModuloFiscal() {
             </CardHeader>
             <CardContent>
               <TaxCalculationPage />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="apuracao" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                Apuração Fiscal Mensal
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ApuracaoFiscal />
             </CardContent>
           </Card>
         </TabsContent>

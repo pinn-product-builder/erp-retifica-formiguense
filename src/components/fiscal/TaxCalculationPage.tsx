@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calculator } from 'lucide-react';
+import { Calculator, Download } from 'lucide-react';
 import { useFiscal, TaxRegime, FiscalClassification, TaxCalculationRequest } from '@/hooks/useFiscal';
 import { formatCurrency } from '@/lib/utils';
 
@@ -270,6 +270,45 @@ export function TaxCalculationPage() {
                 </TableBody>
               </Table>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {calculationResult && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Exportar Resultado</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => {
+                const csvData = [calculationResult];
+                // Use the existing export function from useFiscal
+                const csvHeaders = ['Data', 'Operação', 'Valor Base', 'Total Impostos', 'Detalhes'];
+                const csvRows = csvData.map(calc => [
+                  new Date().toLocaleDateString('pt-BR'),
+                  formData.operation,
+                  formData.amount,
+                  calc.total_taxes?.toFixed(2) || '0.00',
+                  calc.taxes?.map((t: any) => `${t.tax_type}: ${t.amount?.toFixed(2)}`).join('; ') || ''
+                ]);
+
+                const csvContent = [csvHeaders, ...csvRows]
+                  .map(row => row.map(field => `"${field}"`).join(','))
+                  .join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `calculo_fiscal_${new Date().toISOString().split('T')[0]}.csv`;
+                link.click();
+              }}
+              variant="outline"
+              className="w-full"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar Cálculo (CSV)
+            </Button>
           </CardContent>
         </Card>
       )}
