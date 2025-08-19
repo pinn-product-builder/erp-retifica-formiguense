@@ -632,6 +632,48 @@ export type Database = {
         }
         Relationships: []
       }
+      fiscal_audit_log: {
+        Row: {
+          id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
+          operation: string
+          org_id: string
+          record_id: string
+          table_name: string
+          timestamp: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          operation: string
+          org_id: string
+          record_id: string
+          table_name: string
+          timestamp?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          operation?: string
+          org_id?: string
+          record_id?: string
+          table_name?: string
+          timestamp?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       fiscal_classifications: {
         Row: {
           cest: string | null
@@ -669,6 +711,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "fiscal_classifications_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jurisdiction_config: {
+        Row: {
+          badge_color: string
+          created_at: string | null
+          id: string
+          jurisdiction: string
+          org_id: string | null
+          text_color: string
+          updated_at: string | null
+        }
+        Insert: {
+          badge_color: string
+          created_at?: string | null
+          id?: string
+          jurisdiction: string
+          org_id?: string | null
+          text_color: string
+          updated_at?: string | null
+        }
+        Update: {
+          badge_color?: string
+          created_at?: string | null
+          id?: string
+          jurisdiction?: string
+          org_id?: string | null
+          text_color?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jurisdiction_config_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
