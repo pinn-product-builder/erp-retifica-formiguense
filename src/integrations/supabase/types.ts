@@ -416,6 +416,7 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string
+          created_by: string | null
           document: string
           email: string | null
           id: string
@@ -430,6 +431,7 @@ export type Database = {
         Insert: {
           address?: string | null
           created_at?: string
+          created_by?: string | null
           document: string
           email?: string | null
           id?: string
@@ -444,6 +446,7 @@ export type Database = {
         Update: {
           address?: string | null
           created_at?: string
+          created_by?: string | null
           document?: string
           email?: string | null
           id?: string
@@ -930,6 +933,10 @@ export type Database = {
       generate_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
     }
     Enums: {
