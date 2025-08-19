@@ -8,6 +8,7 @@ import { QuickActions } from "@/components/QuickActions";
 import { EnhancedInsights } from "@/components/EnhancedInsights";
 import { useSEO } from "@/hooks/useSEO";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
+import { useDashboard } from "@/hooks/useDashboard";
 import { motion } from "framer-motion";
 import { 
   Users, 
@@ -25,6 +26,17 @@ import {
 
 export default function Dashboard() {
   const { isMobile, isTablet, isDesktop } = useBreakpoint();
+  const { 
+    kpis, 
+    alerts, 
+    recentServices, 
+    loading, 
+    error, 
+    getStatusBadge: getConfiguredStatusBadge, 
+    getStatusLabel,
+    dismissAlert,
+    refetch 
+  } = useDashboard();
 
   // SEO optimization
   useSEO({
@@ -33,81 +45,65 @@ export default function Dashboard() {
     keywords: 'dashboard, painel, retífica, gestão, métricas, orçamentos, serviços'
   });
 
-  const stats = [
-    {
-      title: "Orçamentos Pendentes",
-      value: 12,
-      subtitle: "Aguardando aprovação",
-      icon: Calendar,
-      variant: "warning" as const,
-      trend: { value: 8, isPositive: true }
-    },
-    {
-      title: "Serviços em Andamento",
-      value: 8,
-      subtitle: "Em diferentes etapas",
-      icon: Wrench,
-      variant: "primary" as const
-    },
-    {
-      title: "Funcionários Ativos",
-      value: 15,
-      subtitle: "Trabalhando hoje",
-      icon: Users,
-      variant: "success" as const
-    },
-    {
-      title: "Produtividade Hoje",
-      value: "87%",
-      subtitle: "Meta: 85%",
-      icon: TrendingUp,
-      variant: "default" as const,
-      trend: { value: 12, isPositive: true }
-    }
-  ];
+  // Convert KPIs to stats format
+  const stats = kpis.map(kpi => ({
+    title: kpi.name,
+    value: kpi.value || 0,
+    subtitle: kpi.subtitle || kpi.description,
+    icon: getIconComponent(kpi.icon),
+    variant: getVariantFromColor(kpi.color),
+    trend: kpi.trend
+  }));
 
-  const recentServices = [
-    {
-      id: "RF-2024-001",
-      client: "João Silva",
-      vehicle: "VW Gol 1.0",
-      status: "Diagnóstico",
-      priority: "Alta",
-      date: "2024-01-15"
-    },
-    {
-      id: "RF-2024-002", 
-      client: "Maria Santos",
-      vehicle: "Fiat Uno 1.4",
-      status: "Orçamento",
-      priority: "Média",
-      date: "2024-01-14"
-    },
-    {
-      id: "RF-2024-003",
-      client: "Pedro Costa",
-      vehicle: "Chevrolet Prisma",
-      status: "Execução",
-      priority: "Baixa",
-      date: "2024-01-13"
-    }
-  ];
+  // Helper function to get icon component from string
+  function getIconComponent(iconName: string) {
+    const iconMap: Record<string, any> = {
+      Calendar, Wrench, Users, TrendingUp, AlertTriangle, CheckCircle,
+      Package: Calendar, Clock: Wrench, AlertCircle: AlertTriangle
+    };
+    return iconMap[iconName] || TrendingUp;
+  }
+
+  // Helper function to convert color to variant
+  function getVariantFromColor(color: string) {
+    const colorMap: Record<string, "default" | "warning" | "primary" | "success"> = {
+      blue: "primary",
+      orange: "warning", 
+      green: "success",
+      yellow: "warning",
+      red: "warning",
+      primary: "primary"
+    };
+    return colorMap[color] || "default";
+  }
 
   const getStatusBadge = (status: string) => {
+    const configuredVariant = getConfiguredStatusBadge('order', status);
+    if (configuredVariant) {
+      return configuredVariant as "default" | "secondary" | "destructive" | "outline";
+    }
+    
+    // Fallback to hardcoded variants
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      "Diagnóstico": "secondary",
-      "Orçamento": "outline", 
-      "Execução": "default",
-      "Finalizado": "secondary"
+      "ativa": "default",
+      "em_andamento": "secondary",
+      "concluida": "secondary",
+      "cancelada": "destructive"
     };
     return variants[status] || "default";
   };
 
   const getPriorityBadge = (priority: string) => {
+    const configuredVariant = getConfiguredStatusBadge('priority', priority);
+    if (configuredVariant) {
+      return configuredVariant as "default" | "secondary" | "destructive" | "outline";
+    }
+    
+    // Fallback to hardcoded variants
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      "Alta": "destructive",
-      "Média": "default",
-      "Baixa": "secondary"
+      "alta": "destructive",
+      "media": "default",
+      "baixa": "secondary"
     };
     return variants[priority] || "default";
   };
@@ -170,8 +166,14 @@ export default function Dashboard() {
             <Filter className="w-4 h-4 mr-2" />
             Filtros
           </Button>
-          <Button variant="outline" className="hover:bg-primary/10 border-primary/20" size={isMobile ? "sm" : "default"}>
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <Button 
+            variant="outline" 
+            className="hover:bg-primary/10 border-primary/20" 
+            size={isMobile ? "sm" : "default"}
+            onClick={refetch}
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Atualizar
           </Button>
           <Button className="button-primary-enhanced" size={isMobile ? "sm" : "default"}>
@@ -183,7 +185,19 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className={`grid gap-${isMobile ? '4' : '6'} ${getStatsGridCols()}`}>
-        {stats.map((stat, index) => (
+        {loading ? (
+          // Loading skeleton for stats
+          Array.from({ length: 4 }).map((_, index) => (
+            <motion.div 
+              key={index}
+              className="h-32 bg-card rounded-lg border border-border/50 animate-pulse"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: index * 0.1 }}
+            />
+          ))
+        ) : (
+          stats.map((stat, index) => (
           <motion.div 
             key={index}
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
@@ -207,7 +221,8 @@ export default function Dashboard() {
               trend={stat.trend}
             />
           </motion.div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Main Content Grid */}
@@ -243,7 +258,18 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className={`space-y-${isMobile ? '3' : '4'}`}>
-              {recentServices.map((service, index) => (
+              {loading ? (
+                // Loading skeleton for services
+                Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="h-20 bg-muted/50 rounded-lg animate-pulse" />
+                ))
+              ) : recentServices.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Wrench className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Nenhum serviço recente encontrado</p>
+                </div>
+              ) : (
+                recentServices.map((service, index) => (
                 <motion.div 
                   key={service.id}
                   initial={{ opacity: 0, x: -10 }}
@@ -299,7 +325,8 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </motion.div>
-              ))}
+                ))
+              )}
               
               <Button variant="outline" className="w-full mt-4 hover:bg-primary/10 border-primary/20" size={isMobile ? "sm" : "default"}>
                 <Activity className="w-4 h-4 mr-2" />
@@ -321,57 +348,59 @@ export default function Dashboard() {
         </motion.div>
       </div>
 
-      {/* Alerts Section - Simplificada para apenas 2 cards */}
-      <motion.div 
-        className={`grid gap-${isMobile ? '4' : '6'} ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2'}`}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-      >
-        <Card className="border-warning/30 bg-gradient-to-r from-warning/10 via-warning/5 to-transparent shadow-card hover:shadow-elevated transition-all duration-300">
-          <CardContent className={`p-${isMobile ? '4' : '5'}`}>
-            <div className="flex items-start gap-4">
-              <div className="p-2 bg-gradient-warning rounded-lg shadow-warning/20">
-                <AlertTriangle className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-white`} />
-              </div>
-              <div className="flex-1">
-                <h4 className={`font-bold text-foreground mb-1 ${isMobile ? 'text-sm' : ''}`}>
-                  Atenção
-                </h4>
-                <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground mb-3`}>
-                  3 orçamentos vencem hoje
-                </p>
-                <Button size="sm" variant="outline" className="hover:bg-warning/10 border-warning/30 w-full">
-                  <Eye className="w-4 h-4 mr-2" />
-                  Ver
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-success/30 bg-gradient-to-r from-success/10 via-success/5 to-transparent shadow-card hover:shadow-elevated transition-all duration-300">
-          <CardContent className={`p-${isMobile ? '4' : '5'}`}>
-            <div className="flex items-start gap-4">
-              <div className="p-2 bg-gradient-success rounded-lg shadow-success/20">
-                <CheckCircle className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-white`} />
-              </div>
-              <div className="flex-1">
-                <h4 className={`font-bold text-foreground mb-1 ${isMobile ? 'text-sm' : ''}`}>
-                  Sistema OK
-                </h4>
-                <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground mb-3`}>
-                  Tudo funcionando perfeitamente
-                </p>
-                <div className="flex items-center gap-2 text-xs text-success">
-                  <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-                  <span className="font-medium">Online</span>
+      {/* Dynamic Alerts Section */}
+      {alerts.length > 0 && (
+        <motion.div 
+          className={`grid gap-${isMobile ? '4' : '6'} ${isMobile ? 'grid-cols-1' : alerts.length === 1 ? 'grid-cols-1' : 'md:grid-cols-2'}`}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          {alerts.map((alert, index) => (
+            <Card 
+              key={alert.id}
+              className={`border-${alert.severity}/30 bg-gradient-to-r from-${alert.severity}/10 via-${alert.severity}/5 to-transparent shadow-card hover:shadow-elevated transition-all duration-300`}
+            >
+              <CardContent className={`p-${isMobile ? '4' : '5'}`}>
+                <div className="flex items-start gap-4">
+                  <div className={`p-2 bg-gradient-${alert.severity} rounded-lg shadow-${alert.severity}/20`}>
+                    {alert.severity === 'warning' && <AlertTriangle className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-white`} />}
+                    {alert.severity === 'success' && <CheckCircle className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-white`} />}
+                    {alert.severity === 'error' && <AlertTriangle className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-white`} />}
+                    {alert.severity === 'info' && <Activity className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-white`} />}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className={`font-bold text-foreground mb-1 ${isMobile ? 'text-sm' : ''}`}>
+                      {alert.title}
+                    </h4>
+                    <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground mb-3`}>
+                      {alert.message}
+                    </p>
+                    <div className="flex gap-2">
+                      {alert.action_url && (
+                        <Button size="sm" variant="outline" className={`hover:bg-${alert.severity}/10 border-${alert.severity}/30`}>
+                          <Eye className="w-4 h-4 mr-2" />
+                          {alert.action_label || 'Ver'}
+                        </Button>
+                      )}
+                      {alert.is_dismissible && (
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={() => dismissAlert(alert.id)}
+                          className="hover:bg-destructive/10"
+                        >
+                          Dispensar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+              </CardContent>
+            </Card>
+          ))}
+        </motion.div>
+      )}
     </motion.div>
   );
 }
