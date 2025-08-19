@@ -666,6 +666,59 @@ export type Database = {
         }
         Relationships: []
       }
+      obligation_files: {
+        Row: {
+          error_message: string | null
+          file_name: string
+          file_path: string
+          file_type: string
+          generated_at: string
+          generated_by: string | null
+          hash_sha256: string | null
+          id: string
+          mime_type: string | null
+          obligation_id: string
+          size_bytes: number | null
+          status: string
+        }
+        Insert: {
+          error_message?: string | null
+          file_name: string
+          file_path: string
+          file_type: string
+          generated_at?: string
+          generated_by?: string | null
+          hash_sha256?: string | null
+          id?: string
+          mime_type?: string | null
+          obligation_id: string
+          size_bytes?: number | null
+          status?: string
+        }
+        Update: {
+          error_message?: string | null
+          file_name?: string
+          file_path?: string
+          file_type?: string
+          generated_at?: string
+          generated_by?: string | null
+          hash_sha256?: string | null
+          id?: string
+          mime_type?: string | null
+          obligation_id?: string
+          size_bytes?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obligation_files_obligation_id_fkey"
+            columns: ["obligation_id"]
+            isOneToOne: false
+            referencedRelation: "obligations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       obligation_kinds: {
         Row: {
           code: string

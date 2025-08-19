@@ -921,6 +921,117 @@ export const useFiscal = () => {
     link.click();
   };
 
+  // Obligation Files Management
+  const getObligationFiles = async (obligationId: string) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('obligation_files')
+        .select('*')
+        .eq('obligation_id', obligationId)
+        .order('generated_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      handleError(error, 'Erro ao carregar arquivos da obrigação');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateObligationFile = async (params: {
+    obligationId: string;
+    fileType?: string;
+    format?: 'csv' | 'json';
+  }) => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.functions.invoke('generate-obligation-file', {
+        body: {
+          obligationId: params.obligationId,
+          fileType: params.fileType || 'TAX_SUMMARY',
+          format: params.format || 'csv'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success('Arquivo gerado com sucesso');
+        return data.file;
+      } else {
+        throw new Error(data?.error || 'Erro ao gerar arquivo');
+      }
+    } catch (error) {
+      handleError(error, 'Erro ao gerar arquivo da obrigação');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadObligationFile = async (filePath: string, fileName: string) => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.storage
+        .from('fiscal-outputs')
+        .download(filePath);
+
+      if (error) throw error;
+
+      // Create download link
+      const url = URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success('Download iniciado com sucesso');
+      return true;
+    } catch (error) {
+      handleError(error, 'Erro ao fazer download do arquivo');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteObligationFile = async (fileId: string, filePath: string) => {
+    try {
+      setLoading(true);
+
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('fiscal-outputs')
+        .remove([filePath]);
+
+      if (storageError) throw storageError;
+
+      // Delete record
+      const { error } = await supabase
+        .from('obligation_files')
+        .delete()
+        .eq('id', fileId);
+
+      if (error) throw error;
+      
+      toast.success('Arquivo excluído com sucesso');
+      return true;
+    } catch (error) {
+      handleError(error, 'Erro ao excluir arquivo');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     // Tax Types
@@ -965,6 +1076,11 @@ export const useFiscal = () => {
     updateTaxLedger,
     // Period Management
     closeTaxPeriod,
-    reopenTaxPeriod
+    reopenTaxPeriod,
+    // Obligation Files
+    getObligationFiles,
+    generateObligationFile,
+    downloadObligationFile,
+    deleteObligationFile
   };
 };
