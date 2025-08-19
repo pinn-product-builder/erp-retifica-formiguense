@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
@@ -25,6 +26,7 @@ import ContasReceber from '@/pages/ContasReceber';
 import ContasPagar from '@/pages/ContasPagar';
 import FluxoCaixa from '@/pages/FluxoCaixa';
 import DRE from '@/pages/DRE';
+import ModuloFiscal from '@/pages/ModuloFiscal';
 
 const queryClient = new QueryClient();
 
@@ -57,6 +59,7 @@ function App() {
                       <Route path="/contas-pagar" element={<ContasPagar />} />
                       <Route path="/fluxo-caixa" element={<FluxoCaixa />} />
                       <Route path="/dre" element={<DRE />} />
+                      <Route path="/modulo-fiscal" element={<ModuloFiscal />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </Layout>

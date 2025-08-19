@@ -379,6 +379,53 @@ export type Database = {
         }
         Relationships: []
       }
+      company_fiscal_settings: {
+        Row: {
+          cnpj: string | null
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          municipality_code: string | null
+          org_name: string
+          regime_id: string
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          cnpj?: string | null
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          municipality_code?: string | null
+          org_name: string
+          regime_id: string
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string | null
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          municipality_code?: string | null
+          org_name?: string
+          regime_id?: string
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_fiscal_settings_regime_id_fkey"
+            columns: ["regime_id"]
+            isOneToOne: false
+            referencedRelation: "tax_regimes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consultants: {
         Row: {
           active: boolean | null
@@ -544,6 +591,39 @@ export type Database = {
         }
         Relationships: []
       }
+      fiscal_classifications: {
+        Row: {
+          cest: string | null
+          created_at: string
+          description: string
+          id: string
+          ncm_code: string | null
+          service_code: string | null
+          type: Database["public"]["Enums"]["classification_type"]
+          updated_at: string
+        }
+        Insert: {
+          cest?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          ncm_code?: string | null
+          service_code?: string | null
+          type: Database["public"]["Enums"]["classification_type"]
+          updated_at?: string
+        }
+        Update: {
+          cest?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          ncm_code?: string | null
+          service_code?: string | null
+          type?: Database["public"]["Enums"]["classification_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       monthly_dre: {
         Row: {
           created_at: string | null
@@ -585,6 +665,86 @@ export type Database = {
           year?: number
         }
         Relationships: []
+      }
+      obligation_kinds: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      obligations: {
+        Row: {
+          created_at: string
+          finished_at: string | null
+          generated_file_path: string | null
+          id: string
+          message: string | null
+          obligation_kind_id: string
+          period_month: number
+          period_year: number
+          protocol: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["filing_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          finished_at?: string | null
+          generated_file_path?: string | null
+          id?: string
+          message?: string | null
+          obligation_kind_id: string
+          period_month: number
+          period_year: number
+          protocol?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["filing_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          finished_at?: string | null
+          generated_file_path?: string | null
+          id?: string
+          message?: string | null
+          obligation_kind_id?: string
+          period_month?: number
+          period_year?: number
+          protocol?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["filing_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obligations_obligation_kind_id_fkey"
+            columns: ["obligation_kind_id"]
+            isOneToOne: false
+            referencedRelation: "obligation_kinds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_photos: {
         Row: {
@@ -878,6 +1038,335 @@ export type Database = {
         }
         Relationships: []
       }
+      tax_calculations: {
+        Row: {
+          amount: number
+          calculated_at: string
+          classification_id: string | null
+          created_at: string
+          destination_uf: string | null
+          id: string
+          notes: string | null
+          operation: Database["public"]["Enums"]["operation_type"]
+          order_id: string | null
+          origin_uf: string | null
+          regime_id: string
+          result: Json
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          calculated_at?: string
+          classification_id?: string | null
+          created_at?: string
+          destination_uf?: string | null
+          id?: string
+          notes?: string | null
+          operation: Database["public"]["Enums"]["operation_type"]
+          order_id?: string | null
+          origin_uf?: string | null
+          regime_id: string
+          result: Json
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          calculated_at?: string
+          classification_id?: string | null
+          created_at?: string
+          destination_uf?: string | null
+          id?: string
+          notes?: string | null
+          operation?: Database["public"]["Enums"]["operation_type"]
+          order_id?: string | null
+          origin_uf?: string | null
+          regime_id?: string
+          result?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_calculations_classification_id_fkey"
+            columns: ["classification_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_classifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_calculations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_calculations_regime_id_fkey"
+            columns: ["regime_id"]
+            isOneToOne: false
+            referencedRelation: "tax_regimes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_ledgers: {
+        Row: {
+          balance_due: number
+          created_at: string
+          id: string
+          notes: string | null
+          period_month: number
+          period_year: number
+          regime_id: string
+          status: Database["public"]["Enums"]["period_status"]
+          tax_type_id: string
+          total_credits: number
+          total_debits: number
+          updated_at: string
+        }
+        Insert: {
+          balance_due?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          period_month: number
+          period_year: number
+          regime_id: string
+          status?: Database["public"]["Enums"]["period_status"]
+          tax_type_id: string
+          total_credits?: number
+          total_debits?: number
+          updated_at?: string
+        }
+        Update: {
+          balance_due?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          period_month?: number
+          period_year?: number
+          regime_id?: string
+          status?: Database["public"]["Enums"]["period_status"]
+          tax_type_id?: string
+          total_credits?: number
+          total_debits?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_ledgers_regime_id_fkey"
+            columns: ["regime_id"]
+            isOneToOne: false
+            referencedRelation: "tax_regimes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_ledgers_tax_type_id_fkey"
+            columns: ["tax_type_id"]
+            isOneToOne: false
+            referencedRelation: "tax_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_rate_tables: {
+        Row: {
+          base_reduction: number | null
+          classification_id: string | null
+          created_at: string
+          id: string
+          jurisdiction_code: string
+          rate: number
+          tax_type_id: string
+          updated_at: string
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          base_reduction?: number | null
+          classification_id?: string | null
+          created_at?: string
+          id?: string
+          jurisdiction_code: string
+          rate?: number
+          tax_type_id: string
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Update: {
+          base_reduction?: number | null
+          classification_id?: string | null
+          created_at?: string
+          id?: string
+          jurisdiction_code?: string
+          rate?: number
+          tax_type_id?: string
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_rate_tables_classification_id_fkey"
+            columns: ["classification_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_classifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_rate_tables_tax_type_id_fkey"
+            columns: ["tax_type_id"]
+            isOneToOne: false
+            referencedRelation: "tax_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_regimes: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          effective_from: string | null
+          effective_to: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tax_rules: {
+        Row: {
+          base_reduction: number | null
+          calc_method: Database["public"]["Enums"]["base_calc_method"]
+          classification_id: string | null
+          created_at: string
+          destination_uf: string | null
+          formula: string | null
+          id: string
+          is_active: boolean
+          operation: Database["public"]["Enums"]["operation_type"]
+          origin_uf: string | null
+          priority: number
+          rate: number | null
+          regime_id: string
+          tax_type_id: string
+          updated_at: string
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          base_reduction?: number | null
+          calc_method?: Database["public"]["Enums"]["base_calc_method"]
+          classification_id?: string | null
+          created_at?: string
+          destination_uf?: string | null
+          formula?: string | null
+          id?: string
+          is_active?: boolean
+          operation: Database["public"]["Enums"]["operation_type"]
+          origin_uf?: string | null
+          priority?: number
+          rate?: number | null
+          regime_id: string
+          tax_type_id: string
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Update: {
+          base_reduction?: number | null
+          calc_method?: Database["public"]["Enums"]["base_calc_method"]
+          classification_id?: string | null
+          created_at?: string
+          destination_uf?: string | null
+          formula?: string | null
+          id?: string
+          is_active?: boolean
+          operation?: Database["public"]["Enums"]["operation_type"]
+          origin_uf?: string | null
+          priority?: number
+          rate?: number | null
+          regime_id?: string
+          tax_type_id?: string
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_rules_classification_id_fkey"
+            columns: ["classification_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_classifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_rules_regime_id_fkey"
+            columns: ["regime_id"]
+            isOneToOne: false
+            referencedRelation: "tax_regimes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_rules_tax_type_id_fkey"
+            columns: ["tax_type_id"]
+            isOneToOne: false
+            referencedRelation: "tax_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_types: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          jurisdiction: Database["public"]["Enums"]["jurisdiction"]
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          jurisdiction: Database["public"]["Enums"]["jurisdiction"]
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          jurisdiction?: Database["public"]["Enums"]["jurisdiction"]
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       time_logs: {
         Row: {
           component: Database["public"]["Enums"]["engine_component"]
@@ -940,7 +1429,16 @@ export type Database = {
       }
     }
     Enums: {
+      base_calc_method:
+        | "percentual"
+        | "valor_fixo"
+        | "mva"
+        | "reducao_base"
+        | "substituicao_tributaria"
+        | "isento"
+        | "nao_incidencia"
       budget_status: "pendente" | "aprovado" | "reprovado" | "em_producao"
+      classification_type: "produto" | "servico"
       customer_type: "oficina" | "direto"
       engine_component: "bloco" | "eixo" | "biela" | "comando" | "cabecote"
       expense_category:
@@ -951,6 +1449,9 @@ export type Database = {
         | "salary"
         | "equipment"
         | "maintenance"
+      filing_status: "rascunho" | "gerado" | "validado" | "enviado" | "erro"
+      jurisdiction: "federal" | "estadual" | "municipal"
+      operation_type: "venda" | "compra" | "prestacao_servico"
       order_status: "ativa" | "concluida" | "cancelada"
       payment_method:
         | "cash"
@@ -960,6 +1461,7 @@ export type Database = {
         | "bank_transfer"
         | "check"
       payment_status: "pending" | "paid" | "overdue" | "cancelled"
+      period_status: "aberto" | "fechado" | "transmitido"
       transaction_type: "income" | "expense"
       workflow_status:
         | "entrada"
@@ -1096,7 +1598,17 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      base_calc_method: [
+        "percentual",
+        "valor_fixo",
+        "mva",
+        "reducao_base",
+        "substituicao_tributaria",
+        "isento",
+        "nao_incidencia",
+      ],
       budget_status: ["pendente", "aprovado", "reprovado", "em_producao"],
+      classification_type: ["produto", "servico"],
       customer_type: ["oficina", "direto"],
       engine_component: ["bloco", "eixo", "biela", "comando", "cabecote"],
       expense_category: [
@@ -1108,6 +1620,9 @@ export const Constants = {
         "equipment",
         "maintenance",
       ],
+      filing_status: ["rascunho", "gerado", "validado", "enviado", "erro"],
+      jurisdiction: ["federal", "estadual", "municipal"],
+      operation_type: ["venda", "compra", "prestacao_servico"],
       order_status: ["ativa", "concluida", "cancelada"],
       payment_method: [
         "cash",
@@ -1118,6 +1633,7 @@ export const Constants = {
         "check",
       ],
       payment_status: ["pending", "paid", "overdue", "cancelled"],
+      period_status: ["aberto", "fechado", "transmitido"],
       transaction_type: ["income", "expense"],
       workflow_status: [
         "entrada",
