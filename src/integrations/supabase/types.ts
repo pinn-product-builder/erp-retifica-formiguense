@@ -232,6 +232,48 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_log: {
+        Row: {
+          id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
+          operation: string
+          org_id: string
+          record_id: string
+          table_name: string
+          timestamp: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          operation: string
+          org_id: string
+          record_id: string
+          table_name: string
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
+          operation?: string
+          org_id?: string
+          record_id?: string
+          table_name?: string
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       bank_accounts: {
         Row: {
           account_number: string
@@ -242,6 +284,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          org_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -253,6 +296,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          org_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -264,6 +308,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          org_id?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -521,6 +566,7 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          org_id: string | null
           phone: string | null
           updated_at: string
         }
@@ -531,6 +577,7 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
+          org_id?: string | null
           phone?: string | null
           updated_at?: string
         }
@@ -541,6 +588,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          org_id?: string | null
           phone?: string | null
           updated_at?: string
         }
@@ -706,6 +754,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
+          org_id: string | null
         }
         Insert: {
           category: Database["public"]["Enums"]["expense_category"]
@@ -714,6 +763,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
+          org_id?: string | null
         }
         Update: {
           category?: Database["public"]["Enums"]["expense_category"]
@@ -722,6 +772,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+          org_id?: string | null
         }
         Relationships: []
       }
@@ -947,6 +998,7 @@ export type Database = {
           month: number
           net_profit: number | null
           operational_expenses: number | null
+          org_id: string | null
           profit_margin: number | null
           total_revenue: number | null
           updated_at: string | null
@@ -960,6 +1012,7 @@ export type Database = {
           month: number
           net_profit?: number | null
           operational_expenses?: number | null
+          org_id?: string | null
           profit_margin?: number | null
           total_revenue?: number | null
           updated_at?: string | null
@@ -973,6 +1026,7 @@ export type Database = {
           month?: number
           net_profit?: number | null
           operational_expenses?: number | null
+          org_id?: string | null
           profit_margin?: number | null
           total_revenue?: number | null
           updated_at?: string | null
@@ -1123,6 +1177,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_obligation_files_obligation"
+            columns: ["obligation_id"]
+            isOneToOne: false
+            referencedRelation: "obligations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "obligation_files_obligation_id_fkey"
             columns: ["obligation_id"]
             isOneToOne: false
@@ -1219,6 +1280,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_obligations_obligation_kind"
+            columns: ["obligation_kind_id"]
+            isOneToOne: false
+            referencedRelation: "obligation_kinds"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "obligations_obligation_kind_id_fkey"
             columns: ["obligation_kind_id"]
@@ -1509,6 +1577,7 @@ export type Database = {
           id: string
           notes: string | null
           order_id: string | null
+          org_id: string | null
           part_code: string | null
           part_name: string
           quantity: number
@@ -1524,6 +1593,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_id?: string | null
+          org_id?: string | null
           part_code?: string | null
           part_name: string
           quantity?: number
@@ -1539,6 +1609,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_id?: string | null
+          org_id?: string | null
           part_code?: string | null
           part_name?: string
           quantity?: number
@@ -1662,6 +1733,114 @@ export type Database = {
           title?: string
           updated_at?: string
           variant?: string
+        }
+        Relationships: []
+      }
+      report_catalog: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          org_id: string | null
+          parameters_schema: Json
+          permissions: Json | null
+          template_type: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          code: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          org_id?: string | null
+          parameters_schema?: Json
+          permissions?: Json | null
+          template_type?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          org_id?: string | null
+          parameters_schema?: Json
+          permissions?: Json | null
+          template_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          file_name: string | null
+          file_path: string | null
+          file_type: string | null
+          generated_at: string | null
+          generated_by: string | null
+          hash_sha256: string | null
+          id: string
+          org_id: string
+          parameters: Json
+          period_end: string | null
+          period_start: string | null
+          report_code: string
+          size_bytes: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_type?: string | null
+          generated_at?: string | null
+          generated_by?: string | null
+          hash_sha256?: string | null
+          id?: string
+          org_id: string
+          parameters?: Json
+          period_end?: string | null
+          period_start?: string | null
+          report_code: string
+          size_bytes?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_type?: string | null
+          generated_at?: string | null
+          generated_by?: string | null
+          hash_sha256?: string | null
+          id?: string
+          org_id?: string
+          parameters?: Json
+          period_end?: string | null
+          period_start?: string | null
+          report_code?: string
+          size_bytes?: number | null
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1806,6 +1985,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_tax_calculations_classification"
+            columns: ["classification_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_classifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_tax_calculations_regime"
+            columns: ["regime_id"]
+            isOneToOne: false
+            referencedRelation: "tax_regimes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tax_calculations_classification_id_fkey"
             columns: ["classification_id"]
             isOneToOne: false
@@ -1946,6 +2139,20 @@ export type Database = {
           valid_to?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_tax_rate_tables_classification"
+            columns: ["classification_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_classifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_tax_rate_tables_tax_type"
+            columns: ["tax_type_id"]
+            isOneToOne: false
+            referencedRelation: "tax_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tax_rate_tables_classification_id_fkey"
             columns: ["classification_id"]
