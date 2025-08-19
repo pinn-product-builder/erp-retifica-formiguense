@@ -24,6 +24,7 @@ export type Database = {
           id: string
           invoice_number: string | null
           notes: string | null
+          org_id: string | null
           payment_date: string | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
           status: Database["public"]["Enums"]["payment_status"] | null
@@ -40,6 +41,7 @@ export type Database = {
           id?: string
           invoice_number?: string | null
           notes?: string | null
+          org_id?: string | null
           payment_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           status?: Database["public"]["Enums"]["payment_status"] | null
@@ -56,6 +58,7 @@ export type Database = {
           id?: string
           invoice_number?: string | null
           notes?: string | null
+          org_id?: string | null
           payment_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           status?: Database["public"]["Enums"]["payment_status"] | null
@@ -69,6 +72,13 @@ export type Database = {
             columns: ["expense_category_id"]
             isOneToOne: false
             referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_payable_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -87,6 +97,7 @@ export type Database = {
           late_fee: number | null
           notes: string | null
           order_id: string | null
+          org_id: string | null
           payment_date: string | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
           status: Database["public"]["Enums"]["payment_status"] | null
@@ -106,6 +117,7 @@ export type Database = {
           late_fee?: number | null
           notes?: string | null
           order_id?: string | null
+          org_id?: string | null
           payment_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           status?: Database["public"]["Enums"]["payment_status"] | null
@@ -125,6 +137,7 @@ export type Database = {
           late_fee?: number | null
           notes?: string | null
           order_id?: string | null
+          org_id?: string | null
           payment_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           status?: Database["public"]["Enums"]["payment_status"] | null
@@ -151,6 +164,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -387,6 +407,7 @@ export type Database = {
           effective_to: string | null
           id: string
           municipality_code: string | null
+          org_id: string | null
           org_name: string
           regime_id: string
           state: string | null
@@ -399,6 +420,7 @@ export type Database = {
           effective_to?: string | null
           id?: string
           municipality_code?: string | null
+          org_id?: string | null
           org_name: string
           regime_id: string
           state?: string | null
@@ -411,12 +433,20 @@ export type Database = {
           effective_to?: string | null
           id?: string
           municipality_code?: string | null
+          org_id?: string | null
           org_name?: string
           regime_id?: string
           state?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "company_fiscal_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "company_fiscal_settings_regime_id_fkey"
             columns: ["regime_id"]
@@ -468,6 +498,7 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          org_id: string | null
           phone: string
           type: Database["public"]["Enums"]["customer_type"]
           updated_at: string
@@ -483,6 +514,7 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
+          org_id?: string | null
           phone: string
           type: Database["public"]["Enums"]["customer_type"]
           updated_at?: string
@@ -498,6 +530,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          org_id?: string | null
           phone?: string
           type?: Database["public"]["Enums"]["customer_type"]
           updated_at?: string
@@ -505,7 +538,15 @@ export type Database = {
           workshop_contact?: string | null
           workshop_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       engines: {
         Row: {
@@ -598,6 +639,7 @@ export type Database = {
           description: string
           id: string
           ncm_code: string | null
+          org_id: string | null
           service_code: string | null
           type: Database["public"]["Enums"]["classification_type"]
           updated_at: string
@@ -608,6 +650,7 @@ export type Database = {
           description: string
           id?: string
           ncm_code?: string | null
+          org_id?: string | null
           service_code?: string | null
           type: Database["public"]["Enums"]["classification_type"]
           updated_at?: string
@@ -618,11 +661,20 @@ export type Database = {
           description?: string
           id?: string
           ncm_code?: string | null
+          org_id?: string | null
           service_code?: string | null
           type?: Database["public"]["Enums"]["classification_type"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_classifications_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       monthly_dre: {
         Row: {
@@ -726,6 +778,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          org_id: string | null
           updated_at: string
         }
         Insert: {
@@ -734,6 +787,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          org_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -742,9 +796,18 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          org_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "obligation_kinds_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       obligations: {
         Row: {
@@ -755,6 +818,7 @@ export type Database = {
           id: string
           message: string | null
           obligation_kind_id: string
+          org_id: string | null
           period_month: number
           period_year: number
           protocol: string | null
@@ -770,6 +834,7 @@ export type Database = {
           id?: string
           message?: string | null
           obligation_kind_id: string
+          org_id?: string | null
           period_month: number
           period_year: number
           protocol?: string | null
@@ -785,6 +850,7 @@ export type Database = {
           id?: string
           message?: string | null
           obligation_kind_id?: string
+          org_id?: string | null
           period_month?: number
           period_year?: number
           protocol?: string | null
@@ -798,6 +864,13 @@ export type Database = {
             columns: ["obligation_kind_id"]
             isOneToOne: false
             referencedRelation: "obligation_kinds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obligations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -913,6 +986,7 @@ export type Database = {
           id: string
           initial_observations: string | null
           order_number: string
+          org_id: string | null
           status: Database["public"]["Enums"]["order_status"] | null
           updated_at: string
         }
@@ -932,6 +1006,7 @@ export type Database = {
           id?: string
           initial_observations?: string | null
           order_number: string
+          org_id?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           updated_at?: string
         }
@@ -951,6 +1026,7 @@ export type Database = {
           id?: string
           initial_observations?: string | null
           order_number?: string
+          org_id?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           updated_at?: string
         }
@@ -976,7 +1052,94 @@ export type Database = {
             referencedRelation: "engines"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "orders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      organization_users: {
+        Row: {
+          created_at: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          is_active: boolean
+          joined_at: string | null
+          organization_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean
+          joined_at?: string | null
+          organization_id: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean
+          joined_at?: string | null
+          organization_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_users_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          settings: Json | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          settings?: Json | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          settings?: Json | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       parts_inventory: {
         Row: {
@@ -1105,6 +1268,7 @@ export type Database = {
           notes: string | null
           operation: Database["public"]["Enums"]["operation_type"]
           order_id: string | null
+          org_id: string | null
           origin_uf: string | null
           regime_id: string
           result: Json
@@ -1120,6 +1284,7 @@ export type Database = {
           notes?: string | null
           operation: Database["public"]["Enums"]["operation_type"]
           order_id?: string | null
+          org_id?: string | null
           origin_uf?: string | null
           regime_id: string
           result: Json
@@ -1135,6 +1300,7 @@ export type Database = {
           notes?: string | null
           operation?: Database["public"]["Enums"]["operation_type"]
           order_id?: string | null
+          org_id?: string | null
           origin_uf?: string | null
           regime_id?: string
           result?: Json
@@ -1156,6 +1322,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tax_calculations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tax_calculations_regime_id_fkey"
             columns: ["regime_id"]
             isOneToOne: false
@@ -1170,6 +1343,7 @@ export type Database = {
           created_at: string
           id: string
           notes: string | null
+          org_id: string | null
           period_month: number
           period_year: number
           regime_id: string
@@ -1184,6 +1358,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          org_id?: string | null
           period_month: number
           period_year: number
           regime_id: string
@@ -1198,6 +1373,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          org_id?: string | null
           period_month?: number
           period_year?: number
           regime_id?: string
@@ -1208,6 +1384,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tax_ledgers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tax_ledgers_regime_id_fkey"
             columns: ["regime_id"]
@@ -1231,6 +1414,7 @@ export type Database = {
           created_at: string
           id: string
           jurisdiction_code: string
+          org_id: string | null
           rate: number
           tax_type_id: string
           updated_at: string
@@ -1243,6 +1427,7 @@ export type Database = {
           created_at?: string
           id?: string
           jurisdiction_code: string
+          org_id?: string | null
           rate?: number
           tax_type_id: string
           updated_at?: string
@@ -1255,6 +1440,7 @@ export type Database = {
           created_at?: string
           id?: string
           jurisdiction_code?: string
+          org_id?: string | null
           rate?: number
           tax_type_id?: string
           updated_at?: string
@@ -1267,6 +1453,13 @@ export type Database = {
             columns: ["classification_id"]
             isOneToOne: false
             referencedRelation: "fiscal_classifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_rate_tables_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -1287,6 +1480,7 @@ export type Database = {
           effective_to: string | null
           id: string
           name: string
+          org_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1297,6 +1491,7 @@ export type Database = {
           effective_to?: string | null
           id?: string
           name: string
+          org_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1307,9 +1502,18 @@ export type Database = {
           effective_to?: string | null
           id?: string
           name?: string
+          org_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tax_regimes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tax_rules: {
         Row: {
@@ -1322,6 +1526,7 @@ export type Database = {
           id: string
           is_active: boolean
           operation: Database["public"]["Enums"]["operation_type"]
+          org_id: string | null
           origin_uf: string | null
           priority: number
           rate: number | null
@@ -1341,6 +1546,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           operation: Database["public"]["Enums"]["operation_type"]
+          org_id?: string | null
           origin_uf?: string | null
           priority?: number
           rate?: number | null
@@ -1360,6 +1566,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           operation?: Database["public"]["Enums"]["operation_type"]
+          org_id?: string | null
           origin_uf?: string | null
           priority?: number
           rate?: number | null
@@ -1375,6 +1582,13 @@ export type Database = {
             columns: ["classification_id"]
             isOneToOne: false
             referencedRelation: "fiscal_classifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_rules_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -1401,6 +1615,7 @@ export type Database = {
           id: string
           jurisdiction: Database["public"]["Enums"]["jurisdiction"]
           name: string
+          org_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1410,6 +1625,7 @@ export type Database = {
           id?: string
           jurisdiction: Database["public"]["Enums"]["jurisdiction"]
           name: string
+          org_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1419,9 +1635,18 @@ export type Database = {
           id?: string
           jurisdiction?: Database["public"]["Enums"]["jurisdiction"]
           name?: string
+          org_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tax_types_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       time_logs: {
         Row: {
@@ -1475,16 +1700,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_org_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      has_org_role: {
+        Args: {
+          org_id: string
+          required_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
       }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_org_member: {
+        Args: { org_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "owner" | "admin" | "manager" | "user"
       base_calc_method:
         | "percentual"
         | "valor_fixo"
@@ -1654,6 +1895,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["owner", "admin", "manager", "user"],
       base_calc_method: [
         "percentual",
         "valor_fixo",
