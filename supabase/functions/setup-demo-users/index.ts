@@ -5,6 +5,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Helper function to check if user is admin
+async function isAdmin(supabase: any, userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', userId)
+      .single()
+    
+    if (error) return false
+    return data?.role === 'admin'
+  } catch (error) {
+    return false
+  }
+}
+
 interface CreateUserRequest {
   email: string
   password: string
@@ -15,17 +31,29 @@ interface CreateUserRequest {
 Deno.serve(async (req) => {
   console.log('=== SETUP DEMO USERS FUNCTION START ===');
   console.log('Request method:', req.method);
-  console.log('Request headers:', Object.fromEntries(req.headers.entries()));
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('🔄 Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     console.log('🚀 Starting demo users setup...')
 
+    // Extract and validate JWT token
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Missing or invalid authorization header' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    
     // Validate environment variables with detailed logging
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -60,6 +88,43 @@ Deno.serve(async (req) => {
     }
 
     console.log('✅ Environment variables validated')
+
+    // Create user client to verify JWT and check admin status
+    const supabaseUser = createClient(
+      supabaseUrl,
+      Deno.env.get('SUPABASE_ANON_KEY') || '',
+      {
+        global: {
+          headers: { Authorization: authHeader }
+        }
+      }
+    )
+
+    // Verify JWT and get user
+    const { data: userData, error: userError } = await supabaseUser.auth.getUser(token)
+    if (userError || !userData.user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JWT token' }),
+        { 
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Check if user is admin
+    const userIsAdmin = await isAdmin(supabaseUser, userData.user.id)
+    if (!userIsAdmin) {
+      return new Response(
+        JSON.stringify({ error: 'Access denied. Admin privileges required.' }),
+        { 
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    console.log('✅ Admin access verified')
 
     // Create admin client
     console.log('🔧 Creating Supabase admin client...');

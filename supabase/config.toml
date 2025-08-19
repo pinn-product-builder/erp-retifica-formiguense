@@ -33,4 +33,4 @@ enabled = true
 port = 54326
 
 [functions.setup-demo-users]
-verify_jwt = false
+verify_jwt = true
