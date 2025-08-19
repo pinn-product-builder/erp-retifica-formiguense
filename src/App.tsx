@@ -7,6 +7,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Layout } from '@/components/Layout';
 
 import Dashboard from '@/pages/Dashboard';
+import Landing from '@/pages/Landing';
 import Auth from '@/pages/Auth';
 import Clientes from '@/pages/Clientes';
 import Consultores from '@/pages/Consultores';
@@ -34,7 +35,8 @@ function App() {
         <AuthProvider>
           <Router>
             <Routes>
-              <Route path="/" element={<Auth />} />
+              <Route path="/" element={<Landing />} />
+              <Route path="/auth" element={<Auth />} />
               <Route path="/*" element={
                 <ProtectedRoute>
                   <Layout>
