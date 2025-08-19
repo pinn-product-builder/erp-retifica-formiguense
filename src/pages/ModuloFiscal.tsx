@@ -12,6 +12,7 @@ import ObligationManagement from '@/components/fiscal/ObligationManagement';
 import { TaxCalculationPage } from '@/components/fiscal/TaxCalculationPage';
 import { TaxReports } from '@/components/fiscal/TaxReports';
 import { ApuracaoFiscal } from '@/components/fiscal/ApuracaoFiscal';
+import { FiscalAuditLog } from '@/components/fiscal/FiscalAuditLog';
 import { 
   Calculator, 
   FileText, 
@@ -22,7 +23,8 @@ import {
   Gavel, 
   AlertTriangle,
   Percent,
-  Building
+  Building,
+  Shield
 } from 'lucide-react';
 
 export default function ModuloFiscal() {
@@ -38,7 +40,7 @@ export default function ModuloFiscal() {
       </div>
 
       <Tabs defaultValue="tributos" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 lg:grid-cols-11">
+        <TabsList className="grid w-full grid-cols-5 lg:grid-cols-12">
           <TabsTrigger value="tributos" className="flex items-center gap-2">
             <Receipt className="h-4 w-4" />
             Tributos
@@ -82,6 +84,10 @@ export default function ModuloFiscal() {
           <TabsTrigger value="relatorios" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Relatórios
+          </TabsTrigger>
+          <TabsTrigger value="auditoria" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Auditoria
           </TabsTrigger>
         </TabsList>
 
@@ -237,6 +243,10 @@ export default function ModuloFiscal() {
               <TaxReports />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="auditoria" className="space-y-6">
+          <FiscalAuditLog />
         </TabsContent>
       </Tabs>
     </div>

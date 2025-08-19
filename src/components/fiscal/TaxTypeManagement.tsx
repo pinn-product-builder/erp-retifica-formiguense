@@ -10,10 +10,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useFiscal, TaxType } from '@/hooks/useFiscal';
+import { useJurisdictionConfig } from '@/hooks/useJurisdictionConfig';
+import { JurisdictionConfigModal } from './JurisdictionConfigModal';
+import { Settings } from 'lucide-react';
 
 export function TaxTypeManagement() {
   const [taxTypes, setTaxTypes] = useState<TaxType[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [editingTaxType, setEditingTaxType] = useState<TaxType | null>(null);
   const [formData, setFormData] = useState({
     code: '',
@@ -23,6 +27,7 @@ export function TaxTypeManagement() {
   });
 
   const { loading, getTaxTypes, createTaxType, updateTaxType, deleteTaxType } = useFiscal();
+  const { getJurisdictionStyle } = useJurisdictionConfig();
 
   useEffect(() => {
     loadTaxTypes();
@@ -66,19 +71,20 @@ export function TaxTypeManagement() {
     }
   };
 
-  const getJurisdictionColor = (jurisdiction: string) => {
-    switch (jurisdiction) {
-      case 'federal': return 'bg-blue-100 text-blue-800';
-      case 'estadual': return 'bg-green-100 text-green-800';
-      case 'municipal': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Tipos de Tributos</h3>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsConfigModalOpen(true)}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Configurar Cores
+          </Button>
+          
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -159,6 +165,7 @@ export function TaxTypeManagement() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="border rounded-lg">
@@ -185,7 +192,7 @@ export function TaxTypeManagement() {
                   <TableCell className="font-medium">{taxType.code}</TableCell>
                   <TableCell>{taxType.name}</TableCell>
                   <TableCell>
-                    <Badge className={getJurisdictionColor(taxType.jurisdiction)}>
+                    <Badge style={getJurisdictionStyle(taxType.jurisdiction)}>
                       {taxType.jurisdiction}
                     </Badge>
                   </TableCell>
@@ -216,6 +223,11 @@ export function TaxTypeManagement() {
           </TableBody>
         </Table>
       </div>
+      
+      <JurisdictionConfigModal 
+        open={isConfigModalOpen} 
+        onOpenChange={setIsConfigModalOpen} 
+      />
     </div>
   );
 }
