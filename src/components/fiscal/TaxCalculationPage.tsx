@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calculator } from 'lucide-react';
-import { useFiscal, TaxRegime, FiscalClassification } from '@/hooks/useFiscal';
+import { useFiscal, TaxRegime, FiscalClassification, TaxCalculationRequest } from '@/hooks/useFiscal';
 import { formatCurrency } from '@/lib/utils';
 
 export function TaxCalculationPage() {
@@ -43,7 +42,7 @@ export function TaxCalculationPage() {
   const handleCalculate = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const calculation = {
+    const calculation: TaxCalculationRequest = {
       regime_id: formData.regime_id,
       operation: formData.operation,
       classification_id: formData.classification_id || undefined,

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -73,6 +72,16 @@ export interface Obligation {
   started_at?: string;
   finished_at?: string;
   message?: string;
+}
+
+export interface TaxCalculationRequest {
+  regime_id: string;
+  operation: 'venda' | 'compra' | 'prestacao_servico';
+  classification_id?: string;
+  amount: number;
+  origin_uf?: string;
+  destination_uf?: string;
+  notes?: string;
 }
 
 export interface TaxCalculation {
@@ -421,7 +430,7 @@ export const useFiscal = () => {
   };
 
   // Tax Calculations
-  const calculateTax = async (calculation: TaxCalculation) => {
+  const calculateTax = async (calculation: TaxCalculationRequest) => {
     try {
       setLoading(true);
       
@@ -489,12 +498,14 @@ export const useFiscal = () => {
       };
 
       // Salvar cálculo no banco
+      const taxCalculation: TaxCalculation = {
+        ...calculation,
+        result
+      };
+
       const { data, error } = await supabase
         .from('tax_calculations')
-        .insert([{
-          ...calculation,
-          result
-        }])
+        .insert([taxCalculation])
         .select()
         .single();
 
