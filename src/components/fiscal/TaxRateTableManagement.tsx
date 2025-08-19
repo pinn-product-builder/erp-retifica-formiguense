@@ -19,8 +19,8 @@ interface TaxRateTable {
   base_reduction?: number;
   valid_from: string;
   valid_to?: string;
-  tax_types?: { name: string; code: string };
-  fiscal_classifications?: { description: string };
+  tax_types?: any;
+  fiscal_classifications?: any;
 }
 
 export function TaxRateTableManagement() {
@@ -308,7 +308,7 @@ export function TaxRateTableManagement() {
               rateTable.map((rate) => (
                 <TableRow key={rate.id}>
                   <TableCell className="font-medium">
-                    {rate.tax_types?.code} - {rate.tax_types?.name}
+                    {rate.tax_types?.code || 'N/A'} - {rate.tax_types?.name || 'N/A'}
                   </TableCell>
                   <TableCell>{rate.jurisdiction_code}</TableCell>
                   <TableCell>
