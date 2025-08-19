@@ -97,6 +97,32 @@ export interface TaxCalculation {
   notes?: string;
 }
 
+export interface TaxRateTable {
+  id?: string;
+  tax_type_id: string;
+  classification_id?: string;
+  jurisdiction_code: string;
+  rate: number;
+  base_reduction?: number;
+  valid_from: string;
+  valid_to?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CompanyFiscalSetting {
+  id?: string;
+  org_name: string;
+  cnpj?: string;
+  state?: string;
+  municipality_code?: string;
+  regime_id: string;
+  effective_from: string;
+  effective_to?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export const useFiscal = () => {
   const [loading, setLoading] = useState(false);
 
@@ -544,6 +570,152 @@ export const useFiscal = () => {
     }
   };
 
+  // Tax Rate Tables
+  const getTaxRateTable = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('tax_rate_tables')
+        .select(`
+          *,
+          tax_types (name, code),
+          fiscal_classifications (description)
+        `)
+        .order('tax_type_id');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      handleError(error, 'Erro ao carregar tabelas de alíquotas');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createTaxRateTable = async (rateTable: TaxRateTable) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('tax_rate_tables')
+        .insert([rateTable])
+        .select()
+        .single();
+
+      if (error) throw error;
+      toast.success('Tabela de alíquotas criada com sucesso');
+      return data;
+    } catch (error) {
+      handleError(error, 'Erro ao criar tabela de alíquotas');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateTaxRateTable = async (id: string, updates: Partial<TaxRateTable>) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('tax_rate_tables')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      toast.success('Tabela de alíquotas atualizada com sucesso');
+      return data;
+    } catch (error) {
+      handleError(error, 'Erro ao atualizar tabela de alíquotas');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteTaxRateTable = async (id: string) => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('tax_rate_tables')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Tabela de alíquotas excluída com sucesso');
+      return true;
+    } catch (error) {
+      handleError(error, 'Erro ao excluir tabela de alíquotas');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Company Fiscal Settings
+  const getCompanyFiscalSettings = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('company_fiscal_settings')
+        .select(`
+          *,
+          tax_regimes (name, code)
+        `)
+        .order('effective_from', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      handleError(error, 'Erro ao carregar configurações fiscais');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createCompanyFiscalSetting = async (setting: CompanyFiscalSetting) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('company_fiscal_settings')
+        .insert([setting])
+        .select()
+        .single();
+
+      if (error) throw error;
+      toast.success('Configuração fiscal criada com sucesso');
+      return data;
+    } catch (error) {
+      handleError(error, 'Erro ao criar configuração fiscal');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateCompanyFiscalSetting = async (id: string, updates: Partial<CompanyFiscalSetting>) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('company_fiscal_settings')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      toast.success('Configuração fiscal atualizada com sucesso');
+      return data;
+    } catch (error) {
+      handleError(error, 'Erro ao atualizar configuração fiscal');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     // Tax Types
@@ -570,6 +742,15 @@ export const useFiscal = () => {
     createObligation,
     // Tax Calculations
     calculateTax,
-    getTaxCalculations
+    getTaxCalculations,
+    // Tax Rate Tables
+    getTaxRateTable,
+    createTaxRateTable,
+    updateTaxRateTable,
+    deleteTaxRateTable,
+    // Company Fiscal Settings
+    getCompanyFiscalSettings,
+    createCompanyFiscalSetting,
+    updateCompanyFiscalSetting
   };
 };

@@ -6,6 +6,8 @@ import { TaxTypeManagement } from '@/components/fiscal/TaxTypeManagement';
 import { TaxRegimeManagement } from '@/components/fiscal/TaxRegimeManagement';
 import { FiscalClassificationManagement } from '@/components/fiscal/FiscalClassificationManagement';
 import { TaxRuleManagement } from '@/components/fiscal/TaxRuleManagement';
+import { TaxRateTableManagement } from '@/components/fiscal/TaxRateTableManagement';
+import { CompanyFiscalSettings } from '@/components/fiscal/CompanyFiscalSettings';
 import { ObligationKindManagement } from '@/components/fiscal/ObligationKindManagement';
 import { ObligationManagement } from '@/components/fiscal/ObligationManagement';
 import { TaxCalculationPage } from '@/components/fiscal/TaxCalculationPage';
@@ -18,7 +20,9 @@ import {
   Building2, 
   BookOpen, 
   Gavel, 
-  AlertTriangle 
+  AlertTriangle,
+  Percent,
+  Building
 } from 'lucide-react';
 
 export default function ModuloFiscal() {
@@ -34,7 +38,7 @@ export default function ModuloFiscal() {
       </div>
 
       <Tabs defaultValue="tributos" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+        <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10">
           <TabsTrigger value="tributos" className="flex items-center gap-2">
             <Receipt className="h-4 w-4" />
             Tributos
@@ -50,6 +54,14 @@ export default function ModuloFiscal() {
           <TabsTrigger value="regras" className="flex items-center gap-2">
             <Gavel className="h-4 w-4" />
             Regras
+          </TabsTrigger>
+          <TabsTrigger value="aliquotas" className="flex items-center gap-2">
+            <Percent className="h-4 w-4" />
+            Alíquotas
+          </TabsTrigger>
+          <TabsTrigger value="empresa" className="flex items-center gap-2">
+            <Building className="h-4 w-4" />
+            Empresa
           </TabsTrigger>
           <TabsTrigger value="obrigacoes-tipos" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -121,6 +133,34 @@ export default function ModuloFiscal() {
             </CardHeader>
             <CardContent>
               <TaxRuleManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="aliquotas" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Percent className="h-5 w-5" />
+                Gestão de Tabelas de Alíquotas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TaxRateTableManagement />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="empresa" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5" />
+                Configurações Fiscais da Empresa
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CompanyFiscalSettings />
             </CardContent>
           </Card>
         </TabsContent>
