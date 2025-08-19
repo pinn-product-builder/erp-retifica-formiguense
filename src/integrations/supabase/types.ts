@@ -175,6 +175,63 @@ export type Database = {
           },
         ]
       }
+      alerts: {
+        Row: {
+          action_label: string | null
+          action_url: string | null
+          alert_type: string
+          auto_dismiss_after: number | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          is_dismissible: boolean
+          message: string
+          metadata: Json | null
+          org_id: string
+          severity: string
+          target_users: Json | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          action_label?: string | null
+          action_url?: string | null
+          alert_type: string
+          auto_dismiss_after?: number | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_dismissible?: boolean
+          message: string
+          metadata?: Json | null
+          org_id: string
+          severity?: string
+          target_users?: Json | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          action_label?: string | null
+          action_url?: string | null
+          alert_type?: string
+          auto_dismiss_after?: number | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          is_dismissible?: boolean
+          message?: string
+          metadata?: Json | null
+          org_id?: string
+          severity?: string
+          target_users?: Json | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bank_accounts: {
         Row: {
           account_number: string
@@ -548,6 +605,42 @@ export type Database = {
           },
         ]
       }
+      dashboard_preferences: {
+        Row: {
+          created_at: string
+          id: string
+          is_global: boolean
+          org_id: string | null
+          preference_key: string
+          preference_type: string
+          preference_value: Json
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_global?: boolean
+          org_id?: string | null
+          preference_key: string
+          preference_type: string
+          preference_value?: Json
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_global?: boolean
+          org_id?: string | null
+          preference_key?: string
+          preference_type?: string
+          preference_value?: Json
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       engines: {
         Row: {
           assembly_state: string | null
@@ -756,6 +849,95 @@ export type Database = {
           },
         ]
       }
+      kpi_targets: {
+        Row: {
+          created_at: string
+          id: string
+          kpi_id: string
+          period_type: string
+          target_value: number
+          updated_at: string
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kpi_id: string
+          period_type: string
+          target_value: number
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kpi_id?: string
+          period_type?: string
+          target_value?: number
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kpi_targets_kpi_id_fkey"
+            columns: ["kpi_id"]
+            isOneToOne: false
+            referencedRelation: "kpis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kpis: {
+        Row: {
+          calculation_formula: string
+          code: string
+          color: string
+          created_at: string
+          description: string | null
+          display_order: number
+          icon: string
+          id: string
+          is_active: boolean
+          name: string
+          org_id: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          calculation_formula: string
+          code: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          org_id?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          calculation_formula?: string
+          code?: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          org_id?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       monthly_dre: {
         Row: {
           created_at: string | null
@@ -797,6 +979,104 @@ export type Database = {
           year?: number
         }
         Relationships: []
+      }
+      notification_types: {
+        Row: {
+          code: string
+          color: string
+          created_at: string
+          description: string | null
+          icon: string
+          id: string
+          is_active: boolean
+          name: string
+          org_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          org_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          org_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_global: boolean
+          is_read: boolean
+          message: string
+          metadata: Json | null
+          notification_type_id: string
+          org_id: string
+          severity: string
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_global?: boolean
+          is_read?: boolean
+          message: string
+          metadata?: Json | null
+          notification_type_id: string
+          org_id: string
+          severity?: string
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_global?: boolean
+          is_read?: boolean
+          message?: string
+          metadata?: Json | null
+          notification_type_id?: string
+          org_id?: string
+          severity?: string
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_notification_type_id_fkey"
+            columns: ["notification_type_id"]
+            isOneToOne: false
+            referencedRelation: "notification_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       obligation_files: {
         Row: {
@@ -1334,6 +1614,144 @@ export type Database = {
           role?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      quick_actions: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          href: string
+          icon: string
+          id: string
+          is_active: boolean
+          is_featured: boolean
+          org_id: string | null
+          permissions: Json | null
+          title: string
+          updated_at: string
+          variant: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          href: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          org_id?: string | null
+          permissions?: Json | null
+          title: string
+          updated_at?: string
+          variant?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          href?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          org_id?: string | null
+          permissions?: Json | null
+          title?: string
+          updated_at?: string
+          variant?: string
+        }
+        Relationships: []
+      }
+      search_sources: {
+        Row: {
+          created_at: string
+          display_fields: Json
+          id: string
+          is_active: boolean
+          org_id: string | null
+          permissions: Json | null
+          result_template: string | null
+          search_fields: Json
+          source_name: string
+          source_type: string
+          table_name: string | null
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          display_fields?: Json
+          id?: string
+          is_active?: boolean
+          org_id?: string | null
+          permissions?: Json | null
+          result_template?: string | null
+          search_fields?: Json
+          source_name: string
+          source_type: string
+          table_name?: string | null
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          display_fields?: Json
+          id?: string
+          is_active?: boolean
+          org_id?: string | null
+          permissions?: Json | null
+          result_template?: string | null
+          search_fields?: Json
+          source_name?: string
+          source_type?: string
+          table_name?: string | null
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: []
+      }
+      status_config: {
+        Row: {
+          badge_variant: string
+          color: string | null
+          created_at: string
+          entity_type: string
+          icon: string | null
+          id: string
+          is_active: boolean
+          org_id: string | null
+          status_key: string
+          status_label: string
+          updated_at: string
+        }
+        Insert: {
+          badge_variant?: string
+          color?: string | null
+          created_at?: string
+          entity_type: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          org_id?: string | null
+          status_key: string
+          status_label: string
+          updated_at?: string
+        }
+        Update: {
+          badge_variant?: string
+          color?: string | null
+          created_at?: string
+          entity_type?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          org_id?: string | null
+          status_key?: string
+          status_label?: string
+          updated_at?: string
         }
         Relationships: []
       }
