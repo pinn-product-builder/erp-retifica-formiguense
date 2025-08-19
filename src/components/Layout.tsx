@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Bell, User, Search } from "lucide-react";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { OrganizationSelector } from "@/components/OrganizationSelector";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 
 interface LayoutProps {
@@ -41,6 +42,12 @@ export function Layout({ children }: LayoutProps) {
                   </div>
                 )}
               </div>
+              
+              {!isMobile && (
+                <div className="flex-1 flex justify-center">
+                  <OrganizationSelector />
+                </div>
+              )}
             </div>
             
             <div className="flex items-center gap-2">

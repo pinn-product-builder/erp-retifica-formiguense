@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/hooks/useAuth';
+import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Layout } from '@/components/Layout';
 
@@ -35,7 +36,8 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <AuthProvider>
-          <Router>
+          <OrganizationProvider>
+            <Router>
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/auth" element={<Auth />} />
@@ -67,6 +69,7 @@ function App() {
               } />
             </Routes>
           </Router>
+          </OrganizationProvider>
         </AuthProvider>
         <Toaster />
       </ThemeProvider>

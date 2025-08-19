@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { toast } from 'sonner';
 
 export interface TaxType {
@@ -124,6 +125,7 @@ export interface CompanyFiscalSetting {
 }
 
 export const useFiscal = () => {
+  const { currentOrganization } = useOrganization();
   const [loading, setLoading] = useState(false);
 
   const handleError = (error: any, message: string) => {
