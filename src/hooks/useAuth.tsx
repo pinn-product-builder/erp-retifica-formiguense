@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useAudit } from '@/hooks/useAudit';
 
 interface AuthContextType {
   user: User | null;
@@ -20,7 +19,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const { logAuthAction } = useAudit();
+
+  // Simple audit logging without organization dependency
+  const logAuthAction = async (action: string, metadata?: any) => {
+    if (!user) return;
+    
+    try {
+      const userAgent = navigator.userAgent;
+      
+      await supabase.from('fiscal_audit_log').insert({
+        org_id: null, // Will be null during auth flow
+        table_name: 'auth_actions',
+        operation: 'INSERT',
+        record_id: crypto.randomUUID(),
+        new_values: {
+          action,
+          metadata,
+          timestamp: new Date().toISOString()
+        },
+        user_id: user.id,
+        user_agent: userAgent,
+        ip_address: null,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error logging auth action:', error);
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener
