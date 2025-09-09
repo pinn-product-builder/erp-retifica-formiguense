@@ -35,8 +35,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <AuthProvider>
-          <OrganizationProvider>
+        <OrganizationProvider>
+          <AuthProvider>
             <Router>
             <Routes>
               <Route path="/" element={<Landing />} />
@@ -69,8 +69,8 @@ function App() {
               } />
             </Routes>
           </Router>
-          </OrganizationProvider>
-        </AuthProvider>
+          </AuthProvider>
+        </OrganizationProvider>
         <Toaster />
       </ThemeProvider>
     </QueryClientProvider>
