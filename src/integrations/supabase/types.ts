@@ -1934,6 +1934,53 @@ export type Database = {
         }
         Relationships: []
       }
+      system_config: {
+        Row: {
+          category: string
+          created_at: string
+          data_type: string
+          description: string | null
+          id: string
+          is_active: boolean
+          key: string
+          org_id: string | null
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          data_type?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          org_id?: string | null
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          data_type?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          org_id?: string | null
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_config_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tax_calculations: {
         Row: {
           amount: number

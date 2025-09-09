@@ -70,6 +70,7 @@ export function useAudit() {
         org_id: currentOrganization?.id || null,
         table_name: 'auth_actions',
         operation: 'INSERT',
+        record_id: crypto.randomUUID(),
         new_values: {
           action,
           metadata,

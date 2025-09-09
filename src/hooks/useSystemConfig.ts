@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 import { useOrganization } from '@/contexts/OrganizationContext';
+
+// Use direct client to avoid type issues with new table
+const supabaseClient = createClient(
+  "https://citibygettyzjgaewfca.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdGlieWdldHR5empnYWV3ZmNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NjQ3OTUsImV4cCI6MjA2ODQ0MDc5NX0.__NwcDz6CfyRZ0PViXcugbH3FBaffiwcZJb6pbjPeqw"
+);
 
 interface SystemConfig {
   id: string;
@@ -21,7 +27,7 @@ export function useSystemConfig() {
     if (!currentOrganization) return;
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('system_config')
         .select('*')
         .eq('org_id', currentOrganization.id)
@@ -70,7 +76,7 @@ export function useSystemConfig() {
         processedValue = JSON.stringify(value);
       }
 
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('system_config')
         .upsert({
           org_id: currentOrganization.id,

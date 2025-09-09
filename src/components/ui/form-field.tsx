@@ -85,9 +85,6 @@ export function FormField({
   const hasError = Boolean(displayError);
   const hasSuccess = Boolean(success) && !hasError && touched && value;
 
-  const InputComponent = mask ? MaskedInput : Input;
-  const inputProps = mask ? { mask } : { type };
-
   return (
     <div className={cn("space-y-2", className)}>
       <Label htmlFor={name} className="text-sm font-medium">
@@ -96,22 +93,41 @@ export function FormField({
       </Label>
       
       <div className="relative">
-        <InputComponent
-          id={name}
-          name={name}
-          {...inputProps}
-          value={value}
-          onChange={handleChange}
-          onBlur={handleBlur}
-          placeholder={placeholder}
-          disabled={disabled}
-          required={required}
-          className={cn(
-            "pr-10",
-            hasError && "border-destructive focus-visible:ring-destructive",
-            hasSuccess && "border-success focus-visible:ring-success"
-          )}
-        />
+        {mask ? (
+          <MaskedInput
+            id={name}
+            name={name}
+            mask={mask}
+            value={value}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            placeholder={placeholder}
+            disabled={disabled}
+            required={required}
+            className={cn(
+              "pr-10",
+              hasError && "border-destructive focus-visible:ring-destructive",
+              hasSuccess && "border-success focus-visible:ring-success"
+            )}
+          />
+        ) : (
+          <Input
+            id={name}
+            name={name}
+            type={type}
+            value={value}
+            onChange={(e) => handleChange(e.target.value)}
+            onBlur={handleBlur}
+            placeholder={placeholder}
+            disabled={disabled}
+            required={required}
+            className={cn(
+              "pr-10",
+              hasError && "border-destructive focus-visible:ring-destructive",
+              hasSuccess && "border-success focus-visible:ring-success"
+            )}
+          />
+        )}
         
         {/* Status Icon */}
         {(hasError || hasSuccess) && (
