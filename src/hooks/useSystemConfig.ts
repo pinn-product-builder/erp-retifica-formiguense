@@ -1,12 +1,6 @@
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/contexts/OrganizationContext';
-
-// Use direct client to avoid type issues with new table
-const supabaseClient = createClient(
-  "https://citibygettyzjgaewfca.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdGlieWdldHR5empnYWV3ZmNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NjQ3OTUsImV4cCI6MjA2ODQ0MDc5NX0.__NwcDz6CfyRZ0PViXcugbH3FBaffiwcZJb6pbjPeqw"
-);
 
 interface SystemConfig {
   id: string;
@@ -18,6 +12,19 @@ interface SystemConfig {
   is_active: boolean;
 }
 
+interface SystemConfigRow {
+  id: string;
+  key: string;
+  value: string;
+  category: string;
+  description: string | null;
+  data_type: string;
+  is_active: boolean;
+  org_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export function useSystemConfig() {
   const [configs, setConfigs] = useState<SystemConfig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,14 +34,22 @@ export function useSystemConfig() {
     if (!currentOrganization) return;
 
     try {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('system_config')
         .select('*')
         .eq('org_id', currentOrganization.id)
         .eq('is_active', true);
 
       if (error) throw error;
-      setConfigs(data || []);
+      setConfigs((data || []).map((row: SystemConfigRow) => ({
+        id: row.id,
+        key: row.key,
+        value: row.value,
+        category: row.category,
+        description: row.description || undefined,
+        data_type: row.data_type as 'string' | 'number' | 'boolean' | 'json',
+        is_active: row.is_active,
+      })));
     } catch (error) {
       console.error('Error fetching system configs:', error);
     } finally {
@@ -55,7 +70,7 @@ export function useSystemConfig() {
       case 'number':
         return Number(config.value);
       case 'boolean':
-        return Boolean(config.value);
+        return config.value === 'true';
       case 'json':
         try {
           return JSON.parse(config.value);
@@ -74,9 +89,11 @@ export function useSystemConfig() {
       let processedValue = value;
       if (dataType === 'json') {
         processedValue = JSON.stringify(value);
+      } else if (dataType === 'boolean') {
+        processedValue = value ? 'true' : 'false';
       }
 
-      const { error } = await supabaseClient
+      const { error } = await supabase
         .from('system_config')
         .upsert({
           org_id: currentOrganization.id,

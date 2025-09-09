@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAudit } from '@/hooks/useAudit';
 
 interface AuthContextType {
   user: User | null;
@@ -19,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const { logAuthAction } = useAudit();
 
   useEffect(() => {
     // Set up auth state listener
@@ -48,8 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (error) {
       toast.error('Erro ao fazer login: ' + error.message);
+      setTimeout(() => {
+        logAuthAction('sign_in_failed', { email, error: error.message });
+      }, 0);
     } else {
       toast.success('Login realizado com sucesso!');
+      setTimeout(() => {
+        logAuthAction('sign_in_success', { email });
+      }, 0);
     }
     
     return { error };
@@ -74,8 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (error) {
       toast.error('Erro ao criar conta: ' + error.message);
+      setTimeout(() => {
+        logAuthAction('sign_up_failed', { email, name, error: error.message });
+      }, 0);
     } else {
       toast.success('Conta criada com sucesso! Verifique seu email.');
+      setTimeout(() => {
+        logAuthAction('sign_up_success', { email, name });
+      }, 0);
     }
     
     return { error };
@@ -90,8 +104,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (error) {
       toast.error('Erro ao enviar email de recuperação: ' + error.message);
+      setTimeout(() => {
+        logAuthAction('password_reset_failed', { email, error: error.message });
+      }, 0);
     } else {
       toast.success('Email de recuperação enviado! Verifique sua caixa de entrada.');
+      setTimeout(() => {
+        logAuthAction('password_reset_success', { email });
+      }, 0);
     }
     
     return { error };
@@ -103,6 +123,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast.error('Erro ao sair: ' + error.message);
     } else {
       toast.success('Logout realizado com sucesso!');
+      setTimeout(() => {
+        logAuthAction('sign_out', {});
+      }, 0);
     }
   };
 

@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Settings, User, Shield, Database, Bell, Mail } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Settings, User, Shield, Database, Bell, Mail, Cog } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { SystemConfigAdmin } from "@/components/admin/SystemConfigAdmin";
 
 const Configuracoes = () => {
   const { toast } = useToast();
@@ -43,8 +45,17 @@ const Configuracoes = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Configurações Gerais */}
+      <Tabs defaultValue="geral" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="geral">Geral</TabsTrigger>
+          <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
+          <TabsTrigger value="backup">Backup</TabsTrigger>
+          <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
+          <TabsTrigger value="sistema">Sistema</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="geral" className="space-y-6">
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -96,8 +107,9 @@ const Configuracoes = () => {
             </div>
           </CardContent>
         </Card>
+        </TabsContent>
 
-        {/* Notificações */}
+        <TabsContent value="notificacoes" className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -146,8 +158,9 @@ const Configuracoes = () => {
             </div>
           </CardContent>
         </Card>
+        </TabsContent>
 
-        {/* Backup e Segurança */}
+        <TabsContent value="backup" className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -191,8 +204,9 @@ const Configuracoes = () => {
             </div>
           </CardContent>
         </Card>
+        </TabsContent>
 
-        {/* Relatórios Automáticos */}
+        <TabsContent value="relatorios" className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -229,7 +243,25 @@ const Configuracoes = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="sistema" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Cog className="w-5 h-5" />
+                Configurações do Sistema
+              </CardTitle>
+              <CardDescription>
+                Gerencie configurações dinâmicas do sistema
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SystemConfigAdmin />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Botão de Salvar */}
       <div className="flex justify-end">

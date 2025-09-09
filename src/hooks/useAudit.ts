@@ -23,16 +23,6 @@ export function useAudit() {
     try {
       // Get client info
       const userAgent = navigator.userAgent;
-      
-      // Try to get IP address (this is basic, in production you'd use a service)
-      let ipAddress = 'unknown';
-      try {
-        const response = await fetch('https://api.ipify.org?format=json');
-        const data = await response.json();
-        ipAddress = data.ip;
-      } catch (error) {
-        console.warn('Could not fetch IP address:', error);
-      }
 
       await supabase.from('fiscal_audit_log').insert({
         org_id: currentOrganization.id,
@@ -43,7 +33,7 @@ export function useAudit() {
         new_values: logData.new_values,
         user_id: user.id,
         user_agent: userAgent,
-        ip_address: ipAddress,
+        ip_address: null, // Will be set to null for client-side auditing
         timestamp: new Date().toISOString()
       });
     } catch (error) {
@@ -56,15 +46,6 @@ export function useAudit() {
 
     try {
       const userAgent = navigator.userAgent;
-      
-      let ipAddress = 'unknown';
-      try {
-        const response = await fetch('https://api.ipify.org?format=json');
-        const data = await response.json();
-        ipAddress = data.ip;
-      } catch (error) {
-        console.warn('Could not fetch IP address:', error);
-      }
 
       await supabase.from('fiscal_audit_log').insert({
         org_id: currentOrganization?.id || null,
@@ -78,7 +59,7 @@ export function useAudit() {
         },
         user_id: user.id,
         user_agent: userAgent,
-        ip_address: ipAddress,
+        ip_address: null, // Will be set to null for client-side auditing
         timestamp: new Date().toISOString()
       });
     } catch (error) {
