@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Settings, User, Shield, Database, Bell, Mail, Cog } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { SystemConfigAdmin } from "@/components/admin/SystemConfigAdmin";
+import SystemConfigAdmin from "@/components/admin/SystemConfigAdmin";
 
 const Configuracoes = () => {
   const { toast } = useToast();

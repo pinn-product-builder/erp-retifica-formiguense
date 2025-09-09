@@ -24,7 +24,7 @@ interface ConfigItem {
   is_active: boolean;
 }
 
-export function SystemConfigAdmin() {
+function SystemConfigAdmin() {
   const { configs, loading, setConfig, refetch } = useSystemConfig();
   const { logAction } = useAudit();
   const [editingItem, setEditingItem] = useState<ConfigItem | null>(null);
@@ -306,3 +306,6 @@ export function SystemConfigAdmin() {
     </div>
   );
 }
+
+export default SystemConfigAdmin;
+export { SystemConfigAdmin };
