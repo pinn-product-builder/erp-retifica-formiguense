@@ -28,20 +28,7 @@ export default function Auth() {
     keywords: 'login retífica, acesso sistema, ERP login'
   });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (user) {
-    navigate("/dashboard");
-    return null;
-  }
-
-  // Capture UTM parameters for growth tracking
+  // Capture UTM parameters for growth tracking - MOVED BEFORE EARLY RETURNS
   useEffect(() => {
     const utmSource = searchParams.get('utm_source');
     const utmMedium = searchParams.get('utm_medium');
@@ -55,6 +42,25 @@ export default function Auth() {
       }));
     }
   }, [searchParams]);
+
+  // Redirect authenticated users
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (user) {
+    return null; // Will redirect via useEffect
+  }
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
