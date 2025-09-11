@@ -3,10 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
 
+export type EngineComponent = 'bloco' | 'eixo' | 'biela' | 'comando' | 'cabecote';
+
 export interface ProductionSchedule {
   id: string;
   order_id: string;
-  component: string;
+  component: EngineComponent;
   planned_start_date: string;
   planned_end_date: string;
   actual_start_date?: string;
@@ -126,7 +128,15 @@ export const usePCP = () => {
       const { data, error } = await supabase
         .from('production_schedules')
         .insert({
-          ...schedule,
+          order_id: schedule.order_id,
+          component: schedule.component,
+          planned_start_date: schedule.planned_start_date,
+          planned_end_date: schedule.planned_end_date,
+          estimated_hours: schedule.estimated_hours,
+          priority: schedule.priority,
+          status: schedule.status,
+          assigned_to: schedule.assigned_to,
+          notes: schedule.notes,
           org_id: currentOrganization.id,
         })
         .select()
@@ -154,9 +164,17 @@ export const usePCP = () => {
 
   const updateSchedule = async (id: string, updates: Partial<ProductionSchedule>) => {
     try {
+      const updateData: any = {};
+      if (updates.status) updateData.status = updates.status;
+      if (updates.actual_start_date) updateData.actual_start_date = updates.actual_start_date;
+      if (updates.actual_end_date) updateData.actual_end_date = updates.actual_end_date;
+      if (updates.actual_hours) updateData.actual_hours = updates.actual_hours;
+      if (updates.assigned_to) updateData.assigned_to = updates.assigned_to;
+      if (updates.notes) updateData.notes = updates.notes;
+
       const { error } = await supabase
         .from('production_schedules')
-        .update(updates)
+        .update(updateData)
         .eq('id', id);
 
       if (error) throw error;

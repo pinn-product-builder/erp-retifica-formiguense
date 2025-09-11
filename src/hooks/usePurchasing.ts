@@ -190,9 +190,13 @@ export const usePurchasing = () => {
       const { data: reqData, error: reqError } = await supabase
         .from('purchase_requisitions')
         .insert({
-          ...requisition,
+          department: requisition.department || null,
+          priority: requisition.priority || 'medium',
+          justification: requisition.justification || null,
+          status: requisition.status || 'pending',
+          total_estimated_value: requisition.total_estimated_value || 0,
           org_id: currentOrganization.id,
-        })
+        } as any)
         .select()
         .single();
 
@@ -266,9 +270,13 @@ export const usePurchasing = () => {
       const { data: orderData, error: orderError } = await supabase
         .from('purchase_orders')
         .insert({
-          ...order,
+          supplier_id: order.supplier_id,
+          status: order.status || 'pending',
+          order_date: order.order_date || new Date().toISOString().split('T')[0],
+          expected_delivery: order.expected_delivery || null,
+          total_value: order.total_value || 0,
           org_id: currentOrganization.id,
-        })
+        } as any)
         .select()
         .single();
 

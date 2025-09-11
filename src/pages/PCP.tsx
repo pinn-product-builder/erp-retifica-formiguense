@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { formatCurrency } from '@/lib/utils';
+import { EngineComponent } from '@/hooks/usePCP';
 
 const STATUS_COLORS = {
   planned: 'bg-blue-500/20 text-blue-700',
@@ -30,7 +30,7 @@ export default function PCP() {
   const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
   const [newSchedule, setNewSchedule] = useState({
     order_id: '',
-    component: '',
+    component: '' as EngineComponent | '',
     planned_start_date: '',
     planned_end_date: '',
     estimated_hours: 0,
@@ -44,12 +44,13 @@ export default function PCP() {
     
     await createSchedule({
       ...newSchedule,
+      component: newSchedule.component as EngineComponent,
       status: 'planned',
     });
     
     setNewSchedule({
       order_id: '',
-      component: '',
+      component: '' as EngineComponent | '',
       planned_start_date: '',
       planned_end_date: '',
       estimated_hours: 0,
@@ -119,10 +120,10 @@ export default function PCP() {
               </div>
               <div>
                 <Label>Componente</Label>
-                <Select 
-                  value={newSchedule.component} 
-                  onValueChange={(value) => setNewSchedule({...newSchedule, component: value})}
-                >
+                        <Select 
+                          value={newSchedule.component} 
+                          onValueChange={(value) => setNewSchedule({...newSchedule, component: value as EngineComponent})}
+                        >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o componente" />
                   </SelectTrigger>

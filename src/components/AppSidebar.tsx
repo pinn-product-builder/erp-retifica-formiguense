@@ -19,7 +19,10 @@ import {
   Calculator,
   PiggyBank,
   Gavel,
-  LogOut
+  LogOut,
+  Calendar,
+  ShoppingCart,
+  Clock
 } from "lucide-react";
 
 import {
@@ -71,6 +74,11 @@ const operationsItems = [
     icon: Kanban,
   },
   {
+    title: "PCP - Produção",
+    url: "/pcp",
+    icon: Calendar,
+  },
+  {
     title: "Orçamentos",
     url: "/orcamentos",
     icon: DollarSign,
@@ -94,6 +102,11 @@ const peopleItems = [
     url: "/funcionarios",
     icon: Users,
   },
+  {
+    title: "Gestão RH",
+    url: "/gestao-funcionarios",
+    icon: Clock,
+  },
 ];
 
 // Estoque & Inventário
@@ -102,6 +115,11 @@ const inventoryItems = [
     title: "Estoque/Peças",
     url: "/estoque",
     icon: Package,
+  },
+  {
+    title: "Compras",
+    url: "/compras",
+    icon: ShoppingCart,
   },
 ];
 
@@ -296,10 +314,10 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Estoque & Inventário */}
+        {/* Estoque, Compras & Suprimentos */}
         <SidebarGroup>
           <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
-            Estoque & Inventário
+            Estoque & Compras
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
