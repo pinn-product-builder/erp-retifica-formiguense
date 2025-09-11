@@ -501,6 +501,78 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_calculations: {
+        Row: {
+          approved_by: string | null
+          base_sales: number | null
+          bonus: number | null
+          calculated_commission: number | null
+          commission_rate: number | null
+          created_at: string
+          deductions: number | null
+          employee_id: string
+          final_commission: number | null
+          id: string
+          org_id: string | null
+          paid_at: string | null
+          period_month: number
+          period_year: number
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_by?: string | null
+          base_sales?: number | null
+          bonus?: number | null
+          calculated_commission?: number | null
+          commission_rate?: number | null
+          created_at?: string
+          deductions?: number | null
+          employee_id: string
+          final_commission?: number | null
+          id?: string
+          org_id?: string | null
+          paid_at?: string | null
+          period_month: number
+          period_year: number
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_by?: string | null
+          base_sales?: number | null
+          bonus?: number | null
+          calculated_commission?: number | null
+          commission_rate?: number | null
+          created_at?: string
+          deductions?: number | null
+          employee_id?: string
+          final_commission?: number | null
+          id?: string
+          org_id?: string | null
+          paid_at?: string | null
+          period_month?: number
+          period_year?: number
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_calculations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_calculations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_fiscal_settings: {
         Row: {
           cnpj: string | null
@@ -688,6 +760,140 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      employee_time_tracking: {
+        Row: {
+          approved_by: string | null
+          break_duration: number | null
+          clock_in: string | null
+          clock_out: string | null
+          created_at: string
+          date: string
+          employee_id: string
+          id: string
+          notes: string | null
+          org_id: string | null
+          overtime_hours: number | null
+          status: string | null
+          total_hours: number | null
+        }
+        Insert: {
+          approved_by?: string | null
+          break_duration?: number | null
+          clock_in?: string | null
+          clock_out?: string | null
+          created_at?: string
+          date: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          org_id?: string | null
+          overtime_hours?: number | null
+          status?: string | null
+          total_hours?: number | null
+        }
+        Update: {
+          approved_by?: string | null
+          break_duration?: number | null
+          clock_in?: string | null
+          clock_out?: string | null
+          created_at?: string
+          date?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          org_id?: string | null
+          overtime_hours?: number | null
+          status?: string | null
+          total_hours?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_time_tracking_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_time_tracking_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          address: string | null
+          commission_rate: number | null
+          cpf: string | null
+          created_at: string
+          department: string | null
+          email: string | null
+          employee_number: string
+          full_name: string
+          hire_date: string | null
+          hourly_rate: number | null
+          id: string
+          is_active: boolean | null
+          org_id: string | null
+          phone: string | null
+          position: string
+          salary: number | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          commission_rate?: number | null
+          cpf?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          employee_number: string
+          full_name: string
+          hire_date?: string | null
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean | null
+          org_id?: string | null
+          phone?: string | null
+          position: string
+          salary?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          commission_rate?: number | null
+          cpf?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          employee_number?: string
+          full_name?: string
+          hire_date?: string | null
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean | null
+          org_id?: string | null
+          phone?: string | null
+          position?: string
+          salary?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       engines: {
         Row: {
@@ -1661,6 +1867,217 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_reviews: {
+        Row: {
+          achievements: string | null
+          comments: string | null
+          created_at: string
+          employee_id: string
+          goals: string | null
+          id: string
+          improvement_areas: string | null
+          org_id: string | null
+          overall_rating: number | null
+          productivity_score: number | null
+          punctuality_score: number | null
+          quality_score: number | null
+          review_period_end: string
+          review_period_start: string
+          reviewer_id: string
+          status: string | null
+          teamwork_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          achievements?: string | null
+          comments?: string | null
+          created_at?: string
+          employee_id: string
+          goals?: string | null
+          id?: string
+          improvement_areas?: string | null
+          org_id?: string | null
+          overall_rating?: number | null
+          productivity_score?: number | null
+          punctuality_score?: number | null
+          quality_score?: number | null
+          review_period_end: string
+          review_period_start: string
+          reviewer_id: string
+          status?: string | null
+          teamwork_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          achievements?: string | null
+          comments?: string | null
+          created_at?: string
+          employee_id?: string
+          goals?: string | null
+          id?: string
+          improvement_areas?: string | null
+          org_id?: string | null
+          overall_rating?: number | null
+          productivity_score?: number | null
+          punctuality_score?: number | null
+          quality_score?: number | null
+          review_period_end?: string
+          review_period_start?: string
+          reviewer_id?: string
+          status?: string | null
+          teamwork_score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_reviews_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_reviews_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          order_id: string | null
+          org_id: string | null
+          schedule_id: string | null
+          severity: string | null
+          title: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          order_id?: string | null
+          org_id?: string | null
+          schedule_id?: string | null
+          severity?: string | null
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          order_id?: string | null
+          org_id?: string | null
+          schedule_id?: string | null
+          severity?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_alerts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_alerts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_alerts_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "production_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_schedules: {
+        Row: {
+          actual_end_date: string | null
+          actual_hours: number | null
+          actual_start_date: string | null
+          assigned_to: string | null
+          component: Database["public"]["Enums"]["engine_component"]
+          created_at: string
+          estimated_hours: number | null
+          id: string
+          notes: string | null
+          order_id: string
+          org_id: string | null
+          planned_end_date: string
+          planned_start_date: string
+          priority: number | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          actual_end_date?: string | null
+          actual_hours?: number | null
+          actual_start_date?: string | null
+          assigned_to?: string | null
+          component: Database["public"]["Enums"]["engine_component"]
+          created_at?: string
+          estimated_hours?: number | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          org_id?: string | null
+          planned_end_date: string
+          planned_start_date: string
+          priority?: number | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actual_end_date?: string | null
+          actual_hours?: number | null
+          actual_start_date?: string | null
+          assigned_to?: string | null
+          component?: Database["public"]["Enums"]["engine_component"]
+          created_at?: string
+          estimated_hours?: number | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          org_id?: string | null
+          planned_end_date?: string
+          planned_start_date?: string
+          priority?: number | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_schedules_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_schedules_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1687,6 +2104,229 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      purchase_order_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          item_name: string
+          po_id: string
+          quantity: number
+          received_quantity: number | null
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_name: string
+          po_id: string
+          quantity?: number
+          received_quantity?: number | null
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_name?: string
+          po_id?: string
+          quantity?: number
+          received_quantity?: number | null
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          actual_delivery: string | null
+          created_at: string
+          created_by: string | null
+          expected_delivery: string | null
+          id: string
+          notes: string | null
+          order_date: string | null
+          org_id: string | null
+          po_number: string
+          requisition_id: string | null
+          status: string | null
+          supplier_id: string
+          terms: string | null
+          total_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          actual_delivery?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_delivery?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string | null
+          org_id?: string | null
+          po_number: string
+          requisition_id?: string | null
+          status?: string | null
+          supplier_id: string
+          terms?: string | null
+          total_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          actual_delivery?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_delivery?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string | null
+          org_id?: string | null
+          po_number?: string
+          requisition_id?: string | null
+          status?: string | null
+          supplier_id?: string
+          terms?: string | null
+          total_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_requisition_id_fkey"
+            columns: ["requisition_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_requisitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_requisition_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          item_name: string
+          notes: string | null
+          quantity: number
+          requisition_id: string
+          total_price: number | null
+          unit_price: number | null
+          urgency_date: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_name: string
+          notes?: string | null
+          quantity?: number
+          requisition_id: string
+          total_price?: number | null
+          unit_price?: number | null
+          urgency_date?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_name?: string
+          notes?: string | null
+          quantity?: number
+          requisition_id?: string
+          total_price?: number | null
+          unit_price?: number | null
+          urgency_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_requisition_items_requisition_id_fkey"
+            columns: ["requisition_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_requisitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_requisitions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          department: string | null
+          id: string
+          justification: string | null
+          org_id: string | null
+          priority: string | null
+          requested_by: string | null
+          requisition_number: string
+          status: string | null
+          total_estimated_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          department?: string | null
+          id?: string
+          justification?: string | null
+          org_id?: string | null
+          priority?: string | null
+          requested_by?: string | null
+          requisition_number: string
+          status?: string | null
+          total_estimated_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          department?: string | null
+          id?: string
+          justification?: string | null
+          org_id?: string | null
+          priority?: string | null
+          requested_by?: string | null
+          requisition_number?: string
+          status?: string | null
+          total_estimated_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_requisitions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quick_actions: {
         Row: {
@@ -1735,6 +2375,117 @@ export type Database = {
           variant?: string
         }
         Relationships: []
+      }
+      quotation_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          item_name: string
+          quantity: number
+          quotation_id: string
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_name: string
+          quantity?: number
+          quotation_id: string
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          item_name?: string
+          quantity?: number
+          quotation_id?: string
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_items_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotations: {
+        Row: {
+          created_at: string
+          delivery_time: number | null
+          id: string
+          org_id: string | null
+          quote_date: string | null
+          quote_number: string | null
+          requisition_id: string
+          status: string | null
+          supplier_id: string
+          terms: string | null
+          total_value: number | null
+          updated_at: string
+          validity_date: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivery_time?: number | null
+          id?: string
+          org_id?: string | null
+          quote_date?: string | null
+          quote_number?: string | null
+          requisition_id: string
+          status?: string | null
+          supplier_id: string
+          terms?: string | null
+          total_value?: number | null
+          updated_at?: string
+          validity_date?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivery_time?: number | null
+          id?: string
+          org_id?: string | null
+          quote_date?: string | null
+          quote_number?: string | null
+          requisition_id?: string
+          status?: string | null
+          supplier_id?: string
+          terms?: string | null
+          total_value?: number | null
+          updated_at?: string
+          validity_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_requisition_id_fkey"
+            columns: ["requisition_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_requisitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       report_catalog: {
         Row: {
@@ -1844,6 +2595,47 @@ export type Database = {
         }
         Relationships: []
       }
+      resource_capacity: {
+        Row: {
+          created_at: string
+          daily_capacity_hours: number | null
+          id: string
+          is_active: boolean | null
+          org_id: string | null
+          resource_name: string
+          resource_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          daily_capacity_hours?: number | null
+          id?: string
+          is_active?: boolean | null
+          org_id?: string | null
+          resource_name: string
+          resource_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          daily_capacity_hours?: number | null
+          id?: string
+          is_active?: boolean | null
+          org_id?: string | null
+          resource_name?: string
+          resource_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_capacity_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       search_sources: {
         Row: {
           created_at: string
@@ -1933,6 +2725,65 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          cnpj: string | null
+          contact_person: string | null
+          created_at: string
+          delivery_days: number | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          org_id: string | null
+          payment_terms: string | null
+          phone: string | null
+          rating: number | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          cnpj?: string | null
+          contact_person?: string | null
+          created_at?: string
+          delivery_days?: number | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          org_id?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          rating?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          cnpj?: string | null
+          contact_person?: string | null
+          created_at?: string
+          delivery_days?: number | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          org_id?: string | null
+          payment_terms?: string | null
+          phone?: string | null
+          rating?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_config: {
         Row: {
@@ -2447,6 +3298,93 @@ export type Database = {
           },
         ]
       }
+      work_schedules: {
+        Row: {
+          created_at: string
+          effective_from: string | null
+          effective_to: string | null
+          employee_id: string
+          friday_end: string | null
+          friday_start: string | null
+          id: string
+          monday_end: string | null
+          monday_start: string | null
+          org_id: string | null
+          saturday_end: string | null
+          saturday_start: string | null
+          shift_name: string
+          sunday_end: string | null
+          sunday_start: string | null
+          thursday_end: string | null
+          thursday_start: string | null
+          tuesday_end: string | null
+          tuesday_start: string | null
+          wednesday_end: string | null
+          wednesday_start: string | null
+        }
+        Insert: {
+          created_at?: string
+          effective_from?: string | null
+          effective_to?: string | null
+          employee_id: string
+          friday_end?: string | null
+          friday_start?: string | null
+          id?: string
+          monday_end?: string | null
+          monday_start?: string | null
+          org_id?: string | null
+          saturday_end?: string | null
+          saturday_start?: string | null
+          shift_name: string
+          sunday_end?: string | null
+          sunday_start?: string | null
+          thursday_end?: string | null
+          thursday_start?: string | null
+          tuesday_end?: string | null
+          tuesday_start?: string | null
+          wednesday_end?: string | null
+          wednesday_start?: string | null
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string | null
+          effective_to?: string | null
+          employee_id?: string
+          friday_end?: string | null
+          friday_start?: string | null
+          id?: string
+          monday_end?: string | null
+          monday_start?: string | null
+          org_id?: string | null
+          saturday_end?: string | null
+          saturday_start?: string | null
+          shift_name?: string
+          sunday_end?: string | null
+          sunday_start?: string | null
+          thursday_end?: string | null
+          thursday_start?: string | null
+          tuesday_end?: string | null
+          tuesday_start?: string | null
+          wednesday_end?: string | null
+          wednesday_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_schedules_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_schedules_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2457,6 +3395,14 @@ export type Database = {
         Returns: string
       }
       generate_order_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_po_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_requisition_number: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
