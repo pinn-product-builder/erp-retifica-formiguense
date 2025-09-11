@@ -1509,6 +1509,76 @@ export type Database = {
           },
         ]
       }
+      order_materials: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          order_id: string
+          org_id: string | null
+          part_code: string | null
+          part_id: string | null
+          part_name: string
+          quantity: number
+          total_cost: number | null
+          unit_cost: number | null
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          org_id?: string | null
+          part_code?: string | null
+          part_id?: string | null
+          part_name: string
+          quantity?: number
+          total_cost?: number | null
+          unit_cost?: number | null
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          org_id?: string | null
+          part_code?: string | null
+          part_id?: string | null
+          part_name?: string
+          quantity?: number
+          total_cost?: number | null
+          unit_cost?: number | null
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_materials_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_materials_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_materials_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts_inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_photos: {
         Row: {
           component: Database["public"]["Enums"]["engine_component"] | null
@@ -1552,6 +1622,108 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_status_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_status: string
+          notes: string | null
+          old_status: string | null
+          order_id: string
+          org_id: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_status: string
+          notes?: string | null
+          old_status?: string | null
+          order_id: string
+          org_id?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_status?: string
+          notes?: string | null
+          old_status?: string | null
+          order_id?: string
+          org_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_status_history_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_warranties: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          is_active: boolean | null
+          order_id: string
+          org_id: string | null
+          start_date: string
+          terms: string | null
+          updated_at: string
+          warranty_type: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          order_id: string
+          org_id?: string | null
+          start_date: string
+          terms?: string | null
+          updated_at?: string
+          warranty_type: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          order_id?: string
+          org_id?: string | null
+          start_date?: string
+          terms?: string | null
+          updated_at?: string
+          warranty_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_warranties_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_warranties_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1621,8 +1793,10 @@ export type Database = {
           initial_observations: string | null
           order_number: string
           org_id: string | null
+          priority: number | null
           status: Database["public"]["Enums"]["order_status"] | null
           updated_at: string
+          warranty_months: number | null
         }
         Insert: {
           actual_delivery?: string | null
@@ -1641,8 +1815,10 @@ export type Database = {
           initial_observations?: string | null
           order_number: string
           org_id?: string | null
+          priority?: number | null
           status?: Database["public"]["Enums"]["order_status"] | null
           updated_at?: string
+          warranty_months?: number | null
         }
         Update: {
           actual_delivery?: string | null
@@ -1661,8 +1837,10 @@ export type Database = {
           initial_observations?: string | null
           order_number?: string
           org_id?: string | null
+          priority?: number | null
           status?: Database["public"]["Enums"]["order_status"] | null
           updated_at?: string
+          warranty_months?: number | null
         }
         Relationships: [
           {
