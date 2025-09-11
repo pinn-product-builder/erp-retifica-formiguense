@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, startTransition } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
@@ -42,42 +42,36 @@ function App() {
         <AuthProvider>
           <OrganizationProvider>
             <Router>
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/*" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Suspense fallback={<div>Carregando...</div>}>
-                        <Routes>
-                          <Route path="/dashboard" element={<Dashboard />} />
-                          <Route path="/clientes" element={<Clientes />} />
-                          <Route path="/consultores" element={<Consultores />} />
-                          <Route path="/coleta" element={<Coleta />} />
-                          <Route path="/workflow" element={<Workflow />} />
-                          <Route path="/checkin" element={<CheckIn />} />
-                          <Route path="/estoque" element={<Estoque />} />
-                          <Route path="/pcp" element={<PCP />} />
-                          <Route path="/ordens-servico" element={<OrdensServico />} />
-                          <Route path="/compras" element={<Compras />} />
-                          <Route path="/gestao-funcionarios" element={<GestaoFuncionarios />} />
-                          <Route path="/funcionarios" element={<Funcionarios />} />
-                          <Route path="/orcamentos" element={<Orcamentos />} />
-                          <Route path="/relatorios" element={<Relatorios />} />
-                          <Route path="/configuracoes" element={<Configuracoes />} />
-                          <Route path="/financeiro" element={<Financeiro />} />
-                          <Route path="/contas-receber" element={<ContasReceber />} />
-                          <Route path="/contas-pagar" element={<ContasPagar />} />
-                          <Route path="/fluxo-caixa" element={<FluxoCaixa />} />
-                          <Route path="/dre" element={<DRE />} />
-                          <Route path="/modulo-fiscal" element={<ModuloFiscal />} />
-                          <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </Suspense>
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-              </Routes>
+              <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Carregando...</div>}>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/auth" element={<Auth />} />
+                  
+                  {/* Protected Routes */}
+                  <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+                  <Route path="/clientes" element={<ProtectedRoute><Layout><Clientes /></Layout></ProtectedRoute>} />
+                  <Route path="/consultores" element={<ProtectedRoute><Layout><Consultores /></Layout></ProtectedRoute>} />
+                  <Route path="/coleta" element={<ProtectedRoute><Layout><Coleta /></Layout></ProtectedRoute>} />
+                  <Route path="/workflow" element={<ProtectedRoute><Layout><Workflow /></Layout></ProtectedRoute>} />
+                  <Route path="/checkin" element={<ProtectedRoute><Layout><CheckIn /></Layout></ProtectedRoute>} />
+                  <Route path="/estoque" element={<ProtectedRoute><Layout><Estoque /></Layout></ProtectedRoute>} />
+                  <Route path="/pcp" element={<ProtectedRoute><Layout><PCP /></Layout></ProtectedRoute>} />
+                  <Route path="/ordens-servico" element={<ProtectedRoute><Layout><OrdensServico /></Layout></ProtectedRoute>} />
+                  <Route path="/compras" element={<ProtectedRoute><Layout><Compras /></Layout></ProtectedRoute>} />
+                  <Route path="/gestao-funcionarios" element={<ProtectedRoute><Layout><GestaoFuncionarios /></Layout></ProtectedRoute>} />
+                  <Route path="/funcionarios" element={<ProtectedRoute><Layout><Funcionarios /></Layout></ProtectedRoute>} />
+                  <Route path="/orcamentos" element={<ProtectedRoute><Layout><Orcamentos /></Layout></ProtectedRoute>} />
+                  <Route path="/relatorios" element={<ProtectedRoute><Layout><Relatorios /></Layout></ProtectedRoute>} />
+                  <Route path="/configuracoes" element={<ProtectedRoute><Layout><Configuracoes /></Layout></ProtectedRoute>} />
+                  <Route path="/financeiro" element={<ProtectedRoute><Layout><Financeiro /></Layout></ProtectedRoute>} />
+                  <Route path="/contas-receber" element={<ProtectedRoute><Layout><ContasReceber /></Layout></ProtectedRoute>} />
+                  <Route path="/contas-pagar" element={<ProtectedRoute><Layout><ContasPagar /></Layout></ProtectedRoute>} />
+                  <Route path="/fluxo-caixa" element={<ProtectedRoute><Layout><FluxoCaixa /></Layout></ProtectedRoute>} />
+                  <Route path="/dre" element={<ProtectedRoute><Layout><DRE /></Layout></ProtectedRoute>} />
+                  <Route path="/modulo-fiscal" element={<ProtectedRoute><Layout><ModuloFiscal /></Layout></ProtectedRoute>} />
+                  <Route path="*" element={<ProtectedRoute><Layout><NotFound /></Layout></ProtectedRoute>} />
+                </Routes>
+              </Suspense>
             </Router>
           </OrganizationProvider>
         </AuthProvider>

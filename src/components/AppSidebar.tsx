@@ -22,7 +22,8 @@ import {
   LogOut,
   Calendar,
   ShoppingCart,
-  Clock
+  Clock,
+  Wrench
 } from "lucide-react";
 
 import {
@@ -77,6 +78,11 @@ const operationsItems = [
     title: "PCP - Produção",
     url: "/pcp",
     icon: Calendar,
+  },
+  {
+    title: "Ordens de Serviço",
+    url: "/ordens-servico",
+    icon: Wrench,
   },
   {
     title: "Orçamentos",
