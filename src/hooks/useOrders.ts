@@ -207,7 +207,7 @@ export function useOrders() {
     }
   };
 
-  const updateOrderStatus = async (orderId: string, newStatus: string, notes?: string) => {
+  const updateOrderStatus = async (orderId: string, newStatus: 'ativa' | 'concluida' | 'cancelada', notes?: string) => {
     if (!currentOrganization?.id) return false;
 
     try {
