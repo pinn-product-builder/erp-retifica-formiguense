@@ -30,6 +30,7 @@ const DRE = lazy(() => import('@/pages/DRE'));
 const ModuloFiscal = lazy(() => import('@/pages/ModuloFiscal'));
 const PCP = lazy(() => import('@/pages/PCP'));
 const Compras = lazy(() => import('@/pages/Compras'));
+const OrdensServico = lazy(() => import('@/pages/OrdensServico'));
 const GestaoFuncionarios = lazy(() => import('@/pages/GestaoFuncionarios'));
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ function App() {
                           <Route path="/checkin" element={<CheckIn />} />
                           <Route path="/estoque" element={<Estoque />} />
                           <Route path="/pcp" element={<PCP />} />
+                          <Route path="/ordens-servico" element={<OrdensServico />} />
                           <Route path="/compras" element={<Compras />} />
                           <Route path="/gestao-funcionarios" element={<GestaoFuncionarios />} />
                           <Route path="/funcionarios" element={<Funcionarios />} />
