@@ -12,6 +12,8 @@ import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { toast } from '@/hooks/use-toast';
+import { AdminOnly } from '@/components/auth/PermissionGate';
+import { useAdminGuard } from '@/hooks/useRoleGuard';
 
 interface ReportCatalogItem {
   id: string;
@@ -28,11 +30,21 @@ interface ReportCatalogItem {
 }
 
 export const ReportCatalogAdmin = () => {
+  // Verificar permissões de admin
+  const { hasPermission } = useAdminGuard({
+    toastMessage: 'Acesso restrito a administradores para gerenciar relatórios.'
+  });
+
   const { currentOrganization } = useOrganization();
   const [items, setItems] = useState<ReportCatalogItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingItem, setEditingItem] = useState<ReportCatalogItem | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // Se não tem permissão, não renderizar nada
+  if (!hasPermission) {
+    return null;
+  }
 
   const [formData, setFormData] = useState({
     code: '',

@@ -42,6 +42,8 @@ import {
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 // Dashboard & Visão Geral
 const dashboardItems = [
@@ -170,6 +172,11 @@ const fiscalItems = [
 // Administração
 const adminItems = [
   {
+    title: "Gestão de Usuários",
+    url: "/gestao-usuarios",
+    icon: Users,
+  },
+  {
     title: "Configurações",
     url: "/configuracoes",
     icon: Settings,
@@ -181,6 +188,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const { isMobile } = useBreakpoint();
   const { user, signOut } = useAuth();
+  const permissions = usePermissions();
   const isCollapsed = state === "collapsed";
 
   return (
@@ -397,80 +405,84 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/* Fiscal */}
-        <SidebarGroup>
-          <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
-            Fiscal
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {fiscalItems.map((item) => {
-                const isActive = location.pathname === item.url;
-                
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={isCollapsed ? item.title : undefined}
-                      isActive={isActive}
-                      className="group transition-colors duration-200"
-                      size={isMobile ? "sm" : "default"}
-                    >
-                      <NavLink 
-                        to={item.url}
-                        className="flex items-center gap-3 w-full"
+        <PermissionGate module="fiscal" hideOnDenied>
+          <SidebarGroup>
+            <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
+              Fiscal
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {fiscalItems.map((item) => {
+                  const isActive = location.pathname === item.url;
+                  
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={isCollapsed ? item.title : undefined}
+                        isActive={isActive}
+                        className="group transition-colors duration-200"
+                        size={isMobile ? "sm" : "default"}
                       >
-                        <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
-                        {!isCollapsed && (
-                          <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
-                            {item.title}
-                          </span>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                        <NavLink 
+                          to={item.url}
+                          className="flex items-center gap-3 w-full"
+                        >
+                          <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
+                          {!isCollapsed && (
+                            <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
+                              {item.title}
+                            </span>
+                          )}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </PermissionGate>
 
         {/* Administração */}
-        <SidebarGroup>
-          <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
-            Administração
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {adminItems.map((item) => {
-                const isActive = location.pathname === item.url;
-                
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={isCollapsed ? item.title : undefined}
-                      isActive={isActive}
-                      className="group transition-colors duration-200"
-                      size={isMobile ? "sm" : "default"}
-                    >
-                      <NavLink 
-                        to={item.url}
-                        className="flex items-center gap-3 w-full"
+        <PermissionGate requiredRole={['owner', 'admin']} hideOnDenied>
+          <SidebarGroup>
+            <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
+              Administração
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminItems.map((item) => {
+                  const isActive = location.pathname === item.url;
+                  
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={isCollapsed ? item.title : undefined}
+                        isActive={isActive}
+                        className="group transition-colors duration-200"
+                        size={isMobile ? "sm" : "default"}
                       >
-                        <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
-                        {!isCollapsed && (
-                          <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
-                            {item.title}
-                          </span>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                        <NavLink 
+                          to={item.url}
+                          className="flex items-center gap-3 w-full"
+                        >
+                          <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
+                          {!isCollapsed && (
+                            <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
+                              {item.title}
+                            </span>
+                          )}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </PermissionGate>
       </SidebarContent>
       
       <SidebarFooter>

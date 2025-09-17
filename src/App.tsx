@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/hooks/useAuth';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { AdminRoute } from '@/components/auth/ProtectedRoute';
 import { Layout } from '@/components/Layout';
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
@@ -32,6 +33,7 @@ const PCP = lazy(() => import('@/pages/PCP'));
 const Compras = lazy(() => import('@/pages/Compras'));
 const OrdensServico = lazy(() => import('@/pages/OrdensServico'));
 const GestaoFuncionarios = lazy(() => import('@/pages/GestaoFuncionarios'));
+const GestaoUsuarios = lazy(() => import('@/pages/GestaoUsuarios'));
 
 const queryClient = new QueryClient();
 
@@ -60,6 +62,7 @@ function App() {
                   <Route path="/compras" element={<ProtectedRoute><Layout><Compras /></Layout></ProtectedRoute>} />
                   <Route path="/gestao-funcionarios" element={<ProtectedRoute><Layout><GestaoFuncionarios /></Layout></ProtectedRoute>} />
                   <Route path="/funcionarios" element={<ProtectedRoute><Layout><Funcionarios /></Layout></ProtectedRoute>} />
+                  <Route path="/gestao-usuarios" element={<AdminRoute><Layout><GestaoUsuarios /></Layout></AdminRoute>} />
                   <Route path="/orcamentos" element={<ProtectedRoute><Layout><Orcamentos /></Layout></ProtectedRoute>} />
                   <Route path="/relatorios" element={<ProtectedRoute><Layout><Relatorios /></Layout></ProtectedRoute>} />
                   <Route path="/configuracoes" element={<ProtectedRoute><Layout><Configuracoes /></Layout></ProtectedRoute>} />

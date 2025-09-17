@@ -12,6 +12,8 @@ import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { toast } from '@/hooks/use-toast';
+import { AdminOnly } from '@/components/auth/PermissionGate';
+import { useAdminGuard } from '@/hooks/useRoleGuard';
 
 interface KPI {
   id: string;
@@ -28,11 +30,21 @@ interface KPI {
 }
 
 export const KPIAdmin = () => {
+  // Verificar permissões de admin
+  const { hasPermission } = useAdminGuard({
+    toastMessage: 'Acesso restrito a administradores para gerenciar KPIs.'
+  });
+
   const { currentOrganization } = useOrganization();
   const [kpis, setKpis] = useState<KPI[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingKPI, setEditingKPI] = useState<KPI | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  // Se não tem permissão, não renderizar nada
+  if (!hasPermission) {
+    return null;
+  }
 
   const [formData, setFormData] = useState({
     code: '',
