@@ -3476,6 +3476,33 @@ export type Database = {
           },
         ]
       }
+      user_basic_info: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       work_schedules: {
         Row: {
           created_at: string
@@ -3583,6 +3610,15 @@ export type Database = {
       generate_requisition_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_organization_users_info: {
+        Args: { org_id: string }
+        Returns: {
+          created_at: string
+          email: string
+          name: string
+          user_id: string
+        }[]
       }
       has_org_role: {
         Args: {
