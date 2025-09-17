@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -158,15 +159,23 @@ export default function GestaoUsuarios() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Gestão de Usuários</h1>
-          <p className="text-muted-foreground mt-2">
-            Gerencie usuários e permissões da organização {currentOrganization?.name}
-          </p>
-        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Gestão de Usuários</h1>
+            <p className="text-muted-foreground mt-2">
+              Gerencie usuários e permissões da organização {currentOrganization?.name}
+            </p>
+          </div>
+          
+          <div className="flex gap-2">
+            <Link to="/gestao-usuarios/perfis">
+              <Button variant="outline">
+                <UserCog className="h-4 w-4 mr-2" />
+                Perfis de Usuário
+              </Button>
+            </Link>
         
-        {canManageUsers() && (
+            {canManageUsers() && (
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -255,8 +264,9 @@ export default function GestaoUsuarios() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        )}
-      </div>
+            )}
+          </div>
+        </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

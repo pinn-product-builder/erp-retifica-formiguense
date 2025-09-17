@@ -36,6 +36,7 @@ const Compras = lazy(() => import('@/pages/Compras'));
 const OrdensServico = lazy(() => import('@/pages/OrdensServico'));
 const GestaoFuncionarios = lazy(() => import('@/pages/GestaoFuncionarios'));
 const GestaoUsuarios = lazy(() => import('@/pages/GestaoUsuarios'));
+const GestaoPerfiUsuarios = lazy(() => import('@/pages/GestaoPerfisusuarios'));
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,7 @@ function AppContent() {
             <Route path="/gestao-funcionarios" element={<ProtectedRoute><Layout><GestaoFuncionarios /></Layout></ProtectedRoute>} />
             <Route path="/funcionarios" element={<ProtectedRoute><Layout><Funcionarios /></Layout></ProtectedRoute>} />
             <Route path="/gestao-usuarios" element={<AdminRoute><Layout><GestaoUsuarios /></Layout></AdminRoute>} />
+            <Route path="/gestao-usuarios/perfis" element={<AdminRoute><Layout><GestaoPerfiUsuarios /></Layout></AdminRoute>} />
             <Route path="/orcamentos" element={<ProtectedRoute><Layout><Orcamentos /></Layout></ProtectedRoute>} />
             <Route path="/relatorios" element={<ProtectedRoute><Layout><Relatorios /></Layout></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><Layout><Configuracoes /></Layout></ProtectedRoute>} />
