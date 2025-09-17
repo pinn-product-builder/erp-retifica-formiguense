@@ -73,6 +73,7 @@ export default function GestaoUsuarios() {
     removeUser,
     canManageUsers,
     canEditUser,
+    isSelfUser,
     currentOrganization,
     userRole
   } = useUserManagement();
@@ -343,7 +344,14 @@ export default function GestaoUsuarios() {
                   <TableRow key={user.id}>
                     <TableCell>
                       <div className="flex flex-col">
-                        <div className="font-medium">{user.user?.name || 'Nome não disponível'}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{user.user?.name || 'Nome não disponível'}</span>
+                          {isSelfUser(user.user_id) && (
+                            <Badge variant="secondary" className="text-xs">
+                              Você
+                            </Badge>
+                          )}
+                        </div>
                         <div className="text-sm text-muted-foreground">{user.user?.email}</div>
                       </div>
                     </TableCell>
@@ -375,7 +383,7 @@ export default function GestaoUsuarios() {
                     
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {canEditUser(user.user_id, user.role) && (
+                        {canEditUser(user.user_id) && (
                           <>
                             {/* Toggle Status */}
                             <Button
