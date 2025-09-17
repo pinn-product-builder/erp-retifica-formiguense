@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
-import type { AppRole } from '@/hooks/usePermissions';
+import { Database } from '@/integrations/supabase/types';
+
+type AppRole = Database['public']['Enums']['app_role'];
 
 export interface OrganizationUser {
   id: string;
@@ -69,29 +71,56 @@ export const useUserManagement = () => {
 
       if (orgError) throw orgError;
 
-      // Buscar perfis dos usuários
+      // Buscar informações básicas dos usuários
       const userIds = orgUsers?.map(u => u.user_id) || [];
-      let profiles: any[] = [];
+      let userBasicInfo: any[] = [];
       
       if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('*')
-          .in('user_id', userIds);
-          
-        if (profilesError) throw profilesError;
-        profiles = profilesData || [];
+        // Tentar buscar da tabela user_basic_info (se existir)
+        try {
+          const { data: basicInfoData, error: basicInfoError } = await supabase
+            .from('user_basic_info' as any)
+            .select('user_id, email, name')
+            .in('user_id', userIds);
+            
+          if (!basicInfoError && basicInfoData) {
+            userBasicInfo = basicInfoData;
+          }
+        } catch (error) {
+          console.warn('user_basic_info table not available, using fallback');
+        }
+
+        // Fallback: tentar buscar da tabela profiles (temporário)
+        if (userBasicInfo.length === 0) {
+          try {
+            const { data: profilesData } = await supabase
+              .from('profiles')
+              .select('user_id, name')
+              .in('user_id', userIds);
+              
+            if (profilesData) {
+              userBasicInfo = profilesData.map(p => ({
+                user_id: p.user_id,
+                name: p.name,
+                email: 'Email via profiles' // Placeholder
+              }));
+            }
+          } catch (error) {
+            console.warn('Profiles table also not available');
+          }
+        }
       }
 
-      // Combinar dados
+      // Transformar os dados para incluir informações do usuário
       const usersWithProfile = orgUsers?.map(orgUser => {
-        const profile = profiles.find(p => p.user_id === orgUser.user_id);
+        const basicInfo = userBasicInfo.find(u => u.user_id === orgUser.user_id);
+        
         return {
           ...orgUser,
           user: {
             id: orgUser.user_id,
-            email: '', // Email não disponível na tabela profiles
-            name: profile?.name || '',
+            email: basicInfo?.email || `user_${orgUser.user_id.substring(0, 8)}@temp.com`,
+            name: basicInfo?.name || 'Nome não disponível',
             created_at: orgUser.created_at
           }
         };
@@ -110,27 +139,99 @@ export const useUserManagement = () => {
     }
   };
 
-  // Buscar usuários existentes por email e convidar para a organização
+  // Criar usuário sem fazer login automático
   const createUser = async (userData: CreateUserData): Promise<boolean> => {
     if (!currentOrganization?.id) return false;
 
     setCreateLoading(true);
     try {
-      // Primeiro, tentar buscar usuários existentes pela tabela profiles usando email
-      // Como não temos acesso direto ao auth.users, vamos usar uma abordagem diferente
+      // Salvar a sessão atual para restaurar depois
+      const currentSession = await supabase.auth.getSession();
       
-      toast({
-        title: 'Sistema de convites',
-        description: `Para adicionar ${userData.name}, peça para o usuário se registrar primeiro com o email ${userData.email}. Depois você poderá adicioná-lo à organização.`,
-        variant: 'default',
+      // Gerar senha temporária padrão
+      const tempPassword = 'RetificaTemp2024!';
+      
+      // Criar novo usuário usando signUp
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: tempPassword,
+        options: {
+          emailRedirectTo: undefined, // Não enviar email de confirmação
+          data: {
+            name: userData.name,
+            full_name: userData.name, // Garantir que o nome seja salvo
+            needs_password_change: true // Flag para forçar mudança de senha
+          }
+        }
       });
 
+      if (signUpError) {
+        // Se o usuário já existe, o Supabase retorna um erro específico
+        if (signUpError.message.includes('User already registered')) {
+          toast({
+            title: 'Usuário já existe',
+            description: 'Este email já está cadastrado no sistema.',
+            variant: 'destructive',
+          });
+          return false;
+        }
+        throw signUpError;
+      }
+
+      if (!signUpData.user) {
+        throw new Error('Falha ao criar usuário');
+      }
+
+      // Importante: Fazer logout do usuário recém-criado para não afetar a sessão atual
+      await supabase.auth.signOut();
+      
+      // Restaurar a sessão original se existia
+      if (currentSession.data.session) {
+        await supabase.auth.setSession(currentSession.data.session);
+      }
+
+      // Tentar inserir informações básicas do usuário na tabela user_basic_info
+      try {
+        const { error: basicInfoError } = await supabase
+          .from('user_basic_info' as any)
+          .insert({
+            user_id: signUpData.user.id,
+            email: userData.email,
+            name: userData.name
+          });
+
+        if (basicInfoError) {
+          console.warn('Error inserting user basic info:', basicInfoError);
+        }
+      } catch (error) {
+        console.warn('user_basic_info table not available, skipping insert');
+      }
+
+      // Adicionar à organização
+      const { error: orgUserError } = await supabase
+        .from('organization_users')
+        .insert({
+          organization_id: currentOrganization.id,
+          user_id: signUpData.user.id,
+          role: userData.role,
+          joined_at: new Date().toISOString(),
+          is_active: true
+        });
+
+      if (orgUserError) throw orgUserError;
+
+      toast({
+        title: 'Usuário criado com sucesso',
+        description: `${userData.name} foi adicionado à organização. Senha temporária: ${tempPassword}`,
+      });
+
+      await fetchUsers(); // Recarregar lista
       return true;
     } catch (error: any) {
-      console.error('Error creating invite:', error);
+      console.error('Error creating user:', error);
       toast({
-        title: 'Erro ao criar convite',
-        description: error.message || 'Falha ao criar convite',
+        title: 'Erro ao criar usuário',
+        description: error.message || 'Falha ao criar usuário',
         variant: 'destructive',
       });
       return false;

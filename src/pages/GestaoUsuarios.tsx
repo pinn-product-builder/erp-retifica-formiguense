@@ -25,8 +25,11 @@ import {
   UserCog
 } from 'lucide-react';
 import { useUserManagement, type CreateUserData } from '@/hooks/useUserManagement';
-import { useAdminGuard } from '@/hooks/useRoleGuard';
-import type { AppRole } from '@/hooks/usePermissions';
+import { useRoleGuard } from '@/hooks/useRoleGuard';
+import { Database } from '@/integrations/supabase/types';
+import { toast } from '@/hooks/use-toast';
+
+type AppRole = Database['public']['Enums']['app_role'];
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -34,30 +37,29 @@ const ROLE_COLORS = {
   owner: 'bg-purple-100 text-purple-800 border-purple-200',
   admin: 'bg-red-100 text-red-800 border-red-200',
   manager: 'bg-blue-100 text-blue-800 border-blue-200',
-  user: 'bg-green-100 text-green-800 border-green-200',
-  viewer: 'bg-gray-100 text-gray-800 border-gray-200'
+  user: 'bg-green-100 text-green-800 border-green-200'
 };
 
 const ROLE_ICONS = {
   owner: Crown,
   admin: ShieldCheck,
   manager: UserCog,
-  user: Users,
-  viewer: Eye
+  user: Users
 };
 
 const ROLE_LABELS = {
   owner: 'Proprietário',
   admin: 'Administrador',
   manager: 'Gerente',
-  user: 'Usuário',
-  viewer: 'Visualizador'
+  user: 'Usuário'
 };
 
 export default function GestaoUsuarios() {
-  // Verificar permissões de admin
-  const { hasPermission } = useAdminGuard({
-    toastMessage: 'Acesso restrito a administradores para gerenciar usuários.'
+  // Verificar permissões de admin - usando useRoleGuard diretamente
+  const { hasPermission } = useRoleGuard({
+    requiredRole: ['owner', 'admin'],
+    toastMessage: 'Acesso restrito a administradores para gerenciar usuários.',
+    blockAccess: true
   });
 
   const {
@@ -85,9 +87,23 @@ export default function GestaoUsuarios() {
     role: 'user'
   });
 
-  // Se não tem permissão, não renderizar nada
+
+  // Se não tem permissão, mostrar mensagem
   if (!hasPermission) {
-    return null;
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <Shield className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold">Acesso Restrito</h3>
+          <p className="text-muted-foreground">
+            Apenas administradores podem gerenciar usuários.
+          </p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Sua role atual: <strong>{userRole}</strong>
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const handleCreateUser = async () => {
@@ -97,6 +113,13 @@ export default function GestaoUsuarios() {
     if (success) {
       setNewUserData({ email: '', name: '', role: 'user' });
       setIsCreateDialogOpen(false);
+      
+      // Mostrar informações importantes sobre a senha temporária
+      toast({
+        title: 'Usuário criado com sucesso',
+        description: 'Informe ao usuário que a senha temporária é: RetificaTemp2024! (será solicitada alteração no primeiro login)',
+        duration: 10000, // 10 segundos para dar tempo de copiar
+      });
     }
   };
 
@@ -208,12 +231,6 @@ export default function GestaoUsuarios() {
                         <div className="flex items-center gap-2">
                           {getRoleIcon('user')}
                           {ROLE_LABELS.user}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="viewer">
-                        <div className="flex items-center gap-2">
-                          {getRoleIcon('viewer')}
-                          {ROLE_LABELS.viewer}
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -419,12 +436,6 @@ export default function GestaoUsuarios() {
                                         <div className="flex items-center gap-2">
                                           {getRoleIcon('user')}
                                           {ROLE_LABELS.user}
-                                        </div>
-                                      </SelectItem>
-                                      <SelectItem value="viewer">
-                                        <div className="flex items-center gap-2">
-                                          {getRoleIcon('viewer')}
-                                          {ROLE_LABELS.viewer}
                                         </div>
                                       </SelectItem>
                                     </SelectContent>
