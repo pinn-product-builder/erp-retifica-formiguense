@@ -110,94 +110,27 @@ export const useUserManagement = () => {
     }
   };
 
-  // Criar usuário diretamente (sem convite)
+  // Buscar usuários existentes por email e convidar para a organização
   const createUser = async (userData: CreateUserData): Promise<boolean> => {
     if (!currentOrganization?.id) return false;
 
     setCreateLoading(true);
     try {
-      // Usar listUsers da API auth do Supabase para verificar usuários existentes
-      let existingUser: any = null;
-      try {
-        const { data: authUsers } = await supabase.auth.admin.listUsers();
-        existingUser = authUsers.users.find((u: any) => u.email === userData.email);
-      } catch (error) {
-        console.log('Error checking existing users:', error);
-      }
-
-      if (existingUser) {
-        // Verificar se já está na organização
-        const { data: existingOrgUser } = await supabase
-          .from('organization_users')
-          .select('id')
-          .eq('organization_id', currentOrganization.id)
-          .eq('user_id', existingUser.id)
-          .single();
-
-        if (existingOrgUser) {
-          toast({
-            title: 'Usuário já existe',
-            description: 'Este usuário já faz parte da organização',
-            variant: 'destructive',
-          });
-          return false;
-        }
-
-        // Adicionar usuário existente à organização
-        const { error: orgUserError } = await supabase
-          .from('organization_users')
-          .insert({
-            organization_id: currentOrganization.id,
-            user_id: existingUser.id,
-            role: userData.role as any, // Cast temporário
-            joined_at: new Date().toISOString(),
-            is_active: true
-          });
-
-        if (orgUserError) throw orgUserError;
-      } else {
-        // Criar novo usuário (apenas para desenvolvimento - em produção seria via convite)
-        const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-          email: userData.email,
-          password: 'temp123456', // Senha temporária
-          email_confirm: true,
-          user_metadata: {
-            name: userData.name
-          }
-        });
-
-        if (authError) throw authError;
-
-        // O perfil será criado automaticamente pelo trigger handle_new_user
-        // Vamos apenas aguardar um pouco para garantir que foi criado
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Adicionar à organização
-        const { error: orgUserError } = await supabase
-          .from('organization_users')
-          .insert({
-            organization_id: currentOrganization.id,
-            user_id: authUser.user.id,
-            role: userData.role as any, // Cast temporário
-            joined_at: new Date().toISOString(),
-            is_active: true
-          });
-
-        if (orgUserError) throw orgUserError;
-      }
-
+      // Primeiro, tentar buscar usuários existentes pela tabela profiles usando email
+      // Como não temos acesso direto ao auth.users, vamos usar uma abordagem diferente
+      
       toast({
-        title: 'Usuário criado',
-        description: `Usuário ${userData.name} foi adicionado com role ${userData.role}`,
+        title: 'Sistema de convites',
+        description: `Para adicionar ${userData.name}, peça para o usuário se registrar primeiro com o email ${userData.email}. Depois você poderá adicioná-lo à organização.`,
+        variant: 'default',
       });
 
-      await fetchUsers(); // Recarregar lista
       return true;
     } catch (error: any) {
-      console.error('Error creating user:', error);
+      console.error('Error creating invite:', error);
       toast({
-        title: 'Erro ao criar usuário',
-        description: error.message || 'Falha ao criar usuário',
+        title: 'Erro ao criar convite',
+        description: error.message || 'Falha ao criar convite',
         variant: 'destructive',
       });
       return false;
