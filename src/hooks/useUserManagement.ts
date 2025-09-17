@@ -60,33 +60,42 @@ export const useUserManagement = () => {
 
     setLoading(true);
     try {
-      // Buscar usuários da organização com dados do perfil
-      const { data, error } = await supabase
+      // Buscar usuários da organização
+      const { data: orgUsers, error: orgError } = await supabase
         .from('organization_users')
-        .select(`
-          *,
-          profiles!inner(
-            id,
-            user_id,
-            name,
-            email
-          )
-        `)
+        .select('*')
         .eq('organization_id', currentOrganization.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (orgError) throw orgError;
 
-      // Transformar os dados para incluir informações do usuário
-      const usersWithProfile = data?.map(orgUser => ({
-        ...orgUser,
-        user: {
-          id: orgUser.profiles.user_id,
-          email: orgUser.profiles.email || '',
-          name: orgUser.profiles.name || '',
-          created_at: orgUser.created_at
-        }
-      })) || [];
+      // Buscar perfis dos usuários
+      const userIds = orgUsers?.map(u => u.user_id) || [];
+      let profiles: any[] = [];
+      
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('*')
+          .in('user_id', userIds);
+          
+        if (profilesError) throw profilesError;
+        profiles = profilesData || [];
+      }
+
+      // Combinar dados
+      const usersWithProfile = orgUsers?.map(orgUser => {
+        const profile = profiles.find(p => p.user_id === orgUser.user_id);
+        return {
+          ...orgUser,
+          user: {
+            id: orgUser.user_id,
+            email: '', // Email não disponível na tabela profiles
+            name: profile?.name || '',
+            created_at: orgUser.created_at
+          }
+        };
+      }) || [];
 
       setUsers(usersWithProfile);
     } catch (error) {
@@ -107,12 +116,14 @@ export const useUserManagement = () => {
 
     setCreateLoading(true);
     try {
-      // Verificar se o usuário já existe
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('user_id, email')
-        .eq('email', userData.email)
-        .single();
+      // Usar listUsers da API auth do Supabase para verificar usuários existentes
+      let existingUser: any = null;
+      try {
+        const { data: authUsers } = await supabase.auth.admin.listUsers();
+        existingUser = authUsers.users.find((u: any) => u.email === userData.email);
+      } catch (error) {
+        console.log('Error checking existing users:', error);
+      }
 
       if (existingUser) {
         // Verificar se já está na organização
@@ -120,7 +131,7 @@ export const useUserManagement = () => {
           .from('organization_users')
           .select('id')
           .eq('organization_id', currentOrganization.id)
-          .eq('user_id', existingUser.user_id)
+          .eq('user_id', existingUser.id)
           .single();
 
         if (existingOrgUser) {
@@ -137,8 +148,8 @@ export const useUserManagement = () => {
           .from('organization_users')
           .insert({
             organization_id: currentOrganization.id,
-            user_id: existingUser.user_id,
-            role: userData.role,
+            user_id: existingUser.id,
+            role: userData.role as any, // Cast temporário
             joined_at: new Date().toISOString(),
             is_active: true
           });
@@ -167,7 +178,7 @@ export const useUserManagement = () => {
           .insert({
             organization_id: currentOrganization.id,
             user_id: authUser.user.id,
-            role: userData.role,
+            role: userData.role as any, // Cast temporário
             joined_at: new Date().toISOString(),
             is_active: true
           });
@@ -203,7 +214,7 @@ export const useUserManagement = () => {
       const { error } = await supabase
         .from('organization_users')
         .update({ 
-          role: newRole,
+          role: newRole as any, // Cast temporário
           updated_at: new Date().toISOString()
         })
         .eq('organization_id', currentOrganization.id)

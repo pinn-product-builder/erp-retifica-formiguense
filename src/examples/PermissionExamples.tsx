@@ -16,8 +16,7 @@ import {
   usePermissionGate 
 } from '@/components/auth/PermissionGate';
 import { 
-  usePermissions, 
-  usePermissionCheck 
+  usePermissions
 } from '@/hooks/usePermissions';
 import { useAdminGuard } from '@/hooks/useRoleGuard';
 
@@ -201,14 +200,10 @@ export const AdminPanelExample = () => {
 
 // Exemplo 4: Verificação de permissão sem redirecionamento
 export const ConditionalActionsExample = () => {
-  const canManageUsers = usePermissionCheck({ 
-    requiredRole: ['owner', 'admin'] 
-  });
+  const permissions = usePermissions();
   
-  const canEditFiscal = usePermissionCheck({ 
-    module: 'fiscal', 
-    level: 'write' 
-  });
+  const canManageUsers = permissions.isAdmin() || permissions.isOwner();
+  const canEditFiscal = permissions.canEditFiscal();
 
   return (
     <div className="space-y-4">
