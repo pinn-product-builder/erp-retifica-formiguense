@@ -1,5 +1,6 @@
 import React from 'react';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import {
   Select,
   SelectContent,
@@ -30,6 +31,8 @@ export const OrganizationSelector: React.FC = () => {
     switchOrganization,
     createOrganization,
   } = useOrganization();
+  
+  const { canCreateOrganizations } = usePermissions();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newOrgName, setNewOrgName] = useState('');
@@ -67,6 +70,15 @@ export const OrganizationSelector: React.FC = () => {
   }
 
   if (userOrganizations.length === 0) {
+    if (!canCreateOrganizations()) {
+      return (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Building2 className="h-4 w-4" />
+          Aguardando convite para organização
+        </div>
+      );
+    }
+
     return (
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogTrigger asChild>
@@ -143,12 +155,13 @@ export const OrganizationSelector: React.FC = () => {
         </SelectContent>
       </Select>
 
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
-            <Plus className="h-4 w-4" />
-          </Button>
-        </DialogTrigger>
+      {canCreateOrganizations() && (
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Criar Nova Organização</DialogTitle>
@@ -188,6 +201,7 @@ export const OrganizationSelector: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+      )}
     </div>
   );
 };
