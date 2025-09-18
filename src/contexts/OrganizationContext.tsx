@@ -17,7 +17,7 @@ export interface OrganizationUser {
   id: string;
   organization_id: string;
   user_id: string;
-  role: 'owner' | 'admin' | 'manager' | 'user';
+  role: 'super_admin' | 'owner' | 'admin' | 'manager' | 'user';
   invited_at?: string;
   joined_at?: string;
   invited_by?: string;
@@ -37,7 +37,7 @@ interface OrganizationContextType {
   createOrganization: (name: string, description?: string) => Promise<Organization>;
   updateOrganization: (orgId: string, updates: Partial<Organization>) => Promise<void>;
   inviteUser: (email: string, role: 'admin' | 'manager' | 'user') => Promise<void>;
-  updateUserRole: (userId: string, role: 'owner' | 'admin' | 'manager' | 'user') => Promise<void>;
+  updateUserRole: (userId: string, role: 'super_admin' | 'owner' | 'admin' | 'manager' | 'user') => Promise<void>;
   removeUser: (userId: string) => Promise<void>;
   leaveOrganization: () => Promise<void>;
 }
@@ -135,6 +135,17 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const createOrganization = async (name: string, description?: string): Promise<Organization> => {
     if (!user) throw new Error('User not authenticated');
+
+    // Verificar se usuário é super admin
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_super_admin')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!profile?.is_super_admin) {
+      throw new Error('Apenas super administradores podem criar organizações');
+    }
 
     // Generate slug from name
     const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
