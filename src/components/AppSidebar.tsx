@@ -43,6 +43,7 @@ import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useProfilePermissions } from "@/hooks/useProfilePermissions";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 
 // Dashboard & Visão Geral
@@ -189,7 +190,50 @@ export function AppSidebar() {
   const { isMobile } = useBreakpoint();
   const { user, signOut } = useAuth();
   const permissions = usePermissions();
+  const profilePermissions = useProfilePermissions();
   const isCollapsed = state === "collapsed";
+
+  // Função para renderizar itens da sidebar com verificação de permissões
+  const renderSidebarItem = (item: { title: string; url: string; icon: React.ComponentType<{ className?: string }> }) => {
+    // Verificar se pode acessar a página
+    if (!profilePermissions.canAccessPage(item.url)) {
+      return null;
+    }
+
+    const Icon = item.icon;
+    const isActive = location.pathname === item.url;
+
+    return (
+      <SidebarMenuItem key={item.url}>
+        <SidebarMenuButton asChild isActive={isActive}>
+          <NavLink to={item.url} className="flex items-center gap-3">
+            <Icon className="h-4 w-4" />
+            <span>{item.title}</span>
+          </NavLink>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
+
+  // Função para renderizar grupo de itens
+  const renderSidebarGroup = (items: Array<{ title: string; url: string; icon: React.ComponentType<{ className?: string }> }>, title: string) => {
+    const visibleItems = items.filter(item => profilePermissions.canAccessPage(item.url));
+    
+    if (visibleItems.length === 0) {
+      return null;
+    }
+
+    return (
+      <SidebarGroup key={title}>
+        <SidebarGroupLabel>{title}</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {visibleItems.map(renderSidebarItem)}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  };
 
   return (
     <Sidebar variant="sidebar" collapsible="icon">
@@ -215,274 +259,25 @@ export function AppSidebar() {
 
       <SidebarContent>
         {/* Dashboard & Visão Geral */}
-        <SidebarGroup>
-          <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
-            Dashboard & Visão Geral
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {dashboardItems.map((item) => {
-                const isActive = location.pathname === item.url;
-                
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={isCollapsed ? item.title : undefined}
-                      isActive={isActive}
-                      className="group transition-colors duration-200"
-                      size={isMobile ? "sm" : "default"}
-                    >
-                      <NavLink 
-                        to={item.url}
-                        className="flex items-center gap-3 w-full"
-                      >
-                        <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
-                        {!isCollapsed && (
-                          <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
-                            {item.title}
-                          </span>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {renderSidebarGroup(dashboardItems, "Dashboard & Visão Geral")}
 
         {/* Operações & Serviços */}
-        <SidebarGroup>
-          <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
-            Operações & Serviços
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {operationsItems.map((item) => {
-                const isActive = location.pathname === item.url;
-                
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={isCollapsed ? item.title : undefined}
-                      isActive={isActive}
-                      className="group transition-colors duration-200"
-                      size={isMobile ? "sm" : "default"}
-                    >
-                      <NavLink 
-                        to={item.url}
-                        className="flex items-center gap-3 w-full"
-                      >
-                        <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
-                        {!isCollapsed && (
-                          <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
-                            {item.title}
-                          </span>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {renderSidebarGroup(operationsItems, "Operações & Serviços")}
 
         {/* Gestão de Pessoas */}
-        <SidebarGroup>
-          <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
-            Gestão de Pessoas
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {peopleItems.map((item) => {
-                const isActive = location.pathname === item.url;
-                
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={isCollapsed ? item.title : undefined}
-                      isActive={isActive}
-                      className="group transition-colors duration-200"
-                      size={isMobile ? "sm" : "default"}
-                    >
-                      <NavLink 
-                        to={item.url}
-                        className="flex items-center gap-3 w-full"
-                      >
-                        <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
-                        {!isCollapsed && (
-                          <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
-                            {item.title}
-                          </span>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {renderSidebarGroup(peopleItems, "Gestão de Pessoas")}
 
-        {/* Estoque, Compras & Suprimentos */}
-        <SidebarGroup>
-          <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
-            Estoque & Compras
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {inventoryItems.map((item) => {
-                const isActive = location.pathname === item.url;
-                
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={isCollapsed ? item.title : undefined}
-                      isActive={isActive}
-                      className="group transition-colors duration-200"
-                      size={isMobile ? "sm" : "default"}
-                    >
-                      <NavLink 
-                        to={item.url}
-                        className="flex items-center gap-3 w-full"
-                      >
-                        <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
-                        {!isCollapsed && (
-                          <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
-                            {item.title}
-                          </span>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Estoque & Compras */}
+        {renderSidebarGroup(inventoryItems, "Estoque & Compras")}
 
         {/* Financeiro */}
-        <SidebarGroup>
-          <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
-            Financeiro
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {financialItems.map((item) => {
-                const isActive = location.pathname === item.url;
-                
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={isCollapsed ? item.title : undefined}
-                      isActive={isActive}
-                      className="group transition-colors duration-200"
-                      size={isMobile ? "sm" : "default"}
-                    >
-                      <NavLink 
-                        to={item.url}
-                        className="flex items-center gap-3 w-full"
-                      >
-                        <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
-                        {!isCollapsed && (
-                          <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
-                            {item.title}
-                          </span>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {renderSidebarGroup(financialItems, "Financeiro")}
 
         {/* Fiscal */}
-        <PermissionGate module="fiscal" hideOnDenied>
-          <SidebarGroup>
-            <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
-              Fiscal
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {fiscalItems.map((item) => {
-                  const isActive = location.pathname === item.url;
-                  
-                  return (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        tooltip={isCollapsed ? item.title : undefined}
-                        isActive={isActive}
-                        className="group transition-colors duration-200"
-                        size={isMobile ? "sm" : "default"}
-                      >
-                        <NavLink 
-                          to={item.url}
-                          className="flex items-center gap-3 w-full"
-                        >
-                          <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
-                          {!isCollapsed && (
-                            <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
-                              {item.title}
-                            </span>
-                          )}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </PermissionGate>
+        {renderSidebarGroup(fiscalItems, "Fiscal")}
 
         {/* Administração */}
-        <PermissionGate requiredRole={['owner', 'admin']} hideOnDenied>
-          <SidebarGroup>
-            <SidebarGroupLabel className={isMobile ? "text-xs" : ""}>
-              Administração
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {adminItems.map((item) => {
-                  const isActive = location.pathname === item.url;
-                  
-                  return (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        tooltip={isCollapsed ? item.title : undefined}
-                        isActive={isActive}
-                        className="group transition-colors duration-200"
-                        size={isMobile ? "sm" : "default"}
-                      >
-                        <NavLink 
-                          to={item.url}
-                          className="flex items-center gap-3 w-full"
-                        >
-                          <item.icon className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} shrink-0`} />
-                          {!isCollapsed && (
-                            <span className={`truncate ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
-                              {item.title}
-                            </span>
-                          )}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </PermissionGate>
+        {renderSidebarGroup(adminItems, "Administração")}
       </SidebarContent>
       
       <SidebarFooter>
@@ -492,6 +287,25 @@ export function AppSidebar() {
               <div className="text-xs text-muted-foreground truncate">
                 {user?.email}
               </div>
+              
+              {/* Informações do perfil */}
+              {profilePermissions.hasUserProfile && !isCollapsed && (
+                <div className="text-xs bg-muted rounded-lg p-2 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-2 h-2 rounded-full flex-shrink-0" 
+                      style={{ backgroundColor: profilePermissions.profileSectorColor || '#3B82F6' }}
+                    />
+                    <span className="font-medium truncate">{profilePermissions.profileName}</span>
+                  </div>
+                  {profilePermissions.profileSector && (
+                    <div className="text-muted-foreground truncate">
+                      {profilePermissions.profileSector}
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <Button 
                 variant="outline" 
                 size="sm" 

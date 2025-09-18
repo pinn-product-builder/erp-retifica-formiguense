@@ -7,6 +7,7 @@ import { AuthProvider } from '@/hooks/useAuth';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { AdminRoute } from '@/components/auth/ProtectedRoute';
+import { ProfileProtectedRoute } from '@/components/auth/ProfileProtectedRoute';
 import { Layout } from '@/components/Layout';
 import { ForcePasswordChange } from '@/components/auth/ForcePasswordChange';
 import { usePasswordChange } from '@/hooks/usePasswordChange';
@@ -55,30 +56,30 @@ function AppContent() {
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             
-            {/* Protected Routes */}
-            <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
-            <Route path="/clientes" element={<ProtectedRoute><Layout><Clientes /></Layout></ProtectedRoute>} />
-            <Route path="/consultores" element={<ProtectedRoute><Layout><Consultores /></Layout></ProtectedRoute>} />
-            <Route path="/coleta" element={<ProtectedRoute><Layout><Coleta /></Layout></ProtectedRoute>} />
-            <Route path="/workflow" element={<ProtectedRoute><Layout><Workflow /></Layout></ProtectedRoute>} />
-            <Route path="/checkin" element={<ProtectedRoute><Layout><CheckIn /></Layout></ProtectedRoute>} />
-            <Route path="/estoque" element={<ProtectedRoute><Layout><Estoque /></Layout></ProtectedRoute>} />
-            <Route path="/pcp" element={<ProtectedRoute><Layout><PCP /></Layout></ProtectedRoute>} />
-            <Route path="/ordens-servico" element={<ProtectedRoute><Layout><OrdensServico /></Layout></ProtectedRoute>} />
-            <Route path="/compras" element={<ProtectedRoute><Layout><Compras /></Layout></ProtectedRoute>} />
-            <Route path="/gestao-funcionarios" element={<ProtectedRoute><Layout><GestaoFuncionarios /></Layout></ProtectedRoute>} />
-            <Route path="/funcionarios" element={<ProtectedRoute><Layout><Funcionarios /></Layout></ProtectedRoute>} />
+            {/* Protected Routes with Profile Permissions */}
+            <Route path="/dashboard" element={<ProfileProtectedRoute><Layout><Dashboard /></Layout></ProfileProtectedRoute>} />
+            <Route path="/clientes" element={<ProfileProtectedRoute><Layout><Clientes /></Layout></ProfileProtectedRoute>} />
+            <Route path="/consultores" element={<ProfileProtectedRoute><Layout><Consultores /></Layout></ProfileProtectedRoute>} />
+            <Route path="/coleta" element={<ProfileProtectedRoute><Layout><Coleta /></Layout></ProfileProtectedRoute>} />
+            <Route path="/workflow" element={<ProfileProtectedRoute><Layout><Workflow /></Layout></ProfileProtectedRoute>} />
+            <Route path="/checkin" element={<ProfileProtectedRoute><Layout><CheckIn /></Layout></ProfileProtectedRoute>} />
+            <Route path="/estoque" element={<ProfileProtectedRoute><Layout><Estoque /></Layout></ProfileProtectedRoute>} />
+            <Route path="/pcp" element={<ProfileProtectedRoute><Layout><PCP /></Layout></ProfileProtectedRoute>} />
+            <Route path="/ordens-servico" element={<ProfileProtectedRoute><Layout><OrdensServico /></Layout></ProfileProtectedRoute>} />
+            <Route path="/compras" element={<ProfileProtectedRoute><Layout><Compras /></Layout></ProfileProtectedRoute>} />
+            <Route path="/gestao-funcionarios" element={<ProfileProtectedRoute><Layout><GestaoFuncionarios /></Layout></ProfileProtectedRoute>} />
+            <Route path="/funcionarios" element={<ProfileProtectedRoute><Layout><Funcionarios /></Layout></ProfileProtectedRoute>} />
             <Route path="/gestao-usuarios" element={<AdminRoute><Layout><GestaoUsuarios /></Layout></AdminRoute>} />
             <Route path="/gestao-usuarios/perfis" element={<AdminRoute><Layout><GestaoPerfiUsuarios /></Layout></AdminRoute>} />
-            <Route path="/orcamentos" element={<ProtectedRoute><Layout><Orcamentos /></Layout></ProtectedRoute>} />
-            <Route path="/relatorios" element={<ProtectedRoute><Layout><Relatorios /></Layout></ProtectedRoute>} />
-            <Route path="/configuracoes" element={<ProtectedRoute><Layout><Configuracoes /></Layout></ProtectedRoute>} />
-            <Route path="/financeiro" element={<ProtectedRoute><Layout><Financeiro /></Layout></ProtectedRoute>} />
-            <Route path="/contas-receber" element={<ProtectedRoute><Layout><ContasReceber /></Layout></ProtectedRoute>} />
-            <Route path="/contas-pagar" element={<ProtectedRoute><Layout><ContasPagar /></Layout></ProtectedRoute>} />
-            <Route path="/fluxo-caixa" element={<ProtectedRoute><Layout><FluxoCaixa /></Layout></ProtectedRoute>} />
-            <Route path="/dre" element={<ProtectedRoute><Layout><DRE /></Layout></ProtectedRoute>} />
-            <Route path="/modulo-fiscal" element={<ProtectedRoute><Layout><ModuloFiscal /></Layout></ProtectedRoute>} />
+            <Route path="/orcamentos" element={<ProfileProtectedRoute><Layout><Orcamentos /></Layout></ProfileProtectedRoute>} />
+            <Route path="/relatorios" element={<ProfileProtectedRoute><Layout><Relatorios /></Layout></ProfileProtectedRoute>} />
+            <Route path="/configuracoes" element={<ProfileProtectedRoute><Layout><Configuracoes /></Layout></ProfileProtectedRoute>} />
+            <Route path="/financeiro" element={<ProfileProtectedRoute><Layout><Financeiro /></Layout></ProfileProtectedRoute>} />
+            <Route path="/contas-receber" element={<ProfileProtectedRoute><Layout><ContasReceber /></Layout></ProfileProtectedRoute>} />
+            <Route path="/contas-pagar" element={<ProfileProtectedRoute><Layout><ContasPagar /></Layout></ProfileProtectedRoute>} />
+            <Route path="/fluxo-caixa" element={<ProfileProtectedRoute><Layout><FluxoCaixa /></Layout></ProfileProtectedRoute>} />
+            <Route path="/dre" element={<ProfileProtectedRoute><Layout><DRE /></Layout></ProfileProtectedRoute>} />
+            <Route path="/modulo-fiscal" element={<ProfileProtectedRoute><Layout><ModuloFiscal /></Layout></ProfileProtectedRoute>} />
             <Route path="*" element={<ProtectedRoute><Layout><NotFound /></Layout></ProtectedRoute>} />
           </Routes>
         </Suspense>

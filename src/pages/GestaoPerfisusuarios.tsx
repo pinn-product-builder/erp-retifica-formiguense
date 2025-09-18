@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,10 +24,12 @@ import {
   Palette,
   Settings,
   CheckCircle,
-  XCircle
+  XCircle,
+  ArrowLeft
 } from 'lucide-react';
 import { useUserProfiles, type CreateUserProfileData, type CreateSectorData } from '@/hooks/useUserProfiles';
 import { useRoleGuard } from '@/hooks/useRoleGuard';
+import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -58,6 +61,7 @@ const DEFAULT_COLORS = [
 ];
 
 export default function GestaoPerfiUsuarios() {
+  const { toast } = useToast();
   const { hasPermission } = useRoleGuard({
     requiredRole: ['owner', 'admin'],
     toastMessage: 'Acesso restrito a administradores para gerenciar perfis.',
@@ -99,6 +103,10 @@ export default function GestaoPerfiUsuarios() {
   // Estado para permissões de páginas
   const [selectedPermissions, setSelectedPermissions] = useState<Record<string, { view: boolean; edit: boolean; delete: boolean }>>({});
 
+  // Estados para controlar quando mostrar validações
+  const [sectorValidationTouched, setSectorValidationTouched] = useState({ name: false });
+  const [profileValidationTouched, setProfileValidationTouched] = useState({ name: false, sector_id: false });
+
   if (!hasPermission) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -114,7 +122,17 @@ export default function GestaoPerfiUsuarios() {
   }
 
   const handleCreateSector = async () => {
-    if (!newSectorData.name.trim()) return;
+    // Marcar todos os campos como "touched" para mostrar validações
+    setSectorValidationTouched({ name: true });
+    
+    if (!newSectorData.name.trim()) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'O nome do setor é obrigatório',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     const success = await createSector(newSectorData);
     if (success) {
@@ -124,7 +142,26 @@ export default function GestaoPerfiUsuarios() {
   };
 
   const handleCreateProfile = async () => {
-    if (!newProfileData.name.trim()) return;
+    // Marcar todos os campos como "touched" para mostrar validações
+    setProfileValidationTouched({ name: true, sector_id: true });
+    
+    if (!newProfileData.name.trim()) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'O nome do perfil é obrigatório',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!newProfileData.sector_id) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'O setor é obrigatório para o perfil',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     const permissions = Object.entries(selectedPermissions)
       .filter(([_, perms]) => perms.view || perms.edit || perms.delete)
@@ -169,6 +206,14 @@ export default function GestaoPerfiUsuarios() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
+          <div className="flex items-center gap-3 mb-2">
+            <Link to="/gestao-usuarios">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar para Gestão de Usuários
+              </Button>
+            </Link>
+          </div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <UserCog className="h-8 w-8" />
             Perfis de Usuários
@@ -197,7 +242,15 @@ export default function GestaoPerfiUsuarios() {
             </div>
             
             {canManageProfiles() && (
-              <Dialog open={isCreateProfileOpen} onOpenChange={setIsCreateProfileOpen}>
+              <Dialog open={isCreateProfileOpen} onOpenChange={(open) => {
+                setIsCreateProfileOpen(open);
+                if (open) {
+                  // Limpar formulário ao abrir
+                  setNewProfileData({ name: '', description: '', sector_id: '', page_permissions: [] });
+                  setSelectedPermissions({});
+                  setProfileValidationTouched({ name: false, sector_id: false });
+                }
+              }}>
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="h-4 w-4 mr-2" />
@@ -220,17 +273,25 @@ export default function GestaoPerfiUsuarios() {
                           id="profile-name"
                           value={newProfileData.name}
                           onChange={(e) => setNewProfileData(prev => ({ ...prev, name: e.target.value }))}
+                          onBlur={() => setProfileValidationTouched(prev => ({ ...prev, name: true }))}
                           placeholder="Ex: Analista Fiscal"
+                          className={profileValidationTouched.name && !newProfileData.name.trim() ? 'border-red-300' : ''}
                         />
+                        {profileValidationTouched.name && !newProfileData.name.trim() && (
+                          <span className="text-sm text-red-500">Campo obrigatório</span>
+                        )}
                       </div>
                       
                       <div>
                         <Label htmlFor="profile-sector">Setor</Label>
                         <Select
                           value={newProfileData.sector_id}
-                          onValueChange={(value) => setNewProfileData(prev => ({ ...prev, sector_id: value }))}
+                          onValueChange={(value) => {
+                            setNewProfileData(prev => ({ ...prev, sector_id: value }));
+                            setProfileValidationTouched(prev => ({ ...prev, sector_id: true }));
+                          }}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className={profileValidationTouched.sector_id && !newProfileData.sector_id ? 'border-red-300' : ''}>
                             <SelectValue placeholder="Selecione um setor" />
                           </SelectTrigger>
                           <SelectContent>
@@ -247,6 +308,9 @@ export default function GestaoPerfiUsuarios() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {profileValidationTouched.sector_id && !newProfileData.sector_id && (
+                          <span className="text-sm text-red-500">Campo obrigatório</span>
+                        )}
                       </div>
                     </div>
                     
@@ -464,7 +528,14 @@ export default function GestaoPerfiUsuarios() {
             </div>
             
             {canManageProfiles() && (
-              <Dialog open={isCreateSectorOpen} onOpenChange={setIsCreateSectorOpen}>
+              <Dialog open={isCreateSectorOpen} onOpenChange={(open) => {
+                setIsCreateSectorOpen(open);
+                if (open) {
+                  // Limpar formulário ao abrir
+                  setNewSectorData({ name: '', description: '', color: DEFAULT_COLORS[0] });
+                  setSectorValidationTouched({ name: false });
+                }
+              }}>
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="h-4 w-4 mr-2" />
@@ -486,8 +557,13 @@ export default function GestaoPerfiUsuarios() {
                         id="sector-name"
                         value={newSectorData.name}
                         onChange={(e) => setNewSectorData(prev => ({ ...prev, name: e.target.value }))}
+                        onBlur={() => setSectorValidationTouched(prev => ({ ...prev, name: true }))}
                         placeholder="Ex: Financeiro, Produção, RH..."
+                        className={sectorValidationTouched.name && !newSectorData.name.trim() ? 'border-red-300' : ''}
                       />
+                      {sectorValidationTouched.name && !newSectorData.name.trim() && (
+                        <span className="text-sm text-red-500">Campo obrigatório</span>
+                      )}
                     </div>
                     
                     <div>

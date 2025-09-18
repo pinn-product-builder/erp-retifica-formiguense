@@ -189,12 +189,56 @@ export const useUserProfiles = () => {
   const createSector = async (sectorData: CreateSectorData): Promise<boolean> => {
     if (!currentOrganization?.id) return false;
 
+    // Validações
+    if (!sectorData.name?.trim()) {
+      toast({
+        title: 'Erro de validação',
+        description: 'O nome do setor é obrigatório',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    if (sectorData.name.trim().length < 2) {
+      toast({
+        title: 'Erro de validação',
+        description: 'O nome do setor deve ter pelo menos 2 caracteres',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    if (sectorData.name.trim().length > 100) {
+      toast({
+        title: 'Erro de validação',
+        description: 'O nome do setor deve ter no máximo 100 caracteres',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    // Verificar se já existe um setor com o mesmo nome na organização
+    const existingSector = sectors.find(sector => 
+      sector.name.toLowerCase().trim() === sectorData.name.toLowerCase().trim()
+    );
+    
+    if (existingSector) {
+      toast({
+        title: 'Erro de validação',
+        description: 'Já existe um setor com este nome na organização',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
     setCreateLoading(true);
     try {
       const { error } = await (supabase as unknown as ExtendedSupabaseClient)
         .from('user_sectors')
         .insert({
-          ...sectorData,
+          name: sectorData.name.trim(),
+          description: sectorData.description?.trim() || null,
+          color: sectorData.color,
           org_id: currentOrganization.id,
         });
 
@@ -209,9 +253,26 @@ export const useUserProfiles = () => {
       return true;
     } catch (error: unknown) {
       console.error('Error creating sector:', error);
+      
+      let errorMessage = 'Falha ao criar setor';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Já existe um setor com este nome')) {
+          errorMessage = 'Já existe um setor com este nome na organização';
+        } else if (error.message.includes('unique_violation')) {
+          errorMessage = 'Já existe um setor com este nome na organização';
+        } else if (error.message.includes('check_sector_name_not_empty')) {
+          errorMessage = 'O nome do setor é obrigatório';
+        } else if (error.message.includes('check_sector_name_length')) {
+          errorMessage = 'O nome do setor deve ter entre 2 e 100 caracteres';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: 'Erro ao criar setor',
-        description: error instanceof Error ? error.message : 'Falha ao criar setor',
+        description: errorMessage,
         variant: 'destructive',
       });
       return false;
@@ -224,14 +285,76 @@ export const useUserProfiles = () => {
   const createProfile = async (profileData: CreateUserProfileData): Promise<boolean> => {
     if (!currentOrganization?.id) return false;
 
+    // Validações
+    if (!profileData.name?.trim()) {
+      toast({
+        title: 'Erro de validação',
+        description: 'O nome do perfil é obrigatório',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    if (profileData.name.trim().length < 2) {
+      toast({
+        title: 'Erro de validação',
+        description: 'O nome do perfil deve ter pelo menos 2 caracteres',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    if (profileData.name.trim().length > 100) {
+      toast({
+        title: 'Erro de validação',
+        description: 'O nome do perfil deve ter no máximo 100 caracteres',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    if (!profileData.sector_id?.trim()) {
+      toast({
+        title: 'Erro de validação',
+        description: 'O setor é obrigatório para o perfil',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    // Verificar se o setor existe
+    const sectorExists = sectors.find(sector => sector.id === profileData.sector_id);
+    if (!sectorExists) {
+      toast({
+        title: 'Erro de validação',
+        description: 'O setor selecionado não existe',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    // Verificar se já existe um perfil com o mesmo nome na organização
+    const existingProfile = profiles.find(profile => 
+      profile.name.toLowerCase().trim() === profileData.name.toLowerCase().trim()
+    );
+    
+    if (existingProfile) {
+      toast({
+        title: 'Erro de validação',
+        description: 'Já existe um perfil com este nome na organização',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
     setCreateLoading(true);
     try {
       // Criar o perfil
       const { data: profileResult, error: profileError } = await (supabase as unknown as ExtendedSupabaseClient)
         .from('user_profiles')
         .insert({
-          name: profileData.name,
-          description: profileData.description,
+          name: profileData.name.trim(),
+          description: profileData.description?.trim() || null,
           sector_id: profileData.sector_id,
           org_id: currentOrganization.id,
         })
@@ -265,9 +388,28 @@ export const useUserProfiles = () => {
       return true;
     } catch (error: unknown) {
       console.error('Error creating profile:', error);
+      
+      let errorMessage = 'Falha ao criar perfil';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Já existe um perfil com este nome')) {
+          errorMessage = 'Já existe um perfil com este nome na organização';
+        } else if (error.message.includes('unique_violation')) {
+          errorMessage = 'Já existe um perfil com este nome na organização';
+        } else if (error.message.includes('check_profile_name_not_empty')) {
+          errorMessage = 'O nome do perfil é obrigatório';
+        } else if (error.message.includes('check_profile_name_length')) {
+          errorMessage = 'O nome do perfil deve ter entre 2 e 100 caracteres';
+        } else if (error.message.includes('foreign_key_violation')) {
+          errorMessage = 'O setor selecionado não existe ou não está ativo';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: 'Erro ao criar perfil',
-        description: error instanceof Error ? error.message : 'Falha ao criar perfil',
+        description: errorMessage,
         variant: 'destructive',
       });
       return false;

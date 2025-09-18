@@ -41,6 +41,7 @@ export interface CreateUserData {
   email: string;
   name: string;
   role: AppRole;
+  profile_id?: string;
 }
 
 export interface UserPermissions {

@@ -26,9 +26,10 @@ import {
   UserCog
 } from 'lucide-react';
 import { useUserManagement, type CreateUserData } from '@/hooks/useUserManagement';
+import { useUserProfiles } from '@/hooks/useUserProfiles';
 import { useRoleGuard } from '@/hooks/useRoleGuard';
 import { Database } from '@/integrations/supabase/types';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 type AppRole = Database['public']['Enums']['app_role'];
 import { formatDistanceToNow } from 'date-fns';
@@ -56,6 +57,8 @@ const ROLE_LABELS = {
 };
 
 export default function GestaoUsuarios() {
+  const { toast } = useToast();
+  
   // Verificar permissões de admin - usando useRoleGuard diretamente
   const { hasPermission } = useRoleGuard({
     requiredRole: ['owner', 'admin'],
@@ -82,12 +85,18 @@ export default function GestaoUsuarios() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editingRole, setEditingRole] = useState<AppRole>('user');
+  const [editingProfile, setEditingProfile] = useState<string>('');
 
   const [newUserData, setNewUserData] = useState<CreateUserData>({
     email: '',
     name: '',
-    role: 'user'
+    role: 'user',
+    profile_id: undefined
   });
+
+  // Hook para gerenciar perfis
+  const profilesData = useUserProfiles();
+  const profiles = profilesData?.profiles || [];
 
 
   // Se não tem permissão, mostrar mensagem
@@ -108,27 +117,79 @@ export default function GestaoUsuarios() {
     );
   }
 
-  const handleCreateUser = async () => {
-    if (!newUserData.email || !newUserData.name) return;
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Carregando usuários...</p>
+        </div>
+      </div>
+    );
+  }
 
-    const success = await createUser(newUserData);
-    if (success) {
-      setNewUserData({ email: '', name: '', role: 'user' });
-      setIsCreateDialogOpen(false);
+  const handleCreateUser = async () => {
+    try {
+      console.log('Iniciando criação de usuário:', newUserData);
       
-      // Mostrar informações importantes sobre a senha temporária
+      if (!newUserData.email || !newUserData.name) {
+        console.log('Dados incompletos:', { email: newUserData.email, name: newUserData.name });
+        return;
+      }
+
+      const success = await createUser(newUserData);
+      console.log('Resultado da criação:', success);
+      
+      if (success) {
+        setNewUserData({ 
+          email: '', 
+          name: '', 
+          role: 'user', 
+          profile_id: undefined 
+        });
+        setIsCreateDialogOpen(false);
+        
+        // Mostrar informações importantes sobre a senha temporária
+        toast({
+          title: 'Usuário criado com sucesso',
+          description: 'Informe ao usuário que a senha temporária é: RetificaTemp2024! (será solicitada alteração no primeiro login)',
+          duration: 10000, // 10 segundos para dar tempo de copiar
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao criar usuário:', error);
       toast({
-        title: 'Usuário criado com sucesso',
-        description: 'Informe ao usuário que a senha temporária é: RetificaTemp2024! (será solicitada alteração no primeiro login)',
-        duration: 10000, // 10 segundos para dar tempo de copiar
+        title: 'Erro ao criar usuário',
+        description: 'Ocorreu um erro inesperado. Tente novamente.',
+        variant: 'destructive',
       });
     }
   };
 
   const handleUpdateRole = async (userId: string) => {
-    const success = await updateUserRole(userId, editingRole);
-    if (success) {
-      setEditingUser(null);
+    try {
+      console.log('Atualizando usuário:', { userId, editingRole, editingProfile });
+      
+      const success = await updateUserRole(userId, editingRole);
+      console.log('Resultado da atualização:', success);
+      
+      if (success) {
+        setEditingUser(null);
+        setEditingProfile('');
+        
+        toast({
+          title: 'Usuário atualizado',
+          description: 'Nível de acesso atualizado com sucesso',
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar usuário:', error);
+      toast({
+        title: 'Erro ao atualizar usuário',
+        description: 'Ocorreu um erro inesperado. Tente novamente.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -176,7 +237,18 @@ export default function GestaoUsuarios() {
             </Link>
         
             {canManageUsers() && (
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+                setIsCreateDialogOpen(open);
+                if (open) {
+                  // Limpar formulário ao abrir
+                  setNewUserData({
+                    email: '',
+                    name: '',
+                    role: 'user',
+                    profile_id: undefined
+                  });
+                }
+              }}>
             <DialogTrigger asChild>
               <Button>
                 <UserPlus className="h-4 w-4 mr-2" />
@@ -246,6 +318,42 @@ export default function GestaoUsuarios() {
                     </SelectContent>
                   </Select>
                 </div>
+                
+                <div>
+                  <Label htmlFor="profile">Perfil de Usuário (Opcional)</Label>
+                  <Select
+                    value={newUserData.profile_id || 'none'}
+                    onValueChange={(value) => setNewUserData(prev => ({ 
+                      ...prev, 
+                      profile_id: value === 'none' ? undefined : value 
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um perfil (opcional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        <span className="text-muted-foreground">Nenhum perfil</span>
+                      </SelectItem>
+                      {profiles.map((profile) => (
+                        <SelectItem key={profile.id} value={profile.id}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: profile.sector?.color || '#3B82F6' }}
+                            />
+                            <span>{profile.name}</span>
+                            {profile.sector && (
+                              <span className="text-xs text-muted-foreground">
+                                ({profile.sector.name})
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               
               <DialogFooter>
@@ -262,8 +370,8 @@ export default function GestaoUsuarios() {
                   {createLoading ? 'Criando...' : 'Criar Usuário'}
                 </Button>
               </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                </DialogContent>
+              </Dialog>
             )}
           </div>
         </div>
@@ -413,6 +521,7 @@ export default function GestaoUsuarios() {
                                   onClick={() => {
                                     setEditingUser(user.user_id);
                                     setEditingRole(user.role);
+                                    setEditingProfile(''); // TODO: Buscar perfil atual do usuário
                                   }}
                                 >
                                   <Edit className="h-4 w-4" />
@@ -426,38 +535,73 @@ export default function GestaoUsuarios() {
                                   </DialogDescription>
                                 </DialogHeader>
                                 
-                                <div>
-                                  <Label>Nível de Acesso</Label>
-                                  <Select
-                                    value={editingRole}
-                                    onValueChange={(value: AppRole) => setEditingRole(value)}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {userRole === 'owner' && user.role !== 'owner' && (
-                                        <SelectItem value="admin">
+                                <div className="space-y-4">
+                                  <div>
+                                    <Label>Nível de Acesso</Label>
+                                    <Select
+                                      value={editingRole}
+                                      onValueChange={(value: AppRole) => setEditingRole(value)}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {userRole === 'owner' && user.role !== 'owner' && (
+                                          <SelectItem value="admin">
+                                            <div className="flex items-center gap-2">
+                                              {getRoleIcon('admin')}
+                                              {ROLE_LABELS.admin}
+                                            </div>
+                                          </SelectItem>
+                                        )}
+                                        <SelectItem value="manager">
                                           <div className="flex items-center gap-2">
-                                            {getRoleIcon('admin')}
-                                            {ROLE_LABELS.admin}
+                                            {getRoleIcon('manager')}
+                                            {ROLE_LABELS.manager}
                                           </div>
                                         </SelectItem>
-                                      )}
-                                      <SelectItem value="manager">
-                                        <div className="flex items-center gap-2">
-                                          {getRoleIcon('manager')}
-                                          {ROLE_LABELS.manager}
-                                        </div>
-                                      </SelectItem>
-                                      <SelectItem value="user">
-                                        <div className="flex items-center gap-2">
-                                          {getRoleIcon('user')}
-                                          {ROLE_LABELS.user}
-                                        </div>
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
+                                        <SelectItem value="user">
+                                          <div className="flex items-center gap-2">
+                                            {getRoleIcon('user')}
+                                            {ROLE_LABELS.user}
+                                          </div>
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  
+                                  <div>
+                                    <Label>Perfil de Usuário (Opcional)</Label>
+                                    <Select
+                                      value={editingProfile || 'none'}
+                                      onValueChange={(value) => setEditingProfile(value === 'none' ? '' : value)}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Selecione um perfil (opcional)" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="none">
+                                          <span className="text-muted-foreground">Nenhum perfil</span>
+                                        </SelectItem>
+                                        {profiles.map((profile) => (
+                                          <SelectItem key={profile.id} value={profile.id}>
+                                            <div className="flex items-center gap-2">
+                                              <div 
+                                                className="w-3 h-3 rounded-full" 
+                                                style={{ backgroundColor: profile.sector?.color || '#3B82F6' }}
+                                              />
+                                              <span>{profile.name}</span>
+                                              {profile.sector && (
+                                                <span className="text-xs text-muted-foreground">
+                                                  ({profile.sector.name})
+                                                </span>
+                                              )}
+                                            </div>
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
                                 </div>
                                 
                                 <DialogFooter>
