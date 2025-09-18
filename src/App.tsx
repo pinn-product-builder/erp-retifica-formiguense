@@ -15,6 +15,7 @@ import { usePasswordChange } from '@/hooks/usePasswordChange';
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Landing = lazy(() => import('@/pages/Landing'));
 const Auth = lazy(() => import('@/pages/Auth'));
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const Clientes = lazy(() => import('@/pages/Clientes'));
 const Consultores = lazy(() => import('@/pages/Consultores'));
 const Coleta = lazy(() => import('@/pages/Coleta'));
@@ -55,6 +56,7 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             
             {/* Protected Routes with Profile Permissions */}
             <Route path="/dashboard" element={<ProfileProtectedRoute><Layout><Dashboard /></Layout></ProfileProtectedRoute>} />

@@ -22,6 +22,8 @@ enable_signup = false
 enable_signup = false
 double_confirm_email = false
 enable_confirmations = false
+secure_password_change_enabled = true
+password_reset_enabled = true
 
 [storage]
 enabled = true

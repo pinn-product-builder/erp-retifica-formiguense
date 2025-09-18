@@ -14,6 +14,7 @@ export default function Auth() {
   const [resetEmail, setResetEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const { signIn, resetPassword, user, loading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -71,7 +72,6 @@ export default function Auth() {
     setIsLoading(false);
   };
 
-
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -79,8 +79,7 @@ export default function Auth() {
     const { error } = await resetPassword(resetEmail);
     
     if (!error) {
-      setShowResetPassword(false);
-      setResetEmail("");
+      setResetEmailSent(true);
     }
     
     setIsLoading(false);
@@ -106,38 +105,81 @@ export default function Auth() {
                   <span className="text-lg font-bold text-primary-foreground">RF</span>
                 </div>
               </div>
-              <CardTitle className="text-xl">Recuperar Senha</CardTitle>
+              <CardTitle className="text-xl">
+                {resetEmailSent ? 'Email Enviado!' : 'Recuperar Senha'}
+              </CardTitle>
               <CardDescription>
-                Digite seu e-mail para receber as instruções de recuperação
+                {resetEmailSent 
+                  ? `Enviamos as instruções de recuperação para ${resetEmail}. Verifique sua caixa de entrada e spam.`
+                  : 'Digite seu e-mail para receber as instruções de recuperação'
+                }
               </CardDescription>
             </CardHeader>
-            <form onSubmit={handleResetPassword}>
+{resetEmailSent ? (
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="reset-email">E-mail</Label>
-                  <Input
-                    id="reset-email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    required
-                  />
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Não recebeu o email? Verifique sua pasta de spam ou tente novamente em alguns minutos.
+                  </p>
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Enviando...
-                    </>
-                  ) : (
-                    "Enviar Instruções"
-                  )}
+            ) : (
+              <form onSubmit={handleResetPassword}>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email">E-mail</Label>
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      "Enviar Instruções"
+                    )}
+                  </Button>
+                </CardFooter>
+              </form>
+            )}
+            
+            <CardFooter className="pt-0">
+              <div className="flex gap-2 w-full">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowResetPassword(false);
+                    setResetEmailSent(false);
+                    setResetEmail("");
+                  }}
+                  className="flex-1"
+                >
+                  {resetEmailSent ? 'Fechar' : 'Voltar ao Login'}
                 </Button>
-              </CardFooter>
-            </form>
+                {resetEmailSent && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setResetEmailSent(false)}
+                    className="flex-1"
+                  >
+                    Enviar Novamente
+                  </Button>
+                )}
+              </div>
+            </CardFooter>
           </Card>
         </div>
       </div>
