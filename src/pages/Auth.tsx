@@ -405,6 +405,19 @@ export default function Auth() {
               <SetupDemoUsers />
             </div>
 
+            {/* Super User Signup Link */}
+            <div className="text-center pt-4 border-t">
+              <p className="text-xs text-muted-foreground mb-2">
+                Precisa criar organizações para outras empresas?
+              </p>
+              <Link 
+                to="/super-user-signup" 
+                className="text-xs text-primary hover:underline font-medium"
+              >
+                Solicitar acesso como Super Usuário
+              </Link>
+            </div>
+
             {/* Social Proof */}
             <div className="text-center pt-6 border-t">
               <p className="text-xs text-muted-foreground">
