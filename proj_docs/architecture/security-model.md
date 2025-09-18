@@ -40,6 +40,47 @@ const supabase = createClient(
 
 ## Autorização
 
+### Criação de Organizações
+
+#### Política de Criação
+
+**Qualquer usuário autenticado pode criar uma nova organização:**
+
+```sql
+CREATE POLICY "Users can create organizations"
+ON public.organizations
+FOR INSERT
+WITH CHECK (created_by = auth.uid());
+```
+
+#### Processo de Criação
+
+1. **Usuário autenticado** cria organização
+2. **Automaticamente torna-se OWNER** da organização
+3. **Recebe todos os privilégios** de gestão
+4. **Pode convidar outros usuários** com diferentes roles
+
+```typescript
+// Exemplo do processo de criação
+const createOrganization = async (name: string, description?: string) => {
+  // 1. Criar organização
+  const org = await supabase
+    .from('organizations')
+    .insert({ name, slug: generateSlug(name), description, created_by: user.id });
+
+  // 2. Adicionar criador como OWNER
+  await supabase
+    .from('organization_users')
+    .insert({ organization_id: org.id, user_id: user.id, role: 'owner' });
+};
+```
+
+#### Implicações de Segurança
+
+- ✅ **Liberal**: Qualquer usuário pode criar organizações
+- ✅ **Adequado para SaaS**: Cada empresa tem sua organização
+- ⚠️ **Considerar**: Pode não ser ideal se quiser restringir criação apenas a super-admins
+
 ### Modelo RBAC (Role-Based Access Control)
 
 #### Níveis de Acesso por Organização
@@ -81,6 +122,91 @@ type PermissionLevel = 'none' | 'read' | 'write' | 'admin';
 | manager | write | read | write | write | none |
 | user | read | none | write | write | none |
 | viewer | read | read | read | read | none |
+
+### Sistema de Perfis de Usuário (Profile-Based Permissions)
+
+#### Visão Geral
+
+O sistema implementa um modelo híbrido que combina **RBAC tradicional** com **permissões específicas por página** através de perfis de usuário:
+
+```typescript
+interface UserProfile {
+  id: string;
+  name: string;
+  description?: string;
+  sector_id: string;
+  org_id: string;
+  is_active: boolean;
+}
+
+interface ProfilePagePermission {
+  profile_id: string;
+  page_id: string;
+  can_view: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+}
+```
+
+#### Estrutura do Sistema de Perfis
+
+1. **Setores de Usuário** (`user_sectors`)
+   - Agrupam perfis por departamento/área
+   - Permitem organização visual (cores)
+   - Facilitam gestão hierárquica
+
+2. **Perfis de Usuário** (`user_profiles`)
+   - Definem conjuntos específicos de permissões
+   - Vinculados a um setor
+   - Podem ter permissões granulares por página
+
+3. **Páginas do Sistema** (`system_pages`)
+   - Cadastro centralizado de todas as rotas
+   - Mapeamento para módulos existentes
+   - Controle de ativação/desativação
+
+4. **Permissões de Página** (`profile_page_permissions`)
+   - Granularidade: visualizar, editar, excluir
+   - Específicas por perfil e página
+   - Sobrepõem permissões de role quando definidas
+
+#### Fluxo de Autorização
+
+```typescript
+// Ordem de verificação de permissões
+const canAccessPage = (routePath: string): boolean => {
+  // 1. Verificar se usuário está autenticado
+  if (!user) return false;
+
+  // 2. Se não tem organização, apenas dashboard
+  if (!currentOrganization) return routePath === '/dashboard';
+
+  // 3. Se tem perfil específico, usar permissões do perfil
+  if (userProfile && pagePermissions.length > 0) {
+    const pagePermission = pagePermissions.find(p => p.page?.route_path === routePath);
+    if (pagePermission) {
+      return pagePermission.can_view;
+    }
+  }
+
+  // 4. Fallback para permissões baseadas em role
+  const module = PAGE_MODULE_MAPPING[routePath];
+  if (module) {
+    return basePermissions.canAccessModule(module);
+  }
+
+  // 5. Permitir acesso por padrão se não há restrições
+  return true;
+};
+```
+
+#### Vantagens do Sistema Híbrido
+
+- **Flexibilidade**: Combina roles gerais com permissões específicas
+- **Granularidade**: Controle fino por página/funcionalidade
+- **Escalabilidade**: Fácil adição de novas páginas e permissões
+- **Compatibilidade**: Mantém sistema RBAC existente como fallback
+- **Organização**: Setores facilitam gestão hierárquica
 
 ## Row Level Security (RLS)
 

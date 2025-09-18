@@ -155,6 +155,79 @@ O sistema suporta migração de dados entre organizações com ferramentas dedic
 - Importação com mapeamento
 - Validação de integridade
 
+### Políticas RLS Atuais
+
+#### Políticas para `organizations`
+
+```sql
+-- Usuários podem visualizar organizações das quais fazem parte
+CREATE POLICY "Users can view their organizations"
+ON public.organizations
+FOR SELECT
+USING (id IN (
+  SELECT organization_id 
+  FROM organization_users 
+  WHERE user_id = auth.uid() AND is_active = true
+));
+
+-- Qualquer usuário autenticado pode criar organizações
+CREATE POLICY "Users can create organizations"
+ON public.organizations
+FOR INSERT
+WITH CHECK (created_by = auth.uid());
+
+-- Apenas owners e admins podem atualizar organizações
+CREATE POLICY "Org owners and admins can update organization"
+ON public.organizations
+FOR UPDATE
+USING (public.has_org_role(id, 'owner') OR public.has_org_role(id, 'admin'));
+```
+
+#### Políticas para `organization_users`
+
+```sql
+-- Usuários podem ver membros de suas organizações
+CREATE POLICY "Users can view org members of their organizations"
+ON public.organization_users
+FOR SELECT
+USING (public.is_org_member(organization_id));
+
+-- Owners e admins podem gerenciar membros
+CREATE POLICY "Org owners and admins can manage members"
+ON public.organization_users
+FOR ALL
+USING (public.has_org_role(organization_id, 'owner') OR public.has_org_role(organization_id, 'admin'));
+
+-- Usuários podem se juntar quando convidados
+CREATE POLICY "Users can join when invited"
+ON public.organization_users
+FOR INSERT
+WITH CHECK (user_id = auth.uid());
+```
+
+#### Políticas para Sistema de Perfis
+
+```sql
+-- Setores: apenas membros da organização podem ver
+CREATE POLICY "org_members_can_view_sectors" ON user_sectors
+FOR SELECT
+USING (public.is_org_member(org_id));
+
+-- Perfis: apenas membros da organização podem ver
+CREATE POLICY "org_members_can_view_profiles" ON user_profiles
+FOR SELECT
+USING (public.is_org_member(org_id));
+
+-- Atribuições: usuários podem ver suas próprias atribuições
+CREATE POLICY "users_can_view_own_assignments" ON user_profile_assignments
+FOR SELECT
+USING (
+  user_id = auth.uid() OR 
+  public.has_org_role(org_id, 'admin') OR 
+  public.has_org_role(org_id, 'owner')
+);
+```
+
 ## Monitoramento
 
 ### Métricas por Organização
@@ -163,6 +236,8 @@ O sistema suporta migração de dados entre organizações com ferramentas dedic
 - Volume de transações
 - Uso de storage
 - Performance por tenant
+- Criação de organizações por período
+- Distribuição de roles por organização
 
 ### Auditoria
 
@@ -178,8 +253,39 @@ CREATE TABLE audit_logs (
   record_id UUID,
   old_data JSONB,
   new_data JSONB,
+  ip_address INET,
+  user_agent TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+```
+
+### Alertas de Segurança
+
+```sql
+-- Detectar tentativas suspeitas de criação de organizações
+CREATE OR REPLACE FUNCTION monitor_org_creation()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Alertar se usuário criar muitas organizações rapidamente
+  IF (SELECT COUNT(*) FROM organizations 
+      WHERE created_by = NEW.created_by 
+      AND created_at > NOW() - INTERVAL '1 hour') > 3 THEN
+    
+    INSERT INTO security_alerts (
+      alert_type, user_id, org_id, description, severity
+    ) VALUES (
+      'SUSPICIOUS_ORG_CREATION', NEW.created_by, NEW.id,
+      'User created multiple organizations in short time', 'MEDIUM'
+    );
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER monitor_org_creation_trigger
+  AFTER INSERT ON organizations
+  FOR EACH ROW EXECUTE FUNCTION monitor_org_creation();
 ```
 
 ## Escalabilidade
@@ -190,9 +296,12 @@ CREATE TABLE audit_logs (
 2. **Particionamento**: Tabelas grandes podem ser particionadas por organização
 3. **Cache**: Cache específico por tenant
 4. **Rate Limiting**: Limites por organização
+5. **Isolamento de Recursos**: Organizações grandes podem ter recursos dedicados
 
 ### Considerações de Performance
 
 - Consultas sempre filtradas por `org_id`
 - Conexões dedicadas para organizações grandes
 - Monitoramento de performance por tenant
+- Limitação de criação de organizações por usuário/período
+- Validação de recursos antes da criação
