@@ -2305,6 +2305,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_super_admin: boolean | null
           name: string | null
           role: string | null
           updated_at: string
@@ -2313,6 +2314,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_super_admin?: boolean | null
           name?: string | null
           role?: string | null
           updated_at?: string
@@ -2321,6 +2323,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_super_admin?: boolean | null
           name?: string | null
           role?: string | null
           updated_at?: string
@@ -3813,6 +3816,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_organizations: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       current_org_id: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -3853,9 +3860,13 @@ export type Database = {
         Args: { org_id: string }
         Returns: boolean
       }
+      is_super_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
-      app_role: "owner" | "admin" | "manager" | "user"
+      app_role: "owner" | "admin" | "manager" | "user" | "super_admin"
       base_calc_method:
         | "percentual"
         | "valor_fixo"
@@ -4025,7 +4036,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["owner", "admin", "manager", "user"],
+      app_role: ["owner", "admin", "manager", "user", "super_admin"],
       base_calc_method: [
         "percentual",
         "valor_fixo",
