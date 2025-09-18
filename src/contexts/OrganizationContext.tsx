@@ -136,19 +136,6 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const createOrganization = async (name: string, description?: string): Promise<Organization> => {
     if (!user) throw new Error('User not authenticated');
 
-    // Check if user can create organizations (must be super user)
-    const { data: canCreate, error: checkError } = await supabase
-      .rpc('can_create_organizations', { user_uuid: user.id });
-
-    if (checkError) {
-      console.error('Error checking organization creation permissions:', checkError);
-      throw new Error('Erro ao verificar permissões');
-    }
-
-    if (!canCreate) {
-      throw new Error('Apenas super usuários podem criar organizações. Solicite acesso como super usuário.');
-    }
-
     // Generate slug from name
     const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
 

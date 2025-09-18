@@ -51,12 +51,11 @@ Para contribuir com a documentação, consulte o [Guia de Contribuição](./deve
 - Perfis personalizáveis com permissões específicas (visualizar, editar, excluir)
 - Interface de gestão completa para administradores
 
-### 🔐 Sistema de Super Usuários
-- **Apenas Super Usuários** podem criar organizações
-- **Processo de solicitação** com aprovação manual
-- **Dois tipos**: Platform Admin e Organization Creator
-- **Interface de gestão** para administradores da plataforma
-- **Auditoria completa** de todas as solicitações e ações
+### 🔐 Política de Criação de Organizações
+- **Qualquer usuário autenticado** pode criar organizações
+- Criador automaticamente torna-se **OWNER** da organização
+- Políticas RLS atualizadas para suportar o novo fluxo
+- Monitoramento de segurança para detecção de atividades suspeitas
 
 ### 🗄️ Esquema de Banco Atualizado
 - Novas tabelas: `user_sectors`, `user_profiles`, `system_pages`, `profile_page_permissions`, `user_profile_assignments`

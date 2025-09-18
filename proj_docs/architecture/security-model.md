@@ -42,85 +42,33 @@ const supabase = createClient(
 
 ### Criação de Organizações
 
-#### Sistema de Super Usuários
+#### Política de Criação
 
-**Apenas Super Usuários podem criar organizações:**
-
-```sql
--- Nova política: apenas super usuários podem criar organizações
-CREATE POLICY "super_users_can_create_organizations" ON public.organizations
-  FOR INSERT
-  WITH CHECK (
-    created_by = auth.uid() AND 
-    public.can_create_organizations(auth.uid())
-  );
-```
-
-#### Tipos de Super Usuário
+**Qualquer usuário autenticado pode criar uma nova organização:**
 
 ```sql
-CREATE TYPE public.super_user_type AS ENUM ('platform_admin', 'organization_creator');
+CREATE POLICY "Users can create organizations"
+ON public.organizations
+FOR INSERT
+WITH CHECK (created_by = auth.uid());
 ```
 
-- **`platform_admin`**: Administrador da plataforma
-  - Pode criar organizações
-  - Pode gerenciar outros super usuários
-  - Pode aprovar/rejeitar solicitações de acesso
-  - Acesso total ao sistema
+#### Processo de Criação
 
-- **`organization_creator`**: Criador de organizações
-  - Pode criar organizações
-  - Não pode gerenciar outros super usuários
-  - Foco na criação e gestão de organizações
-
-#### Processo de Solicitação
-
-1. **Usuário acessa** `/super-user-signup`
-2. **Preenche formulário** com justificativa
-3. **Solicitação é enviada** para análise
-4. **Platform Admin** revisa e aprova/rejeita
-5. **Se aprovado**, usuário recebe instruções para criar conta
+1. **Usuário autenticado** cria organização
+2. **Automaticamente torna-se OWNER** da organização
+3. **Recebe todos os privilégios** de gestão
+4. **Pode convidar outros usuários** com diferentes roles
 
 ```typescript
-// Fluxo de solicitação
-const submitSuperUserRequest = async (data: SuperUserSignupData) => {
-  const { error } = await supabase
-    .from('super_user_signup_requests')
-    .insert({
-      email: data.email,
-      name: data.name,
-      company_name: data.company_name,
-      requested_type: data.requested_type,
-      message: data.message
-    });
-};
-```
-
-#### Processo de Criação de Organização (Atualizado)
-
-1. **Super usuário** inicia criação
-2. **Sistema verifica** se é super usuário ativo
-3. **Se autorizado**, cria organização
-4. **Criador torna-se OWNER** da organização
-5. **Pode convidar outros usuários** com diferentes roles
-
-```typescript
-// Processo atualizado com verificação
+// Exemplo do processo de criação
 const createOrganization = async (name: string, description?: string) => {
-  // 1. Verificar se é super usuário
-  const { data: canCreate } = await supabase
-    .rpc('can_create_organizations', { user_uuid: user.id });
-
-  if (!canCreate) {
-    throw new Error('Apenas super usuários podem criar organizações');
-  }
-
-  // 2. Criar organização
+  // 1. Criar organização
   const org = await supabase
     .from('organizations')
     .insert({ name, slug: generateSlug(name), description, created_by: user.id });
 
-  // 3. Adicionar criador como OWNER
+  // 2. Adicionar criador como OWNER
   await supabase
     .from('organization_users')
     .insert({ organization_id: org.id, user_id: user.id, role: 'owner' });
@@ -129,11 +77,9 @@ const createOrganization = async (name: string, description?: string) => {
 
 #### Implicações de Segurança
 
-- 🔒 **Restritivo**: Apenas super usuários podem criar organizações
-- ✅ **Controlado**: Processo de aprovação manual
-- ✅ **Auditável**: Todas as solicitações são registradas
-- ✅ **Escalável**: Permite diferentes tipos de super usuários
-- ⚠️ **Processo Manual**: Requer aprovação de platform admin
+- ✅ **Liberal**: Qualquer usuário pode criar organizações
+- ✅ **Adequado para SaaS**: Cada empresa tem sua organização
+- ⚠️ **Considerar**: Pode não ser ideal se quiser restringir criação apenas a super-admins
 
 ### Modelo RBAC (Role-Based Access Control)
 

@@ -38,8 +38,6 @@ const OrdensServico = lazy(() => import('@/pages/OrdensServico'));
 const GestaoFuncionarios = lazy(() => import('@/pages/GestaoFuncionarios'));
 const GestaoUsuarios = lazy(() => import('@/pages/GestaoUsuarios'));
 const GestaoPerfiUsuarios = lazy(() => import('@/pages/GestaoPerfisusuarios'));
-const SuperUserSignup = lazy(() => import('@/pages/SuperUserSignup'));
-const SuperUserRequests = lazy(() => import('@/pages/SuperUserRequests'));
 
 const queryClient = new QueryClient();
 
@@ -57,8 +55,6 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/super-user-signup" element={<SuperUserSignup />} />
-            <Route path="/super-user-requests" element={<SuperUserRequests />} />
             
             {/* Protected Routes with Profile Permissions */}
             <Route path="/dashboard" element={<ProfileProtectedRoute><Layout><Dashboard /></Layout></ProfileProtectedRoute>} />
