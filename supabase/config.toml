@@ -35,3 +35,6 @@ verify_jwt = true
 
 [functions.delete-user]
 verify_jwt = true
+
+[functions.create-user-admin]
+verify_jwt = true
