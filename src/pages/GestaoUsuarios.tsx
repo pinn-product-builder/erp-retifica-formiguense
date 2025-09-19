@@ -23,7 +23,8 @@ import {
   Eye,
   EyeOff,
   Crown,
-  UserCog
+  UserCog,
+  Loader2
 } from 'lucide-react';
 import { useUserManagement, type CreateUserData } from '@/hooks/useUserManagement';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
@@ -70,6 +71,7 @@ export default function GestaoUsuarios() {
     users,
     loading,
     createLoading,
+    deleteLoading,
     fetchUsers,
     createUser,
     updateUserRole,
@@ -610,8 +612,16 @@ export default function GestaoUsuarios() {
                             {user.role !== 'owner' && (
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <Trash2 className="h-4 w-4" />
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    disabled={deleteLoading === user.user_id}
+                                  >
+                                    {deleteLoading === user.user_id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4" />
+                                    )}
                                   </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
@@ -623,12 +633,22 @@ export default function GestaoUsuarios() {
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogCancel disabled={deleteLoading === user.user_id}>
+                                      Cancelar
+                                    </AlertDialogCancel>
                                     <AlertDialogAction
                                       onClick={() => handleRemoveUser(user.user_id)}
-                                      className="bg-red-600 hover:bg-red-700"
+                                      disabled={deleteLoading === user.user_id}
+                                      className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
                                     >
-                                      Remover
+                                      {deleteLoading === user.user_id ? (
+                                        <>
+                                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                          Removendo...
+                                        </>
+                                      ) : (
+                                        'Remover'
+                                      )}
                                     </AlertDialogAction>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>

@@ -68,6 +68,7 @@ export const useUserManagement = () => {
   const [users, setUsers] = useState<OrganizationUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null); // userId sendo deletado
   const { currentOrganization, userRole } = useOrganization();
   const { user: currentUser } = useAuth();
 
@@ -341,6 +342,9 @@ export const useUserManagement = () => {
       return false;
     }
 
+    // Iniciar loading para este usuário específico
+    setDeleteLoading(userId);
+
     try {
       console.log('🗑️ Iniciando remoção de usuário:', userId);
       
@@ -383,6 +387,9 @@ export const useUserManagement = () => {
         description: error instanceof Error ? error.message : 'Falha ao remover usuário'
       });
       return false;
+    } finally {
+      // Parar loading para este usuário
+      setDeleteLoading(null);
     }
   };
 
@@ -429,6 +436,7 @@ export const useUserManagement = () => {
     users,
     loading,
     createLoading,
+    deleteLoading,
     
     // Ações
     fetchUsers,
