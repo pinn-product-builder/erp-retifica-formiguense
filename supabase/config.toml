@@ -40,3 +40,6 @@ verify_jwt = true
 
 [functions.generate-obligation-file]
 verify_jwt = true
+
+[functions.delete-user]
+verify_jwt = true

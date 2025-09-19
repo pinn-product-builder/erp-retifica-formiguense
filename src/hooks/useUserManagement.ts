@@ -144,10 +144,8 @@ export const useUserManagement = () => {
       setUsers(usersWithProfile);
     } catch (error) {
       console.error('Error fetching users:', error);
-      toast({
-        title: 'Erro',
-        description: 'Falha ao carregar usuários da organização',
-        variant: 'destructive',
+      toast.error('Erro ao carregar usuários', {
+        description: 'Falha ao carregar usuários da organização'
       });
     } finally {
       setLoading(false);
@@ -319,19 +317,15 @@ export const useUserManagement = () => {
     
     // Verificar se o usuário está tentando alterar sua própria role
     if (currentUser?.id === userId) {
-      toast({
-        title: 'Ação não permitida',
-        description: 'Você não pode alterar sua própria role.',
-        variant: 'destructive',
+      toast.error('Ação não permitida', {
+        description: 'Você não pode alterar sua própria role.'
       });
       return false;
     }
     
     if (!canEditUser(userId)) {
-      toast({
-        title: 'Acesso Negado',
-        description: 'Você não tem permissão para alterar a role deste usuário.',
-        variant: 'destructive',
+      toast.error('Acesso Negado', {
+        description: 'Você não tem permissão para alterar a role deste usuário.'
       });
       return false;
     }
@@ -348,19 +342,16 @@ export const useUserManagement = () => {
 
       if (error) throw error;
 
-      toast({
-        title: 'Role atualizado',
-        description: `Role do usuário foi alterado para ${newRole}`,
+      toast.success('Role atualizado', {
+        description: `Role do usuário foi alterado para ${newRole}`
       });
 
       await fetchUsers(); // Recarregar lista
       return true;
     } catch (error: unknown) {
       console.error('Error updating user role:', error);
-      toast({
-        title: 'Erro ao atualizar role',
-        description: error instanceof Error ? error.message : 'Falha ao atualizar role do usuário',
-        variant: 'destructive',
+      toast.error('Erro ao atualizar role', {
+        description: error instanceof Error ? error.message : 'Falha ao atualizar role do usuário'
       });
       return false;
     }
@@ -372,19 +363,15 @@ export const useUserManagement = () => {
     
     // Verificar se o usuário está tentando desativar a si mesmo
     if (currentUser?.id === userId && !isActive) {
-      toast({
-        title: 'Ação não permitida',
-        description: 'Você não pode desativar sua própria conta.',
-        variant: 'destructive',
+      toast.error('Ação não permitida', {
+        description: 'Você não pode desativar sua própria conta.'
       });
       return false;
     }
     
     if (!canEditUser(userId)) {
-      toast({
-        title: 'Acesso Negado',
-        description: 'Você não tem permissão para alterar o status deste usuário.',
-        variant: 'destructive',
+      toast.error('Acesso Negado', {
+        description: 'Você não tem permissão para alterar o status deste usuário.'
       });
       return false;
     }
@@ -401,19 +388,16 @@ export const useUserManagement = () => {
 
       if (error) throw error;
 
-      toast({
-        title: isActive ? 'Usuário ativado' : 'Usuário desativado',
-        description: `Usuário foi ${isActive ? 'ativado' : 'desativado'} com sucesso`,
+      toast.success(isActive ? 'Usuário ativado' : 'Usuário desativado', {
+        description: `Usuário foi ${isActive ? 'ativado' : 'desativado'} com sucesso`
       });
 
       await fetchUsers(); // Recarregar lista
       return true;
     } catch (error: unknown) {
       console.error('Error toggling user status:', error);
-      toast({
-        title: 'Erro ao alterar status',
-        description: error instanceof Error ? error.message : 'Falha ao alterar status do usuário',
-        variant: 'destructive',
+      toast.error('Erro ao alterar status', {
+        description: error instanceof Error ? error.message : 'Falha ao alterar status do usuário'
       });
       return false;
     }
@@ -425,19 +409,15 @@ export const useUserManagement = () => {
     
     // Verificar se o usuário está tentando remover a si mesmo
     if (currentUser?.id === userId) {
-      toast({
-        title: 'Ação não permitida',
-        description: 'Você não pode remover sua própria conta.',
-        variant: 'destructive',
+      toast.error('Ação não permitida', {
+        description: 'Você não pode remover sua própria conta.'
       });
       return false;
     }
     
     if (!canEditUser(userId)) {
-      toast({
-        title: 'Acesso Negado',
-        description: 'Você não tem permissão para remover este usuário.',
-        variant: 'destructive',
+      toast.error('Acesso Negado', {
+        description: 'Você não tem permissão para remover este usuário.'
       });
       return false;
     }
@@ -466,13 +446,11 @@ export const useUserManagement = () => {
 
       // Mostrar toast apropriado baseado no resultado
       if (data.deletedCompletely) {
-        toast({
-          title: 'Usuário removido completamente',
+        toast.success('Usuário removido completamente', {
           description: 'Usuário foi removido completamente do sistema.'
         });
       } else {
-        toast({
-          title: 'Usuário removido da organização',
+        toast.success('Usuário removido da organização', {
           description: 'Usuário foi removido desta organização mas permanece em outras.'
         });
       }
@@ -482,10 +460,8 @@ export const useUserManagement = () => {
       return true;
     } catch (error: unknown) {
       console.error('Error removing user:', error);
-      toast({
-        title: 'Erro ao remover usuário',
-        description: error instanceof Error ? error.message : 'Falha ao remover usuário',
-        variant: 'destructive',
+      toast.error('Erro ao remover usuário', {
+        description: error instanceof Error ? error.message : 'Falha ao remover usuário'
       });
       return false;
     }
