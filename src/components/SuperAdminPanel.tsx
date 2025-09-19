@@ -22,7 +22,7 @@ interface Organization {
     role: string;
     profiles: {
       name: string;
-    };
+    } | null;
   }>;
 }
 

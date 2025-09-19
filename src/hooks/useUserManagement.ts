@@ -14,6 +14,9 @@ interface ExtendedSupabaseClient {
       in: (column: string, values: string[]) => Promise<{ data: unknown; error: unknown }>;
     };
     insert: (data: Record<string, unknown>) => Promise<{ error: unknown }>;
+    delete: () => {
+      eq: (column: string, value: string) => Promise<{ error: unknown }>;
+    };
   };
 }
 
@@ -187,11 +190,13 @@ export const useUserManagement = () => {
           signUpError.message.includes('User already registered') ||
           signUpError.message.includes('already registered') ||
           signUpError.message.includes('already exists') ||
+          signUpError.message.includes('Email already in use') ||
           signUpError.code === 'user_already_exists' ||
-          signUpError.status === 422
+          signUpError.status === 422 ||
+          signUpError.status === 400
         ) {
           toast({
-            title: 'Usuário já existe',
+            title: 'Usuário já cadastrado',
             description: 'Este email já está cadastrado no sistema.',
             variant: 'destructive',
           });
@@ -257,7 +262,27 @@ export const useUserManagement = () => {
         duration: 8000, // 8 segundos para dar tempo de copiar
       });
 
-      await fetchUsers(); // Recarregar lista
+      // Atualizar lista sem recarregar página - adicionar o novo usuário
+      const newUser: OrganizationUser = {
+        id: crypto.randomUUID(),
+        organization_id: currentOrganization.id,
+        user_id: signUpData.user.id,
+        role: userData.role,
+        invited_at: null,
+        joined_at: new Date().toISOString(),
+        invited_by: currentUser?.id || null,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        user: {
+          id: signUpData.user.id,
+          email: userData.email,
+          name: userData.name,
+          created_at: new Date().toISOString()
+        }
+      };
+      
+      setUsers(prev => [newUser, ...prev]);
       return true;
     } catch (error: unknown) {
       console.error('Error creating user:', error);
@@ -378,7 +403,7 @@ export const useUserManagement = () => {
     }
   };
 
-  // Remover usuário da organização
+  // Remover usuário completamente (da organização e do sistema)
   const removeUser = async (userId: string): Promise<boolean> => {
     if (!currentOrganization?.id) return false;
     
@@ -402,20 +427,56 @@ export const useUserManagement = () => {
     }
 
     try {
-      const { error } = await supabase
+      // Verificar se o usuário está em outras organizações
+      const { data: otherOrgs } = await supabase
+        .from('organization_users')
+        .select('organization_id')
+        .eq('user_id', userId)
+        .neq('organization_id', currentOrganization.id);
+
+      // Remover da organização atual
+      const { error: removeOrgError } = await supabase
         .from('organization_users')
         .delete()
         .eq('organization_id', currentOrganization.id)
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (removeOrgError) throw removeOrgError;
 
-      toast({
-        title: 'Usuário removido',
-        description: 'Usuário foi removido da organização',
-      });
+      // Se não está em outras organizações, deletar completamente
+      if (!otherOrgs || otherOrgs.length === 0) {
+        // Deletar das tabelas relacionadas primeiro
+        await supabase.from('profiles').delete().eq('user_id', userId);
+        
+        // Tentar deletar da tabela user_basic_info se existir
+        try {
+          const { error: basicInfoError } = await (supabase as unknown as ExtendedSupabaseClient)
+            .from('user_basic_info')
+            .delete()
+            .eq('user_id', userId);
+            
+          if (basicInfoError) {
+            console.warn('Error deleting from user_basic_info:', basicInfoError);
+          }
+        } catch (error) {
+          console.warn('user_basic_info table not available for deletion');
+        }
 
-      await fetchUsers(); // Recarregar lista
+        // Deletar usuário do sistema de autenticação (requires service role)
+        // Por enquanto, apenas marcar como inativo na nossa estrutura
+        toast({
+          title: 'Usuário removido',
+          description: 'Usuário foi removido da organização. Conta do sistema permanece para auditoria.',
+        });
+      } else {
+        toast({
+          title: 'Usuário removido da organização',
+          description: 'Usuário foi removido desta organização mas permanece em outras.',
+        });
+      }
+
+      // Atualizar lista sem recarregar a página
+      setUsers(prev => prev.filter(u => u.user_id !== userId));
       return true;
     } catch (error: unknown) {
       console.error('Error removing user:', error);

@@ -164,17 +164,7 @@ export const useSuperAdminActions = () => {
       // Buscar todas as organizações
       const { data: organizations, error } = await supabase
         .from('organizations')
-        .select(`
-          *,
-          organization_users!inner(
-            id,
-            user_id,
-            role,
-            profiles!inner(
-              name
-            )
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -182,7 +172,38 @@ export const useSuperAdminActions = () => {
         return [];
       }
 
-      return organizations || [];
+      // Buscar usuários de cada organização separadamente
+      const orgsWithUsers = await Promise.all(
+        (organizations || []).map(async (org) => {
+          const { data: orgUsers } = await supabase
+            .from('organization_users')
+            .select('id, user_id, role')
+            .eq('organization_id', org.id);
+
+          // Buscar nomes dos usuários da tabela profiles
+          const usersWithProfiles = await Promise.all(
+            (orgUsers || []).map(async (orgUser) => {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('name')
+                .eq('user_id', orgUser.user_id)
+                .single();
+
+              return {
+                ...orgUser,
+                profiles: profile ? { name: profile.name || 'Nome não disponível' } : null
+              };
+            })
+          );
+
+          return {
+            ...org,
+            organization_users: usersWithProfiles
+          };
+        })
+      );
+
+      return orgsWithUsers;
     } catch (error) {
       console.error('Error fetching all organizations:', error);
       toast.error('Erro inesperado ao buscar organizações');
