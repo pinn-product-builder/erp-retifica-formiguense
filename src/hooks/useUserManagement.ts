@@ -91,37 +91,39 @@ export const useUserManagement = () => {
       let userBasicInfo: Array<{ user_id: string; email: string; name: string }> = [];
       
       if (userIds.length > 0) {
-        // Tentar buscar da tabela user_basic_info (se existir)
+        // Priorizar busca na tabela profiles (que sabemos que existe e é populada)
         try {
-          const { data: basicInfoData, error: basicInfoError } = await (supabase as unknown as ExtendedSupabaseClient)
-            .from('user_basic_info')
-            .select('user_id, email, name')
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('user_id, name, email')
             .in('user_id', userIds);
             
-            if (!basicInfoError && basicInfoData) {
-              userBasicInfo = basicInfoData as Array<{ user_id: string; email: string; name: string }>;
-            }
+          if (!profilesError && profilesData) {
+            userBasicInfo = profilesData.map(p => ({
+              user_id: p.user_id,
+              name: p.name || 'Nome não disponível',
+              email: p.email || `user_${p.user_id.substring(0, 8)}@temp.com`
+            }));
+            console.log('✅ Dados dos usuários carregados da tabela profiles:', userBasicInfo.length);
+          }
         } catch (error) {
-          console.warn('user_basic_info table not available, using fallback');
+          console.warn('Profiles table not available, trying fallback');
         }
 
-        // Fallback: tentar buscar da tabela profiles (temporário)
+        // Fallback: tentar buscar da tabela user_basic_info apenas se profiles falhou
         if (userBasicInfo.length === 0) {
           try {
-            const { data: profilesData } = await supabase
-              .from('profiles')
-              .select('user_id, name')
+            const { data: basicInfoData, error: basicInfoError } = await (supabase as unknown as ExtendedSupabaseClient)
+              .from('user_basic_info')
+              .select('user_id, email, name')
               .in('user_id', userIds);
               
-            if (profilesData) {
-              userBasicInfo = profilesData.map(p => ({
-                user_id: p.user_id,
-                name: p.name || 'Nome não disponível',
-                email: 'Email via profiles' // Placeholder
-              }));
-            }
+              if (!basicInfoError && basicInfoData) {
+                userBasicInfo = basicInfoData as Array<{ user_id: string; email: string; name: string }>;
+                console.log('✅ Dados dos usuários carregados da tabela user_basic_info:', userBasicInfo.length);
+              }
           } catch (error) {
-            console.warn('Profiles table also not available');
+            console.warn('user_basic_info table not available');
           }
         }
       }

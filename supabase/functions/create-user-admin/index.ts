@@ -128,7 +128,6 @@ Deno.serve(async (req) => {
         user_id: signUpData.user.id,
         name: name,
         email: email,
-        profile_id: profileId || null
       };
 
       const { error: basicInfoError } = await supabaseAdmin
