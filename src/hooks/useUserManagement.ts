@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -70,7 +70,6 @@ export const useUserManagement = () => {
   const [createLoading, setCreateLoading] = useState(false);
   const { currentOrganization, userRole } = useOrganization();
   const { user: currentUser } = useAuth();
-  const { toast } = useToast();
 
   // Buscar usuários da organização
   const fetchUsers = useCallback(async () => {
@@ -153,20 +152,20 @@ export const useUserManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentOrganization?.id, toast]);
+  }, [currentOrganization?.id]);
 
   // Criar usuário sem fazer login automático
   const createUser = async (userData: CreateUserData): Promise<boolean> => {
+    console.log('Criando usuário:', userData);
     if (!currentOrganization?.id) return false;
 
     setCreateLoading(true);
     try {
-      // Salvar a sessão atual para restaurar depois
-      const currentSession = await supabase.auth.getSession();
+      console.log('🔍 Tentando criar usuário:', userData);
       
       // Gerar senha temporária padrão
       const tempPassword = 'RetificaTemp2024!';
-      
+
       // Criar novo usuário usando signUp
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: userData.email,
@@ -183,32 +182,54 @@ export const useUserManagement = () => {
       });
 
       if (signUpError) {
-        console.log('Erro do Supabase:', signUpError);
+        console.log('🔴 ERRO DO SUPABASE DETECTADO:');
+        console.log('- Mensagem:', signUpError.message);
+        console.log('- Código:', signUpError.code);
+        console.log('- Status:', signUpError.status);
+        console.log('- Erro completo:', JSON.stringify(signUpError, null, 2));
         
         // Se o usuário já existe, o Supabase pode retornar diferentes mensagens
-        if (
-          signUpError.message.includes('User already registered') ||
-          signUpError.message.includes('already registered') ||
-          signUpError.message.includes('already exists') ||
-          signUpError.message.includes('Email already in use') ||
-          signUpError.code === 'user_already_exists' ||
-          signUpError.status === 422 ||
-          signUpError.status === 400
-        ) {
-          toast({
-            title: 'Usuário já cadastrado',
-            description: 'Este email já está cadastrado no sistema.',
-            variant: 'destructive',
+        const errorMessage = signUpError.message?.toLowerCase() || '';
+        console.log('🔍 Mensagem em lowercase:', errorMessage);
+        
+        const checks = {
+          hasUserAlreadyRegistered: errorMessage.includes('user already registered'),
+          hasAlreadyRegistered: errorMessage.includes('already registered'),
+          hasAlreadyExists: errorMessage.includes('already exists'),
+          hasEmailInUse: errorMessage.includes('email already in use'),
+          hasUserExistsCode: signUpError.code === 'user_already_exists',
+          hasStatus422: signUpError.status === 422,
+          hasStatus400: signUpError.status === 400
+        };
+        
+        console.log('🔍 Verificações individuais:', checks);
+        
+        const isUserExists = 
+          checks.hasUserAlreadyRegistered ||
+          checks.hasAlreadyRegistered ||
+          checks.hasAlreadyExists ||
+          checks.hasEmailInUse ||
+          checks.hasUserExistsCode ||
+          checks.hasStatus422 ||
+          checks.hasStatus400;
+        
+        console.log('🔍 É usuário duplicado?', isUserExists);
+        
+        if (isUserExists) {
+          console.log('🚨 EXIBINDO TOAST DE USUÁRIO JÁ EXISTS');
+          toast.error('Usuário já cadastrado', {
+            description: 'Este email já está cadastrado no sistema.'
           });
+          console.log('✅ Toast exibido, retornando false');
           return false;
         }
         
         // Para outros erros, mostrar mensagem genérica mas informativa
-        toast({
-          title: 'Erro ao criar usuário',
-          description: signUpError.message || 'Falha ao criar usuário. Tente novamente.',
-          variant: 'destructive',
+        console.log('🚨 EXIBINDO TOAST DE ERRO GENÉRICO');
+        toast.error('Erro ao criar usuário', {
+          description: signUpError.message || 'Falha ao criar usuário. Tente novamente.'
         });
+        console.log('✅ Toast de erro genérico exibido, retornando false');
         return false;
       }
 
@@ -216,13 +237,7 @@ export const useUserManagement = () => {
         throw new Error('Falha ao criar usuário');
       }
 
-      // Importante: Fazer logout do usuário recém-criado para não afetar a sessão atual
-      await supabase.auth.signOut();
-      
-      // Restaurar a sessão original se existia
-      if (currentSession.data.session) {
-        await supabase.auth.setSession(currentSession.data.session);
-      }
+      // Usuário criado com sucesso - não precisamos manipular a sessão
 
       // Tentar inserir informações básicas do usuário na tabela user_basic_info
       try {
@@ -256,12 +271,14 @@ export const useUserManagement = () => {
 
       if (orgUserError) throw orgUserError;
 
-      toast({
-        title: 'Usuário criado com sucesso',
+      console.log('🎉 USUÁRIO CRIADO COM SUCESSO - EXIBINDO TOAST');
+      toast.success('Usuário criado com sucesso', {
         description: `${userData.name} foi adicionado à organização. Senha temporária: ${tempPassword} (será solicitada alteração no primeiro login)`,
         duration: 8000, // 8 segundos para dar tempo de copiar
       });
+      console.log('✅ Toast de sucesso exibido');
 
+      console.log('📝 Atualizando lista de usuários sem recarregar...');
       // Atualizar lista sem recarregar página - adicionar o novo usuário
       const newUser: OrganizationUser = {
         id: crypto.randomUUID(),
@@ -283,13 +300,12 @@ export const useUserManagement = () => {
       };
       
       setUsers(prev => [newUser, ...prev]);
+      console.log('✅ Lista de usuários atualizada - retornando true');
       return true;
     } catch (error: unknown) {
       console.error('Error creating user:', error);
-      toast({
-        title: 'Erro ao criar usuário',
-        description: error instanceof Error ? error.message : 'Falha ao criar usuário',
-        variant: 'destructive',
+      toast.error('Erro ao criar usuário', {
+        description: error instanceof Error ? error.message : 'Falha ao criar usuário'
       });
       return false;
     } finally {

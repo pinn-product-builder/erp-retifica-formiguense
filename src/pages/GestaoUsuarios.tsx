@@ -141,7 +141,7 @@ export default function GestaoUsuarios() {
       });
       return;
     }
-
+    
     const success = await createUser(newUserData);
     console.log('Resultado da criação:', success);
     
