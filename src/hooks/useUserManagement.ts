@@ -173,14 +173,23 @@ export const useUserManagement = () => {
           data: {
             name: userData.name,
             full_name: userData.name, // Garantir que o nome seja salvo
-            needs_password_change: true // Flag para forçar mudança de senha
+            needs_password_change: true, // Flag para forçar mudança de senha
+            created_by_admin: true // Flag para indicar que foi criado por admin
           }
         }
       });
 
       if (signUpError) {
-        // Se o usuário já existe, o Supabase retorna um erro específico
-        if (signUpError.message.includes('User already registered')) {
+        console.log('Erro do Supabase:', signUpError);
+        
+        // Se o usuário já existe, o Supabase pode retornar diferentes mensagens
+        if (
+          signUpError.message.includes('User already registered') ||
+          signUpError.message.includes('already registered') ||
+          signUpError.message.includes('already exists') ||
+          signUpError.code === 'user_already_exists' ||
+          signUpError.status === 422
+        ) {
           toast({
             title: 'Usuário já existe',
             description: 'Este email já está cadastrado no sistema.',
@@ -188,7 +197,14 @@ export const useUserManagement = () => {
           });
           return false;
         }
-        throw signUpError;
+        
+        // Para outros erros, mostrar mensagem genérica mas informativa
+        toast({
+          title: 'Erro ao criar usuário',
+          description: signUpError.message || 'Falha ao criar usuário. Tente novamente.',
+          variant: 'destructive',
+        });
+        return false;
       }
 
       if (!signUpData.user) {
@@ -237,7 +253,8 @@ export const useUserManagement = () => {
 
       toast({
         title: 'Usuário criado com sucesso',
-        description: `${userData.name} foi adicionado à organização. Senha temporária: ${tempPassword}`,
+        description: `${userData.name} foi adicionado à organização. Senha temporária: ${tempPassword} (será solicitada alteração no primeiro login)`,
+        duration: 8000, // 8 segundos para dar tempo de copiar
       });
 
       await fetchUsers(); // Recarregar lista

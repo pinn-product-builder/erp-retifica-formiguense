@@ -16,7 +16,11 @@ export const usePasswordChange = () => {
 
       // Verificar se o usuário tem a flag needs_password_change nos metadados
       const needsChange = user.user_metadata?.needs_password_change === true;
-      setNeedsPasswordChange(needsChange);
+      const createdByAdmin = user.user_metadata?.created_by_admin === true;
+      
+      // Se foi criado por admin, não mostrar modal de mudança de senha
+      // O usuário mudará a senha no primeiro login dele mesmo
+      setNeedsPasswordChange(needsChange && !createdByAdmin);
       setLoading(false);
     };
 

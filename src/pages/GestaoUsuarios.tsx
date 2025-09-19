@@ -130,41 +130,32 @@ export default function GestaoUsuarios() {
   }
 
   const handleCreateUser = async () => {
-    try {
-      console.log('Iniciando criação de usuário:', newUserData);
-      
-      if (!newUserData.email || !newUserData.name) {
-        console.log('Dados incompletos:', { email: newUserData.email, name: newUserData.name });
-        return;
-      }
-
-      const success = await createUser(newUserData);
-      console.log('Resultado da criação:', success);
-      
-      if (success) {
-        setNewUserData({ 
-          email: '', 
-          name: '', 
-          role: 'user', 
-          profile_id: undefined 
-        });
-        setIsCreateDialogOpen(false);
-        
-        // Mostrar informações importantes sobre a senha temporária
-        toast({
-          title: 'Usuário criado com sucesso',
-          description: 'Informe ao usuário que a senha temporária é: RetificaTemp2024! (será solicitada alteração no primeiro login)',
-          duration: 10000, // 10 segundos para dar tempo de copiar
-        });
-      }
-    } catch (error) {
-      console.error('Erro ao criar usuário:', error);
+    console.log('Iniciando criação de usuário:', newUserData);
+    
+    if (!newUserData.email || !newUserData.name) {
+      console.log('Dados incompletos:', { email: newUserData.email, name: newUserData.name });
       toast({
-        title: 'Erro ao criar usuário',
-        description: 'Ocorreu um erro inesperado. Tente novamente.',
+        title: 'Dados incompletos',
+        description: 'Por favor, preencha o email e nome do usuário.',
         variant: 'destructive',
       });
+      return;
     }
+
+    const success = await createUser(newUserData);
+    console.log('Resultado da criação:', success);
+    
+    if (success) {
+      setNewUserData({ 
+        email: '', 
+        name: '', 
+        role: 'user', 
+        profile_id: undefined 
+      });
+      setIsCreateDialogOpen(false);
+      // Toast já é exibido pela função createUser no hook
+    }
+    // Se success === false, o toast de erro já foi exibido pelo hook
   };
 
   const handleUpdateRole = async (userId: string) => {
