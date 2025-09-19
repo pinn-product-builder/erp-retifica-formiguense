@@ -443,51 +443,37 @@ export const useUserManagement = () => {
     }
 
     try {
-      // Verificar se o usuário está em outras organizações
-      const { data: otherOrgs } = await supabase
-        .from('organization_users')
-        .select('organization_id')
-        .eq('user_id', userId)
-        .neq('organization_id', currentOrganization.id);
-
-      // Remover da organização atual
-      const { error: removeOrgError } = await supabase
-        .from('organization_users')
-        .delete()
-        .eq('organization_id', currentOrganization.id)
-        .eq('user_id', userId);
-
-      if (removeOrgError) throw removeOrgError;
-
-      // Se não está em outras organizações, deletar completamente
-      if (!otherOrgs || otherOrgs.length === 0) {
-        // Deletar das tabelas relacionadas primeiro
-        await supabase.from('profiles').delete().eq('user_id', userId);
-        
-        // Tentar deletar da tabela user_basic_info se existir
-        try {
-          const { error: basicInfoError } = await (supabase as unknown as ExtendedSupabaseClient)
-            .from('user_basic_info')
-            .delete()
-            .eq('user_id', userId);
-            
-          if (basicInfoError) {
-            console.warn('Error deleting from user_basic_info:', basicInfoError);
-          }
-        } catch (error) {
-          console.warn('user_basic_info table not available for deletion');
+      console.log('🗑️ Iniciando remoção de usuário:', userId);
+      
+      // Chamar a Edge Function para deletar o usuário completamente
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: {
+          userId: userId,
+          organizationId: currentOrganization.id
         }
+      });
 
-        // Deletar usuário do sistema de autenticação (requires service role)
-        // Por enquanto, apenas marcar como inativo na nossa estrutura
+      if (error) {
+        console.error('Error from delete-user function:', error);
+        throw error;
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Falha ao deletar usuário');
+      }
+
+      console.log('✅ Usuário removido:', data);
+
+      // Mostrar toast apropriado baseado no resultado
+      if (data.deletedCompletely) {
         toast({
-          title: 'Usuário removido',
-          description: 'Usuário foi removido da organização. Conta do sistema permanece para auditoria.',
+          title: 'Usuário removido completamente',
+          description: 'Usuário foi removido completamente do sistema.'
         });
       } else {
         toast({
           title: 'Usuário removido da organização',
-          description: 'Usuário foi removido desta organização mas permanece em outras.',
+          description: 'Usuário foi removido desta organização mas permanece em outras.'
         });
       }
 
