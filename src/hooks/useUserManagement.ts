@@ -159,61 +159,35 @@ export const useUserManagement = () => {
 
     setCreateLoading(true);
     try {
-      console.log('🔍 Tentando criar usuário:', userData);
+      console.log('🔍 Tentando criar usuário via Edge Function:', userData);
       
       // Gerar senha temporária padrão
       const tempPassword = 'RetificaTemp2024!';
 
-      // Criar novo usuário usando signUp
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: userData.email,
-        password: tempPassword,
-        options: {
-          emailRedirectTo: undefined, // Não enviar email de confirmação
-          data: {
-            name: userData.name,
-            full_name: userData.name, // Garantir que o nome seja salvo
-            needs_password_change: true, // Flag para forçar mudança de senha
-            created_by_admin: true // Flag para indicar que foi criado por admin
-          }
+      // Chamar a Edge Function para criar o usuário sem fazer login automático
+      const { data, error } = await supabase.functions.invoke('create-user-admin', {
+        body: {
+          email: userData.email,
+          name: userData.name,
+          role: userData.role,
+          organizationId: currentOrganization.id,
+          tempPassword: tempPassword,
+          profileId: userData.profile_id || null
         }
       });
 
-      if (signUpError) {
-        console.log('🔴 ERRO DO SUPABASE DETECTADO:');
-        console.log('- Mensagem:', signUpError.message);
-        console.log('- Código:', signUpError.code);
-        console.log('- Status:', signUpError.status);
-        console.log('- Erro completo:', JSON.stringify(signUpError, null, 2));
+      if (error) {
+        console.error('Error from create-user-admin function:', error);
+        throw error;
+      }
+
+      if (!data.success) {
+        console.log('🔴 ERRO RETORNADO PELA EDGE FUNCTION:');
+        console.log('- Error:', data.error);
+        console.log('- Message:', data.message);
         
-        // Se o usuário já existe, o Supabase pode retornar diferentes mensagens
-        const errorMessage = signUpError.message?.toLowerCase() || '';
-        console.log('🔍 Mensagem em lowercase:', errorMessage);
-        
-        const checks = {
-          hasUserAlreadyRegistered: errorMessage.includes('user already registered'),
-          hasAlreadyRegistered: errorMessage.includes('already registered'),
-          hasAlreadyExists: errorMessage.includes('already exists'),
-          hasEmailInUse: errorMessage.includes('email already in use'),
-          hasUserExistsCode: signUpError.code === 'user_already_exists',
-          hasStatus422: signUpError.status === 422,
-          hasStatus400: signUpError.status === 400
-        };
-        
-        console.log('🔍 Verificações individuais:', checks);
-        
-        const isUserExists = 
-          checks.hasUserAlreadyRegistered ||
-          checks.hasAlreadyRegistered ||
-          checks.hasAlreadyExists ||
-          checks.hasEmailInUse ||
-          checks.hasUserExistsCode ||
-          checks.hasStatus422 ||
-          checks.hasStatus400;
-        
-        console.log('🔍 É usuário duplicado?', isUserExists);
-        
-        if (isUserExists) {
+        // Verificar se é usuário já existente
+        if (data.error === 'user_already_exists') {
           console.log('🚨 EXIBINDO TOAST DE USUÁRIO JÁ EXISTS');
           toast.error('Usuário já cadastrado', {
             description: 'Este email já está cadastrado no sistema.'
@@ -222,52 +196,14 @@ export const useUserManagement = () => {
           return false;
         }
         
-        // Para outros erros, mostrar mensagem genérica mas informativa
+        // Para outros erros
         console.log('🚨 EXIBINDO TOAST DE ERRO GENÉRICO');
         toast.error('Erro ao criar usuário', {
-          description: signUpError.message || 'Falha ao criar usuário. Tente novamente.'
+          description: data.message || 'Falha ao criar usuário. Tente novamente.'
         });
         console.log('✅ Toast de erro genérico exibido, retornando false');
         return false;
       }
-
-      if (!signUpData.user) {
-        throw new Error('Falha ao criar usuário');
-      }
-
-      // Usuário criado com sucesso - não precisamos manipular a sessão
-
-      // Tentar inserir informações básicas do usuário na tabela user_basic_info
-      try {
-        const basicInfoData = {
-          user_id: signUpData.user.id,
-          email: userData.email,
-          name: userData.name
-        };
-        
-        const { error: basicInfoError } = await (supabase as unknown as ExtendedSupabaseClient)
-          .from('user_basic_info')
-          .insert(basicInfoData);
-
-        if (basicInfoError) {
-          console.warn('Error inserting user basic info:', basicInfoError);
-        }
-      } catch (error) {
-        console.warn('user_basic_info table not available, skipping insert');
-      }
-
-      // Adicionar à organização
-      const { error: orgUserError } = await supabase
-        .from('organization_users')
-        .insert({
-          organization_id: currentOrganization.id,
-          user_id: signUpData.user.id,
-          role: userData.role,
-          joined_at: new Date().toISOString(),
-          is_active: true
-        });
-
-      if (orgUserError) throw orgUserError;
 
       console.log('🎉 USUÁRIO CRIADO COM SUCESSO - EXIBINDO TOAST');
       toast.success('Usuário criado com sucesso', {
@@ -277,27 +213,8 @@ export const useUserManagement = () => {
       console.log('✅ Toast de sucesso exibido');
 
       console.log('📝 Atualizando lista de usuários sem recarregar...');
-      // Atualizar lista sem recarregar página - adicionar o novo usuário
-      const newUser: OrganizationUser = {
-        id: crypto.randomUUID(),
-        organization_id: currentOrganization.id,
-        user_id: signUpData.user.id,
-        role: userData.role,
-        invited_at: null,
-        joined_at: new Date().toISOString(),
-        invited_by: currentUser?.id || null,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user: {
-          id: signUpData.user.id,
-          email: userData.email,
-          name: userData.name,
-          created_at: new Date().toISOString()
-        }
-      };
-      
-      setUsers(prev => [newUser, ...prev]);
+      // Atualizar lista sem recarregar página - usar os dados retornados pela Edge Function
+      setUsers(prev => [data.user, ...prev]);
       console.log('✅ Lista de usuários atualizada - retornando true');
       return true;
     } catch (error: unknown) {
