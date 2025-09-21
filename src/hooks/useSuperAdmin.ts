@@ -22,17 +22,15 @@ export const useSuperAdmin = (): SuperAdminInfo => {
       }
 
       try {
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('is_super_admin')
-          .eq('user_id', user.id)
-          .single();
+        // Usar função SQL para verificar is_super_admin de auth.users
+        const { data: superAdminCheck, error: superAdminError } = await supabase
+          .rpc('is_super_admin');
 
-        if (error) {
-          console.error('Error checking super admin status:', error);
+        if (superAdminError) {
+          console.error('Error checking super admin status:', superAdminError);
           setIsSuperAdmin(false);
         } else {
-          setIsSuperAdmin(profile?.is_super_admin || false);
+          setIsSuperAdmin(superAdminCheck || false);
         }
       } catch (error) {
         console.error('Error checking super admin status:', error);
@@ -64,22 +62,17 @@ export const useSuperAdminActions = () => {
     setLoading(true);
     try {
       // Verificar se o usuário atual é super admin
-      const { data: currentProfile } = await supabase
-        .from('profiles')
-        .select('is_super_admin')
-        .eq('user_id', user.id)
-        .single();
+      const { data: currentSuperAdmin, error: checkError } = await supabase
+        .rpc('is_super_admin');
 
-      if (!currentProfile?.is_super_admin) {
+      if (checkError || !currentSuperAdmin) {
         toast.error('Apenas super administradores podem promover outros usuários');
         return false;
       }
 
-      // Promover o usuário
+      // Promover o usuário usando função admin (precisa ser implementada no backend)
       const { error } = await supabase
-        .from('profiles')
-        .update({ is_super_admin: true })
-        .eq('user_id', userId);
+        .rpc('promote_user_to_super_admin', { user_id: userId });
 
       if (error) {
         toast.error('Erro ao promover usuário: ' + error.message);
@@ -106,13 +99,10 @@ export const useSuperAdminActions = () => {
     setLoading(true);
     try {
       // Verificar se o usuário atual é super admin
-      const { data: currentProfile } = await supabase
-        .from('profiles')
-        .select('is_super_admin')
-        .eq('user_id', user.id)
-        .single();
+      const { data: currentSuperAdmin, error: checkError } = await supabase
+        .rpc('is_super_admin');
 
-      if (!currentProfile?.is_super_admin) {
+      if (checkError || !currentSuperAdmin) {
         toast.error('Apenas super administradores podem revogar permissões');
         return false;
       }
@@ -123,11 +113,9 @@ export const useSuperAdminActions = () => {
         return false;
       }
 
-      // Revogar permissões
+      // Revogar permissões usando função admin (precisa ser implementada no backend)
       const { error } = await supabase
-        .from('profiles')
-        .update({ is_super_admin: false })
-        .eq('user_id', userId);
+        .rpc('revoke_user_super_admin', { user_id: userId });
 
       if (error) {
         toast.error('Erro ao revogar permissões: ' + error.message);
@@ -150,13 +138,10 @@ export const useSuperAdminActions = () => {
 
     try {
       // Verificar se é super admin
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_super_admin')
-        .eq('user_id', user.id)
-        .single();
+      const { data: superAdminCheck, error: checkError } = await supabase
+        .rpc('is_super_admin');
 
-      if (!profile?.is_super_admin) {
+      if (checkError || !superAdminCheck) {
         toast.error('Apenas super administradores podem visualizar todas as organizações');
         return [];
       }
@@ -180,18 +165,18 @@ export const useSuperAdminActions = () => {
             .select('id, user_id, role')
             .eq('organization_id', org.id);
 
-          // Buscar nomes dos usuários da tabela profiles
+          // Buscar nomes dos usuários da tabela user_basic_info
           const usersWithProfiles = await Promise.all(
             (orgUsers || []).map(async (orgUser) => {
-              const { data: profile } = await supabase
-                .from('profiles')
+              const { data: basicInfo } = await supabase
+                .from('user_basic_info')
                 .select('name')
                 .eq('user_id', orgUser.user_id)
                 .single();
 
               return {
                 ...orgUser,
-                profiles: profile ? { name: profile.name || 'Nome não disponível' } : null
+                profiles: basicInfo ? { name: basicInfo.name || 'Nome não disponível' } : null
               };
             })
           );

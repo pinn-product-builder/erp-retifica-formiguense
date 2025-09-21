@@ -137,13 +137,10 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!user) throw new Error('User not authenticated');
 
     // Verificar se usuário é super admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_super_admin')
-      .eq('user_id', user.id)
-      .single();
+    const { data: superAdminCheck } = await supabase
+      .rpc('is_super_admin');
 
-    if (!profile?.is_super_admin) {
+    if (!superAdminCheck) {
       throw new Error('Apenas super administradores podem criar organizações');
     }
 

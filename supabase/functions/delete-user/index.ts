@@ -82,28 +82,18 @@ Deno.serve(async (req) => {
     if (!otherOrgs || otherOrgs.length === 0) {
       // Deletar das tabelas relacionadas primeiro
       
-      // 1. Deletar de user_basic_info se existir
-      try {
-        await supabaseAdmin
-          .from('user_basic_info')
-          .delete()
-          .eq('user_id', userId);
-      } catch (error) {
-        console.warn('user_basic_info deletion failed or table does not exist:', error);
-      }
-
-      // 2. Deletar de profiles
-      const { error: profileError } = await supabaseAdmin
-        .from('profiles')
+      // 1. Deletar de user_basic_info (substitui profiles)
+      const { error: basicInfoError } = await supabaseAdmin
+        .from('user_basic_info')
         .delete()
         .eq('user_id', userId);
 
-      if (profileError) {
-        console.error('Error deleting profile:', profileError);
-        throw profileError;
+      if (basicInfoError) {
+        console.error('Error deleting user basic info:', basicInfoError);
+        throw basicInfoError;
       }
 
-      // 3. Deletar da tabela auth.users usando admin client
+      // 2. Deletar da tabela auth.users usando admin client
       const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
       if (authError) {

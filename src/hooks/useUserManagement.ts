@@ -92,40 +92,37 @@ export const useUserManagement = () => {
       let userBasicInfo: Array<{ user_id: string; email: string; name: string }> = [];
       
       if (userIds.length > 0) {
-        // Priorizar busca na tabela profiles (que sabemos que existe e é populada)
+        // Buscar dados da tabela user_basic_info (substitui profiles)
         try {
-          const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('user_id, name, email')
+          const { data: basicInfoData, error: basicInfoError } = await supabase
+            .from('user_basic_info')
+            .select('user_id, email, name')
             .in('user_id', userIds);
-            
-          if (!profilesError && profilesData) {
-            userBasicInfo = profilesData.map(p => ({
-              user_id: p.user_id,
+              
+          if (!basicInfoError && basicInfoData) {
+            userBasicInfo = basicInfoData.map(p => ({
+              user_id: p.user_id || '',
               name: p.name || 'Nome não disponível',
-              email: p.email || `user_${p.user_id.substring(0, 8)}@temp.com`
+              email: p.email || `user_${(p.user_id || '').substring(0, 8)}@temp.com`
             }));
-            console.log('✅ Dados dos usuários carregados da tabela profiles:', userBasicInfo.length);
+            console.log('✅ Dados dos usuários carregados da tabela user_basic_info:', userBasicInfo.length);
+          } else {
+            console.warn('user_basic_info table error:', basicInfoError);
+            // Fallback: usar dados básicos dos userIds
+            userBasicInfo = userIds.map(userId => ({
+              user_id: userId,
+              email: `user_${userId.substring(0, 8)}@temp.com`,
+              name: 'Nome não disponível'
+            }));
           }
         } catch (error) {
-          console.warn('Profiles table not available, trying fallback');
-        }
-
-        // Fallback: tentar buscar da tabela user_basic_info apenas se profiles falhou
-        if (userBasicInfo.length === 0) {
-          try {
-            const { data: basicInfoData, error: basicInfoError } = await (supabase as unknown as ExtendedSupabaseClient)
-              .from('user_basic_info')
-              .select('user_id, email, name')
-              .in('user_id', userIds);
-              
-              if (!basicInfoError && basicInfoData) {
-                userBasicInfo = basicInfoData as Array<{ user_id: string; email: string; name: string }>;
-                console.log('✅ Dados dos usuários carregados da tabela user_basic_info:', userBasicInfo.length);
-              }
-          } catch (error) {
-            console.warn('user_basic_info table not available');
-          }
+          console.error('Erro ao buscar informações dos usuários:', error);
+          // Fallback final
+          userBasicInfo = userIds.map(userId => ({
+            user_id: userId,
+            email: `user_${userId.substring(0, 8)}@temp.com`,
+            name: 'Nome não disponível'
+          }));
         }
       }
 
