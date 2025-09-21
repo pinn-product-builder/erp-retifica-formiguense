@@ -91,6 +91,17 @@ export const useUserManagement = () => {
       const userIds = orgUsers?.map(u => u.user_id) || [];
       let userBasicInfo: Array<{ user_id: string; email: string; name: string }> = [];
       
+      // Buscar informações de super admin para filtrar usando RPC
+      let superAdminIds: string[] = [];
+      try {
+        const { data: superAdmins, error: superAdminError } = await supabase.rpc('get_all_super_admins');
+        if (!superAdminError && superAdmins) {
+          superAdminIds = superAdmins.map(admin => admin.user_id);
+        }
+      } catch (error) {
+        console.warn('Erro ao buscar super admins:', error);
+      }
+      
       if (userIds.length > 0) {
         // Buscar dados da tabela user_basic_info (substitui profiles)
         try {
@@ -98,7 +109,7 @@ export const useUserManagement = () => {
             .from('user_basic_info')
             .select('user_id, email, name')
             .in('user_id', userIds);
-              
+                
           if (!basicInfoError && basicInfoData) {
             userBasicInfo = basicInfoData.map(p => ({
               user_id: p.user_id || '',
@@ -141,7 +152,13 @@ export const useUserManagement = () => {
         };
       }) || [];
 
-      setUsers(usersWithProfile);
+      // Filtrar super admins da listagem de usuários da organização
+      const filteredUsers = usersWithProfile.filter(user => 
+        !superAdminIds.includes(user.user_id)
+      );
+
+      console.log(`✅ Usuários carregados: ${usersWithProfile.length} total, ${filteredUsers.length} após filtrar super admins`);
+      setUsers(filteredUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast.error('Erro ao carregar usuários', {
@@ -171,6 +188,7 @@ export const useUserManagement = () => {
           name: userData.name,
           role: userData.role,
           organizationId: currentOrganization.id,
+          currentOrganizationId: currentOrganization.id, // Organização atual para vinculação automática
           tempPassword: tempPassword,
           profileId: userData.profile_id || null
         }

@@ -13,6 +13,7 @@ interface CreateUserRequest {
   organizationId: string;
   tempPassword: string;
   profileId?: string;
+  currentOrganizationId?: string; // Organização atual do usuário que está criando
 }
 
 Deno.serve(async (req) => {
@@ -34,7 +35,7 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { email, name, role, organizationId, tempPassword, profileId }: CreateUserRequest = await req.json();
+    const { email, name, role, organizationId, tempPassword, profileId, currentOrganizationId }: CreateUserRequest = await req.json();
 
     if (!email || !name || !role || !organizationId || !tempPassword) {
       return new Response(
@@ -141,24 +142,68 @@ Deno.serve(async (req) => {
       console.warn('user_basic_info table not available');
     }
 
-    // Inserir o usuário na organização
-    const { error: orgUserError } = await supabaseAdmin
+    // Verificar se o usuário já existe em alguma organização
+    const { data: existingOrgUser, error: checkError } = await supabaseAdmin
       .from('organization_users')
-      .insert([{
-        organization_id: organizationId,
-        user_id: signUpData.user.id,
-        role: role,
-        is_active: true
-      }]);
+      .select('organization_id, role')
+      .eq('user_id', signUpData.user.id)
+      .eq('is_active', true);
 
-    if (orgUserError) {
-      console.error('Error adding user to organization:', orgUserError);
-      // Se falhar ao adicionar à organização, deletar o usuário criado
-      await supabaseAdmin.auth.admin.deleteUser(signUpData.user.id);
-      throw orgUserError;
+    if (checkError) {
+      console.error('Error checking existing organization membership:', checkError);
     }
 
-    console.log('✅ Usuário adicionado à organização');
+    const userOrganizations = existingOrgUser || [];
+    const organizationsToAdd = new Set<string>();
+
+    // Sempre adicionar à organização especificada
+    organizationsToAdd.add(organizationId);
+
+    // Se existe uma organização atual diferente da especificada, adicionar também
+    if (currentOrganizationId && currentOrganizationId !== organizationId) {
+      organizationsToAdd.add(currentOrganizationId);
+    }
+
+    // Verificar quais organizações o usuário ainda não faz parte
+    const existingOrgIds = userOrganizations.map(ou => ou.organization_id);
+    const newOrganizations = Array.from(organizationsToAdd).filter(orgId => 
+      !existingOrgIds.includes(orgId)
+    );
+
+    console.log('🏢 Organizações para adicionar:', newOrganizations);
+
+    // Inserir o usuário nas organizações necessárias
+    const organizationInserts = [];
+    
+    for (const orgId of newOrganizations) {
+      // Usar o role especificado para a organização principal, 'user' para as outras
+      const userRole = orgId === organizationId ? role : 'user';
+      
+      organizationInserts.push({
+        organization_id: orgId,
+        user_id: signUpData.user.id,
+        role: userRole,
+        is_active: true,
+        joined_at: new Date().toISOString()
+      });
+    }
+
+    if (organizationInserts.length > 0) {
+      const { error: orgUserError } = await supabaseAdmin
+        .from('organization_users')
+        .insert(organizationInserts);
+
+      if (orgUserError) {
+        console.error('Error adding user to organizations:', orgUserError);
+        // Se falhar ao adicionar às organizações, deletar o usuário criado
+        await supabaseAdmin.auth.admin.deleteUser(signUpData.user.id);
+        throw orgUserError;
+      }
+
+      console.log(`✅ Usuário adicionado a ${organizationInserts.length} organização(ões)`);
+    } else {
+      console.log('ℹ️ Usuário já fazia parte de todas as organizações necessárias');
+    }
 
     // Criar o novo usuário para retornar na resposta
     const newUser = {
@@ -172,14 +217,20 @@ Deno.serve(async (req) => {
         name: name,
         email: email,
         is_super_admin: false
-      }
+      },
+      organizations_added: Array.from(organizationsToAdd)
     };
+
+    const message = organizationInserts.length > 1 
+      ? `Usuário criado e vinculado a ${organizationInserts.length} organizações`
+      : 'Usuário criado com sucesso';
 
     return new Response(
       JSON.stringify({ 
         success: true,
         user: newUser,
-        message: 'Usuário criado com sucesso'
+        message: message,
+        organizations_count: organizationInserts.length
       }),
       { 
         status: 200, 

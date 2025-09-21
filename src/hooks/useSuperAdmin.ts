@@ -172,7 +172,7 @@ export const useSuperAdminActions = () => {
                 .from('user_basic_info')
                 .select('name')
                 .eq('user_id', orgUser.user_id)
-                .single();
+                .maybeSingle();
 
               return {
                 ...orgUser,

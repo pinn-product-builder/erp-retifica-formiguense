@@ -23,7 +23,8 @@ import {
   Calendar,
   ShoppingCart,
   Clock,
-  Wrench
+  Wrench,
+  Shield
 } from "lucide-react";
 
 import {
@@ -45,6 +46,7 @@ import { Button } from "@/components/ui/button";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useProfilePermissions } from "@/hooks/useProfilePermissions";
 import { PermissionGate } from "@/components/auth/PermissionGate";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 
 // Dashboard & Visão Geral
 const dashboardItems = [
@@ -184,6 +186,15 @@ const adminItems = [
   },
 ];
 
+// Super Admin (apenas para super administradores)
+const superAdminItems = [
+  {
+    title: "Super Admin",
+    url: "/super-admin",
+    icon: Shield,
+  },
+];
+
 export function AppSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
@@ -191,6 +202,7 @@ export function AppSidebar() {
   const { user, signOut } = useAuth();
   const permissions = usePermissions();
   const profilePermissions = useProfilePermissions();
+  const { isSuperAdmin } = useSuperAdmin();
   const isCollapsed = state === "collapsed";
 
   // Função para renderizar itens da sidebar com verificação de permissões
@@ -278,6 +290,9 @@ export function AppSidebar() {
 
         {/* Administração */}
         {renderSidebarGroup(adminItems, "Administração")}
+
+        {/* Super Admin (apenas para super administradores) */}
+        {isSuperAdmin && renderSidebarGroup(superAdminItems, "Super Admin")}
       </SidebarContent>
       
       <SidebarFooter>

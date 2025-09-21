@@ -121,7 +121,7 @@ export const useProfilePermissions = () => {
         .eq('user_id', user.id)
         .eq('org_id', currentOrganization.id)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (assignmentError && assignmentError.code !== 'PGRST116') {
         console.error('Erro ao buscar perfil do usuário:', assignmentError);

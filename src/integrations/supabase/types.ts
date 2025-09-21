@@ -3864,6 +3864,28 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_user_super_admin: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      promote_user_to_super_admin: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      revoke_user_super_admin: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
+      get_all_super_admins: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          email: string
+          last_sign_in_at: string
+          name: string
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       app_role: "owner" | "admin" | "manager" | "user" | "super_admin"
