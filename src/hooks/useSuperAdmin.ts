@@ -70,9 +70,9 @@ export const useSuperAdminActions = () => {
         return false;
       }
 
-      // Promover o usuário usando função admin (precisa ser implementada no backend)
+      // Promover o usuário usando função admin
       const { error } = await supabase
-        .rpc('promote_user_to_super_admin', { user_id: userId });
+        .rpc('promote_user_to_super_admin' as any, { user_id: userId });
 
       if (error) {
         toast.error('Erro ao promover usuário: ' + error.message);
@@ -113,9 +113,9 @@ export const useSuperAdminActions = () => {
         return false;
       }
 
-      // Revogar permissões usando função admin (precisa ser implementada no backend)
+      // Revogar permissões usando função admin
       const { error } = await supabase
-        .rpc('revoke_user_super_admin', { user_id: userId });
+        .rpc('revoke_user_super_admin' as any, { user_id: userId });
 
       if (error) {
         toast.error('Erro ao revogar permissões: ' + error.message);
