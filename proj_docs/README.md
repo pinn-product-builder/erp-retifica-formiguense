@@ -8,7 +8,12 @@ Este diretório contém toda a documentação técnica e de usuário do sistema 
 Documentação técnica da arquitetura do sistema, multitenancy, banco de dados e segurança.
 
 ### 🔧 [Módulos](./modules/)
-Documentação detalhada de cada módulo do sistema (fiscal, financeiro, PCP, workflow, etc.).
+Documentação detalhada de cada módulo do sistema:
+- [**Operações & Serviços**](./modules/operations/) - Sistema Kanban, workflows por componente, ordens de serviço
+- [**Dashboard**](./modules/dashboard/) - Painéis, métricas e KPIs executivos
+- [**Fiscal**](./modules/fiscal/) - Gestão fiscal, tributos e obrigações
+- [**Financeiro**](./modules/financial/) - Contas, fluxo de caixa e relatórios
+- [**PCP**](./modules/pcp/) - Planejamento e controle de produção
 
 ### 🌐 [API](./api/)
 Documentação da API, Supabase, edge functions e políticas de segurança.
