@@ -1,0 +1,35 @@
+---
+alwaysApply: true
+---
+
+Quando criar telas:
+- Utilize Clean Architecture (pages → features → components → services).
+- Priorize componentização e reutilização.
+- Nunca coloque lógica de negócio em páginas.
+
+Quando criar backend:
+- Utilize Clean Architecture (domain, application, infrastructure, presentation).
+- Separe o código em módulos por domínio.
+- Controllers nunca acessam banco diretamente, apenas via use cases.
+- Sempre use injeção de dependência para providers externos.
+
+Regras gerais:
+- Tipagem forte com TypeScript.
+- Nomeação consistente: PascalCase (classes), camelCase (funções), snake_case (colunas).
+- Testes unitários para casos de uso e entidades.
+- Testes de integração para fluxos críticos.Quando criar telas:
+- Utilize Clean Architecture (pages → features → components → services).
+- Priorize componentização e reutilização.
+- Nunca coloque lógica de negócio em páginas.
+
+Quando criar backend:
+- Utilize Clean Architecture (domain, application, infrastructure, presentation).
+- Separe o código em módulos por domínio.
+- Controllers nunca acessam banco diretamente, apenas via use cases.
+- Sempre use injeção de dependência para providers externos.
+
+Regras gerais:
+- Tipagem forte com TypeScript.
+- Nomeação consistente: PascalCase (classes), camelCase (funções), snake_case (colunas).
+- Testes unitários para casos de uso e entidades.
+- Testes de integração para fluxos críticos.

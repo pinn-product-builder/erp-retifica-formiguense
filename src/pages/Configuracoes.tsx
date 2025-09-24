@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, User, Shield, Database, Bell, Mail, Cog } from "lucide-react";
+import { Settings, User, Shield, Database, Bell, Mail, Cog, Wrench } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import SystemConfigAdmin from "@/components/admin/SystemConfigAdmin";
+import { EngineTypesConfig } from "@/components/operations/EngineTypesConfig";
 
 const Configuracoes = () => {
   const { toast } = useToast();
@@ -46,8 +47,9 @@ const Configuracoes = () => {
       </div>
 
       <Tabs defaultValue="geral" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="geral">Geral</TabsTrigger>
+          <TabsTrigger value="tipos-motor">Tipos de Motor</TabsTrigger>
           <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
           <TabsTrigger value="backup">Backup</TabsTrigger>
           <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
@@ -107,6 +109,10 @@ const Configuracoes = () => {
             </div>
           </CardContent>
         </Card>
+        </TabsContent>
+
+        <TabsContent value="tipos-motor" className="space-y-6">
+          <EngineTypesConfig />
         </TabsContent>
 
         <TabsContent value="notificacoes" className="space-y-6">

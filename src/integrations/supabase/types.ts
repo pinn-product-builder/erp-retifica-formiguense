@@ -3811,6 +3811,124 @@ export type Database = {
           },
         ]
       }
+      engine_types: {
+        Row: {
+          id: string
+          org_id: string
+          name: string
+          category: Database["public"]["Enums"]["engine_category"]
+          description: string | null
+          technical_standards: string[]
+          required_components: Database["public"]["Enums"]["engine_component"][]
+          special_requirements: Json | null
+          default_warranty_months: number
+          is_active: boolean
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          name: string
+          category: Database["public"]["Enums"]["engine_category"]
+          description?: string | null
+          technical_standards?: string[]
+          required_components: Database["public"]["Enums"]["engine_component"][]
+          special_requirements?: Json | null
+          default_warranty_months?: number
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          name?: string
+          category?: Database["public"]["Enums"]["engine_category"]
+          description?: string | null
+          technical_standards?: string[]
+          required_components?: Database["public"]["Enums"]["engine_component"][]
+          special_requirements?: Json | null
+          default_warranty_months?: number
+          is_active?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engine_types_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      workflow_steps: {
+        Row: {
+          id: string
+          engine_type_id: string
+          component: Database["public"]["Enums"]["engine_component"]
+          step_name: string
+          step_key: string
+          description: string | null
+          is_required: boolean
+          estimated_hours: number
+          step_order: number
+          prerequisites: string[]
+          special_equipment: string[]
+          quality_checklist_required: boolean
+          technical_report_required: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          engine_type_id: string
+          component: Database["public"]["Enums"]["engine_component"]
+          step_name: string
+          step_key: string
+          description?: string | null
+          is_required?: boolean
+          estimated_hours?: number
+          step_order?: number
+          prerequisites?: string[]
+          special_equipment?: string[]
+          quality_checklist_required?: boolean
+          technical_report_required?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          engine_type_id?: string
+          component?: Database["public"]["Enums"]["engine_component"]
+          step_name?: string
+          step_key?: string
+          description?: string | null
+          is_required?: boolean
+          estimated_hours?: number
+          step_order?: number
+          prerequisites?: string[]
+          special_equipment?: string[]
+          quality_checklist_required?: boolean
+          technical_report_required?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_steps_engine_type_id_fkey"
+            columns: ["engine_type_id"]
+            isOneToOne: false
+            referencedRelation: "engine_types"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -3931,6 +4049,36 @@ export type Database = {
         | "pronto"
         | "garantia"
         | "entregue"
+      engine_category:
+        | "geral"
+        | "linha_pesada"
+        | "linha_leve"
+        | "bosch"
+        | "bosch_specialized"
+        | "garantia"
+      workflow_step_type: "manual" | "automated" | "quality_check" | "measurement"
+      form_field_type:
+        | "text"
+        | "number"
+        | "select"
+        | "checkbox"
+        | "textarea"
+        | "date"
+        | "file"
+      form_layout_type: "single_column" | "two_columns" | "grid" | "tabs"
+      checklist_item_type: "boolean" | "measurement" | "text" | "selection"
+      budget_status_new: "draft" | "pending" | "approved" | "rejected" | "expired"
+      approval_type: "automatic" | "manual" | "manager" | "technical"
+      price_table_type: "service" | "parts" | "labor"
+      reservation_status: "pending" | "confirmed" | "cancelled" | "completed"
+      purchase_priority: "low" | "normal" | "high" | "urgent"
+      alert_type: "stock_low" | "stock_high" | "expiry" | "quality" | "maintenance"
+      quality_status: "pending" | "in_progress" | "approved" | "rejected" | "requires_rework"
+      report_type: "quality" | "technical" | "measurement" | "certification"
+      standard_type: "nbr" | "iso" | "bosch" | "internal" | "customer"
+      claim_status: "open" | "investigating" | "approved" | "rejected" | "closed"
+      claim_category: "defect" | "performance" | "warranty" | "installation" | "other"
+      environment_type: "clean_room" | "paint_booth" | "test_bench" | "assembly" | "storage"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4104,6 +4252,50 @@ export const Constants = {
         "pronto",
         "garantia",
         "entregue",
+      ],
+      engine_category: [
+        "geral",
+        "linha_pesada",
+        "linha_leve",
+        "bosch",
+        "bosch_specialized",
+        "garantia",
+      ],
+      workflow_step_type: ["manual", "automated", "quality_check", "measurement"],
+      form_field_type: [
+        "text",
+        "number",
+        "select",
+        "checkbox",
+        "textarea",
+        "date",
+        "file",
+      ],
+      form_layout_type: ["single_column", "two_columns", "grid", "tabs"],
+      checklist_item_type: ["boolean", "measurement", "text", "selection"],
+      budget_status_new: ["draft", "pending", "approved", "rejected", "expired"],
+      approval_type: ["automatic", "manual", "manager", "technical"],
+      price_table_type: ["service", "parts", "labor"],
+      reservation_status: ["pending", "confirmed", "cancelled", "completed"],
+      purchase_priority: ["low", "normal", "high", "urgent"],
+      alert_type: ["stock_low", "stock_high", "expiry", "quality", "maintenance"],
+      quality_status: [
+        "pending",
+        "in_progress",
+        "approved",
+        "rejected",
+        "requires_rework",
+      ],
+      report_type: ["quality", "technical", "measurement", "certification"],
+      standard_type: ["nbr", "iso", "bosch", "internal", "customer"],
+      claim_status: ["open", "investigating", "approved", "rejected", "closed"],
+      claim_category: ["defect", "performance", "warranty", "installation", "other"],
+      environment_type: [
+        "clean_room",
+        "paint_booth",
+        "test_bench",
+        "assembly",
+        "storage",
       ],
     },
   },
