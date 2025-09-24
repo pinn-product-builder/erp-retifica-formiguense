@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Pagination, 
   PaginationContent, 
@@ -27,12 +29,16 @@ import {
   UserX,
   Crown,
   Link as LinkIcon,
-  Unlink
+  Unlink,
+  ChevronDown,
+  ChevronRight,
+  Eye
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { Navigate } from 'react-router-dom';
+import { useResponsive } from '@/hooks/useResponsive';
 
 // Constantes de cores padronizadas
 const ROLE_COLORS = {
@@ -99,6 +105,7 @@ interface UserOrgLinkForm {
 const SuperAdmin: React.FC = () => {
   const { user: currentUser } = useAuth();
   const { isSuperAdmin, loading: superAdminLoading } = useSuperAdmin();
+  const { isMobile, padding, layout, componentSize, gridCols, textSize } = useResponsive();
   
   const [users, setUsers] = useState<UserWithOrganizations[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -119,6 +126,18 @@ const SuperAdmin: React.FC = () => {
     role: 'user'
   });
   const [linkLoading, setLinkLoading] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  // Função para toggle das linhas expandidas
+  const toggleRowExpansion = (userId: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(userId)) {
+      newExpanded.delete(userId);
+    } else {
+      newExpanded.add(userId);
+    }
+    setExpandedRows(newExpanded);
+  };
 
   const fetchUsers = async (page: number = 1, search: string = '') => {
     try {
@@ -362,50 +381,53 @@ const SuperAdmin: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-2 mb-6">
-        <Shield className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold">Super Admin Dashboard</h1>
+    <div className="w-full max-w-full px-4 py-6 mx-auto space-y-6 overflow-hidden">
+      <div className="text-center sm:text-left">
+        <h1 className={`${textSize.title} font-bold flex items-center justify-center sm:justify-start gap-2`}>
+          <Shield className={componentSize.button.icon} />
+          Super Admin Dashboard
+        </h1>
       </div>
 
       <Tabs defaultValue="users" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="users" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Usuários
+            <Users className={componentSize.button.icon} />
+            {isMobile ? 'Users' : 'Usuários'}
           </TabsTrigger>
           <TabsTrigger value="superadmins" className="flex items-center gap-2">
-            <Crown className="h-4 w-4" />
-            Super Admins
+            <Crown className={componentSize.button.icon} />
+            {isMobile ? 'Admins' : 'Super Admins'}
           </TabsTrigger>
           <TabsTrigger value="organizations" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Organizações
+            <Building2 className={componentSize.button.icon} />
+            {isMobile ? 'Orgs' : 'Organizações'}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
+              <div className="space-y-4">
+                <div className="text-center sm:text-left">
+                  <CardTitle className={`flex items-center justify-center sm:justify-start gap-2 ${textSize.heading}`}>
+                    <Users className={componentSize.button.icon} />
                     Gestão de Usuários
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className={`${textSize.caption} mt-1`}>
                     Gerencie usuários e suas vinculações com organizações
                   </CardDescription>
                 </div>
                 
-                <Dialog open={linkUserOrgDialog} onOpenChange={setLinkUserOrgDialog}>
-                  <DialogTrigger asChild>
-                    <Button className="flex items-center gap-2">
-                      <LinkIcon className="h-4 w-4" />
-                      Vincular Usuário
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
+                <div className="flex justify-center sm:justify-end">
+                  <Dialog open={linkUserOrgDialog} onOpenChange={setLinkUserOrgDialog}>
+                    <DialogTrigger asChild>
+                      <Button className="flex items-center gap-2 w-full sm:w-auto">
+                        <LinkIcon className={componentSize.button.icon} />
+                        {isMobile ? 'Vincular' : 'Vincular Usuário'}
+                      </Button>
+                    </DialogTrigger>
+                  <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md mx-auto">
                     <DialogHeader>
                       <DialogTitle>Vincular Usuário à Organização</DialogTitle>
                       <DialogDescription>
@@ -478,18 +500,19 @@ const SuperAdmin: React.FC = () => {
                       </div>
                     </div>
                   </DialogContent>
-                </Dialog>
+                  </Dialog>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Search className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-2 justify-center sm:justify-end">
+                  <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <Input
                     placeholder="Buscar usuários..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="max-w-sm"
+                    className="flex-1"
                   />
                 </div>
 
@@ -497,73 +520,194 @@ const SuperAdmin: React.FC = () => {
                   <div className="flex items-center justify-center py-8">
                     <Users className="h-6 w-6 animate-spin" />
                   </div>
-                ) : (
-                  <div className="space-y-4">
+                ) : isMobile ? (
+                  // Layout de cards para mobile
+                  <div className="space-y-3 max-w-md mx-auto sm:max-w-none">
                     {filteredUsers.map(user => (
-                      <Card key={user.id} className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-medium">{getUserName(user)}</h4>
-                              {user.id === currentUser?.id && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Você
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground">{user.email}</p>
-                            
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {user.organizations.length === 0 ? (
-                                <Badge variant="outline" className="text-xs">
-                                  Sem organizações
-                                </Badge>
-                              ) : (
-                                user.organizations.map(org => (
-                                  <div key={`${user.id}-${org.organization_id}`} className="flex items-center gap-1">
-                                    <Badge 
-                                      className={`text-xs ${ROLE_COLORS[org.role as keyof typeof ROLE_COLORS]} flex items-center gap-1 border`}
-                                    >
-                                      {getRoleIcon(org.role)}
-                                      {org.organization.name} ({ROLE_LABELS[org.role as keyof typeof ROLE_LABELS]})
-                                    </Badge>
-                                    <button
-                                      onClick={() => handleUnlinkUserFromOrganization(user.id, org.organization_id)}
-                                      className="ml-1 hover:text-destructive text-muted-foreground hover:text-red-600"
-                                      title="Desvincular usuário desta organização"
-                                    >
-                                      <Unlink className="h-3 w-3" />
-                                    </button>
-                                  </div>
-                                ))
-                              )}
-                              
-                              {/* Indicador de status */}
-                              <div className="flex items-center gap-2 mt-1">
-                                <div className="flex items-center gap-1">
-                                  <div className={`w-2 h-2 rounded-full ${user.organizations.some(o => o.is_active) ? 'bg-green-500' : 'bg-red-500'}`} />
-                                  <span className="text-xs text-muted-foreground">
-                                    {user.organizations.some(o => o.is_active) ? 'Ativo' : 'Inativo'}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
+                      <div key={user.id} className="border rounded-lg p-4 space-y-3 bg-card">
+                        {/* Informações principais sempre visíveis */}
+                        <div className="text-center space-y-3">
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="font-medium text-lg">{getUserName(user)}</span>
+                            {user.id === currentUser?.id && (
+                              <Badge variant="secondary" className="text-xs">Você</Badge>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {user.email}
                           </div>
                           
-                          <div className="flex items-center gap-2">
+                          {/* Status e organizações principais */}
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${user.organizations.some(o => o.is_active) ? 'bg-green-500' : 'bg-red-500'}`} />
+                              <span className="text-sm">
+                                {user.organizations.some(o => o.is_active) ? 'Ativo' : 'Inativo'}
+                              </span>
+                            </div>
+                            
+                            {user.organizations.length === 0 ? (
+                              <Badge variant="outline" className="text-xs">
+                                Sem organizações
+                              </Badge>
+                            ) : (
+                              <div className="text-xs text-center">
+                                {user.organizations.length} organização{user.organizations.length > 1 ? 'ões' : ''}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Botões de ação */}
+                        <div className="flex items-center justify-center">
+                          <div className="flex items-center gap-4 w-full">
+                            {/* Botão de ação principal */}
                             <Button
                               variant={user.is_super_admin ? "destructive" : "outline"}
                               size="sm"
                               onClick={() => toggleSuperAdmin(user.id, user.is_super_admin)}
-                              className="flex items-center gap-1"
+                              className="flex-1 max-w-[200px]"
                             >
-                              <Crown className="h-3 w-3" />
+                              <Crown className="h-3 w-3 mr-2" />
                               {user.is_super_admin ? 'Remover' : 'Promover'}
+                            </Button>
+                            
+                            {/* Botão expandir/recolher */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleRowExpansion(user.id)}
+                              className="flex-shrink-0"
+                            >
+                              {expandedRows.has(user.id) ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
                             </Button>
                           </div>
                         </div>
-                      </Card>
+
+                        {/* Seção expansível - fora do flex container */}
+                        <Collapsible open={expandedRows.has(user.id)} onOpenChange={() => {}}>
+                          <CollapsibleContent className="w-full">
+                            <div className="mt-3 pt-3 border-t space-y-4">
+                              {/* Detalhes das organizações */}
+                              <div className="space-y-2">
+                                <h5 className="text-sm font-medium text-center">Organizações:</h5>
+                                {user.organizations.length === 0 ? (
+                                  <p className="text-center text-sm text-muted-foreground">
+                                    Usuário não vinculado a nenhuma organização
+                                  </p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {user.organizations.map(org => (
+                                      <div key={`${user.id}-${org.organization_id}`} className="flex items-center justify-between gap-2 p-2 bg-muted rounded">
+                                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                                          <Badge 
+                                            className={`text-xs ${ROLE_COLORS[org.role as keyof typeof ROLE_COLORS]} flex items-center gap-1 border flex-shrink-0`}
+                                          >
+                                            {getRoleIcon(org.role)}
+                                            {ROLE_LABELS[org.role as keyof typeof ROLE_LABELS]}
+                                          </Badge>
+                                          <span className="text-sm truncate">{org.organization.name}</span>
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleUnlinkUserFromOrganization(user.id, org.organization_id)}
+                                          className="flex-shrink-0 p-1 h-auto"
+                                          title="Desvincular usuário desta organização"
+                                        >
+                                          <Unlink className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </div>
                     ))}
+                  </div>
+                ) : (
+                  // Layout de tabela para desktop/tablet
+                  <div className="w-full overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Usuário</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Organizações</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredUsers.map(user => (
+                          <TableRow key={user.id}>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{getUserName(user)}</span>
+                                  {user.id === currentUser?.id && (
+                                    <Badge variant="secondary" className="text-xs">Você</Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">{user.email}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${user.organizations.some(o => o.is_active) ? 'bg-green-500' : 'bg-red-500'}`} />
+                                <span className="text-sm">
+                                  {user.organizations.some(o => o.is_active) ? 'Ativo' : 'Inativo'}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {user.organizations.length === 0 ? (
+                                  <Badge variant="outline" className="text-xs">
+                                    Sem organizações
+                                  </Badge>
+                                ) : (
+                                  user.organizations.map(org => (
+                                    <div key={`${user.id}-${org.organization_id}`} className="flex items-center gap-1">
+                                      <Badge 
+                                        className={`text-xs ${ROLE_COLORS[org.role as keyof typeof ROLE_COLORS]} flex items-center gap-1 border`}
+                                      >
+                                        {getRoleIcon(org.role)}
+                                        {org.organization.name} ({ROLE_LABELS[org.role as keyof typeof ROLE_LABELS]})
+                                      </Badge>
+                                      <button
+                                        onClick={() => handleUnlinkUserFromOrganization(user.id, org.organization_id)}
+                                        className="ml-1 hover:text-destructive text-muted-foreground hover:text-red-600"
+                                        title="Desvincular usuário desta organização"
+                                      >
+                                        <Unlink className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant={user.is_super_admin ? "destructive" : "outline"}
+                                size="sm"
+                                onClick={() => toggleSuperAdmin(user.id, user.is_super_admin)}
+                                className="flex items-center gap-1"
+                              >
+                                <Crown className="h-3 w-3" />
+                                {user.is_super_admin ? 'Remover' : 'Promover'}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </div>
@@ -574,13 +718,15 @@ const SuperAdmin: React.FC = () => {
         <TabsContent value="superadmins" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Crown className="h-5 w-5" />
-                Super Administradores
-              </CardTitle>
-              <CardDescription>
-                Gerencie os super administradores do sistema
-              </CardDescription>
+              <div className="text-center sm:text-left">
+                <CardTitle className="flex items-center justify-center sm:justify-start gap-2">
+                  <Crown className="h-5 w-5" />
+                  Super Administradores
+                </CardTitle>
+                <CardDescription>
+                  Gerencie os super administradores do sistema
+                </CardDescription>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -588,70 +734,112 @@ const SuperAdmin: React.FC = () => {
                   <div className="flex items-center justify-center py-8">
                     <Users className="h-6 w-6 animate-spin" />
                   </div>
-                ) : (
-                  <div className="space-y-4">
+                ) : isMobile ? (
+                  // Layout de cards para mobile
+                  <div className="space-y-3 max-w-md mx-auto sm:max-w-none">
                     {users.filter(user => user.is_super_admin).map(user => (
-                      <Card key={user.id} className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-medium">{getUserName(user)}</h4>
-                              <Badge variant="destructive" className="text-xs">
-                                <Crown className="h-3 w-3 mr-1" />
-                                Super Admin
-                              </Badge>
-                              {user.id === currentUser?.id && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Você
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground">{user.email}</p>
-                            
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {user.organizations.length === 0 ? (
-                                <Badge variant="outline" className="text-xs">
-                                  Sem organizações
-                                </Badge>
-                              ) : (
-                                user.organizations.map(org => (
-                                  <Badge 
-                                    key={`${user.id}-${org.organization_id}`} 
-                                    className={`text-xs ${ROLE_COLORS[org.role as keyof typeof ROLE_COLORS]} flex items-center gap-1 border`}
-                                  >
-                                    {getRoleIcon(org.role)}
-                                    {org.organization.name} ({ROLE_LABELS[org.role as keyof typeof ROLE_LABELS]})
-                                  </Badge>
-                                ))
-                              )}
-                              
-                              {/* Indicador de status */}
-                              <div className="flex items-center gap-2 mt-1">
-                                <div className="flex items-center gap-1">
-                                  <div className={`w-2 h-2 rounded-full ${user.organizations.some(o => o.is_active) ? 'bg-green-500' : 'bg-red-500'}`} />
-                                  <span className="text-xs text-muted-foreground">
-                                    {user.organizations.some(o => o.is_active) ? 'Ativo' : 'Inativo'}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
+                      <div key={user.id} className="border rounded-lg p-4 space-y-3 bg-card">
+                        {/* Informações principais sempre visíveis */}
+                        <div className="text-center space-y-3">
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="font-medium text-lg">{getUserName(user)}</span>
+                            {user.id === currentUser?.id && (
+                              <Badge variant="secondary" className="text-xs">Você</Badge>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {user.email}
                           </div>
                           
-                          <div className="flex items-center gap-2">
+                          <div className="flex justify-center">
+                            <Badge variant="destructive" className="text-sm">
+                              <Crown className="h-3 w-3 mr-1" />
+                              Super Admin
+                            </Badge>
+                          </div>
+                          
+                          {/* Status e organizações principais */}
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${user.organizations.some(o => o.is_active) ? 'bg-green-500' : 'bg-red-500'}`} />
+                              <span className="text-sm">
+                                {user.organizations.some(o => o.is_active) ? 'Ativo' : 'Inativo'}
+                              </span>
+                            </div>
+                            
+                            {user.organizations.length === 0 ? (
+                              <Badge variant="outline" className="text-xs">
+                                Sem organizações
+                              </Badge>
+                            ) : (
+                              <div className="text-xs text-center">
+                                {user.organizations.length} organização{user.organizations.length > 1 ? 'ões' : ''}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Botões de ação */}
+                        <div className="flex items-center justify-center">
+                          <div className="flex items-center gap-4 w-full">
+                            {/* Botão de ação principal (só se não for o usuário atual) */}
                             {user.id !== currentUser?.id && (
                               <Button
                                 variant="destructive"
                                 size="sm"
                                 onClick={() => toggleSuperAdmin(user.id, true)}
-                                className="flex items-center gap-1"
+                                className="flex-1 max-w-[200px]"
                               >
-                                <Crown className="h-3 w-3" />
+                                <Crown className="h-3 w-3 mr-2" />
                                 Remover Super Admin
+                              </Button>
+                            )}
+                            
+                            {/* Botão expandir/recolher */}
+                            {user.organizations.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleRowExpansion(user.id)}
+                                className="flex-shrink-0"
+                              >
+                                {expandedRows.has(user.id) ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
                               </Button>
                             )}
                           </div>
                         </div>
-                      </Card>
+
+                        {/* Seção expansível - fora do flex container */}
+                        {user.organizations.length > 0 && (
+                          <Collapsible open={expandedRows.has(user.id)} onOpenChange={() => {}}>
+                            <CollapsibleContent className="w-full">
+                              <div className="mt-3 pt-3 border-t space-y-4">
+                                {/* Detalhes das organizações */}
+                                <div className="space-y-2">
+                                  <h5 className="text-sm font-medium text-center">Organizações:</h5>
+                                  <div className="space-y-2">
+                                    {user.organizations.map(org => (
+                                      <div key={`${user.id}-${org.organization_id}`} className="flex items-center justify-center gap-2 p-2 bg-muted rounded">
+                                        <Badge 
+                                          className={`text-xs ${ROLE_COLORS[org.role as keyof typeof ROLE_COLORS]} flex items-center gap-1 border`}
+                                        >
+                                          {getRoleIcon(org.role)}
+                                          {ROLE_LABELS[org.role as keyof typeof ROLE_LABELS]}
+                                        </Badge>
+                                        <span className="text-sm">{org.organization.name}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        )}
+                      </div>
                     ))}
                     
                     {users.filter(user => user.is_super_admin).length === 0 && (
@@ -660,6 +848,90 @@ const SuperAdmin: React.FC = () => {
                         <p>Nenhum super administrador encontrado</p>
                       </div>
                     )}
+                  </div>
+                ) : (
+                  // Layout de tabela para desktop/tablet
+                  <div className="w-full overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Usuário</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Organizações</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users.filter(user => user.is_super_admin).map(user => (
+                          <TableRow key={user.id}>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{getUserName(user)}</span>
+                                  <Badge variant="destructive" className="text-xs">
+                                    <Crown className="h-3 w-3 mr-1" />
+                                    Super Admin
+                                  </Badge>
+                                  {user.id === currentUser?.id && (
+                                    <Badge variant="secondary" className="text-xs">Você</Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground">{user.email}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${user.organizations.some(o => o.is_active) ? 'bg-green-500' : 'bg-red-500'}`} />
+                                <span className="text-sm">
+                                  {user.organizations.some(o => o.is_active) ? 'Ativo' : 'Inativo'}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {user.organizations.length === 0 ? (
+                                  <Badge variant="outline" className="text-xs">
+                                    Sem organizações
+                                  </Badge>
+                                ) : (
+                                  user.organizations.map(org => (
+                                    <Badge 
+                                      key={`${user.id}-${org.organization_id}`} 
+                                      className={`text-xs ${ROLE_COLORS[org.role as keyof typeof ROLE_COLORS]} flex items-center gap-1 border`}
+                                    >
+                                      {getRoleIcon(org.role)}
+                                      {org.organization.name} ({ROLE_LABELS[org.role as keyof typeof ROLE_LABELS]})
+                                    </Badge>
+                                  ))
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {user.id !== currentUser?.id && (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => toggleSuperAdmin(user.id, true)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Crown className="h-3 w-3" />
+                                  Remover Super Admin
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        
+                        {users.filter(user => user.is_super_admin).length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                              <Crown className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p>Nenhum super administrador encontrado</p>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </div>
@@ -670,20 +942,22 @@ const SuperAdmin: React.FC = () => {
         <TabsContent value="organizations" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Organizações
-              </CardTitle>
-              <CardDescription>
-                Visualize todas as organizações do sistema
-              </CardDescription>
+              <div className="text-center sm:text-left">
+                <CardTitle className="flex items-center justify-center sm:justify-start gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Organizações
+                </CardTitle>
+                <CardDescription>
+                  Visualize todas as organizações do sistema
+                </CardDescription>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-md mx-auto sm:max-w-none">
                 {organizations.map(org => (
                   <Card key={org.id} className="p-4">
-                    <div className="space-y-2">
-                      <h4 className="font-medium">{org.name}</h4>
+                    <div className="space-y-3 text-center sm:text-left">
+                      <h4 className="font-medium text-lg">{org.name}</h4>
                       <p className="text-sm text-muted-foreground">
                         Slug: {org.slug}
                       </p>
@@ -692,14 +966,16 @@ const SuperAdmin: React.FC = () => {
                           {org.description}
                         </p>
                       )}
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>Criada em: {new Date(org.created_at).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <Users className="h-3 w-3" />
-                        <span>
-                          {users.filter(u => u.organizations.some(o => o.organization_id === org.id)).length} usuários
-                        </span>
+                      <div className="space-y-2 text-xs text-muted-foreground">
+                        <div className="flex items-center justify-center sm:justify-start gap-2">
+                          <span>Criada em: {new Date(org.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center justify-center sm:justify-start gap-2">
+                          <Users className="h-3 w-3" />
+                          <span>
+                            {users.filter(u => u.organizations.some(o => o.organization_id === org.id)).length} usuários
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </Card>

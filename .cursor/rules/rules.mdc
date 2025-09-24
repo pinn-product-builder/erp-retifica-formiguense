@@ -6,6 +6,7 @@ Quando criar telas:
 - Utilize Clean Architecture (pages → features → components → services).
 - Priorize componentização e reutilização.
 - Nunca coloque lógica de negócio em páginas.
+- As telas serão sempre responsivas para mobile, tablet e desktop
 
 Quando criar backend:
 - Utilize Clean Architecture (domain, application, infrastructure, presentation).

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Users, 
   Plus, 
@@ -24,13 +25,16 @@ import {
   EyeOff,
   Crown,
   UserCog,
-  Loader2
+  Loader2,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { useUserManagement, type CreateUserData } from '@/hooks/useUserManagement';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
 import { useRoleGuard } from '@/hooks/useRoleGuard';
 import { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
+import { useResponsive } from '@/hooks/useResponsive';
 
 type AppRole = Database['public']['Enums']['app_role'];
 import { formatDistanceToNow } from 'date-fns';
@@ -59,6 +63,7 @@ const ROLE_LABELS = {
 
 export default function GestaoUsuarios() {
   const { toast } = useToast();
+  const { isMobile, padding, layout, componentSize, gridCols, textSize } = useResponsive();
   
   // Verificar permissões de admin - usando useRoleGuard diretamente
   const { hasPermission } = useRoleGuard({
@@ -88,6 +93,7 @@ export default function GestaoUsuarios() {
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editingRole, setEditingRole] = useState<AppRole>('user');
   const [editingProfile, setEditingProfile] = useState<string>('');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const [newUserData, setNewUserData] = useState<CreateUserData>({
     email: '',
@@ -99,6 +105,17 @@ export default function GestaoUsuarios() {
   // Hook para gerenciar perfis
   const profilesData = useUserProfiles();
   const profiles = profilesData?.profiles || [];
+
+  // Função para toggle das linhas expandidas
+  const toggleRowExpansion = (userId: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(userId)) {
+      newExpanded.delete(userId);
+    } else {
+      newExpanded.add(userId);
+    }
+    setExpandedRows(newExpanded);
+  };
 
 
   // Se não tem permissão, mostrar mensagem
@@ -211,25 +228,25 @@ export default function GestaoUsuarios() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="w-full max-w-full px-4 py-6 mx-auto space-y-6 overflow-hidden">
       {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Gestão de Usuários</h1>
-            <p className="text-muted-foreground mt-2">
-              Gerencie usuários e permissões da organização {currentOrganization?.name}
-            </p>
-          </div>
-          
-          <div className="flex gap-2">
-            <Link to="/gestao-usuarios/perfis">
-              <Button variant="outline">
-                <UserCog className="h-4 w-4 mr-2" />
-                Perfis de Usuário
-              </Button>
-            </Link>
+      <div className="space-y-4">
+        <div className="text-center sm:text-left">
+          <h1 className={`${textSize.title} font-bold`}>Gestão de Usuários</h1>
+          <p className={`text-muted-foreground ${textSize.body} mt-2`}>
+            Gerencie usuários e permissões da organização {currentOrganization?.name}
+          </p>
+        </div>
         
-            {canManageUsers() && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <Link to="/gestao-usuarios/perfis">
+            <Button variant="outline" className="w-full sm:w-auto">
+              <UserCog className={componentSize.button.icon} />
+              {isMobile ? 'Perfis' : 'Perfis de Usuário'}
+            </Button>
+          </Link>
+      
+          {canManageUsers() && (
               <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
                 setIsCreateDialogOpen(open);
                 if (open) {
@@ -243,12 +260,12 @@ export default function GestaoUsuarios() {
                 }
               }}>
             <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Novo Usuário
+              <Button className="w-full sm:w-auto">
+                <UserPlus className={componentSize.button.icon} />
+                {isMobile ? 'Novo' : 'Novo Usuário'}
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md mx-auto">
               <DialogHeader>
                 <DialogTitle>Criar Novo Usuário</DialogTitle>
                 <DialogDescription>
@@ -257,64 +274,67 @@ export default function GestaoUsuarios() {
               </DialogHeader>
               
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Nome Completo</Label>
-                  <Input
-                    id="name"
-                    value={newUserData.name}
-                    onChange={(e) => setNewUserData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Digite o nome completo"
-                  />
+                <div className={`${gridCols.content[2]} gap-4`}>
+                  <div>
+                    <Label htmlFor="name">Nome Completo</Label>
+                    <Input
+                      id="name"
+                      value={newUserData.name}
+                      onChange={(e) => setNewUserData(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Digite o nome completo"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={newUserData.email}
+                      onChange={(e) => setNewUserData(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="Digite o email do usuário"
+                    />
+                  </div>
                 </div>
                 
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newUserData.email}
-                    onChange={(e) => setNewUserData(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="Digite o email do usuário"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="role">Nível de Acesso</Label>
-                  <Select
-                    value={newUserData.role}
-                    onValueChange={(value: AppRole) => setNewUserData(prev => ({ ...prev, role: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {userRole === 'owner' && (
-                        <SelectItem value="admin">
+                <div className={`${gridCols.content[2]} gap-4`}>
+                  <div>
+                    <Label htmlFor="role">Nível de Acesso</Label>
+                    <Select
+                      value={newUserData.role}
+                      onValueChange={(value: AppRole) => setNewUserData(prev => ({ ...prev, role: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {userRole === 'owner' && (
+                          <SelectItem value="admin">
+                            <div className="flex items-center gap-2">
+                              {getRoleIcon('admin')}
+                              {ROLE_LABELS.admin}
+                            </div>
+                          </SelectItem>
+                        )}
+                        <SelectItem value="manager">
                           <div className="flex items-center gap-2">
-                            {getRoleIcon('admin')}
-                            {ROLE_LABELS.admin}
+                            {getRoleIcon('manager')}
+                            {ROLE_LABELS.manager}
                           </div>
                         </SelectItem>
-                      )}
-                      <SelectItem value="manager">
-                        <div className="flex items-center gap-2">
-                          {getRoleIcon('manager')}
-                          {ROLE_LABELS.manager}
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="user">
-                        <div className="flex items-center gap-2">
-                          {getRoleIcon('user')}
-                          {ROLE_LABELS.user}
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="profile">Perfil de Usuário (Opcional)</Label>
-                  <Select
+                        <SelectItem value="user">
+                          <div className="flex items-center gap-2">
+                            {getRoleIcon('user')}
+                            {ROLE_LABELS.user}
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="profile">Perfil de Usuário (Opcional)</Label>
+                    <Select
                     value={newUserData.profile_id || 'none'}
                     onValueChange={(value) => setNewUserData(prev => ({ 
                       ...prev, 
@@ -345,20 +365,23 @@ export default function GestaoUsuarios() {
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
+                    </Select>
+                  </div>
                 </div>
               </div>
               
-              <DialogFooter>
+              <DialogFooter className={`${layout.flex.mobileStack} gap-2`}>
                 <Button 
                   variant="outline" 
                   onClick={() => setIsCreateDialogOpen(false)}
+                  className={componentSize.button.mobile}
                 >
                   Cancelar
                 </Button>
                 <Button 
                   onClick={handleCreateUser}
                   disabled={createLoading || !newUserData.email || !newUserData.name}
+                  className={componentSize.button.mobile}
                 >
                   {createLoading ? 'Criando...' : 'Criar Usuário'}
                 </Button>
@@ -419,25 +442,128 @@ export default function GestaoUsuarios() {
       </div>
 
       {/* Users Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Usuários da Organização</CardTitle>
-          <CardDescription>
+      <Card className="w-full max-w-none mx-auto">
+        <CardHeader className="text-center sm:text-left">
+          <CardTitle className={textSize.heading}>Usuários da Organização</CardTitle>
+          <CardDescription className={textSize.caption}>
             Gerencie os usuários e suas permissões
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Usuário</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Adicionado</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        <CardContent className="p-0">
+          {isMobile ? (
+            // Layout de cards para mobile
+            <div className="space-y-3 p-4 max-w-md mx-auto sm:max-w-none">
+              {loading ? (
+                <div className="text-center py-8">Carregando usuários...</div>
+              ) : users.length === 0 ? (
+                <div className="text-center py-8">Nenhum usuário encontrado</div>
+              ) : (
+                users.map((user) => (
+                  <div key={user.id} className="border rounded-lg p-4 space-y-3 bg-card">
+                    {/* Informações principais sempre visíveis */}
+                    <div className="text-center space-y-3">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="font-medium text-lg">
+                          {user.user?.name || 'Nome não disponível'}
+                        </span>
+                        {isSelfUser(user.user_id) && (
+                          <Badge variant="secondary" className="text-xs">Você</Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {user.user?.email}
+                      </div>
+                      <div className="flex justify-center">
+                        <Badge variant="outline" className={ROLE_COLORS[user.role]}>
+                          <div className="flex items-center gap-1">
+                            {getRoleIcon(user.role)}
+                            {ROLE_LABELS[user.role]}
+                          </div>
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-center">
+                      <div className="flex items-center gap-4 w-full">
+                        <div className="flex items-center gap-2 flex-1 justify-center">
+                          <div className={`w-2 h-2 rounded-full ${user.is_active ? 'bg-green-500' : 'bg-red-500'}`} />
+                          <span className="text-sm">{user.is_active ? 'Ativo' : 'Inativo'}</span>
+                        </div>
+                        
+                        <Collapsible>
+                          <CollapsibleTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleRowExpansion(user.user_id)}
+                              className="flex-shrink-0"
+                            >
+                              {expandedRows.has(user.user_id) ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </CollapsibleTrigger>
+                        
+                        <CollapsibleContent className="w-full">
+                          <div className="mt-3 pt-3 border-t space-y-4">
+                            {/* Informações detalhadas */}
+                            <div className="text-center">
+                              <span className="text-sm font-medium text-muted-foreground">Adicionado: </span>
+                              <span className="text-sm">{user.joined_at ? formatDate(user.joined_at) : 'Pendente'}</span>
+                            </div>
+                            
+                            {/* Ações */}
+                            {canEditUser(user.user_id) && (
+                              <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleToggleStatus(user.user_id, user.is_active)}
+                                  className="w-full sm:flex-1"
+                                >
+                                  {user.is_active ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                                  {user.is_active ? 'Desativar' : 'Ativar'}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="w-full sm:flex-1"
+                                  onClick={() => {
+                                    setEditingUser(user.user_id);
+                                    setEditingRole(user.role);
+                                    setEditingProfile('');
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : (
+            // Layout de tabela para desktop/tablet
+            <div className="w-full overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Usuário</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Adicionado</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8">
@@ -486,14 +612,14 @@ export default function GestaoUsuarios() {
                       </div>
                     </TableCell>
                     
-                    <TableCell>
+                    <TableCell className={isMobile ? 'hidden' : ''}>
                       <div className="text-sm">
                         {user.joined_at ? formatDate(user.joined_at) : 'Pendente'}
                       </div>
                     </TableCell>
                     
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1 sm:gap-2">
                         {canEditUser(user.user_id) && (
                           <>
                             {/* Toggle Status */}
@@ -661,8 +787,10 @@ export default function GestaoUsuarios() {
                   </TableRow>
                 ))
               )}
-            </TableBody>
-          </Table>
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   UserCog,
   Plus,
@@ -25,13 +26,16 @@ import {
   Settings,
   CheckCircle,
   XCircle,
-  ArrowLeft
+  ArrowLeft,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { useUserProfiles, type CreateUserProfileData, type CreateSectorData } from '@/hooks/useUserProfiles';
 import { useRoleGuard } from '@/hooks/useRoleGuard';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const MODULE_COLORS = {
   dashboard: 'bg-blue-100 text-blue-800',
@@ -62,6 +66,7 @@ const DEFAULT_COLORS = [
 
 export default function GestaoPerfiUsuarios() {
   const { toast } = useToast();
+  const { isMobile, padding, layout, componentSize, gridCols, textSize } = useResponsive();
   const { hasPermission } = useRoleGuard({
     requiredRole: ['owner', 'admin'],
     toastMessage: 'Acesso restrito a administradores para gerenciar perfis.',
@@ -106,6 +111,18 @@ export default function GestaoPerfiUsuarios() {
   // Estados para controlar quando mostrar validações
   const [sectorValidationTouched, setSectorValidationTouched] = useState({ name: false });
   const [profileValidationTouched, setProfileValidationTouched] = useState({ name: false, sector_id: false });
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  // Função para toggle das linhas expandidas
+  const toggleRowExpansion = (profileId: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(profileId)) {
+      newExpanded.delete(profileId);
+    } else {
+      newExpanded.add(profileId);
+    }
+    setExpandedRows(newExpanded);
+  };
 
   if (!hasPermission) {
     return (
@@ -203,22 +220,22 @@ export default function GestaoPerfiUsuarios() {
   }, {} as Record<string, typeof systemPages>);
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <Link to="/gestao-usuarios">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar para Gestão de Usuários
-              </Button>
-            </Link>
-          </div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <UserCog className="h-8 w-8" />
+    <div className="w-full max-w-full px-4 py-6 mx-auto space-y-6 overflow-hidden">
+      <div className="space-y-4">
+        <div className="flex items-center justify-start">
+          <Link to="/gestao-usuarios">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              {isMobile ? 'Voltar' : 'Voltar para Gestão de Usuários'}
+            </Button>
+          </Link>
+        </div>
+        <div className="text-center sm:text-left">
+          <h1 className={`${textSize.title} font-bold flex items-center justify-center sm:justify-start gap-2`}>
+            <UserCog className={componentSize.button.icon} />
             Perfis de Usuários
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className={`text-muted-foreground ${textSize.body} mt-2`}>
             Gerencie perfis, setores e permissões de acesso da organização {currentOrganization?.name}
           </p>
         </div>
@@ -226,22 +243,29 @@ export default function GestaoPerfiUsuarios() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="profiles">Perfis</TabsTrigger>
-          <TabsTrigger value="sectors">Setores</TabsTrigger>
-          <TabsTrigger value="pages">Páginas</TabsTrigger>
+          <TabsTrigger value="profiles">
+            Perfis
+          </TabsTrigger>
+          <TabsTrigger value="sectors">
+            Setores
+          </TabsTrigger>
+          <TabsTrigger value="pages">
+            Páginas
+          </TabsTrigger>
         </TabsList>
 
         {/* Tab de Perfis */}
         <TabsContent value="profiles" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Perfis de Usuário</h2>
-              <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex-1 min-w-0">
+              <h2 className={`${textSize.heading} font-semibold`}>Perfis de Usuário</h2>
+              <p className={`${textSize.caption} text-muted-foreground mt-1`}>
                 Perfis definem grupos de permissões que podem ser atribuídos aos usuários
               </p>
             </div>
             
             {canManageProfiles() && (
+              <div className="flex-shrink-0 sm:ml-4">
               <Dialog open={isCreateProfileOpen} onOpenChange={(open) => {
                 setIsCreateProfileOpen(open);
                 if (open) {
@@ -252,12 +276,12 @@ export default function GestaoPerfiUsuarios() {
                 }
               }}>
                 <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo Perfil
+                  <Button className="w-full sm:w-auto">
+                    <Plus className={componentSize.button.icon} />
+                    {isMobile ? 'Novo' : 'Novo Perfil'}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[80vh] overflow-y-auto mx-auto">
                   <DialogHeader>
                     <DialogTitle>Criar Novo Perfil</DialogTitle>
                     <DialogDescription>
@@ -266,7 +290,7 @@ export default function GestaoPerfiUsuarios() {
                   </DialogHeader>
                   
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className={`${gridCols.content[2]} gap-4`}>
                       <div>
                         <Label htmlFor="profile-name">Nome do Perfil</Label>
                         <Input
@@ -400,22 +424,25 @@ export default function GestaoPerfiUsuarios() {
                     </div>
                   </div>
                   
-                  <DialogFooter>
+                  <DialogFooter className={`${layout.flex.mobileStack} gap-2`}>
                     <Button 
                       variant="outline" 
                       onClick={() => setIsCreateProfileOpen(false)}
+                      className={componentSize.button.mobile}
                     >
                       Cancelar
                     </Button>
                     <Button 
                       onClick={handleCreateProfile}
                       disabled={createLoading || !newProfileData.name.trim()}
+                      className={componentSize.button.mobile}
                     >
                       {createLoading ? 'Criando...' : 'Criar Perfil'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+              </div>
             )}
           </div>
 
@@ -426,18 +453,118 @@ export default function GestaoPerfiUsuarios() {
                 Lista de perfis de usuário da organização
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Perfil</TableHead>
-                    <TableHead>Setor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Criado</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+            <CardContent className="p-0">
+              {isMobile ? (
+                // Layout de cards para mobile
+                <div className="space-y-3 p-4 max-w-md mx-auto sm:max-w-none">
+                  {loading ? (
+                    <div className="text-center py-8">Carregando perfis...</div>
+                  ) : profiles.length === 0 ? (
+                    <div className="text-center py-8">Nenhum perfil encontrado</div>
+                  ) : (
+                    profiles.map((profile) => (
+                      <div key={profile.id} className="border rounded-lg p-4 space-y-3 bg-card">
+                        {/* Informações principais sempre visíveis */}
+                        <div className="text-center space-y-3">
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="font-medium text-lg">{profile.name}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {profile.description || 'Sem descrição'}
+                          </div>
+                          {profile.sector && (
+                            <div className="flex items-center justify-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: profile.sector.color }}
+                              />
+                              <span className="text-sm">{profile.sector.name}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-center">
+                            <Badge variant={profile.is_active ? 'default' : 'secondary'}>
+                              {profile.is_active ? (
+                                <>
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Ativo
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Inativo
+                                </>
+                              )}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-center">
+                          <Collapsible>
+                            <CollapsibleTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleRowExpansion(profile.id)}
+                                className="flex-shrink-0"
+                              >
+                                {expandedRows.has(profile.id) ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </CollapsibleTrigger>
+                          
+                            <CollapsibleContent className="w-full">
+                              <div className="mt-3 pt-3 border-t space-y-4">
+                                {/* Informações detalhadas */}
+                                <div className="text-center">
+                                  <span className="text-sm font-medium text-muted-foreground">Criado: </span>
+                                  <span className="text-sm">
+                                    {formatDistanceToNow(new Date(profile.created_at), { 
+                                      addSuffix: true, 
+                                      locale: ptBR 
+                                    })}
+                                  </span>
+                                </div>
+                                
+                                {/* Ações */}
+                                <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+                                  <Button variant="outline" size="sm" className="w-full sm:flex-1">
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    Ver
+                                  </Button>
+                                  <Button variant="outline" size="sm" className="w-full sm:flex-1">
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Editar
+                                  </Button>
+                                  <Button variant="outline" size="sm" className="w-full sm:flex-1">
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Excluir
+                                  </Button>
+                                </div>
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : (
+                // Layout de tabela para desktop/tablet
+                <div className="w-full overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Perfil</TableHead>
+                        <TableHead>Setor</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Criado</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                   {loading ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8">
@@ -489,14 +616,14 @@ export default function GestaoPerfiUsuarios() {
                             )}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className={isMobile ? 'hidden' : ''}>
                           {formatDistanceToNow(new Date(profile.created_at), { 
                             addSuffix: true, 
                             locale: ptBR 
                           })}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-1 sm:gap-2">
                             <Button variant="ghost" size="sm">
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -511,23 +638,26 @@ export default function GestaoPerfiUsuarios() {
                       </TableRow>
                     ))
                   )}
-                </TableBody>
-              </Table>
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Tab de Setores */}
         <TabsContent value="sectors" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Setores</h2>
-              <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex-1 min-w-0">
+              <h2 className={`${textSize.heading} font-semibold`}>Setores</h2>
+              <p className={`${textSize.caption} text-muted-foreground mt-1`}>
                 Organize usuários por setores da empresa
               </p>
             </div>
             
             {canManageProfiles() && (
+              <div className="flex-shrink-0 sm:ml-4">
               <Dialog open={isCreateSectorOpen} onOpenChange={(open) => {
                 setIsCreateSectorOpen(open);
                 if (open) {
@@ -537,12 +667,12 @@ export default function GestaoPerfiUsuarios() {
                 }
               }}>
                 <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo Setor
+                  <Button className="w-full sm:w-auto">
+                    <Plus className={componentSize.button.icon} />
+                    {isMobile ? 'Novo' : 'Novo Setor'}
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md mx-auto">
                   <DialogHeader>
                     <DialogTitle>Criar Novo Setor</DialogTitle>
                     <DialogDescription>
@@ -594,26 +724,29 @@ export default function GestaoPerfiUsuarios() {
                     </div>
                   </div>
                   
-                  <DialogFooter>
+                  <DialogFooter className={`${layout.flex.mobileStack} gap-2`}>
                     <Button 
                       variant="outline" 
                       onClick={() => setIsCreateSectorOpen(false)}
+                      className={componentSize.button.mobile}
                     >
                       Cancelar
                     </Button>
                     <Button 
                       onClick={handleCreateSector}
                       disabled={createLoading || !newSectorData.name.trim()}
+                      className={componentSize.button.mobile}
                     >
                       {createLoading ? 'Criando...' : 'Criar Setor'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+              </div>
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className={`${gridCols.statsCard[3]} gap-4`}>
             {sectors.map((sector) => (
               <Card key={sector.id}>
                 <CardHeader>
@@ -631,7 +764,7 @@ export default function GestaoPerfiUsuarios() {
                     <Badge variant={sector.is_active ? 'default' : 'secondary'}>
                       {sector.is_active ? 'Ativo' : 'Inativo'}
                     </Badge>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1 sm:gap-2">
                       <Button variant="ghost" size="sm">
                         <Edit className="h-4 w-4" />
                       </Button>
