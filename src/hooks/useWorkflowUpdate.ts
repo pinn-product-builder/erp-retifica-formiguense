@@ -7,9 +7,18 @@ export function useWorkflowUpdate() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const updateWorkflowStatus = async (workflowId: string, newStatus: string) => {
+  const updateWorkflowStatus = async (workflowId: string, newStatus: string, changeReason?: string) => {
     try {
       setLoading(true);
+
+      // Primeiro, buscar o status atual para o histórico
+      const { data: currentWorkflow, error: fetchError } = await supabase
+        .from('order_workflow')
+        .select('status, component, order_id')
+        .eq('id', workflowId)
+        .single();
+
+      if (fetchError) throw fetchError;
 
       const updateData: any = { 
         status: newStatus,
@@ -32,6 +41,24 @@ export function useWorkflowUpdate() {
         .eq('id', workflowId);
 
       if (error) throw error;
+
+      // Registrar no histórico de auditoria
+      if (currentWorkflow.status !== newStatus) {
+        const { error: historyError } = await supabase
+          .from('workflow_status_history')
+          .insert({
+            order_workflow_id: workflowId,
+            from_status: currentWorkflow.status,
+            to_status: newStatus,
+            changed_by: (await supabase.auth.getUser()).data.user?.id,
+            change_reason: changeReason,
+          });
+
+        if (historyError) {
+          console.error('Erro ao registrar histórico:', historyError);
+          // Não falha a operação principal por erro no histórico
+        }
+      }
 
       toast({
         title: "Status atualizado!",

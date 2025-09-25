@@ -195,6 +195,12 @@ export const useProfilePermissions = () => {
       return routePath === '/dashboard';
     }
 
+    // Para páginas administrativas, sempre usar permissões de role
+    const adminPages = ['/gestao-usuarios', '/configuracoes'];
+    if (adminPages.includes(routePath)) {
+      return basePermissions.isAdmin();
+    }
+
     // Se não tem perfil específico, usar permissões baseadas em role
     if (!userProfile || pagePermissions.length === 0) {
       const module = PAGE_MODULE_MAPPING[routePath];
@@ -229,6 +235,12 @@ export const useProfilePermissions = () => {
     // Se não está logado ou não tem organização, negar edição
     if (!user || !currentOrganization) {
       return false;
+    }
+
+    // Para páginas administrativas, sempre usar permissões de role
+    const adminPages = ['/gestao-usuarios', '/configuracoes'];
+    if (adminPages.includes(routePath)) {
+      return basePermissions.isAdmin();
     }
 
     if (!userProfile || pagePermissions.length === 0) {

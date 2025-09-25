@@ -4,6 +4,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { KanbanColumn } from './KanbanColumn';
 import { ComponentCard } from './ComponentCard';
 import { useWorkflowUpdate } from '@/hooks/useWorkflowUpdate';
+import { useWorkflowStatusConfig } from '@/hooks/useWorkflowStatusConfig';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { Badge } from '@/components/ui/badge';
 
@@ -15,15 +16,7 @@ const COMPONENTS = [
   { id: 'cabecote', name: 'Cabeçote', color: 'bg-red-500' }
 ];
 
-const STATUS_ORDER = [
-  'entrada',
-  'metrologia', 
-  'usinagem',
-  'montagem',
-  'pronto',
-  'garantia',
-  'entregue'
-];
+// STATUS_ORDER será obtido dinamicamente das configurações
 
 interface KanbanBoardProps {
   orders: any[];
@@ -32,14 +25,23 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
   const { updateWorkflowStatus } = useWorkflowUpdate();
+  const { workflowStatuses, getStatusColors, getNextAllowedStatuses, loading } = useWorkflowStatusConfig();
   const { isMobile, isTablet } = useBreakpoint();
   const [selectedComponent, setSelectedComponent] = useState<string>('bloco');
+
+  // Obter ordem dos status das configurações
+  const statusOrder = workflowStatuses
+    .filter(status => status.is_active)
+    .sort((a, b) => a.display_order - b.display_order)
+    .map(status => status.status_key);
+
+  const statusColors = getStatusColors();
 
   // Organizar workflows por status para o componente selecionado
   const organizeWorkflowsByStatus = () => {
     const workflowsByStatus: Record<string, any[]> = {};
     
-    STATUS_ORDER.forEach(status => {
+    statusOrder.forEach(status => {
       workflowsByStatus[status] = [];
     });
 
@@ -75,7 +77,19 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
     if (source.droppableId === destination.droppableId) return;
 
     const workflowId = draggableId;
+    const currentStatus = source.droppableId;
     const newStatus = destination.droppableId;
+
+    // Validar se a transição é permitida pelos pré-requisitos
+    const allowedTransitions = getNextAllowedStatuses(currentStatus, selectedComponent);
+    const isTransitionAllowed = allowedTransitions.some(
+      transition => transition.to_status_key === newStatus
+    );
+
+    if (!isTransitionAllowed) {
+      // Mostrar toast de erro sobre transição não permitida
+      return;
+    }
 
     const success = await updateWorkflowStatus(workflowId, newStatus);
     
@@ -88,9 +102,10 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
   const selectedComponentData = COMPONENTS.find(c => c.id === selectedComponent);
 
   const getKanbanGridCols = () => {
+    const columnCount = statusOrder.length;
     if (isMobile) return 'flex overflow-x-auto space-x-4 pb-4';
-    if (isTablet) return 'grid grid-cols-4 gap-4';
-    return 'grid grid-cols-7 gap-4';
+    if (isTablet) return `grid grid-cols-${Math.min(columnCount, 4)} gap-4`;
+    return `grid grid-cols-${columnCount} gap-4`;
   };
 
   const getComponentGridCols = () => {
@@ -130,22 +145,27 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
       </div>
 
       {/* Kanban Board */}
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <div className={`${getKanbanGridCols()} ${isMobile ? 'min-h-[500px]' : 'min-h-[600px]'}`}>
-          {STATUS_ORDER.map(status => (
-            <div 
-              key={status} 
-              className={isMobile ? 'min-w-[280px] flex-shrink-0' : ''}
-            >
-              <KanbanColumn
-                status={status}
-                workflows={workflowsByStatus[status] || []}
-                componentColor={selectedComponentData?.color || 'bg-gray-500'}
-              />
-            </div>
-          ))}
-        </div>
-      </DragDropContext>
+      {loading ? (
+        <div className="text-center py-8">Carregando configurações...</div>
+      ) : (
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className={`${getKanbanGridCols()} ${isMobile ? 'min-h-[500px]' : 'min-h-[600px]'}`}>
+            {statusOrder.map(status => (
+              <div 
+                key={status} 
+                className={isMobile ? 'min-w-[280px] flex-shrink-0' : ''}
+              >
+                <KanbanColumn
+                  status={status}
+                  workflows={workflowsByStatus[status] || []}
+                  componentColor={selectedComponentData?.color || 'bg-gray-500'}
+                  statusColors={statusColors}
+                />
+              </div>
+            ))}
+          </div>
+        </DragDropContext>
+      )}
     </div>
   );
 }

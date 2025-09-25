@@ -28,9 +28,10 @@ interface KanbanColumnProps {
   status: string;
   workflows: any[];
   componentColor: string;
+  statusColors?: Record<string, { bgColor: string; textColor: string }>;
 }
 
-export function KanbanColumn({ status, workflows, componentColor }: KanbanColumnProps) {
+export function KanbanColumn({ status, workflows, componentColor, statusColors }: KanbanColumnProps) {
   return (
     <div className="bg-muted/30 rounded-lg p-3 sm:p-4">
       {/* Column Header */}
@@ -43,7 +44,11 @@ export function KanbanColumn({ status, workflows, componentColor }: KanbanColumn
         </div>
         <Badge 
           variant="secondary" 
-          className={`text-xs ${STATUS_COLORS[status]} px-1.5 py-0.5`}
+          className="text-xs px-1.5 py-0.5"
+          style={{
+            backgroundColor: statusColors?.[status]?.bgColor || (STATUS_COLORS[status]?.includes('bg-') ? STATUS_COLORS[status].split(' ')[0].replace('bg-', '#') : '#f3f4f6'),
+            color: statusColors?.[status]?.textColor || '#374151'
+          }}
         >
           {workflows.length}
         </Badge>

@@ -9,6 +9,7 @@ Este módulo oferece uma interface Kanban para gestão visual de workflows, perm
 ### Componentes Principais
 - **Gestão de Ordens de Serviço**: Criação, edição e acompanhamento de ordens
 - **Sistema Kanban**: Interface visual drag-and-drop para gestão de workflows
+- **Configuração Dinâmica de Status**: Personalização completa de status de workflow 🆕
 - **Controle por Componentes**: Workflows específicos para cada componente do motor
 - **Sistema de Garantias**: Gestão automática de garantias pós-serviço
 - **Auditoria Completa**: Histórico de mudanças e rastreabilidade
@@ -23,6 +24,7 @@ Este módulo oferece uma interface Kanban para gestão visual de workflows, perm
 
 ## 🔄 Estados do Workflow
 
+### Status Padrão (Configuráveis)
 1. **Entrada**: Recebimento e catalogação inicial
 2. **Metrologia**: Medição e análise dimensional
 3. **Usinagem**: Processos de corte e acabamento
@@ -30,6 +32,14 @@ Este módulo oferece uma interface Kanban para gestão visual de workflows, perm
 5. **Pronto**: Finalização e controle de qualidade
 6. **Garantia**: Período de garantia técnica
 7. **Entregue**: Entrega ao cliente final
+
+### 🆕 Configuração Dinâmica
+- **Personalização completa** de status por organização
+- **Cores e ícones** personalizáveis
+- **Tempos estimados** configuráveis
+- **Pré-requisitos** entre status
+- **Ordem de exibição** personalizável
+- **Sistema de auditoria** integrado
 
 ## 📁 Estrutura da Documentação
 
@@ -42,12 +52,15 @@ Este módulo oferece uma interface Kanban para gestão visual de workflows, perm
 ### [💼 Processos de Negócio](./business-processes/)
 - [Processo de Ordens de Serviço](./business-processes/service-order-process.md)
 - [Gestão de Workflows](./business-processes/workflow-management.md)
+- [**Configuração Dinâmica de Status**](./business-processes/dynamic-workflow-status-configuration.md) 🆕
 - [Controle de Qualidade](./business-processes/quality-control.md)
 
 ### [🔧 Especificações Técnicas](./technical-specs/)
 - [Arquitetura de Componentes](./technical-specs/component-architecture.md)
 - [Integração com Database](./technical-specs/database-integration.md)
 - [**Fluxograma do Schema de Banco**](./technical-specs/database-schema-flowchart.md) 🆕
+- [**API de Configuração de Status**](./technical-specs/workflow-status-configuration-api.md) 🆕
+- [**Guia de Migração**](./technical-specs/workflow-status-migration-guide.md) 🆕
 - [Especificações de API](./technical-specs/api-specifications.md)
 - [Estruturas de Dados](./technical-specs/data-structures.md)
 
@@ -127,6 +140,7 @@ O módulo foi desenvolvido com abordagem mobile-first, garantindo:
 
 ### 📊 **Funcionalidades Implementadas no Banco**
 - ✅ Workflows dinâmicos configuráveis por tipo de motor
+- ✅ **Sistema de configuração dinâmica de status** 🆕
 - ✅ Sistema de diagnóstico com checklists inteligentes
 - ✅ Orçamentação automática baseada em diagnóstico
 - ✅ Reserva automática de peças e controle de compras
@@ -136,7 +150,8 @@ O módulo foi desenvolvido com abordagem mobile-first, garantindo:
 - ✅ Workflow Bosch especializado (14 etapas)
 - ✅ Controle de ambientes especiais
 - ✅ Indicadores e alertas inteligentes
+- ✅ **Sistema de auditoria de mudanças de status** 🆕
 
 ---
 
-*Última atualização: 23/09/2025*
+*Última atualização: 25/09/2024*
