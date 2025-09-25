@@ -56,7 +56,13 @@ export const WorkflowStatusConfigAdmin = () => {
       textColor: '#374151'
     },
     notification_config: {},
-    sla_config: {},
+    sla_config: {
+      max_hours: 0,
+      warning_threshold: 80,
+      alerts_enabled: false,
+      auto_escalation: false,
+      business_hours_only: false
+    },
     automation_rules: []
   });
 
@@ -95,7 +101,13 @@ export const WorkflowStatusConfigAdmin = () => {
         textColor: '#374151'
       },
       notification_config: {},
-      sla_config: {},
+      sla_config: {
+        max_hours: 0,
+        warning_threshold: 80,
+        alerts_enabled: false,
+        auto_escalation: false,
+        business_hours_only: false
+      },
       automation_rules: []
     });
     setEditingStatus(null);
@@ -135,7 +147,13 @@ export const WorkflowStatusConfigAdmin = () => {
         textColor: '#374151'
       },
       notification_config: status.notification_config || {},
-      sla_config: status.sla_config || {},
+      sla_config: status.sla_config || {
+        max_hours: 0,
+        warning_threshold: 80,
+        alerts_enabled: false,
+        auto_escalation: false,
+        business_hours_only: false
+      },
       automation_rules: status.automation_rules || []
     });
     setIsDialogOpen(true);
@@ -342,7 +360,7 @@ export const WorkflowStatusConfigAdmin = () => {
 
         <CardContent className="p-3 sm:p-6">
           <Tabs defaultValue="statuses" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+            <TabsList className="grid w-full grid-cols-3 h-auto">
               <TabsTrigger value="statuses" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
                 <Settings className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Status</span>
@@ -350,10 +368,6 @@ export const WorkflowStatusConfigAdmin = () => {
               <TabsTrigger value="prerequisites" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
                 <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Pré-requisitos</span>
-              </TabsTrigger>
-              <TabsTrigger value="sla" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
-                <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">SLA & Tempo</span>
               </TabsTrigger>
               <TabsTrigger value="audit" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
                 <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -393,10 +407,21 @@ export const WorkflowStatusConfigAdmin = () => {
                                 <Badge variant="outline" className="text-xs">
                                   {status.estimated_hours}h estimado
                                 </Badge>
+                                {status.sla_config?.max_hours && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    SLA: {status.sla_config.max_hours}h
+                                  </Badge>
+                                )}
+                                {status.sla_config?.alerts_enabled && (
+                                  <Badge variant="default" className="text-xs bg-orange-100 text-orange-800">
+                                    Alertas
+                                  </Badge>
+                                )}
                               </div>
                               <p className="text-xs sm:text-sm text-muted-foreground break-words">
                                 Chave: {status.status_key} • Ordem: {status.display_order}
                                 {status.icon && ` • Ícone: ${status.icon}`}
+                                {status.sla_config?.warning_threshold && ` • Alerta: ${status.sla_config.warning_threshold}%`}
                               </p>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
@@ -512,34 +537,6 @@ export const WorkflowStatusConfigAdmin = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="sla" className="space-y-4">
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium flex items-center gap-2">
-                  <Clock className="w-5 h-5" />
-                  Configurações de SLA e Tempo
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {workflowStatuses.map((status) => (
-                    <div key={status.id} className="p-4 border rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div 
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: statusColors[status.status_key]?.bgColor }}
-                        />
-                        <h4 className="font-medium">{status.status_label}</h4>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">Tempo estimado:</span>
-                          <span className="text-sm font-medium">{status.estimated_hours}h</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </TabsContent>
 
             <TabsContent value="audit" className="space-y-4">
               <div className="space-y-4">
@@ -660,6 +657,103 @@ export const WorkflowStatusConfigAdmin = () => {
                   onChange={(e) => setFormData(prev => ({ ...prev, display_order: parseInt(e.target.value) }))}
                   className="h-9 sm:h-10"
                 />
+              </div>
+            </div>
+
+            {/* Configurações Avançadas de SLA e Tempo */}
+            <div className="space-y-4 p-4 bg-muted/20 rounded-lg border">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" />
+                <h4 className="font-medium text-sm sm:text-base">Configurações de SLA e Tempo</h4>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="sla_max_hours" className="text-sm font-medium">SLA Máximo (horas)</Label>
+                  <Input
+                    id="sla_max_hours"
+                    type="number"
+                    step="0.5"
+                    value={formData.sla_config?.max_hours || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      sla_config: { 
+                        ...prev.sla_config, 
+                        max_hours: parseFloat(e.target.value) || 0 
+                      }
+                    }))}
+                    placeholder="Ex: 24"
+                    className="h-9 sm:h-10"
+                  />
+                  <p className="text-xs text-muted-foreground">Tempo máximo antes de alertas</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="warning_threshold" className="text-sm font-medium">Alerta em % do SLA</Label>
+                  <Input
+                    id="warning_threshold"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={formData.sla_config?.warning_threshold || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      sla_config: { 
+                        ...prev.sla_config, 
+                        warning_threshold: parseInt(e.target.value) || 80 
+                      }
+                    }))}
+                    placeholder="80"
+                    className="h-9 sm:h-10"
+                  />
+                  <p className="text-xs text-muted-foreground">% do SLA para disparar alerta</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="sla_alerts_enabled"
+                    checked={formData.sla_config?.alerts_enabled || false}
+                    onCheckedChange={(checked) => setFormData(prev => ({
+                      ...prev,
+                      sla_config: { 
+                        ...prev.sla_config, 
+                        alerts_enabled: checked 
+                      }
+                    }))}
+                  />
+                  <Label htmlFor="sla_alerts_enabled" className="text-sm font-medium">Habilitar Alertas de SLA</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="auto_escalation"
+                    checked={formData.sla_config?.auto_escalation || false}
+                    onCheckedChange={(checked) => setFormData(prev => ({
+                      ...prev,
+                      sla_config: { 
+                        ...prev.sla_config, 
+                        auto_escalation: checked 
+                      }
+                    }))}
+                  />
+                  <Label htmlFor="auto_escalation" className="text-sm font-medium">Escalação Automática</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="business_hours_only"
+                    checked={formData.sla_config?.business_hours_only || false}
+                    onCheckedChange={(checked) => setFormData(prev => ({
+                      ...prev,
+                      sla_config: { 
+                        ...prev.sla_config, 
+                        business_hours_only: checked 
+                      }
+                    }))}
+                  />
+                  <Label htmlFor="business_hours_only" className="text-sm font-medium">Considerar Apenas Horário Comercial</Label>
+                </div>
               </div>
             </div>
 

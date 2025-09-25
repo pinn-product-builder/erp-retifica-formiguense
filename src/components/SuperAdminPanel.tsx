@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useSuperAdmin, useSuperAdminActions } from '@/hooks/useSuperAdmin';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { Building2, Users, Plus, Shield, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -30,6 +31,7 @@ export function SuperAdminPanel() {
   const { isSuperAdmin, loading } = useSuperAdmin();
   const { canCreateOrganizations, canViewAllOrganizations } = usePermissions();
   const { getAllOrganizations } = useSuperAdminActions();
+  const { createOrganization } = useOrganization();
   
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
@@ -62,8 +64,7 @@ export function SuperAdminPanel() {
     }
 
     try {
-      // Aqui você integraria com o contexto de organização
-      // const org = await createOrganization(newOrgName, newOrgDescription);
+      await createOrganization(newOrgName.trim(), newOrgDescription.trim() || undefined);
       toast.success('Organização criada com sucesso!');
       setNewOrgName('');
       setNewOrgDescription('');
@@ -196,10 +197,60 @@ export function SuperAdminPanel() {
       {/* Lista de Organizações */}
       <Card>
         <CardHeader>
-          <CardTitle>Organizações</CardTitle>
-          <CardDescription>
-            Todas as organizações cadastradas no sistema
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Organizações</CardTitle>
+              <CardDescription>
+                Todas as organizações cadastradas no sistema
+              </CardDescription>
+            </div>
+            {canCreateOrganizations() && (
+              <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nova Organização
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Criar Nova Organização</DialogTitle>
+                    <DialogDescription>
+                      Crie uma nova organização no sistema. Você será automaticamente adicionado como proprietário.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="org-name-main">Nome da Organização</Label>
+                      <Input
+                        id="org-name-main"
+                        value={newOrgName}
+                        onChange={(e) => setNewOrgName(e.target.value)}
+                        placeholder="Ex: Retífica ABC Ltda"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="org-description-main">Descrição (opcional)</Label>
+                      <Input
+                        id="org-description-main"
+                        value={newOrgDescription}
+                        onChange={(e) => setNewOrgDescription(e.target.value)}
+                        placeholder="Descrição da organização"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleCreateOrganization}>
+                      Criar Organização
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {loadingOrgs ? (

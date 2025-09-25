@@ -129,6 +129,66 @@ export const OrganizationSelector: React.FC = () => {
     );
   }
 
+  // Se há apenas uma organização, mostrar apenas o nome sem seletor
+  if (userOrganizations.length === 1) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 text-sm">
+          <Building2 className="h-4 w-4" />
+          {currentOrganization?.name || userOrganizations[0].name}
+        </div>
+        
+        {canCreateOrganizations() && (
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Criar Nova Organização</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="orgName">Nome da Organização</Label>
+                  <Input
+                    id="orgName"
+                    value={newOrgName}
+                    onChange={(e) => setNewOrgName(e.target.value)}
+                    placeholder="Nome da sua organização"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="orgDescription">Descrição (opcional)</Label>
+                  <Textarea
+                    id="orgDescription"
+                    value={newOrgDescription}
+                    onChange={(e) => setNewOrgDescription(e.target.value)}
+                    placeholder="Descreva sua organização"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCreateDialogOpen(false)}
+                    disabled={creating}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleCreateOrganization} disabled={creating}>
+                    {creating ? 'Criando...' : 'Criar'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2">
       <Select

@@ -1,4 +1,5 @@
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 
 export type AppRole = 'super_admin' | 'owner' | 'admin' | 'manager' | 'user' | 'viewer';
 export type PermissionLevel = 'none' | 'read' | 'write' | 'admin';
@@ -82,22 +83,31 @@ const PERMISSION_MATRIX: Record<AppRole, Record<ModuleName, PermissionLevel>> = 
 
 export const usePermissions = () => {
   const { userRole, currentOrganization } = useOrganization();
+  const { isSuperAdmin: isRealSuperAdmin } = useSuperAdmin();
 
   const currentRole = userRole as AppRole | null;
 
   // Verificações básicas de role
-  const isSuperAdmin = () => currentRole === 'super_admin';
+  const isSuperAdmin = () => isRealSuperAdmin || currentRole === 'super_admin';
   const isOwner = () => currentRole === 'owner';
-  const isAdmin = () => ['super_admin', 'owner', 'admin'].includes(currentRole || '');
-  const isManager = () => ['super_admin', 'owner', 'admin', 'manager'].includes(currentRole || '');
-  const canWrite = () => ['super_admin', 'owner', 'admin', 'manager', 'user'].includes(currentRole || '');
-  const canRead = () => Boolean(currentRole && (currentOrganization || isSuperAdmin()));
+  const isAdmin = () => isRealSuperAdmin || ['super_admin', 'owner', 'admin'].includes(currentRole || '');
+  const isManager = () => isRealSuperAdmin || ['super_admin', 'owner', 'admin', 'manager'].includes(currentRole || '');
+  const canWrite = () => isRealSuperAdmin || ['super_admin', 'owner', 'admin', 'manager', 'user'].includes(currentRole || '');
+  const canRead = () => Boolean(isRealSuperAdmin || (currentRole && (currentOrganization || isSuperAdmin())));
 
   // Verificação de permissão por módulo
   const hasModulePermission = (module: ModuleName, requiredLevel: PermissionLevel): boolean => {
-    if (!currentRole || (!currentOrganization && !isSuperAdmin())) return false;
+    if (!isRealSuperAdmin && (!currentRole || (!currentOrganization && !isSuperAdmin()))) return false;
 
-    const userPermission = PERMISSION_MATRIX[currentRole][module];
+    // Super admin sempre tem permissão admin em todos os módulos
+    if (isRealSuperAdmin) {
+      const permissionLevels = ['none', 'read', 'write', 'admin'];
+      const requiredLevelIndex = permissionLevels.indexOf(requiredLevel);
+      const adminLevelIndex = permissionLevels.indexOf('admin');
+      return adminLevelIndex >= requiredLevelIndex;
+    }
+
+    const userPermission = PERMISSION_MATRIX[currentRole!][module];
     
     // Hierarquia de permissões: admin > write > read > none
     const permissionLevels = ['none', 'read', 'write', 'admin'];
@@ -143,10 +153,13 @@ export const usePermissions = () => {
     module?: ModuleName;
     level?: PermissionLevel;
   }): boolean => {
-    if (!currentRole || !currentOrganization) return false;
+    if (!isRealSuperAdmin && (!currentRole || !currentOrganization)) return false;
+
+    // Super admin sempre tem acesso
+    if (isRealSuperAdmin) return true;
 
     // Verificar role se especificado
-    if (requirement.roles && !requirement.roles.includes(currentRole)) {
+    if (requirement.roles && !requirement.roles.includes(currentRole!)) {
       return false;
     }
 
@@ -162,7 +175,7 @@ export const usePermissions = () => {
     // Estado
     currentRole,
     currentOrganization,
-    isAuthenticated: Boolean(currentRole && currentOrganization),
+    isAuthenticated: Boolean(isRealSuperAdmin || (currentRole && currentOrganization)),
 
     // Verificações básicas
     isSuperAdmin,
@@ -196,11 +209,13 @@ export const usePermissions = () => {
 
     // Utilitários
     getModulePermission: (module: ModuleName) => {
+      if (isRealSuperAdmin) return 'admin';
       if (!currentRole) return 'none';
       return PERMISSION_MATRIX[currentRole][module];
     },
     
     getAllPermissions: () => {
+      if (isRealSuperAdmin) return PERMISSION_MATRIX['super_admin'];
       if (!currentRole) return null;
       return PERMISSION_MATRIX[currentRole];
     }

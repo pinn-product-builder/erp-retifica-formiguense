@@ -57,6 +57,13 @@ Na tela principal, você verá:
    - **Ordem de Exibição**: Posição no Kanban board
    - **Cor de Fundo**: Cor de fundo do status
    - **Cor do Texto**: Cor do texto do status
+   
+   **Configurações Avançadas de SLA:**
+   - **SLA Máximo**: Tempo máximo em horas antes de alertas
+   - **Alerta em % do SLA**: Percentual do SLA para disparar alerta (padrão: 80%)
+   - **Habilitar Alertas de SLA**: Ativar notificações automáticas
+   - **Escalação Automática**: Notificar supervisores automaticamente
+   - **Horário Comercial**: Considerar apenas horário comercial nos cálculos
 3. **Visualize** o preview das cores
 4. **Clique** em `Criar`
 
@@ -111,10 +118,12 @@ Na tela principal, você verá:
 - **Validação** de campos obrigatórios
 - **Feedback** com toasts de confirmação/erro
 
-### Aba "SLA & Tempo"
-- **Tempos estimados** de cada status
-- **Configurações** de SLA
-- **Alertas** de tempo
+### Configurações de SLA e Tempo (Integradas na Aba Status)
+- **Tempos estimados** configuráveis por status
+- **SLA máximo** com alertas automáticos
+- **Threshold de alerta** configurável (% do SLA)
+- **Escalação automática** para supervisores
+- **Horário comercial** para cálculos de SLA
 
 ### Aba "Auditoria"
 - **Histórico** de mudanças de status
@@ -126,15 +135,32 @@ Na tela principal, você verá:
 
 ### Status Básicos de Retífica
 
-| Chave | Nome | Tempo | Cor | Ordem |
-|-------|------|-------|-----|-------|
-| `entrada` | Entrada | 0.5h | Vermelho | 1 |
-| `metrologia` | Metrologia | 2h | Laranja | 2 |
-| `usinagem` | Usinagem | 8h | Amarelo | 3 |
-| `montagem` | Montagem | 4h | Verde | 4 |
-| `pronto` | Pronto | 1h | Azul | 5 |
-| `garantia` | Garantia | 0h | Roxo | 6 |
-| `entregue` | Entregue | 0h | Verde Escuro | 7 |
+| Chave | Nome | Tempo Est. | SLA Máx. | Alerta | Cor | Ordem |
+|-------|------|------------|----------|--------|-----|-------|
+| `entrada` | Entrada | 0.5h | 2h | 80% | Vermelho | 1 |
+| `metrologia` | Metrologia | 2h | 4h | 80% | Laranja | 2 |
+| `usinagem` | Usinagem | 8h | 12h | 75% | Amarelo | 3 |
+| `montagem` | Montagem | 4h | 6h | 80% | Verde | 4 |
+| `pronto` | Pronto | 1h | 2h | 90% | Azul | 5 |
+| `garantia` | Garantia | 0h | - | - | Roxo | 6 |
+| `entregue` | Entregue | 0h | - | - | Verde Escuro | 7 |
+
+### Configurações de SLA Recomendadas
+
+#### Tempos de SLA por Tipo de Processo
+- **Processos Rápidos** (Entrada, Pronto): SLA = 2-4x tempo estimado
+- **Processos Médios** (Metrologia, Montagem): SLA = 1.5-2x tempo estimado  
+- **Processos Longos** (Usinagem): SLA = 1.2-1.5x tempo estimado
+
+#### Thresholds de Alerta
+- **Processos Críticos**: 75% do SLA
+- **Processos Normais**: 80% do SLA
+- **Processos Flexíveis**: 90% do SLA
+
+#### Configurações de Escalação
+- **Automática**: Para processos críticos com SLA rígido
+- **Manual**: Para processos que requerem análise caso a caso
+- **Horário Comercial**: Ativar para cálculos mais precisos
 
 ### Cores Recomendadas
 
@@ -246,11 +272,21 @@ Para dúvidas ou problemas:
 
 ---
 
-**Versão**: 2.0  
+**Versão**: 2.1  
 **Última atualização**: Setembro 2024  
 **Autor**: Sistema ERP Retífica Formiguense
 
 ## Changelog
+
+### v2.1 (Setembro 2024)
+- ✅ **Remoção da aba "SLA & Tempo"** redundante
+- ✅ **Integração de configurações SLA** na aba Status
+- ✅ **Configurações avançadas de SLA** (máximo, threshold, alertas)
+- ✅ **Escalação automática** para supervisores
+- ✅ **Cálculos de horário comercial** para SLA
+- ✅ **Interface otimizada** com 3 abas (Status, Pré-requisitos, Auditoria)
+- ✅ **Badges informativos** para SLA e alertas na listagem
+- ✅ **Documentação atualizada** com exemplos de SLA
 
 ### v2.0 (Setembro 2024)
 - ✅ **CRUD completo** para pré-requisitos de workflow
