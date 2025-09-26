@@ -123,22 +123,6 @@ const Orcamentos = () => {
     setSelectedBudget(null);
   };
 
-  const handleNewBudget = () => {
-    if (!currentOrganization) {
-      toast({
-        title: "Erro",
-        description: "Selecione uma organização para criar um orçamento",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    toast({
-      title: "Funcionalidade em desenvolvimento",
-      description: "A criação de novos orçamentos será implementada em breve"
-    });
-  };
-
   const handleGenerateReport = () => {
     if (!currentOrganization) {
       toast({
@@ -151,7 +135,7 @@ const Orcamentos = () => {
     
     toast({
       title: "Funcionalidade em desenvolvimento",
-      description: "A geração de relatórios será implementada em breve"
+      description: "Relatório de orçamentos e aprovações será implementado em breve"
     });
   };
 
@@ -165,26 +149,18 @@ const Orcamentos = () => {
         <div>
           <h1 className="text-3xl font-bold">Orçamentos</h1>
           <p className="text-muted-foreground">
-            Gerencie orçamentos de serviços e acompanhe aprovações
+            Acompanhe e processe aprovações de orçamentos gerados automaticamente
           </p>
         </div>
         
         <div className="flex gap-2">
           <Button 
             variant="outline"
-            onClick={handleNewBudget}
-            disabled={isPageLoading}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Orçamento
-          </Button>
-          <Button 
-            variant="outline"
             onClick={handleGenerateReport}
             disabled={isPageLoading}
           >
             <Download className="w-4 h-4 mr-2" />
-            Relatório
+            Relatório de Orçamentos
           </Button>
         </div>
       </div>
