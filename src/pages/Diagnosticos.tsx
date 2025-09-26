@@ -42,6 +42,7 @@ import {
 import { StatCard } from "@/components/StatCard";
 import DiagnosticInterface from "@/components/operations/DiagnosticInterface";
 import DiagnosticTestSuite from "@/components/operations/DiagnosticTestSuite";
+import DiagnosticChecklistsConfig from "@/components/operations/DiagnosticChecklistsConfig";
 import { useDiagnosticChecklists } from "@/hooks/useDiagnosticChecklists";
 import { useOrders } from "@/hooks/useOrders";
 import { useToast } from "@/hooks/use-toast";
@@ -79,6 +80,7 @@ const Diagnosticos = () => {
   const [selectedOrder, setSelectedOrder] = useState<string>("none");
   const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
   const [showTestSuite, setShowTestSuite] = useState(false);
+  const [showChecklistsConfig, setShowChecklistsConfig] = useState(false);
 
   const checklistsFunctions = useDiagnosticChecklists();
   const ordersData = useOrders();
@@ -235,6 +237,14 @@ const Diagnosticos = () => {
             <AlertCircle className="w-4 h-4 mr-2" />
             {showTestSuite ? 'Ocultar' : 'Mostrar'} Testes
           </Button>
+          
+          <Button
+            variant="outline"
+            onClick={() => setShowChecklistsConfig(!showChecklistsConfig)}
+          >
+            <ClipboardList className="w-4 h-4 mr-2" />
+            {showChecklistsConfig ? 'Ocultar' : 'Configurar'} Checklists
+          </Button>
         </div>
         
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -291,6 +301,21 @@ const Diagnosticos = () => {
       {/* Test Suite */}
       {showTestSuite && (
         <DiagnosticTestSuite />
+      )}
+
+      {/* Checklists Configuration */}
+      {showChecklistsConfig && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Configuração de Checklists</CardTitle>
+            <CardDescription>
+              Configure e gerencie os checklists de diagnóstico para cada tipo de motor e componente
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DiagnosticChecklistsConfig />
+          </CardContent>
+        </Card>
       )}
 
       {/* Stats Cards */}
