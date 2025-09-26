@@ -7,11 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, User, Shield, Database, Bell, Mail, Cog, Wrench } from "lucide-react";
+import { Settings, User, Shield, Database, Bell, Mail, Cog, Wrench, ClipboardList } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import SystemConfigAdmin from "@/components/admin/SystemConfigAdmin";
 import { EngineTypesConfig } from "@/components/operations/EngineTypesConfig";
 import { WorkflowStatusConfigAdmin } from "@/components/admin/WorkflowStatusConfigAdmin";
+import DiagnosticChecklistsConfig from "@/components/operations/DiagnosticChecklistsConfig";
 import { Badge } from '@/components/ui/badge';
 
 const Configuracoes = () => {
@@ -51,7 +52,7 @@ const Configuracoes = () => {
 
       <Tabs defaultValue="geral" className="w-full">
         {/* Tabs responsivas */}
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 h-auto">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 h-auto">
           <TabsTrigger value="geral" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
             <Settings className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             <span className="hidden sm:inline">Geral</span>
@@ -59,6 +60,10 @@ const Configuracoes = () => {
           <TabsTrigger value="tipos-motor" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
             <Wrench className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             <span className="hidden sm:inline">Motores</span>
+          </TabsTrigger>
+          <TabsTrigger value="checklists" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+            <ClipboardList className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Checklists</span>
           </TabsTrigger>
           <TabsTrigger value="workflow" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
             <Cog className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -155,6 +160,10 @@ const Configuracoes = () => {
 
         <TabsContent value="tipos-motor" className="space-y-4 sm:space-y-6">
           <EngineTypesConfig />
+        </TabsContent>
+
+        <TabsContent value="checklists" className="space-y-4 sm:space-y-6">
+          <DiagnosticChecklistsConfig />
         </TabsContent>
 
         <TabsContent value="notificacoes" className="space-y-4 sm:space-y-6">

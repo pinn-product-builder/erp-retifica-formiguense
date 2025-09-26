@@ -24,7 +24,8 @@ import {
   ShoppingCart,
   Clock,
   Wrench,
-  Shield
+  Shield,
+  ClipboardList
 } from "lucide-react";
 
 import {
@@ -93,6 +94,11 @@ const operationsItems = [
     title: "Orçamentos",
     url: "/orcamentos",
     icon: DollarSign,
+  },
+  {
+    title: "Diagnósticos",
+    url: "/diagnosticos",
+    icon: ClipboardList,
   },
 ];
 
