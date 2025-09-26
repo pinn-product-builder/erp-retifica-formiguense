@@ -123,6 +123,11 @@ export function useWorkflowStatusConfig() {
         throw error;
       }
 
+      toast({
+        title: "Sucesso",
+        description: "Configuração de status criada com sucesso",
+      });
+
       fetchWorkflowStatuses();
       return true;
     } catch (error) {
@@ -144,6 +149,11 @@ export function useWorkflowStatusConfig() {
         .eq('id', statusId);
 
       if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Configuração de status atualizada com sucesso",
+      });
 
       fetchWorkflowStatuses();
       return true;
