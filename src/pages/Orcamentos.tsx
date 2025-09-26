@@ -48,6 +48,7 @@ import { useQuery } from "@tanstack/react-query";
 import BudgetApprovalModal from "@/components/budgets/BudgetApprovalModal";
 import BudgetDetails from "@/components/budgets/BudgetDetails";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 const Orcamentos = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,15 +60,16 @@ const Orcamentos = () => {
   
   const { getDetailedBudgets, duplicateBudget, loading } = useDetailedBudgets();
   const { toast } = useToast();
+  const { currentOrganization } = useOrganization();
 
   // Buscar orçamentos detalhados
-  const { data: budgets = [], refetch } = useQuery({
+  const { data: budgets = [], refetch, isLoading: queryLoading } = useQuery({
     queryKey: ['detailed-budgets', statusFilter, componentFilter],
     queryFn: () => getDetailedBudgets({
       status: statusFilter === 'todos' ? undefined : statusFilter,
       component: componentFilter === 'todos' ? undefined : componentFilter
     }),
-    enabled: true
+    enabled: !!currentOrganization?.id
   });
 
   const filteredBudgets = budgets.filter(budget => {
@@ -121,6 +123,41 @@ const Orcamentos = () => {
     setSelectedBudget(null);
   };
 
+  const handleNewBudget = () => {
+    if (!currentOrganization) {
+      toast({
+        title: "Erro",
+        description: "Selecione uma organização para criar um orçamento",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    toast({
+      title: "Funcionalidade em desenvolvimento",
+      description: "A criação de novos orçamentos será implementada em breve"
+    });
+  };
+
+  const handleGenerateReport = () => {
+    if (!currentOrganization) {
+      toast({
+        title: "Erro", 
+        description: "Selecione uma organização para gerar relatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    toast({
+      title: "Funcionalidade em desenvolvimento",
+      description: "A geração de relatórios será implementada em breve"
+    });
+  };
+
+  // Estado de carregamento combinado
+  const isPageLoading = loading || queryLoading || !currentOrganization;
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -133,11 +170,19 @@ const Orcamentos = () => {
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button 
+            variant="outline"
+            onClick={handleNewBudget}
+            disabled={isPageLoading}
+          >
             <Plus className="w-4 h-4 mr-2" />
             Novo Orçamento
           </Button>
-          <Button variant="outline">
+          <Button 
+            variant="outline"
+            onClick={handleGenerateReport}
+            disabled={isPageLoading}
+          >
             <Download className="w-4 h-4 mr-2" />
             Relatório
           </Button>
