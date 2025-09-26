@@ -35,7 +35,7 @@ import {
   X,
   Calculator
 } from "lucide-react";
-import { useDiagnosticChecklists, useDiagnosticChecklistMutations } from "@/hooks/useDiagnosticChecklists";
+import { useDiagnosticChecklists, useDiagnosticChecklistsQuery, useDiagnosticChecklistMutations } from "@/hooks/useDiagnosticChecklists";
 import { useEngineTypes } from "@/hooks/useEngineTypes";
 import { useOrders } from "@/hooks/useOrders";
 import { useToast } from "@/hooks/use-toast";
@@ -68,9 +68,9 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
-  const { data: engineTypes } = useEngineTypes();
-  const { data: checklists } = useDiagnosticChecklists(selectedEngineType, selectedComponent);
-  const { data: orders } = useOrders();
+  const { engineTypes } = useEngineTypes();
+  const { data: checklists } = useDiagnosticChecklistsQuery(selectedEngineType, selectedComponent);
+  const { orders } = useOrders();
   const mutations = useDiagnosticChecklistMutations();
 
   const componentOptions = [
@@ -226,7 +226,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
       // Store diagnostic response for budget creation
       setDiagnosticResponse({
         ...response,
-        generated_services,
+        generated_services: generatedServices,
         component: selectedChecklist.component,
         checklist: selectedChecklist,
         diagnosed_at: new Date().toISOString()

@@ -14,7 +14,7 @@ import {
   Calculator,
   FileText
 } from "lucide-react";
-import { useDiagnosticChecklists } from "@/hooks/useDiagnosticChecklists";
+import { useDiagnosticChecklists, useDiagnosticChecklistMutations } from "@/hooks/useDiagnosticChecklists";
 import { useBudgets } from "@/hooks/useBudgets";
 import { useEngineTypes } from "@/hooks/useEngineTypes";
 import { useOrders } from "@/hooks/useOrders";
@@ -30,10 +30,11 @@ interface TestResult {
 
 const DiagnosticTestSuite = () => {
   const { toast } = useToast();
-  const { getDiagnosticChecklists, createDiagnosticChecklist, createDiagnosticChecklistItem } = useDiagnosticChecklists();
+  const checklist_functions = useDiagnosticChecklists();
+  const mutations = useDiagnosticChecklistMutations();
   const { getServicePrices, getPartsPrices, calculateBudgetFromServices } = useBudgets();
-  const { getEngineTypes } = useEngineTypes();
-  const { getOrders } = useOrders();
+  const { engineTypes } = useEngineTypes();
+  const { orders } = useOrders();
 
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -52,7 +53,7 @@ const DiagnosticTestSuite = () => {
       name: 'CRUD de Checklists',
       test: async () => {
         // Test create checklist
-        const testChecklist = await createDiagnosticChecklist({
+        const testChecklist = await mutations.createChecklist.mutateAsync({
           name: 'Teste Checklist',
           description: 'Checklist para testes',
           component: 'bloco',
@@ -62,7 +63,7 @@ const DiagnosticTestSuite = () => {
         if (!testChecklist) return false;
 
         // Test create checklist item
-        const testItem = await createDiagnosticChecklistItem({
+        const testItem = await mutations.createItem.mutateAsync({
           checklist_id: testChecklist.id,
           item_name: 'Item de Teste',
           item_description: 'Descrição do item',
@@ -103,7 +104,7 @@ const DiagnosticTestSuite = () => {
       id: 'checklist_validation',
       name: 'Validação de Checklist',
       test: async () => {
-        const checklists = await getDiagnosticChecklists();
+        const checklists = await checklist_functions.getChecklists();
         return checklists && checklists.length > 0;
       }
     },

@@ -75,10 +75,10 @@ const DiagnosticChecklistsConfig = () => {
   const [selectedChecklist, setSelectedChecklist] = useState<any>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  const { data: engineTypes } = useEngineTypes();
+  const { engineTypes } = useEngineTypes();
   const { data: checklists, isLoading } = useDiagnosticChecklistsQuery(
-    selectedEngineType || undefined,
-    selectedComponent || undefined
+    selectedEngineType === 'all' ? undefined : selectedEngineType,
+    selectedComponent === 'all' ? undefined : selectedComponent
   );
 
   const mutations = useDiagnosticChecklistMutations();
@@ -129,7 +129,11 @@ const DiagnosticChecklistsConfig = () => {
     }
 
     try {
-      await mutations.createChecklist.mutateAsync(checklistForm);
+      await mutations.createChecklist.mutateAsync({
+        ...checklistForm,
+        org_id: '', // Será setado automaticamente pelo hook
+        version: 1
+      });
       setIsCreateDialogOpen(false);
       setChecklistForm({
         name: '',

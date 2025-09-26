@@ -248,6 +248,7 @@ const BudgetFromDiagnostic = ({
 
       // Preparar dados do orçamento
       const budgetData = {
+        description: `Orçamento baseado em diagnóstico: ${diagnosticResponse.checklist?.name || 'Diagnóstico'}`,
         order_id: orderId,
         component: diagnosticResponse.component,
         labor_hours: calculatedBudget.labor_hours,
@@ -260,7 +261,7 @@ const BudgetFromDiagnostic = ({
         total_amount: calculatedBudget.total_amount,
         estimated_delivery_days: 7,
         warranty_months: 3,
-        status: 'draft' as const,
+        status: 'pendente' as const,
         notes: budgetNotes,
         // Campos JSON para armazenar detalhes
         services_detail: JSON.stringify(calculatedBudget.services),

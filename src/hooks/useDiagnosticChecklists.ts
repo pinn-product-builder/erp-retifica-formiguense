@@ -331,7 +331,6 @@ export function useDiagnosticChecklists() {
           *,
           checklist:diagnostic_checklists(*)
         `)
-        .eq('org_id', currentOrganization?.id)
         .order('diagnosed_at', { ascending: false });
 
       if (orderId) {
