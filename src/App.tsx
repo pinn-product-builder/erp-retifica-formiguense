@@ -5,6 +5,7 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/hooks/useAuth';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
+import { ConfirmDialogProvider } from '@/hooks/useConfirmDialog';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { AdminRoute } from '@/components/auth/ProtectedRoute';
 import { ProfileProtectedRoute } from '@/components/auth/ProfileProtectedRoute';
@@ -103,7 +104,9 @@ function App() {
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <AuthProvider>
           <OrganizationProvider>
-            <AppContent />
+            <ConfirmDialogProvider>
+              <AppContent />
+            </ConfirmDialogProvider>
           </OrganizationProvider>
         </AuthProvider>
         <Toaster />

@@ -113,7 +113,15 @@ export const StatusConfigAdmin = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta configuração de status?')) return;
+    const confirmed = await confirm({
+      title: 'Confirmar exclusão',
+      description: 'Tem certeza que deseja excluir esta configuração de status?',
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive'
+    });
+    
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase

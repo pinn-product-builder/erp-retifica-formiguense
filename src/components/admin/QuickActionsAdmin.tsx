@@ -12,6 +12,7 @@ import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { toast } from '@/hooks/use-toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 interface QuickAction {
   id: string;
@@ -29,6 +30,7 @@ interface QuickAction {
 
 export const QuickActionsAdmin = () => {
   const { currentOrganization } = useOrganization();
+  const { confirm } = useConfirmDialog();
   const [actions, setActions] = useState<QuickAction[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingAction, setEditingAction] = useState<QuickAction | null>(null);
@@ -117,7 +119,15 @@ export const QuickActionsAdmin = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta ação rápida?')) return;
+    const confirmed = await confirm({
+      title: 'Confirmar exclusão',
+      description: 'Tem certeza que deseja excluir esta ação rápida?',
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive'
+    });
+    
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase

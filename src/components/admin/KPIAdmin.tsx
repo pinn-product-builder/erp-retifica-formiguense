@@ -14,6 +14,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { toast } from '@/hooks/use-toast';
 import { AdminOnly } from '@/components/auth/PermissionGate';
 import { useAdminGuard } from '@/hooks/useRoleGuard';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 interface KPI {
   id: string;
@@ -36,6 +37,7 @@ export const KPIAdmin = () => {
   });
 
   const { currentOrganization } = useOrganization();
+  const { confirm } = useConfirmDialog();
   const [kpis, setKpis] = useState<KPI[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingKPI, setEditingKPI] = useState<KPI | null>(null);
@@ -130,7 +132,15 @@ export const KPIAdmin = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este KPI?')) return;
+    const confirmed = await confirm({
+      title: 'Confirmar exclusão',
+      description: 'Tem certeza que deseja excluir este KPI?',
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive'
+    });
+    
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase

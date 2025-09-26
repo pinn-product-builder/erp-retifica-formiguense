@@ -12,6 +12,7 @@ import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { toast } from '@/hooks/use-toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 interface SearchSource {
   id: string;
@@ -29,6 +30,7 @@ interface SearchSource {
 
 export const SearchSourcesAdmin = () => {
   const { currentOrganization } = useOrganization();
+  const { confirm } = useConfirmDialog();
   const [sources, setSources] = useState<SearchSource[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingSource, setEditingSource] = useState<SearchSource | null>(null);
@@ -127,7 +129,15 @@ export const SearchSourcesAdmin = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta fonte de busca?')) return;
+    const confirmed = await confirm({
+      title: 'Confirmar exclusão',
+      description: 'Tem certeza que deseja excluir esta fonte de busca?',
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive'
+    });
+    
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase
