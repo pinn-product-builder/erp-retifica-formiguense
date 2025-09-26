@@ -11,6 +11,7 @@ import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { toast } from '@/hooks/use-toast';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 interface StatusConfig {
   id: string;
@@ -26,6 +27,7 @@ interface StatusConfig {
 
 export const StatusConfigAdmin = () => {
   const { currentOrganization } = useOrganization();
+  const { confirm } = useConfirmDialog();
   const [configs, setConfigs] = useState<StatusConfig[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingConfig, setEditingConfig] = useState<StatusConfig | null>(null);
