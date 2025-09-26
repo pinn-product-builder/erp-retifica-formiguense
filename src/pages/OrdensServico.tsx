@@ -6,11 +6,13 @@ import { OrdersList } from '@/components/orders/OrdersList';
 import { OrderDetails } from '@/components/orders/OrderDetails';
 import { Order, useOrders } from '@/hooks/useOrders';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useNavigate } from 'react-router-dom';
 
 type ViewMode = 'list' | 'details';
 
 export default function OrdensServico() {
   const { orders, loading } = useOrders();
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
@@ -22,6 +24,10 @@ export default function OrdensServico() {
   const handleBackToList = () => {
     setViewMode('list');
     setSelectedOrderId(null);
+  };
+
+  const handleCreateNewOrder = () => {
+    navigate('/checkin');
   };
 
   const totalOrders = orders.length;
@@ -59,7 +65,7 @@ export default function OrdensServico() {
             Relatórios
           </Button>
           
-          <Button>
+          <Button onClick={handleCreateNewOrder}>
             <Plus className="h-4 w-4 mr-2" />
             Nova OS
           </Button>

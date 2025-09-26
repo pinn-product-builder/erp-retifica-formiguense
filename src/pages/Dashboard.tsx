@@ -83,14 +83,8 @@ export default function Dashboard() {
       return configuredVariant as "default" | "secondary" | "destructive" | "outline";
     }
     
-    // Fallback to hardcoded variants
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      "ativa": "default",
-      "em_andamento": "secondary",
-      "concluida": "secondary",
-      "cancelada": "destructive"
-    };
-    return variants[status] || "default";
+    // Use default variant if no configuration found
+    return "default";
   };
 
   const getPriorityBadge = (priority: string) => {
@@ -99,13 +93,8 @@ export default function Dashboard() {
       return configuredVariant as "default" | "secondary" | "destructive" | "outline";
     }
     
-    // Fallback to hardcoded variants
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      "alta": "destructive",
-      "media": "default",
-      "baixa": "secondary"
-    };
-    return variants[priority] || "default";
+    // Use default variant if no configuration found
+    return "default";
   };
 
   const getStatsGridCols = () => {

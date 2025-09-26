@@ -16,42 +16,8 @@ const Funcionarios = () => {
   const [filterStatus, setFilterStatus] = useState('todos');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Dados de exemplo para funcionários
-  const funcionarios = [
-    {
-      id: 1,
-      nome: "João Silva",
-      cargo: "Mecânico Senior",
-      setor: "Bloco",
-      status: "ativo",
-      horasTrabalhadas: 168,
-      metaHoras: 176,
-      telefone: "(11) 99999-1111",
-      email: "joao@retifica.com"
-    },
-    {
-      id: 2,
-      nome: "Maria Santos",
-      cargo: "Técnica em Motores",
-      setor: "Cabeçote", 
-      status: "ativo",
-      horasTrabalhadas: 172,
-      metaHoras: 176,
-      telefone: "(11) 99999-2222",
-      email: "maria@retifica.com"
-    },
-    {
-      id: 3,
-      nome: "Pedro Costa",
-      cargo: "Auxiliar",
-      setor: "Biela",
-      status: "inativo",
-      horasTrabalhadas: 0,
-      metaHoras: 176,
-      telefone: "(11) 99999-3333",
-      email: "pedro@retifica.com"
-    }
-  ];
+  // TODO: Implementar carregamento de dados reais do Supabase
+  const funcionarios: any[] = [];
 
   const funcionariosFiltrados = funcionarios.filter(funcionario => {
     const matchesSearch = funcionario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||

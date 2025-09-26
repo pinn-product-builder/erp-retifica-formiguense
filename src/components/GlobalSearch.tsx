@@ -24,37 +24,8 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
 
-  // Mock search data
-  const searchData: SearchResult[] = [
-    {
-      id: '1',
-      title: 'João Silva',
-      description: 'Funcionário - Mecânico Senior',
-      category: 'funcionarios',
-      url: '/funcionarios'
-    },
-    {
-      id: '2',
-      title: 'Maria Santos',
-      description: 'Cliente - Última visita: 15/01/2024',
-      category: 'clientes',
-      url: '/clientes'
-    },
-    {
-      id: '3',
-      title: 'Pistão Motor VW',
-      description: 'Estoque: 15 unidades - R$ 245,00',
-      category: 'estoque',
-      url: '/estoque'
-    },
-    {
-      id: '4',
-      title: 'RF-2024-001',
-      description: 'Orçamento - Aguardando aprovação',
-      category: 'orcamentos',
-      url: '/orcamentos'
-    }
-  ];
+  // TODO: Implementar busca real no Supabase
+  const searchData: SearchResult[] = [];
 
   const categoryIcons = {
     funcionarios: Users,

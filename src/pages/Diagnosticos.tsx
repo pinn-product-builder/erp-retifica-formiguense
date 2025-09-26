@@ -41,7 +41,6 @@ import {
 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import DiagnosticInterface from "@/components/operations/DiagnosticInterface";
-import DiagnosticTestSuite from "@/components/operations/DiagnosticTestSuite";
 import DiagnosticChecklistsConfig from "@/components/operations/DiagnosticChecklistsConfig";
 import { useDiagnosticChecklists } from "@/hooks/useDiagnosticChecklists";
 import { useOrders } from "@/hooks/useOrders";
@@ -79,63 +78,14 @@ const Diagnosticos = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<string>("none");
   const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
-  const [showTestSuite, setShowTestSuite] = useState(false);
   const [showChecklistsConfig, setShowChecklistsConfig] = useState(false);
 
   const checklistsFunctions = useDiagnosticChecklists();
   const ordersData = useOrders();
 
-  // Mock data - será substituído por dados reais do Supabase
-  const mockResponses: DiagnosticResponse[] = [
-    {
-      id: "1",
-      order_id: "order-1",
-      checklist_id: "checklist-1",
-      component: "bloco",
-      status: "completed",
-      diagnosed_at: "2024-01-15T10:00:00Z",
-      diagnosed_by: "João Silva",
-      order: {
-        order_number: "RF-2024-0001",
-        customer: {
-          name: "Maria Santos"
-        },
-        engine: {
-          type: "Motor 1.6",
-          brand: "Volkswagen",
-          model: "Golf"
-        }
-      },
-      checklist: {
-        name: "Checklist Bloco Motor 1.6"
-      }
-    },
-    {
-      id: "2",
-      order_id: "order-2",
-      checklist_id: "checklist-2",
-      component: "cabecote",
-      status: "pending",
-      diagnosed_at: "2024-01-14T14:30:00Z",
-      diagnosed_by: "Pedro Costa",
-      order: {
-        order_number: "RF-2024-0002",
-        customer: {
-          name: "Carlos Oliveira"
-        },
-        engine: {
-          type: "Motor 2.0",
-          brand: "Ford",
-          model: "Focus"
-        }
-      },
-      checklist: {
-        name: "Checklist Cabeçote Motor 2.0"
-      }
-    }
-  ];
 
-  const diagnosticResponses = mockResponses;
+  // TODO: Implementar carregamento de dados reais do Supabase
+  const diagnosticResponses: DiagnosticResponse[] = [];
 
   const filteredResponses = diagnosticResponses.filter(response => {
     const matchesSearch = response.order?.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -230,13 +180,6 @@ const Diagnosticos = () => {
             </DialogTrigger>
           </Dialog>
           
-          <Button
-            variant="outline"
-            onClick={() => setShowTestSuite(!showTestSuite)}
-          >
-            <AlertCircle className="w-4 h-4 mr-2" />
-            {showTestSuite ? 'Ocultar' : 'Mostrar'} Testes
-          </Button>
           
           <Button
             variant="outline"
@@ -298,10 +241,6 @@ const Diagnosticos = () => {
         </Dialog>
       </div>
 
-      {/* Test Suite */}
-      {showTestSuite && (
-        <DiagnosticTestSuite />
-      )}
 
       {/* Checklists Configuration */}
       {showChecklistsConfig && (

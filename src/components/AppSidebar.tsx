@@ -66,24 +66,10 @@ const dashboardItems = [
 // Operações & Serviços
 const operationsItems = [
   {
-    title: "Coleta de Motor",
-    url: "/coleta",
-    icon: Truck,
-  },
-  {
-    title: "Check-in Técnico",
-    url: "/checkin",
-    icon: ClipboardCheck,
-  },
-  {
-    title: "Workflow Kanban",
-    url: "/workflow",
+    title: "Central de Operações",
+    url: "/operations-center",
     icon: Kanban,
-  },
-  {
-    title: "PCP - Produção",
-    url: "/pcp",
-    icon: Calendar,
+    description: "Interface unificada para todo o fluxo operacional"
   },
   {
     title: "Ordens de Serviço",
@@ -99,6 +85,11 @@ const operationsItems = [
     title: "Diagnósticos",
     url: "/diagnosticos",
     icon: ClipboardList,
+  },
+  {
+    title: "PCP - Produção",
+    url: "/pcp",
+    icon: Calendar,
   },
 ];
 
@@ -137,6 +128,11 @@ const inventoryItems = [
     title: "Compras",
     url: "/compras",
     icon: ShoppingCart,
+  },
+  {
+    title: "Gestão de Materiais",
+    url: "/gestao-materiais",
+    icon: Package,
   },
 ];
 

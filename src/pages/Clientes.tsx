@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,78 +10,55 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Building2, UserPlus, Search, Filter, Phone } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const Clientes = () => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('todos');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [clientes, setClientes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Dados de exemplo para clientes
-  const clientes = [
-    {
-      id: 1,
-      nome: "João da Silva",
-      tipo: "direto",
-      documento: "123.456.789-00",
-      telefone: "(11) 99999-7777",
-      email: "joao@email.com",
-      endereco: "Rua A, 123 - São Paulo/SP",
-      servicos: 5,
-      ultimoServico: "2024-01-15"
-    },
-    {
-      id: 2,
-      nome: "Oficina do Pedro",
-      tipo: "oficina",
-      documento: "12.345.678/0001-90",
-      telefone: "(11) 99999-8888",
-      email: "contato@oficinapedro.com",
-      endereco: "Av. B, 456 - Santos/SP",
-      servicos: 12,
-      ultimoServico: "2024-01-18",
-      nomeOficina: "Oficina do Pedro",
-      cnpjOficina: "12.345.678/0001-90",
-      contatoOficina: "Pedro Santos"
-    },
-    {
-      id: 3,
-      nome: "Maria Costa",
-      tipo: "direto",
-      documento: "987.654.321-00",
-      telefone: "(11) 99999-9999",
-      email: "maria@email.com",
-      endereco: "Rua C, 789 - Campinas/SP",
-      servicos: 2,
-      ultimoServico: "2024-01-10"
-    },
-    {
-      id: 4,
-      nome: "AutoCenter Central",
-      tipo: "oficina",
-      documento: "98.765.432/0001-10",
-      telefone: "(11) 99999-0000",
-      email: "vendas@autocentral.com",
-      endereco: "Rod. D, 1000 - Guarulhos/SP",
-      servicos: 8,
-      ultimoServico: "2024-01-20",
-      nomeOficina: "AutoCenter Central",
-      cnpjOficina: "98.765.432/0001-10",
-      contatoOficina: "Ana Pereira"
+  useEffect(() => {
+    loadClientes();
+  }, []);
+
+  const loadClientes = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setClientes(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar clientes:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os clientes",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const clientesFiltrados = clientes.filter(cliente => {
-    const matchesSearch = cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         cliente.documento.includes(searchTerm) ||
-                         cliente.telefone.includes(searchTerm);
-    const matchesType = filterType === 'todos' || cliente.tipo === filterType;
+    const matchesSearch = cliente.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         cliente.document?.includes(searchTerm) ||
+                         cliente.phone?.includes(searchTerm);
+    const matchesType = filterType === 'todos' || cliente.type === filterType;
     return matchesSearch && matchesType;
   });
 
   const totalClientes = clientes.length;
-  const clientesDiretos = clientes.filter(c => c.tipo === 'direto').length;
-  const oficinas = clientes.filter(c => c.tipo === 'oficina').length;
-  const totalServicos = clientes.reduce((sum, c) => sum + c.servicos, 0);
+  const clientesDiretos = clientes.filter(c => c.type === 'direto').length;
+  const oficinas = clientes.filter(c => c.type === 'oficina').length;
+  const totalServicos = 0; // TODO: Implementar contagem de serviços por cliente
 
   return (
     <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -227,34 +204,34 @@ const Clientes = () => {
                 <TableRow key={cliente.id}>
                   <TableCell className="min-w-[150px]">
                     <div>
-                      <div className="font-medium truncate">{cliente.nome}</div>
-                      {cliente.tipo === 'oficina' && cliente.contatoOficina && (
+                      <div className="font-medium truncate">{cliente.name}</div>
+                      {cliente.type === 'oficina' && cliente.workshop_contact && (
                         <div className="text-sm text-muted-foreground truncate">
-                          Contato: {cliente.contatoOficina}
+                          Contato: {cliente.workshop_contact}
                         </div>
                       )}
                     </div>
                   </TableCell>
                   <TableCell className="min-w-[100px]">
-                    <Badge variant={cliente.tipo === 'direto' ? 'default' : 'secondary'}>
-                      {cliente.tipo === 'direto' ? 'Direto' : 'Oficina'}
+                    <Badge variant={cliente.type === 'direto' ? 'default' : 'secondary'}>
+                      {cliente.type === 'direto' ? 'Direto' : 'Oficina'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-sm min-w-[140px]">{cliente.documento}</TableCell>
+                  <TableCell className="font-mono text-sm min-w-[140px]">{cliente.document}</TableCell>
                   <TableCell className="min-w-[160px]">
                     <div className="text-sm">
-                      <div className="truncate">{cliente.telefone}</div>
+                      <div className="truncate">{cliente.phone}</div>
                       <div className="text-muted-foreground truncate">{cliente.email}</div>
                     </div>
                   </TableCell>
                   <TableCell className="min-w-[100px]">
                     <Badge variant="outline">
-                      {cliente.servicos} serviços
+                      0 serviços
                     </Badge>
                   </TableCell>
                   <TableCell className="min-w-[110px]">
                     <div className="text-sm">
-                      {new Date(cliente.ultimoServico).toLocaleDateString('pt-BR')}
+                      {cliente.created_at ? new Date(cliente.created_at).toLocaleDateString('pt-BR') : '-'}
                     </div>
                   </TableCell>
                   <TableCell className="min-w-[140px]">

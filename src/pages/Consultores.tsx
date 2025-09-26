@@ -16,42 +16,8 @@ const Consultores = () => {
   const [filterStatus, setFilterStatus] = useState('todos');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Dados de exemplo para consultores
-  const consultores = [
-    {
-      id: 1,
-      nome: "Carlos Vendas",
-      email: "carlos@retifica.com",
-      telefone: "(11) 99999-4444",
-      status: "ativo",
-      vendas: 25,
-      meta: 30,
-      comissao: 0.05,
-      valorVendido: 15750.00
-    },
-    {
-      id: 2,
-      nome: "Ana Comercial",
-      email: "ana@retifica.com", 
-      telefone: "(11) 99999-5555",
-      status: "ativo",
-      vendas: 32,
-      meta: 30,
-      comissao: 0.06,
-      valorVendido: 22100.00
-    },
-    {
-      id: 3,
-      nome: "Roberto Silva",
-      email: "roberto@retifica.com",
-      telefone: "(11) 99999-6666", 
-      status: "inativo",
-      vendas: 0,
-      meta: 30,
-      comissao: 0.04,
-      valorVendido: 0
-    }
-  ];
+  // TODO: Implementar carregamento de dados reais do Supabase
+  const consultores: any[] = [];
 
   const consultoresFiltrados = consultores.filter(consultor => {
     const matchesSearch = consultor.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||

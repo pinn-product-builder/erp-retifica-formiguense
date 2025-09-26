@@ -42,6 +42,10 @@ const GestaoFuncionarios = lazy(() => import('@/pages/GestaoFuncionarios'));
 const GestaoUsuarios = lazy(() => import('@/pages/GestaoUsuarios'));
 const GestaoPerfiUsuarios = lazy(() => import('@/pages/GestaoPerfisusuarios'));
 const SuperAdmin = lazy(() => import('@/pages/SuperAdmin'));
+const GestaoMateriais = lazy(() => import('@/pages/GestaoMateriais'));
+const ControleQualidade = lazy(() => import('@/pages/ControleQualidade'));
+const GestaoGarantias = lazy(() => import('@/pages/GestaoGarantias'));
+const OperationsCenter = lazy(() => import('@/pages/OperationsCenter'));
 
 const queryClient = new QueryClient();
 
@@ -87,6 +91,10 @@ function AppContent() {
             <Route path="/fluxo-caixa" element={<ProfileProtectedRoute><Layout><FluxoCaixa /></Layout></ProfileProtectedRoute>} />
             <Route path="/dre" element={<ProfileProtectedRoute><Layout><DRE /></Layout></ProfileProtectedRoute>} />
             <Route path="/modulo-fiscal" element={<ProfileProtectedRoute><Layout><ModuloFiscal /></Layout></ProfileProtectedRoute>} />
+            <Route path="/gestao-materiais" element={<ProfileProtectedRoute><Layout><GestaoMateriais /></Layout></ProfileProtectedRoute>} />
+            <Route path="/controle-qualidade" element={<ProfileProtectedRoute><Layout><ControleQualidade /></Layout></ProfileProtectedRoute>} />
+            <Route path="/gestao-garantias" element={<ProfileProtectedRoute><Layout><GestaoGarantias /></Layout></ProfileProtectedRoute>} />
+            <Route path="/operations-center" element={<ProfileProtectedRoute><Layout><OperationsCenter /></Layout></ProfileProtectedRoute>} />
             <Route path="*" element={<ProtectedRoute><Layout><NotFound /></Layout></ProtectedRoute>} />
           </Routes>
         </Suspense>

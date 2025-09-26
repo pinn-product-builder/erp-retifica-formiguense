@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,59 +10,42 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Package, AlertTriangle, Plus, Search, Filter, TrendingDown } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const Estoque = () => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('todos');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [pecas, setPecas] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Dados de exemplo para estoque
-  const pecas = [
-    {
-      id: 1,
-      codigo: "PIV-001",
-      nome: "Pistão 1.0 8V",
-      categoria: "Pistão",
-      quantidade: 15,
-      minimo: 10,
-      preco: 45.90,
-      fornecedor: "AutoPeças SP",
-      localizacao: "A1-P2"
-    },
-    {
-      id: 2,
-      codigo: "BIE-002", 
-      nome: "Biela Corsa 1.4",
-      categoria: "Biela",
-      quantidade: 5,
-      minimo: 8,
-      preco: 89.50,
-      fornecedor: "Metal Parts",
-      localizacao: "B2-P1"
-    },
-    {
-      id: 3,
-      codigo: "VAL-003",
-      nome: "Válvula Admissão",
-      categoria: "Válvula", 
-      quantidade: 25,
-      minimo: 20,
-      preco: 12.30,
-      fornecedor: "Válvulas Brasil",
-      localizacao: "C1-P3"
-    },
-    {
-      id: 4,
-      codigo: "RET-004",
-      nome: "Retentor Válvula",
-      categoria: "Vedação",
-      quantidade: 3,
-      minimo: 15,
-      preco: 2.80,
-      fornecedor: "Vedações Tech",
-      localizacao: "D1-P1"
+  useEffect(() => {
+    loadPecas();
+  }, []);
+
+  const loadPecas = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('parts_inventory')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPecas(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar peças:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar o estoque",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const pecasFiltradas = pecas.filter(peca => {
     const matchesSearch = peca.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
