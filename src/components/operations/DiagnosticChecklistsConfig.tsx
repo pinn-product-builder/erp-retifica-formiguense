@@ -83,6 +83,13 @@ const DiagnosticChecklistsConfig = () => {
 
   const mutations = useDiagnosticChecklistMutations();
 
+  // Debug: Log dos dados carregados
+  React.useEffect(() => {
+    console.log('DiagnosticChecklistsConfig - checklists:', checklists);
+    console.log('DiagnosticChecklistsConfig - isLoading:', isLoading);
+    console.log('DiagnosticChecklistsConfig - engineTypes:', engineTypes);
+  }, [checklists, isLoading, engineTypes]);
+
   const [checklistForm, setChecklistForm] = useState<DiagnosticChecklistFormData>({
     name: '',
     description: '',

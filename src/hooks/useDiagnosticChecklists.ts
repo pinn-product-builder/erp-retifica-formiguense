@@ -56,15 +56,37 @@ export function useDiagnosticChecklists() {
   // Buscar checklists por tipo de motor e componente
   const getChecklists = async (engineTypeId?: string, component?: string) => {
     try {
+      // Primeiro, tentar buscar com organização atual
       let query = supabase
         .from('diagnostic_checklists')
         .select(`
           *,
           items:diagnostic_checklist_items(*)
         `)
-        .eq('org_id', currentOrganization?.id)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
+
+      // Se há organização atual, filtrar por ela
+      if (currentOrganization?.id) {
+        query = query.eq('org_id', currentOrganization.id);
+        console.log('Buscando checklists para organização:', currentOrganization.id);
+      } else {
+        // Se não há organização, buscar para o usuário logado através das organizações que ele pertence
+        const { data: userOrgs } = await supabase
+          .from('organization_users')
+          .select('organization_id')
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+          .eq('is_active', true);
+          
+        if (userOrgs && userOrgs.length > 0) {
+          const orgIds = userOrgs.map(org => org.organization_id);
+          query = query.in('org_id', orgIds);
+          console.log('Buscando checklists para organizações do usuário:', orgIds);
+        } else {
+          // Como último recurso, buscar todos os checklists (apenas para debug/admin)
+          console.warn('Nenhuma organização encontrada, buscando todos os checklists');
+        }
+      }
 
       if (engineTypeId) {
         query = query.eq('engine_type_id', engineTypeId);
@@ -76,7 +98,12 @@ export function useDiagnosticChecklists() {
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro na query checklists:', error);
+        throw error;
+      }
+      
+      console.log('Checklists encontrados:', data?.length || 0);
       return data as DiagnosticChecklist[];
     } catch (error) {
       console.error('Erro ao buscar checklists:', error);
@@ -118,17 +145,47 @@ export function useDiagnosticChecklists() {
   // Criar checklist
   const createChecklist = async (checklist: Omit<DiagnosticChecklist, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      let orgId = currentOrganization?.id;
+      
+      // Se não há organização no contexto, buscar a primeira organização do usuário
+      if (!orgId) {
+        const { data: userOrgs } = await supabase
+          .from('organization_users')
+          .select('organization_id')
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+          .eq('is_active', true)
+          .limit(1);
+          
+        if (userOrgs && userOrgs.length > 0) {
+          orgId = userOrgs[0].organization_id;
+        }
+      }
+      
+      if (!orgId) {
+        toast({
+          title: "Erro",
+          description: "Nenhuma organização encontrada para o usuário",
+          variant: "destructive"
+        });
+        return null;
+      }
+      
+      console.log('Criando checklist para org:', orgId);
       const { data, error } = await supabase
         .from('diagnostic_checklists')
         .insert({
           ...checklist,
-          org_id: currentOrganization?.id
+          org_id: orgId
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao criar checklist:', error);
+        throw error;
+      }
 
+      console.log('Checklist criado:', data);
       toast({
         title: "Sucesso",
         description: "Checklist criado com sucesso"
@@ -402,7 +459,7 @@ export function useDiagnosticChecklistsQuery(engineTypeId?: string, component?: 
   return useQuery({
     queryKey: ['diagnostic-checklists', engineTypeId, component],
     queryFn: () => getChecklists(engineTypeId, component),
-    enabled: !!engineTypeId || !!component
+    enabled: true // Sempre habilitar - deixar os filtros opcionais
   });
 }
 
