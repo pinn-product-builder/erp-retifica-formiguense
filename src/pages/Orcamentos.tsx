@@ -18,7 +18,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { 
   Select, 
@@ -27,7 +26,6 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { 
   Plus, 
   Search, 
@@ -38,117 +36,89 @@ import {
   X,
   DollarSign,
   FileText,
-  Clock
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Copy,
+  Download
 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
-import { useSupabase } from "@/hooks/useSupabase";
+import { useDetailedBudgets, type DetailedBudget } from "@/hooks/useDetailedBudgets";
 import { useQuery } from "@tanstack/react-query";
-
-interface Budget {
-  id: string;
-  order_id: string;
-  component: string;
-  description: string;
-  labor_cost: number;
-  parts_cost: number;
-  total_cost: number;
-  status: 'pendente' | 'aprovado' | 'reprovado';
-  notes?: string;
-  approved_by?: string;
-  approved_at?: string;
-  created_at: string;
-  order?: {
-    order_number: string;
-    customer: {
-      name: string;
-    };
-  };
-}
+import BudgetApprovalModal from "@/components/budgets/BudgetApprovalModal";
+import BudgetDetails from "@/components/budgets/BudgetDetails";
+import { useToast } from "@/hooks/use-toast";
 
 const Orcamentos = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const { loading } = useSupabase();
+  const [componentFilter, setComponentFilter] = useState<string>("todos");
+  const [selectedBudget, setSelectedBudget] = useState<DetailedBudget | null>(null);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  
+  const { getDetailedBudgets, duplicateBudget, loading } = useDetailedBudgets();
+  const { toast } = useToast();
 
-  // Mock data - será substituído por dados reais do Supabase
-  const mockBudgets: Budget[] = [
-    {
-      id: "1",
-      order_id: "order-1",
-      component: "bloco",
-      description: "Retífica completa do bloco do motor",
-      labor_cost: 800.00,
-      parts_cost: 450.00,
-      total_cost: 1250.00,
-      status: "pendente",
-      created_at: "2024-01-15T10:00:00Z",
-      order: {
-        order_number: "RF-2024-0001",
-        customer: {
-          name: "João Silva"
-        }
-      }
-    },
-    {
-      id: "2",
-      order_id: "order-2",
-      component: "cabecote",
-      description: "Reparo completo do cabeçote",
-      labor_cost: 600.00,
-      parts_cost: 320.00,
-      total_cost: 920.00,
-      status: "aprovado",
-      approved_by: "Cliente",
-      approved_at: "2024-01-14T14:30:00Z",
-      created_at: "2024-01-14T10:00:00Z",
-      order: {
-        order_number: "RF-2024-0002",
-        customer: {
-          name: "Maria Santos"
-        }
-      }
-    }
-  ];
-
-  const budgets = mockBudgets;
+  // Buscar orçamentos detalhados
+  const { data: budgets = [], refetch } = useQuery({
+    queryKey: ['detailed-budgets', statusFilter, componentFilter],
+    queryFn: () => getDetailedBudgets({
+      status: statusFilter === 'todos' ? undefined : statusFilter,
+      component: componentFilter === 'todos' ? undefined : componentFilter
+    }),
+    enabled: true
+  });
 
   const filteredBudgets = budgets.filter(budget => {
     const matchesSearch = budget.order?.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         budget.order?.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         budget.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         budget.order?.customer.name.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === "todos" || budget.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   const stats = {
     total: budgets.length,
-    pendentes: budgets.filter(b => b.status === 'pendente').length,
-    aprovados: budgets.filter(b => b.status === 'aprovado').length,
-    reprovados: budgets.filter(b => b.status === 'reprovado').length,
-    valorTotal: budgets.reduce((sum, b) => sum + b.total_cost, 0)
+    pendentes: budgets.filter(b => b.status === 'draft').length,
+    aprovados: budgets.filter(b => b.status === 'approved').length,
+    reprovados: budgets.filter(b => b.status === 'rejected').length,
+    parciais: budgets.filter(b => b.status === 'partially_approved').length,
+    valorTotal: budgets.reduce((sum, b) => sum + b.total_amount, 0)
   };
 
   const getStatusBadge = (status: string) => {
-    const variants = {
-      pendente: "default",
-      aprovado: "default",
-      reprovado: "destructive"
-    };
-    
     const colors = {
-      pendente: "bg-yellow-100 text-yellow-800",
-      aprovado: "bg-green-100 text-green-800", 
-      reprovado: "bg-red-100 text-red-800"
+      draft: "bg-gray-100 text-gray-800",
+      approved: "bg-green-100 text-green-800", 
+      partially_approved: "bg-yellow-100 text-yellow-800",
+      rejected: "bg-red-100 text-red-800"
+    };
+
+    const labels = {
+      draft: "Rascunho",
+      approved: "Aprovado",
+      partially_approved: "Parcial",
+      rejected: "Rejeitado"
     };
 
     return (
-      <Badge className={colors[status as keyof typeof colors]}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+      <Badge className={colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800"}>
+        {labels[status as keyof typeof labels] || status}
       </Badge>
     );
+  };
+
+  const handleDuplicate = async (budget: DetailedBudget) => {
+    const result = await duplicateBudget(budget.id);
+    if (result) {
+      refetch();
+    }
+  };
+
+  const handleApprovalCreated = () => {
+    refetch();
+    setIsApprovalModalOpen(false);
+    setSelectedBudget(null);
   };
 
   return (
@@ -162,85 +132,20 @@ const Orcamentos = () => {
           </p>
         </div>
         
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Orçamento
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Criar Novo Orçamento</DialogTitle>
-              <DialogDescription>
-                Preencha os dados para criar um novo orçamento
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Ordem de Serviço</label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma ordem" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="order-1">RF-2024-0001 - João Silva</SelectItem>
-                    <SelectItem value="order-2">RF-2024-0002 - Maria Santos</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium">Componente</label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o componente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bloco">Bloco</SelectItem>
-                    <SelectItem value="cabecote">Cabeçote</SelectItem>
-                    <SelectItem value="eixo">Eixo</SelectItem>
-                    <SelectItem value="biela">Biela</SelectItem>
-                    <SelectItem value="comando">Comando</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium">Descrição</label>
-                <Textarea placeholder="Descreva os serviços necessários..." />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Mão de Obra</label>
-                  <Input type="number" placeholder="0,00" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Peças</label>
-                  <Input type="number" placeholder="0,00" />
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  className="flex-1"
-                  onClick={() => setIsCreateDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button className="flex-1">
-                  Criar Orçamento
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Button variant="outline">
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Orçamento
+          </Button>
+          <Button variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            Relatório
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         <StatCard
           title="Total"
           value={stats.total}
@@ -248,7 +153,7 @@ const Orcamentos = () => {
           variant="default"
         />
         <StatCard
-          title="Pendentes"
+          title="Rascunhos"
           value={stats.pendentes}
           icon={Clock}
           variant="warning"
@@ -256,11 +161,17 @@ const Orcamentos = () => {
         <StatCard
           title="Aprovados"
           value={stats.aprovados}
-          icon={Check}
+          icon={CheckCircle}
           variant="success"
         />
         <StatCard
-          title="Reprovados"
+          title="Parciais"
+          value={stats.parciais}
+          icon={AlertTriangle}
+          variant="warning"
+        />
+        <StatCard
+          title="Rejeitados"
           value={stats.reprovados}
           icon={X}
           variant="danger"
@@ -294,9 +205,24 @@ const Orcamentos = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos os Status</SelectItem>
-                <SelectItem value="pendente">Pendente</SelectItem>
-                <SelectItem value="aprovado">Aprovado</SelectItem>
-                <SelectItem value="reprovado">Reprovado</SelectItem>
+                <SelectItem value="draft">Rascunho</SelectItem>
+                <SelectItem value="approved">Aprovado</SelectItem>
+                <SelectItem value="partially_approved">Parcial</SelectItem>
+                <SelectItem value="rejected">Rejeitado</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={componentFilter} onValueChange={setComponentFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Componente" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos Componentes</SelectItem>
+                <SelectItem value="bloco">Bloco</SelectItem>
+                <SelectItem value="cabecote">Cabeçote</SelectItem>
+                <SelectItem value="eixo">Eixo</SelectItem>
+                <SelectItem value="biela">Biela</SelectItem>
+                <SelectItem value="comando">Comando</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -312,10 +238,10 @@ const Orcamentos = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Nº Orçamento</TableHead>
                 <TableHead>Ordem</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Componente</TableHead>
-                <TableHead>Descrição</TableHead>
                 <TableHead>Valor Total</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Data</TableHead>
@@ -326,6 +252,9 @@ const Orcamentos = () => {
               {filteredBudgets.map((budget) => (
                 <TableRow key={budget.id}>
                   <TableCell className="font-medium">
+                    {budget.budget_number || `#${budget.id.slice(-6)}`}
+                  </TableCell>
+                  <TableCell className="font-medium">
                     {budget.order?.order_number}
                   </TableCell>
                   <TableCell>{budget.order?.customer.name}</TableCell>
@@ -334,23 +263,43 @@ const Orcamentos = () => {
                       {budget.component.charAt(0).toUpperCase() + budget.component.slice(1)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="max-w-xs truncate">
-                    {budget.description}
-                  </TableCell>
                   <TableCell className="font-medium">
-                    R$ {budget.total_cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {budget.total_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </TableCell>
                   <TableCell>{getStatusBadge(budget.status)}</TableCell>
                   <TableCell>
                     {new Date(budget.created_at).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm">
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedBudget(budget);
+                          setIsDetailsModalOpen(true);
+                        }}
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        <Edit className="w-4 h-4" />
+                      {budget.status === 'draft' && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedBudget(budget);
+                            setIsApprovalModalOpen(true);
+                          }}
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDuplicate(budget)}
+                      >
+                        <Copy className="w-4 h-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -368,6 +317,37 @@ const Orcamentos = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Modais */}
+      <BudgetApprovalModal
+        budget={selectedBudget}
+        open={isApprovalModalOpen}
+        onOpenChange={setIsApprovalModalOpen}
+        onApprovalCreated={handleApprovalCreated}
+      />
+
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Orçamento</DialogTitle>
+          </DialogHeader>
+          {selectedBudget && (
+            <BudgetDetails
+              budget={selectedBudget}
+              onDuplicate={() => {
+                handleDuplicate(selectedBudget);
+                setIsDetailsModalOpen(false);
+              }}
+              onGeneratePDF={() => {
+                toast({
+                  title: "Funcionalidade em desenvolvimento",
+                  description: "A geração de PDF será implementada em breve"
+                });
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
