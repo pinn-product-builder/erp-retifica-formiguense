@@ -38,7 +38,7 @@ import {
   Workflow, 
   Eye, 
   MoreVertical,
-  DragHandleDots2Icon
+  GripVertical
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -201,18 +201,18 @@ export function EngineTypesConfig() {
                               <span className="text-sm">{engineType.default_warranty_months}m</span>
                             </TableCell>
                             <TableCell className="hidden lg:table-cell">
-                              <div className="flex flex-wrap gap-1 max-w-[150px]">
-                                {engineType.technical_standards.slice(0, 2).map((standard) => (
-                                  <Badge key={standard} variant="outline" className="text-xs">
-                                    {standard}
-                                  </Badge>
-                                ))}
-                                {engineType.technical_standards.length > 2 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{engineType.technical_standards.length - 2}
-                                  </Badge>
-                                )}
-                              </div>
+                               <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                 {Array.isArray(engineType.technical_standards) ? (engineType.technical_standards as string[]).slice(0, 2).map((standard: string) => (
+                                   <Badge key={String(standard)} variant="outline" className="text-xs">
+                                     {String(standard)}
+                                   </Badge>
+                                 )) : []}
+                                 {Array.isArray(engineType.technical_standards) && engineType.technical_standards.length > 2 && (
+                                   <Badge variant="outline" className="text-xs">
+                                     +{engineType.technical_standards.length - 2}
+                                   </Badge>
+                                 )}
+                               </div>
                             </TableCell>
                             <TableCell className="hidden sm:table-cell">
                               <Badge 
@@ -338,16 +338,16 @@ export function EngineTypesConfig() {
                             </div>
                           </div>
                           
-                          {engineType.technical_standards.length > 0 && (
+                          {Array.isArray(engineType.technical_standards) && engineType.technical_standards.length > 0 && (
                             <div>
                               <span className="text-sm font-medium">Normas:</span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {engineType.technical_standards.map((standard) => (
-                                  <Badge key={standard} variant="outline" className="text-xs">
-                                    {standard}
-                                  </Badge>
-                                ))}
-                              </div>
+                               <div className="flex flex-wrap gap-1 mt-1">
+                                 {(engineType.technical_standards as string[] || []).map((standard: string) => (
+                                   <Badge key={standard} variant="outline" className="text-xs">
+                                     {standard}
+                                   </Badge>
+                                 ))}
+                               </div>
                             </div>
                           )}
                         </div>

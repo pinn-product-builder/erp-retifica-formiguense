@@ -325,17 +325,17 @@ export function WorkflowStepsManager({ engineType, onClose }: WorkflowStepsManag
                                       {step.estimated_hours}h estimado
                                     </div>
                                     
-                                    {step.special_equipment.length > 0 && (
+                                    {Array.isArray(step.special_equipment) && step.special_equipment.length > 0 && (
                                       <div className="flex items-center gap-1">
                                         <Settings className="w-3 h-3" />
-                                        {step.special_equipment.length} equipamento(s)
+                                         {step.special_equipment.length} equipamento(s)
                                       </div>
                                     )}
                                     
-                                    {step.prerequisites.length > 0 && (
+                                    {Array.isArray(step.prerequisites) && step.prerequisites.length > 0 && (
                                       <div className="flex items-center gap-1">
                                         <CheckCircle2 className="w-3 h-3" />
-                                        {step.prerequisites.length} pré-requisito(s)
+                                         {step.prerequisites.length} pré-requisito(s)
                                       </div>
                                     )}
                                   </div>

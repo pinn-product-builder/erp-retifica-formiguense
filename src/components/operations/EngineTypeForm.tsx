@@ -118,19 +118,19 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
         name: engineType.name,
         category: engineType.category,
         description: engineType.description || '',
-        technical_standards: engineType.technical_standards,
-        required_components: engineType.required_components,
+        technical_standards: Array.isArray(engineType.technical_standards) ? engineType.technical_standards as string[] : [],
+        required_components: Array.isArray(engineType.required_components) ? engineType.required_components as string[] : [],
         default_warranty_months: engineType.default_warranty_months,
         is_active: engineType.is_active,
         display_order: engineType.display_order,
         special_requirements: {
-          ambiente: engineType.special_requirements?.ambiente || '',
-          equipamentos: engineType.special_requirements?.equipamentos || [],
-          certificacao_required: engineType.special_requirements?.certificacao_required || false,
-          temperatura_controlada: engineType.special_requirements?.temperatura_controlada || false,
-          umidade_controlada: engineType.special_requirements?.umidade_controlada || false,
-          limpeza_especial: engineType.special_requirements?.limpeza_especial || false,
-          rastreabilidade_completa: engineType.special_requirements?.rastreabilidade_completa || false,
+          ambiente: (engineType.special_requirements as any)?.ambiente || '',
+          equipamentos: (engineType.special_requirements as any)?.equipamentos || [],
+          certificacao_required: (engineType.special_requirements as any)?.certificacao_required || false,
+          temperatura_controlada: (engineType.special_requirements as any)?.temperatura_controlada || false,
+          umidade_controlada: (engineType.special_requirements as any)?.umidade_controlada || false,
+          limpeza_especial: (engineType.special_requirements as any)?.limpeza_especial || false,
+          rastreabilidade_completa: (engineType.special_requirements as any)?.rastreabilidade_completa || false,
         },
       });
     }
@@ -139,9 +139,29 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
   const onSubmit = async (data: EngineTypeFormData) => {
     try {
       if (mode === 'create') {
-        await createEngineType(data);
+        await createEngineType({
+          name: data.name!,
+          category: data.category!,
+          description: data.description,
+          is_active: data.is_active,
+          display_order: data.display_order,
+          default_warranty_months: data.default_warranty_months,
+          required_components: data.required_components as ("bloco" | "eixo" | "biela" | "comando" | "cabecote")[],
+          technical_standards: data.technical_standards as any,
+          special_requirements: data.special_requirements as any,
+        });
       } else if (engineType) {
-        await updateEngineType(engineType.id, data);
+        await updateEngineType(engineType.id, {
+          name: data.name,
+          category: data.category,
+          description: data.description,
+          is_active: data.is_active,
+          display_order: data.display_order,
+          default_warranty_months: data.default_warranty_months,
+          required_components: data.required_components as any,
+          technical_standards: data.technical_standards as any,
+          special_requirements: data.special_requirements as any,
+        });
       }
       onSuccess();
     } catch (error) {

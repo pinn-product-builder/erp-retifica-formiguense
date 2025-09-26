@@ -48,10 +48,10 @@ export function useWorkflowUpdate() {
           .from('workflow_status_history')
           .insert({
             order_workflow_id: workflowId,
-            from_status: currentWorkflow.status,
-            to_status: newStatus,
+            old_status: currentWorkflow.status as any,
+            new_status: newStatus as any,
             changed_by: (await supabase.auth.getUser()).data.user?.id,
-            change_reason: changeReason,
+            reason: changeReason,
           });
 
         if (historyError) {

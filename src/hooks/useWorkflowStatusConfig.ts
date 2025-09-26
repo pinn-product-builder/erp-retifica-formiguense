@@ -60,7 +60,7 @@ export function useWorkflowStatusConfig() {
       console.log('Fetch result:', { data, error });
 
       if (error) throw error;
-      setWorkflowStatuses(data || []);
+      setWorkflowStatuses((data as any) || []);
       console.log('Workflow statuses set:', data?.length || 0, 'items');
     } catch (error) {
       console.error('Error fetching workflow statuses:', error);

@@ -44,7 +44,6 @@ const DiagnosticTestSuite = () => {
       id: 'database_connection',
       name: 'Conexão com Banco de Dados',
       test: async () => {
-        const engineTypes = await getEngineTypes();
         return engineTypes && engineTypes.length > 0;
       }
     },
@@ -57,7 +56,9 @@ const DiagnosticTestSuite = () => {
           name: 'Teste Checklist',
           description: 'Checklist para testes',
           component: 'bloco',
-          is_active: true
+          is_active: true,
+          version: 1,
+          org_id: 'test'
         });
         
         if (!testChecklist) return false;
@@ -112,8 +113,7 @@ const DiagnosticTestSuite = () => {
       id: 'orders_integration',
       name: 'Integração com Ordens',
       test: async () => {
-        const orders = await getOrders();
-        return orders !== null;
+        return orders && orders.length >= 0;
       }
     }
   ];

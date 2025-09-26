@@ -71,7 +71,7 @@ export function useDiagnosticChecklists() {
       }
 
       if (component) {
-        query = query.eq('component', component);
+        query = query.eq('component', component as any);
       }
 
       const { data, error } = await query;

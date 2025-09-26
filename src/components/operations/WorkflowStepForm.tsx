@@ -151,8 +151,8 @@ export function WorkflowStepForm({
         description: workflowStep.description || '',
         is_required: workflowStep.is_required,
         estimated_hours: workflowStep.estimated_hours,
-        prerequisites: workflowStep.prerequisites,
-        special_equipment: workflowStep.special_equipment,
+        prerequisites: Array.isArray(workflowStep.prerequisites) ? workflowStep.prerequisites as string[] : [],
+        special_equipment: Array.isArray(workflowStep.special_equipment) ? workflowStep.special_equipment as string[] : [],
         quality_checklist_required: workflowStep.quality_checklist_required,
         technical_report_required: workflowStep.technical_report_required,
       });
@@ -181,8 +181,10 @@ export function WorkflowStepForm({
 
       const stepData = {
         ...data,
+        step_name: data.step_name!,
+        step_key: data.step_key!,
         engine_type_id: engineType.id,
-        component,
+        component: component as "bloco" | "eixo" | "biela" | "comando" | "cabecote",
         step_order: mode === 'create' ? stepOrder : workflowStep?.step_order || 1,
       };
 

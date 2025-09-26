@@ -2,20 +2,12 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/contexts/OrganizationContext';
-import { Database } from '@/integrations/supabase/types';
-
-type Budget = Database['public']['Tables']['budgets']['Row'];
-type InsertBudget = Database['public']['Tables']['budgets']['Insert'];
-type UpdateBudget = Database['public']['Tables']['budgets']['Update'];
-
-type ServicePrice = Database['public']['Tables']['service_price_table']['Row'];
-type PartsPrice = Database['public']['Tables']['parts_price_table']['Row'];
 
 export function useBudgets() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { organization } = useOrganization();
-  const orgId = organization?.id;
+  const { currentOrganization } = useOrganization();
+  const orgId = currentOrganization?.id;
 
   const handleError = (error: any, message: string) => {
     console.error(message, error);
@@ -35,12 +27,11 @@ export function useBudgets() {
         .from('budgets')
         .select(`
           *,
-          order:orders(
+          orders!inner(
             order_number,
-            customer:customers(name)
+            customers!inner(name)
           )
         `)
-        .eq('org_id', orgId)
         .order('created_at', { ascending: false });
 
       if (orderId) {
@@ -59,7 +50,7 @@ export function useBudgets() {
     }
   };
 
-  const createBudget = async (budget: InsertBudget) => {
+  const createBudget = async (budget: any) => {
     if (!orgId) {
       handleError(null, 'Organização não encontrada.');
       return null;
@@ -68,7 +59,7 @@ export function useBudgets() {
       setLoading(true);
       const { data, error } = await supabase
         .from('budgets')
-        .insert({ ...budget, org_id: orgId })
+        .insert({ ...budget })
         .select()
         .single();
 
@@ -83,7 +74,7 @@ export function useBudgets() {
     }
   };
 
-  const updateBudget = async (id: string, updates: UpdateBudget) => {
+  const updateBudget = async (id: string, updates: any) => {
     if (!orgId) {
       handleError(null, 'Organização não encontrada.');
       return null;
@@ -94,7 +85,6 @@ export function useBudgets() {
         .from('budgets')
         .update(updates)
         .eq('id', id)
-        .eq('org_id', orgId)
         .select()
         .single();
 
@@ -119,8 +109,7 @@ export function useBudgets() {
       const { error } = await supabase
         .from('budgets')
         .delete()
-        .eq('id', id)
-        .eq('org_id', orgId);
+        .eq('id', id);
 
       if (error) throw error;
       toast({ title: "Sucesso", description: "Orçamento excluído com sucesso." });
@@ -235,7 +224,7 @@ export function useBudgets() {
       for (const service of services) {
         const servicePrice = await getServicePrice(service.name);
         const laborHours = service.labor_hours || 1;
-        const laborRate = servicePrice?.hourly_rate || service.labor_rate || 50;
+        const laborRate = (servicePrice as any)?.base_price || service.labor_rate || 50;
         const serviceTotal = laborHours * laborRate;
 
         calculatedServices.push({
@@ -253,7 +242,7 @@ export function useBudgets() {
       for (const part of parts) {
         const partPrice = await getPartPrice(part.name);
         const quantity = part.quantity || 1;
-        const unitPrice = partPrice?.unit_price || part.unit_price || 0;
+        const unitPrice = (partPrice as any)?.unit_price || part.unit_price || 0;
         const partTotal = quantity * unitPrice;
 
         calculatedParts.push({

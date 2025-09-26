@@ -80,8 +80,8 @@ const Diagnosticos = () => {
   const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
   const [showTestSuite, setShowTestSuite] = useState(false);
 
-  const { data: responses, isLoading } = useDiagnosticChecklists();
-  const { data: orders } = useOrders();
+  const checklistsFunctions = useDiagnosticChecklists();
+  const ordersData = useOrders();
 
   // Mock data - será substituído por dados reais do Supabase
   const mockResponses: DiagnosticResponse[] = [
@@ -253,7 +253,7 @@ const Diagnosticos = () => {
                     <SelectValue placeholder="Selecione uma ordem" />
                   </SelectTrigger>
                   <SelectContent>
-                    {orders?.map((order) => (
+                    {ordersData.orders?.map((order) => (
                       <SelectItem key={order.id} value={order.id}>
                         {order.order_number} - {order.customer?.name}
                       </SelectItem>
