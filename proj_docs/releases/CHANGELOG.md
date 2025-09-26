@@ -5,23 +5,106 @@ Todas as mudanças notáveis do projeto ERP Retífica serão documentadas neste 
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
-## [Em Desenvolvimento] - 2024-01-15
+## [1.2.1] - 2024-01-15
 
-### Adicionado
-- 📁 Sistema de documentação completo em `proj_docs/`
-- 🔧 Configuração de desenvolvimento aprimorada
-- 📊 Diagramas de arquitetura em Mermaid
-- 📚 Guias detalhados para usuários e desenvolvedores
+### ✨ Adicionado
 
-### Alterado
-- 🎨 Melhorias na interface do módulo fiscal
-- ⚡ Otimizações de performance no dashboard
-- 🔒 Aprimoramentos no sistema de segurança
+#### 🧾 Sistema de Orçamentação Detalhada (US-004)
+- **Hook `useDetailedBudgets`**: Gerenciamento completo de orçamentos detalhados
+  - CRUD completo com validações frontend e backend
+  - Filtros avançados por status, componente e período
+  - Duplicação inteligente de orçamentos existentes
+  - Integração automática com módulo financeiro
 
-### Corrigido
-- 🐛 Correção de hook order violation no componente Auth
-- 🔧 Resolução de problemas de RLS em tabelas específicas
-- 📱 Melhorias na responsividade mobile
+- **Componente `BudgetApprovalModal`**: Interface completa de aprovação
+  - ✅ Aprovação Total: Todo o orçamento em uma única ação
+  - ⚠️ Aprovação Parcial: Seleção granular de serviços/peças
+  - ❌ Rejeição: Processo documentado com justificativas
+  - 📱 WhatsApp, 📧 E-mail, ✍️ Assinatura, 🗣️ Verbal como métodos
+  - 📎 Upload seguro de documentos comprobatórios
+
+- **Componente `BudgetDetails`**: Visualização detalhada
+  - 💰 Resumo financeiro completo (mão de obra + peças)
+  - 🔧 Lista detalhada de serviços com horas/valores
+  - 📦 Lista de peças com quantidades/preços
+  - 📋 Histórico completo de aprovações
+  - ⏱️ Prazos de entrega e períodos de garantia
+
+- **Página `Orcamentos`**: Interface principal renovada
+  - 📊 Dashboard com estatísticas em tempo real
+  - 🔍 Filtros por status (Rascunho/Aprovado/Parcial/Rejeitado)
+  - 🏷️ Filtros por componente (Bloco/Cabeçote/Eixo/etc)
+  - 📋 Tabela responsiva com ações contextuais
+  - 🔄 Integração completa com sistema de aprovações
+
+#### 🔒 Validações e Segurança
+- **Zod Schemas**: Validação robusta em todos os formulários
+- **Campos Obrigatórios**: Validação antes de criar/aprovar orçamentos
+- **Toast System**: Feedback visual para todas as operações
+- **Confirmation Modals**: Sistema integrado ao design da aplicação
+- **RLS Policies**: Segurança por organização em todas as operações
+
+#### 📊 Integração Financeira Automática
+- **Contas a Receber**: Geração automática via trigger SQL
+- **Cálculos Precisos**: Labor total + peças + impostos - descontos
+- **Numeração Sequencial**: Formato padronizado ORC-YYYY-NNNN
+- **Auditoria Completa**: Log detalhado de todas as alterações
+
+### 🚀 Melhorado
+
+#### 📱 Experiência do Usuário
+- **Design Responsivo**: Adaptação perfeita mobile/tablet/desktop
+- **Acessibilidade**: Navegação por teclado e compatibilidade com screen readers
+- **Performance**: Lazy loading otimizado e cache inteligente
+- **Loading States**: Indicadores visuais em tempo real
+
+#### 🔄 Fluxos de Processo
+- **Documentação Completa**: Rastro detalhado de todas as aprovações
+- **Estados Claros**: Draft → Approved/Partially_Approved/Rejected
+- **Workflow Seamless**: Integração automática entre módulos
+- **Smart Alerts**: Alertas inteligentes para orçamentos pendentes
+
+### 🐛 Corrigido
+- **TypeScript**: Correção de tipos para compatibilidade Supabase
+- **Import Paths**: Ajuste de caminhos de importação nos componentes
+- **Schema Validation**: Compatibilidade total com tipos do banco
+
+### 📚 Documentação
+
+#### 📖 Nova Documentação Técnica
+- **`proj_docs/modules/budgets/README.md`**: Visão geral completa do módulo
+- **`proj_docs/modules/budgets/technical-specs/component-architecture.md`**: Arquitetura detalhada
+- **`proj_docs/modules/budgets/user-flows/budget-approval-flow.md`**: Fluxos completos de usuário
+
+#### 🎯 Regras de Negócio Implementadas
+
+##### ✅ US-004: Orçamentação Detalhada e Aprovação
+- **RN016**: ✅ Orçamento inclui serviços, peças, prazos e custos detalhados
+- **RN017**: ✅ Cliente pode aprovar total, parcial ou rejeitar orçamento
+- **RN018**: ✅ Aprovações documentadas (assinatura, WhatsApp, email)
+- **RN019**: ✅ Sistema alerta sobre orçamentos pendentes de aprovação
+- **RN020**: ✅ Orçamentos aprovados geram automaticamente contas a receber
+
+##### ✅ Critérios de Aceite Atendidos
+- **CA016**: ✅ Sistema gera orçamento detalhado baseado no diagnóstico
+- **CA017**: ✅ Interface permite registrar diferentes tipos de aprovação
+- **CA018**: ✅ Documentos de aprovação são armazenados no sistema
+- **CA019**: ✅ Dashboard mostra orçamentos pendentes com alertas
+- **CA020**: ✅ Aprovação gera automaticamente título no financeiro
+
+### 💾 Estruturas de Banco Utilizadas
+- **`detailed_budgets`**: Orçamentos com cálculos automáticos e numeração sequencial
+- **`budget_approvals`**: Aprovações documentadas com upload de comprovantes
+- **`accounts_receivable`**: Integração automática via triggers SQL
+- **Storage `reports`**: Armazenamento seguro de documentos comprobatórios
+
+## [Em Desenvolvimento] - 2024-01-16
+
+### 🔮 Próximas Funcionalidades
+- 📄 Geração automática de PDF para orçamentos
+- ✍️ Assinatura digital integrada na plataforma
+- 📧 Notificações automáticas por email
+- 📊 Relatórios de conversão e performance de orçamentos
 
 ## [1.2.0] - 2024-01-01
 
