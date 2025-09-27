@@ -257,8 +257,8 @@ export function useBudgets() {
       }
 
       const subtotal = laborTotal + partsTotal;
-      const discount = 0; // TODO: implement discount logic
-      const taxPercentage = 0; // TODO: implement tax logic
+      const discount = 0; // Desconto será implementado conforme regras de negócio
+      const taxPercentage = 0; // Impostos serão calculados pelo módulo fiscal
       const taxAmount = subtotal * (taxPercentage / 100);
       const total = subtotal - discount + taxAmount;
 

@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,259 +7,415 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Building2, UserPlus, Search, Filter, Phone } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Users, Building2, UserPlus, Search, Filter, Phone, Edit, Trash2, Loader2 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
+import { useCustomers, Customer } from "@/hooks/useCustomers";
+import { useToast } from "@/hooks/use-toast";
 
 const Clientes = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('todos');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Customer | null>(null);
+  const [deletingClient, setDeletingClient] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    document: '',
+    phone: '',
+    email: '',
+    address: '',
+    type: 'direto' as 'direto' | 'oficina',
+    workshop_name: '',
+    workshop_cnpj: '',
+    workshop_contact: ''
+  });
 
-  // Dados de exemplo para clientes
-  const clientes = [
-    {
-      id: 1,
-      nome: "João da Silva",
-      tipo: "direto",
-      documento: "123.456.789-00",
-      telefone: "(11) 99999-7777",
-      email: "joao@email.com",
-      endereco: "Rua A, 123 - São Paulo/SP",
-      servicos: 5,
-      ultimoServico: "2024-01-15"
-    },
-    {
-      id: 2,
-      nome: "Oficina do Pedro",
-      tipo: "oficina",
-      documento: "12.345.678/0001-90",
-      telefone: "(11) 99999-8888",
-      email: "contato@oficinapedro.com",
-      endereco: "Av. B, 456 - Santos/SP",
-      servicos: 12,
-      ultimoServico: "2024-01-18",
-      nomeOficina: "Oficina do Pedro",
-      cnpjOficina: "12.345.678/0001-90",
-      contatoOficina: "Pedro Santos"
-    },
-    {
-      id: 3,
-      nome: "Maria Costa",
-      tipo: "direto",
-      documento: "987.654.321-00",
-      telefone: "(11) 99999-9999",
-      email: "maria@email.com",
-      endereco: "Rua C, 789 - Campinas/SP",
-      servicos: 2,
-      ultimoServico: "2024-01-10"
-    },
-    {
-      id: 4,
-      nome: "AutoCenter Central",
-      tipo: "oficina",
-      documento: "98.765.432/0001-10",
-      telefone: "(11) 99999-0000",
-      email: "vendas@autocentral.com",
-      endereco: "Rod. D, 1000 - Guarulhos/SP",
-      servicos: 8,
-      ultimoServico: "2024-01-20",
-      nomeOficina: "AutoCenter Central",
-      cnpjOficina: "98.765.432/0001-10",
-      contatoOficina: "Ana Pereira"
+  const { customers, loading, fetchCustomers, createCustomer, updateCustomer, deleteCustomer } = useCustomers();
+  const { toast } = useToast();
+
+  const loadCustomers = useCallback(async () => {
+    await fetchCustomers();
+  }, [fetchCustomers]);
+
+  useEffect(() => {
+    loadCustomers();
+  }, [loadCustomers]);
+
+  const handleSearch = async (term: string) => {
+    setSearchTerm(term);
+    if (term.trim()) {
+      await fetchCustomers(term);
+    } else {
+      await fetchCustomers();
     }
-  ];
+  };
 
-  const clientesFiltrados = clientes.filter(cliente => {
-    const matchesSearch = cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         cliente.documento.includes(searchTerm) ||
-                         cliente.telefone.includes(searchTerm);
-    const matchesType = filterType === 'todos' || cliente.tipo === filterType;
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      document: '',
+      phone: '',
+      email: '',
+      address: '',
+      type: 'direto',
+      workshop_name: '',
+      workshop_cnpj: '',
+      workshop_contact: ''
+    });
+    setEditingClient(null);
+  };
+
+  const handleEdit = (client: Customer) => {
+    setEditingClient(client);
+    setFormData({
+      name: client.name,
+      document: client.document,
+      phone: client.phone || '',
+      email: client.email || '',
+      address: client.address || '',
+      type: client.type,
+      workshop_name: client.workshop_name || '',
+      workshop_cnpj: client.workshop_cnpj || '',
+      workshop_contact: client.workshop_contact || ''
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name || !formData.document) {
+      toast({
+        title: "Erro",
+        description: "Nome e documento são obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      if (editingClient) {
+        await updateCustomer(editingClient.id, formData);
+      } else {
+        await createCustomer(formData);
+      }
+      
+      setIsDialogOpen(false);
+      resetForm();
+      await loadCustomers();
+    } catch (error) {
+      console.error('Erro ao salvar cliente:', error);
+    }
+  };
+
+  const handleDelete = async (clientId: string) => {
+    try {
+      const success = await deleteCustomer(clientId);
+      if (success) {
+        await loadCustomers();
+      }
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error);
+    }
+  };
+
+  const filteredCustomers = customers.filter(customer => {
+    const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         customer.document.includes(searchTerm) ||
+                         (customer.phone && customer.phone.includes(searchTerm));
+    const matchesType = filterType === 'todos' || 
+                       (filterType === 'direto' && customer.type === 'direto') ||
+                       (filterType === 'oficina' && customer.type === 'oficina');
     return matchesSearch && matchesType;
   });
 
-  const totalClientes = clientes.length;
-  const clientesDiretos = clientes.filter(c => c.tipo === 'direto').length;
-  const oficinas = clientes.filter(c => c.tipo === 'oficina').length;
-  const totalServicos = clientes.reduce((sum, c) => sum + c.servicos, 0);
+  const totalCustomers = customers.length;
+  const directCustomers = customers.filter(c => c.type === 'direto').length;
+  const workshopCustomers = customers.filter(c => c.type === 'oficina').length;
 
   return (
     <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Clientes</h1>
-          <p className="text-muted-foreground">Gerencie clientes diretos e oficinas parceiras</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Clientes</h1>
+          <p className="text-muted-foreground">
+            Gerencie todos os clientes da retífica
+          </p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2 w-full sm:w-auto">
-              <UserPlus className="w-4 h-4" />
-              <span className="hidden sm:inline">Novo Cliente</span>
-              <span className="sm:hidden">Novo</span>
+            <Button onClick={resetForm}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Novo Cliente
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] mx-4">
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Cadastrar Cliente</DialogTitle>
+              <DialogTitle>
+                {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
+              </DialogTitle>
               <DialogDescription>
-                Adicione um novo cliente ao sistema
+                {editingClient ? 'Atualize os dados do cliente' : 'Cadastre um novo cliente'}
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="tipo" className="text-right">Tipo</Label>
-                <Select>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Selecione o tipo" />
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="name">Nome / Razão Social *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Nome completo ou razão social"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="type">Tipo de Cliente *</Label>
+                <Select 
+                  value={formData.type} 
+                  onValueChange={(value: 'direto' | 'oficina') => 
+                    setFormData(prev => ({ ...prev, type: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="direto">Cliente Direto</SelectItem>
-                    <SelectItem value="oficina">Oficina Parceira</SelectItem>
+                    <SelectItem value="oficina">Oficina</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="nome" className="text-right">Nome</Label>
-                <Input id="nome" className="col-span-3" />
+              <div>
+                <Label htmlFor="document">
+                  {formData.type === 'direto' ? 'CPF' : 'CNPJ'} *
+                </Label>
+                <Input
+                  id="document"
+                  value={formData.document}
+                  onChange={(e) => setFormData(prev => ({ ...prev, document: e.target.value }))}
+                  placeholder={formData.type === 'direto' ? '000.000.000-00' : '00.000.000/0000-00'}
+                  required
+                />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="documento" className="text-right">CPF/CNPJ</Label>
-                <Input id="documento" className="col-span-3" />
+              <div>
+                <Label htmlFor="phone">Telefone</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="(00) 00000-0000"
+                />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="telefone" className="text-right">Telefone</Label>
-                <Input id="telefone" className="col-span-3" />
+              <div>
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="cliente@email.com"
+                />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="email" className="text-right">Email</Label>
-                <Input id="email" type="email" className="col-span-3" />
+              <div>
+                <Label htmlFor="address">Endereço</Label>
+                <Input
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                  placeholder="Endereço completo"
+                />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="endereco" className="text-right">Endereço</Label>
-                <Input id="endereco" className="col-span-3" />
-              </div>
-            </div>
+              
+              {/* Campos específicos para oficina */}
+              {formData.type === 'oficina' && (
+                <>
+                  <div>
+                    <Label htmlFor="workshop_name">Nome da Oficina</Label>
+                    <Input
+                      id="workshop_name"
+                      value={formData.workshop_name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, workshop_name: e.target.value }))}
+                      placeholder="Nome da oficina"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="workshop_cnpj">CNPJ da Oficina</Label>
+                    <Input
+                      id="workshop_cnpj"
+                      value={formData.workshop_cnpj}
+                      onChange={(e) => setFormData(prev => ({ ...prev, workshop_cnpj: e.target.value }))}
+                      placeholder="00.000.000/0000-00"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="workshop_contact">Contato da Oficina</Label>
+                    <Input
+                      id="workshop_contact"
+                      value={formData.workshop_contact}
+                      onChange={(e) => setFormData(prev => ({ ...prev, workshop_contact: e.target.value }))}
+                      placeholder="Nome do responsável"
+                    />
+                  </div>
+                </>
+              )}
             <DialogFooter>
-              <Button type="submit" onClick={() => setIsDialogOpen(false)}>
-                Salvar Cliente
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={loading}>
+                  {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {editingClient ? 'Atualizar' : 'Cadastrar'}
               </Button>
             </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {/* Statistics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
           title="Total de Clientes"
-          value={totalClientes}
+          value={totalCustomers}
           icon={Users}
-          subtitle="Ativos no sistema"
         />
         <StatCard
           title="Clientes Diretos"
-          value={clientesDiretos}
+          value={directCustomers}
           icon={Users}
-          subtitle="Pessoa física"
         />
         <StatCard
-          title="Oficinas Parceiras"
-          value={oficinas}
+          title="Oficinas"
+          value={workshopCustomers}
           icon={Building2}
-          subtitle="Pessoa jurídica"
-        />
-        <StatCard
-          title="Total de Serviços"
-          value={totalServicos}
-          icon={Phone}
-          subtitle="Serviços realizados"
         />
       </div>
 
-      {/* Lista de clientes */}
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filtros</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome, documento ou telefone..."
+                value={searchTerm}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="pl-8"
+              />
+              </div>
+            </div>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-full sm:w-48">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os Tipos</SelectItem>
+                <SelectItem value="direto">Cliente Direto</SelectItem>
+                <SelectItem value="oficina">Oficina</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Customers Table */}
       <Card>
         <CardHeader>
           <CardTitle>Lista de Clientes</CardTitle>
           <CardDescription>
-            Visualize e gerencie todos os clientes
+            {filteredCustomers.length} cliente(s) encontrado(s)
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, documento ou telefone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Carregando clientes...</span>
             </div>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="direto">Clientes Diretos</SelectItem>
-                <SelectItem value="oficina">Oficinas</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
+          ) : filteredCustomers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchTerm ? 'Nenhum cliente encontrado com os filtros aplicados' : 'Nenhum cliente cadastrado'}
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome/Razão Social</TableHead>
+                    <TableHead>Nome</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Documento</TableHead>
-                <TableHead>Contato</TableHead>
-                <TableHead>Serviços</TableHead>
-                <TableHead>Último Serviço</TableHead>
+                    <TableHead>Telefone</TableHead>
+                    <TableHead>E-mail</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {clientesFiltrados.map((cliente) => (
-                <TableRow key={cliente.id}>
-                  <TableCell className="min-w-[150px]">
-                    <div>
-                      <div className="font-medium truncate">{cliente.nome}</div>
-                      {cliente.tipo === 'oficina' && cliente.contatoOficina && (
-                        <div className="text-sm text-muted-foreground truncate">
-                          Contato: {cliente.contatoOficina}
-                        </div>
-                      )}
+                  {filteredCustomers.map((customer) => (
+                    <TableRow key={customer.id}>
+                      <TableCell className="font-medium">{customer.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={customer.type === 'direto' ? 'default' : 'secondary'}>
+                          {customer.type === 'direto' ? 'Cliente Direto' : 'Oficina'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{customer.document}</TableCell>
+                      <TableCell>
+                        {customer.phone && (
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {customer.phone}
                     </div>
+                        )}
                   </TableCell>
-                  <TableCell className="min-w-[100px]">
-                    <Badge variant={cliente.tipo === 'direto' ? 'default' : 'secondary'}>
-                      {cliente.tipo === 'direto' ? 'Direto' : 'Oficina'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-sm min-w-[140px]">{cliente.documento}</TableCell>
-                  <TableCell className="min-w-[160px]">
-                    <div className="text-sm">
-                      <div className="truncate">{cliente.telefone}</div>
-                      <div className="text-muted-foreground truncate">{cliente.email}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="min-w-[100px]">
-                    <Badge variant="outline">
-                      {cliente.servicos} serviços
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="min-w-[110px]">
-                    <div className="text-sm">
-                      {new Date(cliente.ultimoServico).toLocaleDateString('pt-BR')}
-                    </div>
-                  </TableCell>
-                  <TableCell className="min-w-[140px]">
-                    <div className="flex gap-1 sm:gap-2">
-                      <Button variant="outline" size="sm" className="text-xs">Editar</Button>
-                      <Button variant="outline" size="sm" className="text-xs">Histórico</Button>
+                      <TableCell>{customer.email || '-'}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(customer)}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir o cliente "{customer.name}"?
+                                  Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(customer.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -268,6 +423,7 @@ const Clientes = () => {
             </TableBody>
           </Table>
           </div>
+          )}
         </CardContent>
       </Card>
     </div>

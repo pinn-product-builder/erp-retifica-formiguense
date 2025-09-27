@@ -164,7 +164,7 @@ export function useSupabase() {
           photo_type: photoType,
           file_path: uploadData.path,
           file_name: file.name,
-          uploaded_by: 'Sistema' // TODO: usar usuário logado
+          uploaded_by: (await supabase.auth.getUser()).data.user?.id || 'Sistema'
         })
         .select()
         .single();

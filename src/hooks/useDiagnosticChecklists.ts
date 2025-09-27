@@ -397,7 +397,30 @@ export function useDiagnosticChecklists() {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data as DiagnosticChecklistResponse[];
+      
+      // Buscar nomes dos usuários separadamente
+      const userIds = [...new Set(data?.map(r => r.diagnosed_by).filter(Boolean))] as string[];
+      let userNames: Record<string, string> = {};
+      
+      if (userIds.length > 0) {
+        const { data: users } = await supabase
+          .from('user_basic_info')
+          .select('user_id, name')
+          .in('user_id', userIds);
+          
+        userNames = users?.reduce((acc, user) => ({
+          ...acc,
+          [user.user_id]: user.name
+        }), {}) || {};
+      }
+      
+      // Mapear os dados para incluir o nome do usuário
+      const mappedData = data?.map(response => ({
+        ...response,
+        diagnosed_by_name: userNames[response.diagnosed_by] || response.diagnosed_by || 'Usuário não identificado'
+      })) || [];
+      
+      return mappedData as (DiagnosticChecklistResponse & { diagnosed_by_name: string })[];
     } catch (error) {
       console.error('Erro ao buscar respostas:', error);
       toast({

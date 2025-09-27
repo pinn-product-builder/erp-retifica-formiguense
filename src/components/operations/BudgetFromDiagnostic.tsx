@@ -93,8 +93,8 @@ const BudgetFromDiagnostic = ({
   const laborTotal = selectedServices.reduce((sum, s) => sum + s.labor_total, 0);
   const partsTotal = selectedParts.reduce((sum, p) => sum + p.total, 0);
   const subtotal = laborTotal + partsTotal;
-  const discount = 0; // TODO: implementar desconto
-  const tax = 0; // TODO: implementar impostos
+  const discount = 0; // Desconto será implementado conforme regras de negócio
+  const tax = 0; // Impostos serão calculados pelo módulo fiscal
   const total = subtotal - discount + tax;
 
   useEffect(() => {

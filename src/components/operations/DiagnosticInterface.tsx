@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,7 +215,8 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
         responses,
         photos: Object.values(responses).flatMap(r => r.photos),
         generated_services: generatedServices,
-        diagnosed_by: 'current_user_id', // TODO: usar usuário logado
+        diagnosed_by: (await supabase.auth.getUser()).data.user?.user_metadata?.name || 
+                   (await supabase.auth.getUser()).data.user?.email?.split('@')[0] || 'Usuário',
         status: 'completed'
       });
 

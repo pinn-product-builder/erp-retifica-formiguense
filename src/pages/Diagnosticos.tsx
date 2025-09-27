@@ -41,11 +41,12 @@ import {
 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import DiagnosticInterface from "@/components/operations/DiagnosticInterface";
-import DiagnosticTestSuite from "@/components/operations/DiagnosticTestSuite";
 import DiagnosticChecklistsConfig from "@/components/operations/DiagnosticChecklistsConfig";
-import { useDiagnosticChecklists } from "@/hooks/useDiagnosticChecklists";
+import { useDiagnosticChecklists, useDiagnosticChecklistsQuery } from "@/hooks/useDiagnosticChecklists";
 import { useOrders } from "@/hooks/useOrders";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DiagnosticResponse {
   id: string;
@@ -55,6 +56,7 @@ interface DiagnosticResponse {
   status: 'pending' | 'completed' | 'approved';
   diagnosed_at: string;
   diagnosed_by: string;
+  diagnosed_by_name?: string;
   order?: {
     order_number: string;
     customer: {
@@ -79,63 +81,48 @@ const Diagnosticos = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<string>("none");
   const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
-  const [showTestSuite, setShowTestSuite] = useState(false);
   const [showChecklistsConfig, setShowChecklistsConfig] = useState(false);
 
   const checklistsFunctions = useDiagnosticChecklists();
   const ordersData = useOrders();
 
-  // Mock data - será substituído por dados reais do Supabase
-  const mockResponses: DiagnosticResponse[] = [
-    {
-      id: "1",
-      order_id: "order-1",
-      checklist_id: "checklist-1",
-      component: "bloco",
-      status: "completed",
-      diagnosed_at: "2024-01-15T10:00:00Z",
-      diagnosed_by: "João Silva",
-      order: {
-        order_number: "RF-2024-0001",
-        customer: {
-          name: "Maria Santos"
-        },
-        engine: {
-          type: "Motor 1.6",
-          brand: "Volkswagen",
-          model: "Golf"
-        }
-      },
-      checklist: {
-        name: "Checklist Bloco Motor 1.6"
-      }
-    },
-    {
-      id: "2",
-      order_id: "order-2",
-      checklist_id: "checklist-2",
-      component: "cabecote",
-      status: "pending",
-      diagnosed_at: "2024-01-14T14:30:00Z",
-      diagnosed_by: "Pedro Costa",
-      order: {
-        order_number: "RF-2024-0002",
-        customer: {
-          name: "Carlos Oliveira"
-        },
-        engine: {
-          type: "Motor 2.0",
-          brand: "Ford",
-          model: "Focus"
-        }
-      },
-      checklist: {
-        name: "Checklist Cabeçote Motor 2.0"
-      }
-    }
-  ];
+  // Buscar respostas de diagnóstico do banco de dados
+  const { data: diagnosticResponsesData, isLoading: isLoadingResponses } = useQuery({
+    queryKey: ['diagnostic-responses'],
+    queryFn: async () => {
+      const responses = await checklistsFunctions.getChecklistResponses();
+      
+      // Buscar dados completos das ordens para cada resposta
+      const responsesWithOrderData = await Promise.all(
+        responses.map(async (response) => {
+          try {
+            // Buscar dados da ordem
+            const { data: orderData } = await supabase
+              .from('orders')
+              .select(`
+                order_number,
+                customer:customers(name),
+                engine:engines(type, brand, model)
+              `)
+              .eq('id', response.order_id)
+              .single();
 
-  const diagnosticResponses = mockResponses;
+            return {
+              ...response,
+              order: orderData
+            };
+          } catch (error) {
+            console.error('Erro ao buscar dados da ordem:', error);
+            return response;
+          }
+        })
+      );
+
+      return responsesWithOrderData;
+    }
+  });
+
+  const diagnosticResponses = diagnosticResponsesData || [];
 
   const filteredResponses = diagnosticResponses.filter(response => {
     const matchesSearch = response.order?.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -232,14 +219,6 @@ const Diagnosticos = () => {
           
           <Button
             variant="outline"
-            onClick={() => setShowTestSuite(!showTestSuite)}
-          >
-            <AlertCircle className="w-4 h-4 mr-2" />
-            {showTestSuite ? 'Ocultar' : 'Mostrar'} Testes
-          </Button>
-          
-          <Button
-            variant="outline"
             onClick={() => setShowChecklistsConfig(!showChecklistsConfig)}
           >
             <ClipboardList className="w-4 h-4 mr-2" />
@@ -298,12 +277,7 @@ const Diagnosticos = () => {
         </Dialog>
       </div>
 
-      {/* Test Suite */}
-      {showTestSuite && (
-        <DiagnosticTestSuite />
-      )}
-
-      {/* Checklists Configuration */}
+{/* Checklists Configuration */}
       {showChecklistsConfig && (
         <Card>
           <CardHeader>
@@ -397,66 +371,73 @@ const Diagnosticos = () => {
           <CardTitle>Histórico de Diagnósticos</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ordem</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Motor</TableHead>
-                <TableHead>Componente</TableHead>
-                <TableHead>Checklist</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Diagnosticado por</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredResponses.map((response) => (
-                <TableRow key={response.id}>
-                  <TableCell className="font-medium">
-                    {response.order?.order_number}
-                  </TableCell>
-                  <TableCell>{response.order?.customer.name}</TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div className="font-medium">{response.order?.engine.brand}</div>
-                      <div className="text-muted-foreground">{response.order?.engine.model}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {getComponentLabel(response.component)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate">
-                    {response.checklist?.name}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(response.status)}</TableCell>
-                  <TableCell>{response.diagnosed_by}</TableCell>
-                  <TableCell>
-                    {new Date(response.diagnosed_at).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      {response.status === 'pending' && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleStartDiagnostic(response.order_id)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
+          {isLoadingResponses ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Carregando diagnósticos...</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ordem</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Motor</TableHead>
+                  <TableHead>Componente</TableHead>
+                  <TableHead>Checklist</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Diagnosticado por</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredResponses.map((response) => (
+                  <TableRow key={response.id}>
+                    <TableCell className="font-medium">
+                      {response.order?.order_number || 'N/A'}
+                    </TableCell>
+                    <TableCell>{response.order?.customer?.name || 'N/A'}</TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div className="font-medium">{response.order?.engine?.brand || 'N/A'}</div>
+                        <div className="text-muted-foreground">{response.order?.engine?.model || 'N/A'}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {getComponentLabel(response.component)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {response.checklist?.name || 'N/A'}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(response.status)}</TableCell>
+                    <TableCell>{response.diagnosed_by_name || response.diagnosed_by || 'N/A'}</TableCell>
+                    <TableCell>
+                      {new Date(response.diagnosed_at).toLocaleDateString('pt-BR')}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        {response.status === 'pending' && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleStartDiagnostic(response.order_id)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
           
           {filteredResponses.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">

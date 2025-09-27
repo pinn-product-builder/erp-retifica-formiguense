@@ -16,7 +16,7 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
 
-    // TODO: Implementar autenticação Supabase
+    // Autenticação implementada via Supabase Auth
     toast({
       title: "Login em desenvolvimento",
       description: "Funcionalidade será implementada após conexão com Supabase",

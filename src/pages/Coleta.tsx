@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase } from "@/hooks/useSupabase";
-import { MapPin, User, Building, Wrench } from "lucide-react";
+import { useCustomers, Customer } from "@/hooks/useCustomers";
+import { MapPin, User, Building, Wrench, Search, Plus, UserPlus } from "lucide-react";
 
 export default function Coleta() {
   const [formData, setFormData] = useState({
@@ -37,18 +39,79 @@ export default function Coleta() {
     consultor: ""
   });
 
-  const [consultants, setConsultants] = useState<any[]>([]);
+  const [consultants, setConsultants] = useState<Array<{id: string, name: string}>>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<Customer[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { loading, getConsultants, createCustomer } = useSupabase();
+  const { fetchCustomers, createCustomer: createNewCustomer, loading: customersLoading } = useCustomers();
+
+  const loadConsultants = useCallback(async () => {
+    const data = await getConsultants();
+    if (data) {
+      setConsultants(data);
+    }
+  }, [getConsultants]);
 
   useEffect(() => {
     loadConsultants();
-  }, []);
+  }, [loadConsultants]);
 
-  const loadConsultants = async () => {
-    const data = await getConsultants();
-    setConsultants(data);
+  // Buscar clientes
+  const handleSearchCustomers = async (term: string) => {
+    setSearchTerm(term);
+    if (term.length >= 2) {
+      const results = await fetchCustomers(term);
+      setSearchResults(results);
+      setShowSearchResults(true);
+    } else {
+      setSearchResults([]);
+      setShowSearchResults(false);
+    }
+  };
+
+  // Selecionar cliente existente
+  const handleSelectCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setFormData(prev => ({
+      ...prev,
+      nomeCliente: customer.name,
+      documento: customer.document,
+      telefone: customer.phone || "",
+      email: customer.email || "",
+      endereco: customer.address || "",
+      tipoCliente: customer.type,
+      nomeOficina: customer.workshop_name || "",
+      cnpjOficina: customer.workshop_cnpj || "",
+      contatoOficina: customer.workshop_contact || ""
+    }));
+    setShowSearchResults(false);
+    setSearchTerm("");
+  };
+
+  // Criar novo cliente
+  const handleCreateNewCustomer = async () => {
+    const customerData = {
+      name: formData.nomeCliente,
+      document: formData.documento,
+      phone: formData.telefone,
+      email: formData.email,
+      address: formData.endereco,
+      type: formData.tipoCliente as 'direto' | 'oficina',
+      workshop_name: formData.tipoCliente === 'oficina' ? formData.nomeOficina : undefined,
+      workshop_cnpj: formData.tipoCliente === 'oficina' ? formData.cnpjOficina : undefined,
+      workshop_contact: formData.tipoCliente === 'oficina' ? formData.contatoOficina : undefined
+    };
+
+    const newCustomer = await createNewCustomer(customerData);
+    if (newCustomer) {
+      setSelectedCustomer(newCustomer);
+      setShowNewCustomerDialog(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -192,12 +255,140 @@ export default function Coleta() {
         {/* Dados do Cliente */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5" />
-              Cliente
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <User className="w-5 h-5" />
+                Cliente
+              </div>
+              <div className="flex gap-2">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Search className="w-4 h-4 mr-2" />
+                      Buscar Cliente
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Buscar Cliente</DialogTitle>
+                      <DialogDescription>
+                        Digite o nome, documento ou telefone para buscar
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <Input
+                        placeholder="Digite para buscar..."
+                        value={searchTerm}
+                        onChange={(e) => handleSearchCustomers(e.target.value)}
+                      />
+                      {showSearchResults && searchResults.length > 0 && (
+                        <div className="max-h-60 overflow-y-auto space-y-2">
+                          {searchResults.map((customer) => (
+                            <div
+                              key={customer.id}
+                              className="p-3 border rounded cursor-pointer hover:bg-gray-50"
+                              onClick={() => handleSelectCustomer(customer)}
+                            >
+                              <div className="font-medium">{customer.name}</div>
+                              <div className="text-sm text-gray-600">{customer.document}</div>
+                              {customer.phone && (
+                                <div className="text-sm text-gray-600">{customer.phone}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {showSearchResults && searchResults.length === 0 && searchTerm.length >= 2 && (
+                        <div className="text-center py-4 text-gray-500">
+                          Nenhum cliente encontrado
+                        </div>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <Dialog open={showNewCustomerDialog} onOpenChange={setShowNewCustomerDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Novo Cliente
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
+                      <DialogDescription>
+                        Preencha os dados do cliente abaixo
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="newClientName">Nome Completo / Razão Social</Label>
+                        <Input
+                          id="newClientName"
+                          value={formData.nomeCliente}
+                          onChange={(e) => handleInputChange('nomeCliente', e.target.value)}
+                          placeholder="Nome do cliente"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="newClientDoc">CPF / CNPJ</Label>
+                        <Input
+                          id="newClientDoc"
+                          value={formData.documento}
+                          onChange={(e) => handleInputChange('documento', e.target.value)}
+                          placeholder="000.000.000-00"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="newClientPhone">Telefone</Label>
+                        <Input
+                          id="newClientPhone"
+                          value={formData.telefone}
+                          onChange={(e) => handleInputChange('telefone', e.target.value)}
+                          placeholder="(00) 00000-0000"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="newClientEmail">E-mail</Label>
+                        <Input
+                          id="newClientEmail"
+                          value={formData.email}
+                          onChange={(e) => handleInputChange('email', e.target.value)}
+                          placeholder="cliente@email.com"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <Label htmlFor="newClientAddress">Endereço</Label>
+                        <Input
+                          id="newClientAddress"
+                          value={formData.endereco}
+                          onChange={(e) => handleInputChange('endereco', e.target.value)}
+                          placeholder="Endereço completo"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button 
+                        onClick={handleCreateNewCustomer}
+                        disabled={customersLoading}
+                      >
+                        {customersLoading ? "Cadastrando..." : "Cadastrar Cliente"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {selectedCustomer && (
+              <div className="sm:col-span-2 p-3 bg-green-50 border border-green-200 rounded">
+                <div className="flex items-center gap-2 text-green-800">
+                  <User className="w-4 h-4" />
+                  <span className="font-medium">Cliente Selecionado: {selectedCustomer.name}</span>
+                </div>
+              </div>
+            )}
             <div>
               <Label htmlFor="nomeCliente">Nome Completo / Razão Social</Label>
               <Input
@@ -206,6 +397,7 @@ export default function Coleta() {
                 value={formData.nomeCliente}
                 onChange={(e) => handleInputChange('nomeCliente', e.target.value)}
                 required
+                disabled={!!selectedCustomer}
               />
             </div>
             <div>
@@ -216,6 +408,7 @@ export default function Coleta() {
                 value={formData.documento}
                 onChange={(e) => handleInputChange('documento', e.target.value)}
                 required
+                disabled={!!selectedCustomer}
               />
             </div>
             <div>
@@ -226,6 +419,7 @@ export default function Coleta() {
                 value={formData.telefone}
                 onChange={(e) => handleInputChange('telefone', e.target.value)}
                 required
+                disabled={!!selectedCustomer}
               />
             </div>
             <div>
@@ -236,6 +430,7 @@ export default function Coleta() {
                 placeholder="cliente@email.com"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
+                disabled={!!selectedCustomer}
               />
             </div>
             <div className="md:col-span-2">
@@ -245,6 +440,7 @@ export default function Coleta() {
                 placeholder="Rua, número, bairro, cidade, CEP"
                 value={formData.endereco}
                 onChange={(e) => handleInputChange('endereco', e.target.value)}
+                disabled={!!selectedCustomer}
               />
             </div>
           </CardContent>

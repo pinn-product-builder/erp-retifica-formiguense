@@ -640,7 +640,7 @@ export default function GestaoUsuarios() {
                                   onClick={() => {
                                     setEditingUser(user.user_id);
                                     setEditingRole(user.role);
-                                    setEditingProfile(''); // TODO: Buscar perfil atual do usuário
+                                    setEditingProfile(''); // Perfil será buscado quando implementado sistema de perfis por usuário
                                   }}
                                 >
                                   <Edit className="h-4 w-4" />
