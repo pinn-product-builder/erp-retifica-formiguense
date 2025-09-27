@@ -21,6 +21,8 @@ import {
   Wrench
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useSupabase } from '@/hooks/useSupabase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface IntakeWizardProps {
   onComplete: () => void;
@@ -68,6 +70,7 @@ interface CheckinData {
 
 export function IntakeWizard({ onComplete }: IntakeWizardProps) {
   const { toast } = useToast();
+  const { createCustomer, createEngine, createOrder } = useSupabase();
   const [currentStep, setCurrentStep] = useState<WizardStep>('collection');
   const [loading, setLoading] = useState(false);
 
@@ -116,7 +119,7 @@ export function IntakeWizard({ onComplete }: IntakeWizardProps) {
     etiqueta: null
   });
 
-  const steps = [
+  const steps: Array<{ id: WizardStep; name: string; icon: any; progress: number }> = [
     { id: 'collection', name: 'Coleta', icon: Truck, progress: 20 },
     { id: 'customer', name: 'Cliente', icon: User, progress: 40 },
     { id: 'checkin', name: 'Check-in', icon: ClipboardCheck, progress: 60 },
@@ -130,14 +133,14 @@ export function IntakeWizard({ onComplete }: IntakeWizardProps) {
   const handleNext = () => {
     const currentIndex = getCurrentStepIndex();
     if (currentIndex < steps.length - 1) {
-      setCurrentStep(steps[currentIndex + 1].id as WizardStep);
+      setCurrentStep(steps[currentIndex + 1].id);
     }
   };
 
   const handlePrevious = () => {
     const currentIndex = getCurrentStepIndex();
     if (currentIndex > 0) {
-      setCurrentStep(steps[currentIndex - 1].id as WizardStep);
+      setCurrentStep(steps[currentIndex - 1].id);
     }
   };
 
@@ -145,19 +148,80 @@ export function IntakeWizard({ onComplete }: IntakeWizardProps) {
     try {
       setLoading(true);
       
-      // TODO: Implementar salvamento real dos dados
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // 1. Criar cliente
+      const customer = await createCustomer({
+        type: customerData.tipoCliente,
+        name: customerData.nomeCliente,
+        document: customerData.documento,
+        phone: customerData.telefone,
+        email: customerData.email,
+        address: customerData.endereco,
+        workshop_name: customerData.nomeOficina,
+        workshop_cnpj: customerData.cnpjOficina,
+        workshop_contact: customerData.contatoOficina
+      });
+
+      if (!customer) {
+        throw new Error('Erro ao criar cliente');
+      }
+
+      // 2. Criar motor
+      const engine = await createEngine({
+        type: checkinData.tipo,
+        brand: checkinData.marca,
+        model: checkinData.modelo,
+        fuel_type: checkinData.combustivel,
+        serial_number: checkinData.numeroSerie,
+        is_complete: checkinData.motorCompleto,
+        assembly_state: checkinData.montado,
+        has_block: checkinData.temBloco,
+        has_head: checkinData.temCabecote,
+        has_crankshaft: checkinData.temVirabrequim,
+        has_piston: checkinData.temPistao,
+        has_connecting_rod: checkinData.temBiela,
+        turns_manually: checkinData.giraManualmente
+      });
+
+      if (!engine) {
+        throw new Error('Erro ao criar motor');
+      }
+
+      // 3. Buscar consultor disponível
+      const consultants = await supabase.from('consultants').select('id').limit(1);
+      const consultantId = consultants.data?.[0]?.id;
+
+      if (!consultantId) {
+        throw new Error('Nenhum consultor disponível');
+      }
+
+      // 4. Criar ordem de serviço
+      const order = await createOrder({
+        customer_id: customer.id,
+        consultant_id: consultantId,
+        engine_id: engine.id,
+        collection_date: collectionData.dataColeta,
+        collection_time: collectionData.horaColeta,
+        collection_location: collectionData.localColeta,
+        driver_name: collectionData.motorista,
+        failure_reason: collectionData.motivoFalha,
+        initial_observations: checkinData.observacoes
+      });
+
+      if (!order) {
+        throw new Error('Erro ao criar ordem de serviço');
+      }
       
       toast({
         title: "Sucesso!",
-        description: "Entrada processada com sucesso. Redirecionando para o workflow...",
+        description: `Ordem ${order.order_number} criada com sucesso!`,
       });
       
       onComplete();
     } catch (error) {
+      console.error('Erro ao processar entrada:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível processar a entrada",
+        description: error instanceof Error ? error.message : "Não foi possível processar a entrada",
         variant: "destructive"
       });
     } finally {
@@ -432,114 +496,183 @@ export function IntakeWizard({ onComplete }: IntakeWizardProps) {
               />
             </div>
 
-            <Card className="border-orange-200 bg-orange-50">
-              <CardHeader>
-                <CardTitle className="text-sm text-orange-800">Checklist de Componentes</CardTitle>
+            <Card className="border-primary/20 bg-card">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <div className="w-2 h-2 bg-primary rounded-full"></div>
+                  Checklist de Componentes
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Marque os componentes presentes no motor
+                </p>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="motorCompleto"
-                      checked={checkinData.motorCompleto}
-                      onCheckedChange={(checked) => 
-                        setCheckinData(prev => ({ ...prev, motorCompleto: checked as boolean }))
-                      }
-                    />
-                    <Label htmlFor="motorCompleto">Motor Completo</Label>
+              <CardContent className="space-y-6">
+                {/* Componentes Principais */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-foreground border-b pb-2">
+                    Componentes Principais
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="flex items-center space-x-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <Checkbox
+                        id="motorCompleto"
+                        checked={checkinData.motorCompleto}
+                        onCheckedChange={(checked) => 
+                          setCheckinData(prev => ({ ...prev, motorCompleto: checked as boolean }))
+                        }
+                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
+                      <Label htmlFor="motorCompleto" className="text-sm font-medium cursor-pointer">
+                        Motor Completo
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <Checkbox
+                        id="temBloco"
+                        checked={checkinData.temBloco}
+                        onCheckedChange={(checked) => 
+                          setCheckinData(prev => ({ ...prev, temBloco: checked as boolean }))
+                        }
+                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
+                      <Label htmlFor="temBloco" className="text-sm font-medium cursor-pointer">
+                        Bloco do Motor
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <Checkbox
+                        id="temCabecote"
+                        checked={checkinData.temCabecote}
+                        onCheckedChange={(checked) => 
+                          setCheckinData(prev => ({ ...prev, temCabecote: checked as boolean }))
+                        }
+                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
+                      <Label htmlFor="temCabecote" className="text-sm font-medium cursor-pointer">
+                        Cabeçote
+                      </Label>
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="temBloco"
-                      checked={checkinData.temBloco}
-                      onCheckedChange={(checked) => 
-                        setCheckinData(prev => ({ ...prev, temBloco: checked as boolean }))
-                      }
-                    />
-                    <Label htmlFor="temBloco">Tem Bloco</Label>
+                </div>
+
+                {/* Componentes Internos */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-foreground border-b pb-2">
+                    Componentes Internos
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="flex items-center space-x-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <Checkbox
+                        id="temVirabrequim"
+                        checked={checkinData.temVirabrequim}
+                        onCheckedChange={(checked) => 
+                          setCheckinData(prev => ({ ...prev, temVirabrequim: checked as boolean }))
+                        }
+                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
+                      <Label htmlFor="temVirabrequim" className="text-sm font-medium cursor-pointer">
+                        Virabrequim
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <Checkbox
+                        id="temPistao"
+                        checked={checkinData.temPistao}
+                        onCheckedChange={(checked) => 
+                          setCheckinData(prev => ({ ...prev, temPistao: checked as boolean }))
+                        }
+                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
+                      <Label htmlFor="temPistao" className="text-sm font-medium cursor-pointer">
+                        Pistões
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <Checkbox
+                        id="temBiela"
+                        checked={checkinData.temBiela}
+                        onCheckedChange={(checked) => 
+                          setCheckinData(prev => ({ ...prev, temBiela: checked as boolean }))
+                        }
+                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
+                      <Label htmlFor="temBiela" className="text-sm font-medium cursor-pointer">
+                        Bielas
+                      </Label>
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="temCabecote"
-                      checked={checkinData.temCabecote}
-                      onCheckedChange={(checked) => 
-                        setCheckinData(prev => ({ ...prev, temCabecote: checked as boolean }))
-                      }
-                    />
-                    <Label htmlFor="temCabecote">Tem Cabeçote</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="temVirabrequim"
-                      checked={checkinData.temVirabrequim}
-                      onCheckedChange={(checked) => 
-                        setCheckinData(prev => ({ ...prev, temVirabrequim: checked as boolean }))
-                      }
-                    />
-                    <Label htmlFor="temVirabrequim">Tem Virabrequim</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="temPistao"
-                      checked={checkinData.temPistao}
-                      onCheckedChange={(checked) => 
-                        setCheckinData(prev => ({ ...prev, temPistao: checked as boolean }))
-                      }
-                    />
-                    <Label htmlFor="temPistao">Tem Pistão</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="temBiela"
-                      checked={checkinData.temBiela}
-                      onCheckedChange={(checked) => 
-                        setCheckinData(prev => ({ ...prev, temBiela: checked as boolean }))
-                      }
-                    />
-                    <Label htmlFor="temBiela">Tem Biela</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
+                </div>
+
+                {/* Teste Funcional */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-medium text-foreground border-b pb-2">
+                    Teste Funcional
+                  </h4>
+                  <div className="flex items-center space-x-3 p-3 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors">
                     <Checkbox
                       id="giraManualmente"
                       checked={checkinData.giraManualmente}
                       onCheckedChange={(checked) => 
                         setCheckinData(prev => ({ ...prev, giraManualmente: checked as boolean }))
                       }
+                      className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                     />
-                    <Label htmlFor="giraManualmente">Gira Manualmente</Label>
+                    <Label htmlFor="giraManualmente" className="text-sm font-medium cursor-pointer">
+                      Motor gira manualmente
+                    </Label>
                   </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="montado">Estado de Montagem</Label>
+                {/* Estado de Montagem */}
+                <div className="space-y-3">
+                  <Label htmlFor="montado" className="text-sm font-medium">
+                    Estado de Montagem
+                  </Label>
                   <Select
                     value={checkinData.montado}
                     onValueChange={(value) => setCheckinData(prev => ({ ...prev, montado: value }))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11">
                       <SelectValue placeholder="Selecione o estado" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="montado">Montado</SelectItem>
-                      <SelectItem value="parcialmente_desmontado">Parcialmente Desmontado</SelectItem>
-                      <SelectItem value="desmontado">Completamente Desmontado</SelectItem>
+                      <SelectItem value="montado">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          Montado
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="parcialmente_desmontado">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                          Parcialmente Desmontado
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="desmontado">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          Completamente Desmontado
+                        </div>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div>
-                  <Label htmlFor="observacoes">Observações Técnicas</Label>
+                {/* Observações */}
+                <div className="space-y-3">
+                  <Label htmlFor="observacoes" className="text-sm font-medium">
+                    Observações Técnicas
+                  </Label>
                   <Textarea
                     id="observacoes"
-                    placeholder="Observações sobre o estado do motor, danos visíveis, etc."
+                    placeholder="Descreva o estado geral do motor, danos visíveis, peças faltantes ou outras observações importantes..."
                     value={checkinData.observacoes}
                     onChange={(e) => setCheckinData(prev => ({ ...prev, observacoes: e.target.value }))}
+                    className="min-h-[100px] resize-none"
                   />
                 </div>
               </CardContent>
@@ -795,7 +928,7 @@ export function IntakeWizard({ onComplete }: IntakeWizardProps) {
         ) : (
           <Button
             onClick={handleNext}
-            disabled={currentStep === 'review'}
+            disabled={getCurrentStepIndex() === steps.length - 1}
           >
             Próximo
             <ArrowRight className="h-4 w-4 ml-2" />

@@ -39,6 +39,7 @@ import { useDiagnosticChecklists, useDiagnosticChecklistsQuery, useDiagnosticChe
 import { useEngineTypes } from "@/hooks/useEngineTypes";
 import { useOrders } from "@/hooks/useOrders";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from '@/integrations/supabase/client';
 import BudgetFromDiagnostic from './BudgetFromDiagnostic';
 import DiagnosticValidation from './DiagnosticValidation';
 
@@ -214,7 +215,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
         responses,
         photos: Object.values(responses).flatMap(r => r.photos),
         generated_services: generatedServices,
-        diagnosed_by: 'current_user_id', // TODO: usar usuário logado
+        diagnosed_by: (await supabase.auth.getUser()).data.user?.id || null,
         status: 'completed'
       });
 

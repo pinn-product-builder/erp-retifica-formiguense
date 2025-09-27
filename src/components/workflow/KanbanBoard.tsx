@@ -45,6 +45,11 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
       workflowsByStatus[status] = [];
     });
 
+    // Verificar se orders existe e é um array antes de iterar
+    if (!orders || !Array.isArray(orders)) {
+      return workflowsByStatus;
+    }
+
     orders.forEach(order => {
       if (order.order_workflow) {
         const componentWorkflow = order.order_workflow.find(

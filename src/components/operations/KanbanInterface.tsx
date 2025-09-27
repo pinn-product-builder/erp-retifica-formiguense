@@ -22,6 +22,7 @@ import {
 import { KanbanBoard } from '@/components/workflow/KanbanBoard';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useToast } from '@/hooks/use-toast';
+import { useOrders } from '@/hooks/useOrders';
 
 interface OrderContext {
   id?: string;
@@ -54,10 +55,9 @@ interface ComponentStatus {
 }
 
 export function KanbanInterface({ orderContext }: KanbanInterfaceProps) {
-  const { getOrders, loading } = useSupabase();
+  const { orders, loading, fetchOrders } = useOrders();
   const { toast } = useToast();
 
-  const [orders, setOrders] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -72,74 +72,104 @@ export function KanbanInterface({ orderContext }: KanbanInterfaceProps) {
     averageTime: 0
   });
 
-  const [componentStatuses, setComponentStatuses] = useState<ComponentStatus[]>([
-    {
-      component: 'Bloco',
-      status: 'usinagem',
-      assignedTo: 'João Silva',
-      startedAt: '2025-09-26T08:00:00',
-      estimatedCompletion: '2025-09-27T16:00:00',
-      progress: 65
-    },
-    {
-      component: 'Cabeçote',
-      status: 'metrologia',
-      assignedTo: 'Maria Santos',
-      startedAt: '2025-09-26T09:30:00',
-      estimatedCompletion: '2025-09-26T17:00:00',
-      progress: 30
-    },
-    {
-      component: 'Virabrequim',
-      status: 'entrada',
-      progress: 0
-    },
-    {
-      component: 'Biela',
-      status: 'montagem',
-      assignedTo: 'Pedro Costa',
-      startedAt: '2025-09-25T14:00:00',
-      estimatedCompletion: '2025-09-26T12:00:00',
-      progress: 90
-    },
-    {
-      component: 'Comando',
-      status: 'pronto',
-      assignedTo: 'Ana Pereira',
-      progress: 100
-    }
-  ]);
+  const [componentStatuses, setComponentStatuses] = useState<ComponentStatus[]>([]);
 
   useEffect(() => {
-    loadOrders();
     loadStats();
-  }, []);
+    loadComponentStatuses();
+  }, [orders]); // Atualizar stats quando orders mudar
 
-  const loadOrders = async () => {
+  const loadComponentStatuses = async () => {
     try {
-      const data = await getOrders();
-      if (data) {
-        setOrders(data);
-        updateStats(data);
+      if (!orders || orders.length === 0) {
+        setComponentStatuses([]);
+        return;
       }
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar as ordens",
-        variant: "destructive"
+
+      // Agregar status dos componentes de todas as ordens
+      const componentMap = new Map<string, ComponentStatus>();
+      
+      orders.forEach((order: any) => {
+        if (order.order_workflow) {
+          order.order_workflow.forEach((workflow: any) => {
+            const componentKey = workflow.component;
+            const existing = componentMap.get(componentKey);
+            
+            if (!existing || workflow.updated_at > existing.startedAt) {
+              componentMap.set(componentKey, {
+                component: workflow.component.charAt(0).toUpperCase() + workflow.component.slice(1),
+                status: workflow.status,
+                assignedTo: workflow.assigned_to || 'Não atribuído',
+                startedAt: workflow.updated_at || new Date().toISOString(),
+                estimatedCompletion: workflow.estimated_completion,
+                progress: getProgressFromStatus(workflow.status)
+              });
+            }
+          });
+        }
       });
+
+      setComponentStatuses(Array.from(componentMap.values()));
+    } catch (error) {
+      console.error('Erro ao carregar status dos componentes:', error);
+      setComponentStatuses([]);
     }
   };
 
+  const getProgressFromStatus = (status: string): number => {
+    const statusProgress: { [key: string]: number } = {
+      'entrada': 10,
+      'metrologia': 25,
+      'usinagem': 50,
+      'montagem': 75,
+      'pronto': 100,
+      'garantia': 100,
+      'entregue': 100
+    };
+    return statusProgress[status] || 0;
+  };
+
   const loadStats = async () => {
-    // TODO: Implementar carregamento real das estatísticas
-    setStats({
-      totalOrders: 24,
-      activeOrders: 18,
-      completedToday: 3,
-      delayedOrders: 2,
-      averageTime: 4.5
-    });
+    try {
+      // Calcular estatísticas baseadas nas ordens carregadas
+      const totalOrders = orders.length;
+      const activeOrders = orders.filter(order => 
+        order.status === 'ativa'
+      ).length;
+      
+      const today = new Date().toISOString().split('T')[0];
+      const completedToday = orders.filter(order => 
+        order.status === 'concluida' && 
+        order.updated_at?.startsWith(today)
+      ).length;
+      
+      const delayedOrders = orders.filter(order => 
+        order.estimated_delivery && 
+        new Date(order.estimated_delivery) < new Date() && 
+        !['concluida', 'entregue', 'cancelada'].includes(order.status)
+      ).length;
+      
+      // Calcular tempo médio (simplificado - pode ser melhorado)
+      const averageTime = totalOrders > 0 ? 4.5 : 0; // Placeholder para cálculo mais complexo
+      
+      setStats({
+        totalOrders,
+        activeOrders,
+        completedToday,
+        delayedOrders,
+        averageTime
+      });
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas:', error);
+      // Fallback para valores padrão em caso de erro
+      setStats({
+        totalOrders: 0,
+        activeOrders: 0,
+        completedToday: 0,
+        delayedOrders: 0,
+        averageTime: 0
+      });
+    }
   };
 
   const updateStats = (ordersData: any[]) => {
@@ -169,7 +199,7 @@ export function KanbanInterface({ orderContext }: KanbanInterfaceProps) {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadOrders();
+    await fetchOrders();
     setRefreshing(false);
   };
 
@@ -452,7 +482,7 @@ export function KanbanInterface({ orderContext }: KanbanInterfaceProps) {
               </div>
             </div>
           ) : (
-            <KanbanBoard />
+            <KanbanBoard orders={orders} onOrderUpdate={fetchOrders} />
           )}
         </CardContent>
       </Card>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,8 @@ import {
   Home
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useOrders } from '@/hooks/useOrders';
+import { supabase } from '@/integrations/supabase/client';
 
 // Componentes contextuais - serão importados dinamicamente
 import { IntakeWizard } from '@/components/operations/IntakeWizard';
@@ -54,6 +56,7 @@ export default function OperationsCenter() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { fetchOrderDetails } = useOrders();
 
   // Estados principais
   const [currentStage, setCurrentStage] = useState<OperationStage>('intake');
@@ -104,19 +107,40 @@ export default function OperationsCenter() {
     }
   ];
 
-  const loadOrderContext = async (orderId: string) => {
+  const loadOrderContext = useCallback(async (orderId: string) => {
     try {
       setLoading(true);
-      // TODO: Implementar carregamento real do contexto da ordem
-      setOrderContext({
-        id: orderId,
-        number: `RF-2025-${orderId.slice(-4)}`,
-        customer: 'Cliente Exemplo',
-        status: 'em_andamento',
-        progress: 65,
-        currentStep: currentStage
-      });
+      const orderDetails = await fetchOrderDetails(orderId);
+      
+      if (orderDetails) {
+        // Calcular progresso baseado no workflow
+        const totalComponents = 5; // bloco, cabeçote, eixo, biela, comando
+        
+        // Buscar workflows da ordem para calcular progresso real
+        const { data: workflows } = await supabase
+          .from('order_workflow')
+          .select('status')
+          .eq('order_id', orderDetails.id);
+        
+        const completedComponents = workflows?.filter(wf => 
+          ['pronto', 'garantia', 'entregue'].includes(wf.status)
+        ).length || 0;
+        
+        const progress = Math.round((completedComponents / totalComponents) * 100);
+        
+        setOrderContext({
+          id: orderDetails.id,
+          number: orderDetails.order_number,
+          customer: orderDetails.customer?.name || 'Cliente não identificado',
+          status: orderDetails.status,
+          progress: progress,
+          currentStep: currentStage
+        });
+      } else {
+        throw new Error('Ordem não encontrada');
+      }
     } catch (error) {
+      console.error('Erro ao carregar contexto da ordem:', error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar o contexto da ordem",
@@ -125,7 +149,7 @@ export default function OperationsCenter() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchOrderDetails, currentStage, toast]);
 
   // Inicialização baseada em parâmetros da URL
   useEffect(() => {
@@ -196,162 +220,145 @@ export default function OperationsCenter() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header Contextual */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            {/* Título e Contexto */}
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/dashboard')}
-                className="p-2"
-              >
-                <Home className="h-4 w-4" />
-              </Button>
+    <div className="p-4 sm:p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/dashboard')}
+            className="p-2"
+          >
+            <Home className="h-4 w-4" />
+          </Button>
 
-              <div>
-                <h1 className="text-xl lg:text-2xl font-bold text-gray-900">
-                  {getStageTitle()}
-                </h1>
-                <p className="text-sm text-gray-600">
-                  {getStageDescription()}
-                </p>
-              </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">
+              {getStageTitle()}
+            </h1>
+            <p className="text-muted-foreground">
+              {getStageDescription()}
+            </p>
+          </div>
 
-              {orderContext.number && (
-                <Badge variant="outline" className="ml-2">
-                  OS: {orderContext.number}
-                </Badge>
-              )}
+          {orderContext.number && (
+            <Badge variant="outline" className="ml-2">
+              OS: {orderContext.number}
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          {orderContext.progress && (
+            <div className="hidden lg:flex items-center gap-2 min-w-[200px]">
+              <span className="text-sm text-muted-foreground">Progresso:</span>
+              <Progress value={orderContext.progress} className="flex-1" />
+              <span className="text-sm font-medium">{orderContext.progress}%</span>
             </div>
+          )}
 
-            {/* Progresso e Ações */}
-            <div className="flex items-center gap-4">
-              {orderContext.progress && (
-                <div className="hidden lg:flex items-center gap-2 min-w-[200px]">
-                  <span className="text-sm text-gray-600">Progresso:</span>
-                  <Progress value={orderContext.progress} className="flex-1" />
-                  <span className="text-sm font-medium">{orderContext.progress}%</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePreviousStep}
+            disabled={currentStage === 'intake'}
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Anterior
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={handleNextStep}
+            disabled={currentStage === 'delivery'}
+          >
+            Próximo
+            <ArrowRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Etapas do Processo */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Etapas do Processo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {processSteps.map((step, index) => {
+              const Icon = step.icon;
+              const isActive = step.id === currentStage;
+              const isCompleted = step.status === 'completed';
+
+              return (
+                <div
+                  key={step.id}
+                  className={`
+                    flex flex-col items-center gap-3 p-4 rounded-lg cursor-pointer transition-all border-2
+                    ${isActive
+                      ? 'bg-primary/10 border-primary'
+                      : 'hover:bg-muted border-transparent'
+                    }
+                  `}
+                  onClick={() => handleStageChange(step.id as OperationStage)}
+                >
+                  <div className={`
+                    flex items-center justify-center w-12 h-12 rounded-full
+                    ${isActive
+                      ? 'bg-primary text-primary-foreground'
+                      : isCompleted
+                        ? 'bg-green-600 text-white'
+                        : 'bg-muted text-muted-foreground'
+                    }
+                  `}>
+                    {isCompleted ? (
+                      <CheckCircle className="h-6 w-6" />
+                    ) : (
+                      <Icon className="h-6 w-6" />
+                    )}
+                  </div>
+
+                  <div className="text-center">
+                    <p className={`
+                      font-medium text-sm
+                      ${isActive ? 'text-primary' : ''}
+                    `}>
+                      {step.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {step.description}
+                    </p>
+
+                    {step.progress > 0 && (
+                      <Progress
+                        value={step.progress}
+                        className="mt-2 h-1"
+                      />
+                    )}
+                  </div>
                 </div>
-              )}
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
+      {/* Conteúdo Contextual */}
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePreviousStep}
-                  disabled={currentStage === 'intake'}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-1" />
-                  Anterior
-                </Button>
-
-                <Button
-                  size="sm"
-                  onClick={handleNextStep}
-                  disabled={currentStage === 'delivery'}
-                >
-                  Próximo
-                  <ArrowRight className="h-4 w-4 ml-1" />
-                </Button>
+                <Clock className="h-5 w-5 animate-spin" />
+                <span>Carregando...</span>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Sidebar de Navegação */}
-          <div className="lg:col-span-3">
-            <Card className="sticky top-24">
-              <CardHeader>
-                <CardTitle className="text-lg">Etapas do Processo</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {processSteps.map((step, index) => {
-                  const Icon = step.icon;
-                  const isActive = step.id === currentStage;
-                  const isCompleted = step.status === 'completed';
-
-                  return (
-                    <div
-                      key={step.id}
-                      className={`
-                        flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all
-                        ${isActive
-                          ? 'bg-blue-50 border-2 border-blue-200'
-                          : 'hover:bg-gray-50 border-2 border-transparent'
-                        }
-                      `}
-                      onClick={() => handleStageChange(step.id as OperationStage)}
-                    >
-                      <div className={`
-                        flex items-center justify-center w-8 h-8 rounded-full
-                        ${isActive
-                          ? 'bg-blue-600 text-white'
-                          : isCompleted
-                            ? 'bg-green-600 text-white'
-                            : 'bg-gray-200 text-gray-600'
-                        }
-                      `}>
-                        {isCompleted ? (
-                          <CheckCircle className="h-4 w-4" />
-                        ) : (
-                          <Icon className="h-4 w-4" />
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <p className={`
-                          font-medium truncate
-                          ${isActive ? 'text-blue-900' : 'text-gray-900'}
-                        `}>
-                          {step.name}
-                        </p>
-                        <p className="text-xs text-gray-600 truncate">
-                          {step.description}
-                        </p>
-
-                        {step.progress > 0 && (
-                          <Progress
-                            value={step.progress}
-                            className="mt-1 h-1"
-                          />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Área de Trabalho Principal */}
-          <div className="lg:col-span-9">
-            <div className="space-y-6">
-              {/* Conteúdo Contextual */}
-              <Card>
-                <CardContent className="p-0">
-                  {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-5 w-5 animate-spin" />
-                        <span>Carregando...</span>
-                      </div>
-                    </div>
-                  ) : (
-                    renderContextualContent()
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </div>
+          ) : (
+            renderContextualContent()
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

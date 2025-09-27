@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
@@ -83,7 +83,7 @@ export function useOrders() {
   const { currentOrganization } = useOrganization();
   const { toast } = useToast();
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     if (!currentOrganization?.id) return;
 
     try {
@@ -136,9 +136,9 @@ export function useOrders() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentOrganization?.id, toast]);
 
-  const fetchOrderDetails = async (orderId: string) => {
+  const fetchOrderDetails = useCallback(async (orderId: string) => {
     if (!currentOrganization?.id) return null;
 
     try {
@@ -205,9 +205,9 @@ export function useOrders() {
       });
       return null;
     }
-  };
+  }, [currentOrganization?.id, toast]);
 
-  const updateOrderStatus = async (orderId: string, newStatus: 'ativa' | 'concluida' | 'cancelada', notes?: string) => {
+  const updateOrderStatus = useCallback(async (orderId: string, newStatus: 'ativa' | 'concluida' | 'cancelada', notes?: string) => {
     if (!currentOrganization?.id) return false;
 
     try {
@@ -246,7 +246,7 @@ export function useOrders() {
       });
       return false;
     }
-  };
+  }, [currentOrganization?.id, toast, fetchOrders]);
 
   const addOrderMaterial = async (material: Omit<OrderMaterial, 'id' | 'total_cost'>) => {
     if (!currentOrganization?.id) return false;
@@ -312,7 +312,7 @@ export function useOrders() {
     if (currentOrganization?.id) {
       fetchOrders();
     }
-  }, [currentOrganization?.id]);
+  }, [currentOrganization?.id, fetchOrders]);
 
   return {
     orders,

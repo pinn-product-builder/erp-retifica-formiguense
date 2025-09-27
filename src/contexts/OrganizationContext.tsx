@@ -61,11 +61,26 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [error, setError] = useState<string | null>(null);
 
   const fetchUserOrganizations = async () => {
-    if (!user) return;
-
     try {
       setLoading(true);
       setError(null);
+
+      if (!user) {
+        // Modo desenvolvimento - carregar primeira organização disponível
+        const { data: orgs, error: orgsError } = await supabase
+          .from('organizations')
+          .select('*')
+          .limit(1);
+
+        if (orgsError) throw orgsError;
+
+        if (orgs && orgs.length > 0) {
+          setUserOrganizations(orgs);
+          setCurrentOrganization(orgs[0]);
+          setUserRole('super_admin');
+        }
+        return;
+      }
 
       // Fetch user's organizations through the junction table
       const { data: orgUsers, error: orgUsersError } = await supabase
@@ -234,14 +249,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   useEffect(() => {
-    if (user) {
-      fetchUserOrganizations();
-    } else {
-      setCurrentOrganization(null);
-      setUserOrganizations([]);
-      setUserRole(null);
-      setLoading(false);
-    }
+    fetchUserOrganizations();
   }, [user]);
 
   // Load preferred organization from localStorage

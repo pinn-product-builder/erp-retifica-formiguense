@@ -83,6 +83,8 @@ const BudgetFromDiagnostic = ({
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [parts, setParts] = useState<PartItem[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [discountPercentage, setDiscountPercentage] = useState(0);
+  const [taxPercentage, setTaxPercentage] = useState(0);
   const [budgetNotes, setBudgetNotes] = useState('');
   const [isCalculating, setIsCalculating] = useState(false);
 
@@ -93,8 +95,8 @@ const BudgetFromDiagnostic = ({
   const laborTotal = selectedServices.reduce((sum, s) => sum + s.labor_total, 0);
   const partsTotal = selectedParts.reduce((sum, p) => sum + p.total, 0);
   const subtotal = laborTotal + partsTotal;
-  const discount = 0; // TODO: implementar desconto
-  const tax = 0; // TODO: implementar impostos
+  const discount = (subtotal * discountPercentage) / 100;
+  const tax = ((subtotal - discount) * taxPercentage) / 100;
   const total = subtotal - discount + tax;
 
   useEffect(() => {
@@ -519,6 +521,36 @@ const BudgetFromDiagnostic = ({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                {/* Controles de Desconto e Impostos */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="discount">Desconto (%)</Label>
+                    <Input
+                      id="discount"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={discountPercentage}
+                      onChange={(e) => setDiscountPercentage(Number(e.target.value))}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tax">Impostos (%)</Label>
+                    <Input
+                      id="tax"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={taxPercentage}
+                      onChange={(e) => setTaxPercentage(Number(e.target.value))}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+                
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="space-y-2">
                     <div className="flex justify-between">

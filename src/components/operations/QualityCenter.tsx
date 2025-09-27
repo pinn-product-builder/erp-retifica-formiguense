@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { QualityChecklistManager } from '@/components/quality/QualityChecklistManager';
@@ -31,41 +31,61 @@ interface QualityCenterProps {
 
 export function QualityCenter({ orderContext }: QualityCenterProps) {
   const [activeTab, setActiveTab] = useState('checklists');
-
-  // Dados simulados para demonstração
-  const qualityStats = {
+  const [qualityStats, setQualityStats] = useState({
     checklistsAtivos: 0,
     relatoriosGerados: 0,
     taxaConformidade: 0,
     naoConformidades: 0,
     garantiasAtivas: 0,
     reclamacoesAbertas: 0
+  });
+
+  // Carregar estatísticas reais quando o componente montar
+  useEffect(() => {
+    loadQualityStats();
+  }, [orderContext]);
+
+  const loadQualityStats = async () => {
+    try {
+      // TODO: Implementar carregamento real das estatísticas de qualidade
+      // Por enquanto, mantém valores zerados até implementar as queries
+      setQualityStats({
+        checklistsAtivos: 0,
+        relatoriosGerados: 0,
+        taxaConformidade: 0,
+        naoConformidades: 0,
+        garantiasAtivas: 0,
+        reclamacoesAbertas: 0
+      });
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas de qualidade:', error);
+    }
   };
 
   return (
     <div className="space-y-6 p-6">
       {/* Header com contexto da ordem */}
       {orderContext?.number && (
-        <Card className="border-green-200 bg-green-50">
+        <Card className="border-green-600 bg-green-900/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-green-900">
+                <h3 className="font-semibold text-green-100">
                   Controle de Qualidade - OS: {orderContext.number}
                 </h3>
-                <p className="text-sm text-green-700">
+                <p className="text-sm text-green-200">
                   Cliente: {orderContext.customer}
                 </p>
               </div>
               <div className="text-right">
-                <Badge variant="outline" className="border-green-300 text-green-800">
+                <Badge variant="outline" className="border-green-400 text-green-300">
                   <Shield className="h-3 w-3 mr-1" />
                   Qualidade em Análise
                 </Badge>
                 {orderContext.progress && (
                   <div className="mt-2 w-32">
-                    <Progress value={orderContext.progress} className="bg-green-100" />
-                    <p className="text-xs text-green-600 mt-1">
+                    <Progress value={orderContext.progress} className="bg-green-800" />
+                    <p className="text-xs text-green-300 mt-1">
                       {orderContext.progress}% concluído
                     </p>
                   </div>
@@ -78,103 +98,103 @@ export function QualityCenter({ orderContext }: QualityCenterProps) {
 
       {/* Dashboard de Qualidade */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card>
+        <Card className="bg-gray-800 border-gray-700">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Checklists Ativos</p>
+                <p className="text-sm font-medium text-gray-300">Checklists Ativos</p>
                 <p className="text-2xl font-bold text-blue-600">{qualityStats.checklistsAtivos}</p>
               </div>
-              <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <div className="h-8 w-8 bg-blue-900/30 rounded-full flex items-center justify-center">
                 <CheckCircle className="h-4 w-4 text-blue-600" />
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-400 mt-2">
               Por etapa de produção
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-800 border-gray-700">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Relatórios Gerados</p>
+                <p className="text-sm font-medium text-gray-300">Relatórios Gerados</p>
                 <p className="text-2xl font-bold text-green-600">{qualityStats.relatoriosGerados}</p>
               </div>
-              <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+              <div className="h-8 w-8 bg-green-900/30 rounded-full flex items-center justify-center">
                 <FileText className="h-4 w-4 text-green-600" />
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-400 mt-2">
               Automáticos por norma
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-800 border-gray-700">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Taxa de Conformidade</p>
+                <p className="text-sm font-medium text-gray-300">Taxa de Conformidade</p>
                 <p className="text-2xl font-bold text-purple-600">{qualityStats.taxaConformidade}%</p>
               </div>
-              <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
+              <div className="h-8 w-8 bg-purple-900/30 rounded-full flex items-center justify-center">
                 <TrendingUp className="h-4 w-4 text-purple-600" />
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-400 mt-2">
               Meta: &gt; 95%
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-800 border-gray-700">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Não Conformidades</p>
+                <p className="text-sm font-medium text-gray-300">Não Conformidades</p>
                 <p className="text-2xl font-bold text-orange-600">{qualityStats.naoConformidades}</p>
               </div>
-              <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
+              <div className="h-8 w-8 bg-orange-900/30 rounded-full flex items-center justify-center">
                 <AlertTriangle className="h-4 w-4 text-orange-600" />
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-400 mt-2">
               Abertas este mês
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-800 border-gray-700">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Garantias Ativas</p>
+                <p className="text-sm font-medium text-gray-300">Garantias Ativas</p>
                 <p className="text-2xl font-bold text-indigo-600">{qualityStats.garantiasAtivas}</p>
               </div>
               <div className="h-8 w-8 bg-indigo-100 rounded-full flex items-center justify-center">
                 <Award className="h-4 w-4 text-indigo-600" />
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-400 mt-2">
               Em período de cobertura
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-800 border-gray-700">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Reclamações</p>
+                <p className="text-sm font-medium text-gray-300">Reclamações</p>
                 <p className="text-2xl font-bold text-red-600">{qualityStats.reclamacoesAbertas}</p>
               </div>
-              <div className="h-8 w-8 bg-red-100 rounded-full flex items-center justify-center">
+              <div className="h-8 w-8 bg-red-900/30 rounded-full flex items-center justify-center">
                 <Clock className="h-4 w-4 text-red-600" />
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-400 mt-2">
               Aguardando resolução
             </p>
           </CardContent>
@@ -182,9 +202,9 @@ export function QualityCenter({ orderContext }: QualityCenterProps) {
       </div>
 
       {/* Conteúdo Principal */}
-      <Card>
+      <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-white">
             <Shield className="h-5 w-5" />
             Centro de Qualidade e Garantias
           </CardTitle>
@@ -259,84 +279,84 @@ export function QualityCenter({ orderContext }: QualityCenterProps) {
 
       {/* Resumo de Processos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="text-lg flex items-center gap-2 text-white">
               <CheckCircle className="h-5 w-5 text-green-600" />
               Processo de Qualidade
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <div className="flex items-center gap-3 p-3 bg-gray-700 rounded-lg">
+                <div className="w-8 h-8 bg-blue-900/30 rounded-full flex items-center justify-center">
                   <span className="text-sm font-bold text-blue-600">1</span>
                 </div>
                 <div>
-                  <p className="font-medium">Checklist por Etapa</p>
-                  <p className="text-sm text-gray-600">Verificação obrigatória antes de avançar</p>
+                  <p className="font-medium text-white">Checklist por Etapa</p>
+                  <p className="text-sm text-gray-300">Verificação obrigatória antes de avançar</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+              <div className="flex items-center gap-3 p-3 bg-gray-700 rounded-lg">
+                <div className="w-8 h-8 bg-green-900/30 rounded-full flex items-center justify-center">
                   <span className="text-sm font-bold text-green-600">2</span>
                 </div>
                 <div>
-                  <p className="font-medium">Aprovação Supervisão</p>
-                  <p className="text-sm text-gray-600">Validação por supervisor qualificado</p>
+                  <p className="font-medium text-white">Aprovação Supervisão</p>
+                  <p className="text-sm text-gray-300">Validação por supervisor qualificado</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+              <div className="flex items-center gap-3 p-3 bg-gray-700 rounded-lg">
+                <div className="w-8 h-8 bg-purple-900/30 rounded-full flex items-center justify-center">
                   <span className="text-sm font-bold text-purple-600">3</span>
                 </div>
                 <div>
-                  <p className="font-medium">Relatório Automático</p>
-                  <p className="text-sm text-gray-600">Geração de documentação técnica</p>
+                  <p className="font-medium text-white">Relatório Automático</p>
+                  <p className="text-sm text-gray-300">Geração de documentação técnica</p>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="text-lg flex items-center gap-2 text-white">
               <Award className="h-5 w-5 text-indigo-600" />
               Fluxo de Garantias
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+              <div className="flex items-center gap-3 p-3 bg-gray-700 rounded-lg">
+                <div className="w-8 h-8 bg-orange-900/30 rounded-full flex items-center justify-center">
                   <span className="text-sm font-bold text-orange-600">1</span>
                 </div>
                 <div>
-                  <p className="font-medium">Ativação Automática</p>
-                  <p className="text-sm text-gray-600">Garantia criada na entrega</p>
+                  <p className="font-medium text-white">Ativação Automática</p>
+                  <p className="text-sm text-gray-300">Garantia criada na entrega</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+              <div className="flex items-center gap-3 p-3 bg-gray-700 rounded-lg">
+                <div className="w-8 h-8 bg-red-900/30 rounded-full flex items-center justify-center">
                   <span className="text-sm font-bold text-red-600">2</span>
                 </div>
                 <div>
-                  <p className="font-medium">Reclamações</p>
-                  <p className="text-sm text-gray-600">Sistema de atendimento especializado</p>
+                  <p className="font-medium text-white">Reclamações</p>
+                  <p className="text-sm text-gray-300">Sistema de atendimento especializado</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3 p-3 bg-gray-700 rounded-lg">
                 <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
                   <span className="text-sm font-bold text-indigo-600">3</span>
                 </div>
                 <div>
-                  <p className="font-medium">Workflow Bosch</p>
-                  <p className="text-sm text-gray-600">Processo especializado para parceiros</p>
+                  <p className="font-medium text-white">Workflow Bosch</p>
+                  <p className="text-sm text-gray-300">Processo especializado para parceiros</p>
                 </div>
               </div>
             </div>

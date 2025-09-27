@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PartsReservationManager } from '@/components/materials/PartsReservationManager';
@@ -32,15 +32,34 @@ interface MaterialsCenterProps {
 
 export function MaterialsCenter({ orderContext }: MaterialsCenterProps) {
   const [activeTab, setActiveTab] = useState('reservation');
-
-  // Dados simulados para demonstração
-  const materialsStats = {
+  const [materialsStats, setMaterialsStats] = useState({
     pecasReservadas: 0,
     alertasEstoque: 0,
     comprasPlanejadas: 0,
     tempoMedio: 0,
     valorEstoque: 0,
     fornecedoresAtivos: 0
+  });
+
+  useEffect(() => {
+    loadMaterialsStats();
+  }, [orderContext]);
+
+  const loadMaterialsStats = async () => {
+    try {
+      // TODO: Implementar carregamento real das estatísticas de materiais
+      // Por enquanto, mantém valores zerados até implementar as queries
+      setMaterialsStats({
+        pecasReservadas: 0,
+        alertasEstoque: 0,
+        comprasPlanejadas: 0,
+        tempoMedio: 0,
+        valorEstoque: 0,
+        fornecedoresAtivos: 0
+      });
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas de materiais:', error);
+    }
   };
 
   const reservedParts = [
