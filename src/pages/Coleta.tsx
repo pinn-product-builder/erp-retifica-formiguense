@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useCustomers, Customer } from "@/hooks/useCustomers";
+import { useConsultants } from "@/hooks/useConsultants";
 import { MapPin, User, Building, Wrench, Search, Plus, UserPlus } from "lucide-react";
 
 export default function Coleta() {
@@ -39,7 +40,6 @@ export default function Coleta() {
     consultor: ""
   });
 
-  const [consultants, setConsultants] = useState<Array<{id: string, name: string}>>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -47,19 +47,13 @@ export default function Coleta() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { loading, getConsultants, createCustomer } = useSupabase();
+  const { loading } = useSupabase();
   const { fetchCustomers, createCustomer: createNewCustomer, loading: customersLoading } = useCustomers();
-
-  const loadConsultants = useCallback(async () => {
-    const data = await getConsultants();
-    if (data) {
-      setConsultants(data);
-    }
-  }, [getConsultants]);
+  const { consultants, loading: consultantsLoading, fetchConsultants } = useConsultants();
 
   useEffect(() => {
-    loadConsultants();
-  }, [loadConsultants]);
+    fetchConsultants();
+  }, [fetchConsultants]);
 
   // Buscar clientes
   const handleSearchCustomers = async (term: string) => {
@@ -143,7 +137,7 @@ export default function Coleta() {
       workshop_contact: formData.tipoCliente === 'oficina' ? formData.contatoOficina || undefined : undefined,
     };
 
-    const customer = await createCustomer(customerData);
+    const customer = await createNewCustomer(customerData);
     if (!customer) return;
 
     // Salvar dados da coleta no sessionStorage para usar no check-in
@@ -518,8 +512,8 @@ export default function Coleta() {
         </Card>
 
         <div className="flex justify-center sm:justify-end">
-          <Button type="submit" size="lg" disabled={loading} className="w-full sm:w-auto">
-            {loading ? "Salvando..." : "Avançar para Check-in Técnico"}
+          <Button type="submit" size="lg" disabled={loading || customersLoading || consultantsLoading} className="w-full sm:w-auto">
+            {(loading || customersLoading || consultantsLoading) ? "Salvando..." : "Avançar para Check-in Técnico"}
           </Button>
         </div>
       </form>
