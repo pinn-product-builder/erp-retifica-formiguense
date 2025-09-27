@@ -37,12 +37,13 @@ export default function Workflow() {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-      <Card>
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <CardTitle className="text-xl sm:text-2xl font-bold">
+    <div className="h-screen flex flex-col">
+      {/* Header fixo */}
+      <div className="flex-shrink-0 p-4 sm:p-6 border-b">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h1 className="text-xl sm:text-2xl font-bold">
             Painel de Workflow - Kanban
-          </CardTitle>
+          </h1>
           <Button 
             onClick={handleRefresh}
             disabled={refreshing}
@@ -53,14 +54,18 @@ export default function Workflow() {
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Atualizar
           </Button>
-        </CardHeader>
-        <CardContent>
+        </div>
+      </div>
+
+      {/* Área do Kanban com scroll */}
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full p-4 sm:p-6">
           <KanbanBoard 
             orders={orders} 
             onOrderUpdate={loadOrders}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

@@ -103,9 +103,15 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
 
   const getKanbanGridCols = () => {
     const columnCount = statusOrder.length;
-    if (isMobile) return 'flex overflow-x-auto space-x-4 pb-4';
-    if (isTablet) return `grid grid-cols-${Math.min(columnCount, 4)} gap-4`;
-    return `grid grid-cols-${columnCount} gap-4`;
+    if (isMobile) {
+      return 'flex overflow-x-auto space-x-4 pb-4';
+    }
+    if (isTablet) {
+      // Em tablet, mostra até 3 colunas lado a lado, depois quebra linha
+      return `grid grid-cols-${Math.min(columnCount, 3)} gap-3`;
+    }
+    // Desktop: sempre lado a lado com scroll horizontal se necessário
+    return `flex gap-4 overflow-x-auto pb-2`;
   };
 
   const getComponentGridCols = () => {
@@ -115,57 +121,70 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
   };
 
   return (
-    <div className={`space-y-${isMobile ? '4' : '6'}`}>
-      {/* Component Selector */}
-      <div className={getComponentGridCols()}>
-        {COMPONENTS.map(component => (
-          <button
-            key={component.id}
-            onClick={() => setSelectedComponent(component.id)}
-            className={`${isMobile ? 'px-2 py-1 text-xs' : 'px-4 py-2'} rounded-lg font-medium transition-colors ${
-              selectedComponent === component.id
-                ? `${component.color} text-white`
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {component.name}
-          </button>
-        ))}
+    <div className="h-full flex flex-col">
+      {/* Header Section - Fixed */}
+      <div className="flex-shrink-0 space-y-4 mb-6">
+        {/* Component Selector */}
+        <div className={getComponentGridCols()}>
+          {COMPONENTS.map(component => (
+            <button
+              key={component.id}
+              onClick={() => setSelectedComponent(component.id)}
+              className={`${isMobile ? 'px-2 py-1 text-xs' : 'px-4 py-2'} rounded-lg font-medium transition-colors ${
+                selectedComponent === component.id
+                  ? `${component.color} text-white`
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              {component.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Component Header */}
+        <div className="flex items-center gap-3">
+          <div className={`w-4 h-4 rounded-full ${selectedComponentData?.color}`} />
+          <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold`}>
+            Workflow - {selectedComponentData?.name}
+          </h2>
+          <Badge variant="secondary" className={isMobile ? "text-xs" : ""}>
+            {Object.values(workflowsByStatus).flat().length} itens
+          </Badge>
+        </div>
       </div>
 
-      {/* Component Header */}
-      <div className="flex items-center gap-3">
-        <div className={`w-4 h-4 rounded-full ${selectedComponentData?.color}`} />
-        <h2 className={`${isMobile ? 'text-lg' : 'text-xl'} font-semibold`}>
-          Workflow - {selectedComponentData?.name}
-        </h2>
-        <Badge variant="secondary" className={isMobile ? "text-xs" : ""}>
-          {Object.values(workflowsByStatus).flat().length} itens
-        </Badge>
-      </div>
-
-      {/* Kanban Board */}
-      {loading ? (
-        <div className="text-center py-8">Carregando configurações...</div>
-      ) : (
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <div className={`${getKanbanGridCols()} ${isMobile ? 'min-h-[500px]' : 'min-h-[600px]'}`}>
-            {statusOrder.map(status => (
-              <div 
-                key={status} 
-                className={isMobile ? 'min-w-[280px] flex-shrink-0' : ''}
-              >
-                <KanbanColumn
-                  status={status}
-                  workflows={workflowsByStatus[status] || []}
-                  componentColor={selectedComponentData?.color || 'bg-gray-500'}
-                  statusColors={statusColors}
-                />
-              </div>
-            ))}
+      {/* Kanban Board - Scrollable */}
+      <div className="flex-1 overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">Carregando configurações...</div>
           </div>
-        </DragDropContext>
-      )}
+        ) : (
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <div className={`${getKanbanGridCols()} h-full`}>
+              {statusOrder.map(status => (
+                <div 
+                  key={status} 
+                  className={
+                    isMobile 
+                      ? 'min-w-[280px] flex-shrink-0' 
+                      : isTablet 
+                        ? 'h-full' 
+                        : 'min-w-[300px] flex-shrink-0 h-full'
+                  }
+                >
+                  <KanbanColumn
+                    status={status}
+                    workflows={workflowsByStatus[status] || []}
+                    componentColor={selectedComponentData?.color || 'bg-gray-500'}
+                    statusColors={statusColors}
+                  />
+                </div>
+              ))}
+            </div>
+          </DragDropContext>
+        )}
+      </div>
     </div>
   );
 }
