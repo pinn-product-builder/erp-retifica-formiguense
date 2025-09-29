@@ -13,7 +13,7 @@ O sistema Kanban oferece uma interface visual drag-and-drop para acompanhar o pr
 
 ## 🔄 Estados do Workflow
 
-<lov-mermaid>
+```mermaid
 flowchart LR
     A[Entrada] --> B[Metrologia]
     B --> C[Usinagem]
@@ -29,7 +29,7 @@ flowchart LR
     style E fill:#99ffcc
     style F fill:#99ccff
     style G fill:#cc99ff
-</lov-mermaid>
+```
 
 ### 📋 Detalhamento dos Estados
 
@@ -100,7 +100,7 @@ flowchart LR
 
 ### Seletor de Componentes
 
-<lov-mermaid>
+```mermaid
 flowchart TD
     A[Seletor de Componentes] --> B[Bloco]
     A --> C[Eixo]
@@ -120,7 +120,7 @@ flowchart TD
     style D fill:#fff3e0
     style E fill:#fce4ec
     style F fill:#e0f2f1
-</lov-mermaid>
+```
 
 ### Interface Responsiva
 
@@ -141,7 +141,7 @@ flowchart TD
 
 ## 🔄 Fluxo de Drag & Drop
 
-<lov-mermaid>
+```mermaid
 sequenceDiagram
     participant U as Usuário
     participant C as ComponentCard
@@ -159,7 +159,7 @@ sequenceDiagram
     K-->>U: Feedback visual
     
     Note over U,S: Atualização em tempo real
-</lov-mermaid>
+```
 
 ### Estados do Drag
 
@@ -172,7 +172,7 @@ sequenceDiagram
 
 ### Informações Exibidas
 
-<lov-mermaid>
+```mermaid
 graph TD
     A[Component Card] --> B[Header Info]
     A --> C[Status Info]
@@ -195,7 +195,7 @@ graph TD
     E --> E1[Indicador de Fotos]
     E --> E2[Indicador de Notas]
     E --> E3[Progresso de Tempo]
-</lov-mermaid>
+```
 
 ### Códigos de Cor por Tempo
 

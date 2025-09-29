@@ -11,6 +11,7 @@ import {
   UserCheck, 
   Users, 
   Package, 
+  PackageCheck,
   FileText, 
   Settings,
   Receipt,
@@ -132,6 +133,11 @@ const inventoryItems = [
     title: "Estoque/Peças",
     url: "/estoque",
     icon: Package,
+  },
+  {
+    title: "Separação de Peças",
+    url: "/separacao-pecas",
+    icon: PackageCheck,
   },
   {
     title: "Compras",

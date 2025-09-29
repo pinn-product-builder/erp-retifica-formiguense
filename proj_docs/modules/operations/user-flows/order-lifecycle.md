@@ -4,7 +4,7 @@ Esta documentação detalha o ciclo completo de vida de uma ordem de serviço, d
 
 ## 🔄 Visão Geral do Ciclo de Vida
 
-<lov-mermaid>
+```mermaid
 stateDiagram-v2
     [*] --> Criacao: Nova Ordem
     Criacao --> Ativa: Aprovação
@@ -249,7 +249,7 @@ interface OrderTiming {
 
 ### Prazos Padrão por Componente
 
-<lov-mermaid>
+```mermaid
 gantt
     title Cronograma Padrão por Componente
     dateFormat X
@@ -272,7 +272,7 @@ gantt
     Usinagem      :c2, after c1, 4d
     Montagem      :c3, after c2, 2d
     Finalização   :c4, after c3, 1d
-</lov-mermaid>
+```
 
 ### KPIs por Estado
 - **Taxa de Conversão**: % ordens que completam o ciclo

@@ -6,7 +6,7 @@ Esta documentação detalha o processo completo de gestão de ordens de serviço
 
 O processo de ordens de serviço é o núcleo operacional do sistema, gerenciando desde a entrada do cliente até a entrega final do serviço, passando por todas as etapas de produção e controle de qualidade.
 
-<lov-mermaid>
+```mermaid
 flowchart TD
     A[Solicitação do Cliente] --> B[Análise Técnica]
     B --> C[Orçamento]
@@ -25,7 +25,7 @@ flowchart TD
     style G fill:#e8f5e8
     style J fill:#fff3e0
     style L fill:#fce4ec
-</lov-mermaid>
+```
 
 ## 📋 Fluxo Detalhado do Processo
 
@@ -71,7 +71,7 @@ interface TechnicalAnalysis {
 ### 2. **Criação da Ordem de Serviço**
 
 #### 2.1 Aprovação do Cliente
-<lov-mermaid>
+```mermaid
 sequenceDiagram
     participant C as Cliente
     participant R as Recepcionista
@@ -85,7 +85,7 @@ sequenceDiagram
     T->>S: Confirma Recebimento
     S->>R: OS Ativa
     R->>C: Confirmação de Início
-</lov-mermaid>
+```
 
 #### 2.2 Estrutura da Ordem
 ```sql
@@ -131,7 +131,7 @@ const createDefaultWorkflow = async (orderId: string) => {
 #### 3.1 Gestão por Componente
 Cada componente segue seu workflow específico:
 
-<lov-mermaid>
+```mermaid
 stateDiagram-v2
     [*] --> Entrada
     Entrada --> Metrologia: Análise Inicial
@@ -145,7 +145,7 @@ stateDiagram-v2
     Metrologia --> Entrada: Reprocesso
     Usinagem --> Metrologia: Correção
     Montagem --> Usinagem: Retrabalho
-</lov-mermaid>
+```
 
 #### 3.2 Controle de Progresso
 - **Kanban Visual**: Interface drag-and-drop para operadores
@@ -205,7 +205,7 @@ interface QualityCheck {
 ### 5. **Finalização e Entrega**
 
 #### 5.1 Preparação para Entrega
-<lov-mermaid>
+```mermaid
 flowchart TD
     A[Todos Componentes Prontos] --> B[Inspeção Final]
     B --> C[Limpeza e Embalagem]
@@ -222,7 +222,7 @@ flowchart TD
     style G fill:#4caf50
     style H fill:#ff9800
     style K fill:#2196f3
-</lov-mermaid>
+```
 
 #### 5.2 Documentação de Entrega
 - **Relatório Técnico**: Serviços executados e especificações

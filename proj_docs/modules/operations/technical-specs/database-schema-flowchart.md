@@ -6,7 +6,7 @@ Este documento apresenta a arquitetura completa do banco de dados implementada p
 
 O sistema foi implementado em **5 fases distintas**, totalizando **31 novas tabelas** que se integram com as tabelas existentes do sistema.
 
-<lov-mermaid>
+```mermaid
 graph TB
     %% FASE 1: FUNDAÇÃO DINÂMICA
     subgraph "🎯 FASE 1: Fundação Dinâmica"
@@ -143,7 +143,7 @@ graph TB
     class WCL,SE,ER,WI fase5
     class ORG,ORD,OW,ENG,CUST,PI,AR,SC existing
     class PER complement
-</lov-mermaid>
+```
 
 ## 📊 Detalhamento por Fase
 

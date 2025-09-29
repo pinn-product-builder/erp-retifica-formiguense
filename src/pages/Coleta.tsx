@@ -45,6 +45,7 @@ export default function Coleta() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [showNewCustomerDialog, setShowNewCustomerDialog] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [showSearchDialog, setShowSearchDialog] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { loading } = useSupabase();
@@ -85,6 +86,7 @@ export default function Coleta() {
     }));
     setShowSearchResults(false);
     setSearchTerm("");
+    setShowSearchDialog(false); // Fechar o modal após seleção
   };
 
   // Criar novo cliente
@@ -255,7 +257,18 @@ export default function Coleta() {
                 Cliente
               </div>
               <div className="flex gap-2">
-                <Dialog>
+                <Dialog 
+                  open={showSearchDialog} 
+                  onOpenChange={(open) => {
+                    setShowSearchDialog(open);
+                    if (!open) {
+                      // Limpar busca quando modal for fechado
+                      setSearchTerm("");
+                      setSearchResults([]);
+                      setShowSearchResults(false);
+                    }
+                  }}
+                >
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm">
                       <Search className="w-4 h-4 mr-2" />

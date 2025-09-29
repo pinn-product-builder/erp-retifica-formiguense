@@ -18,7 +18,7 @@ Esta documentação detalha as jornadas completas dos usuários no módulo Opera
 
 ## 🚀 Jornada Multi-Persona
 
-<lov-mermaid>
+```mermaid
 journey
     title Jornada Completa - Operações & Serviços
     section Recebimento
@@ -42,7 +42,7 @@ journey
       Registrar Garantia: 5: Supervisor, Admin
       Confirmar Entrega: 5: Supervisor, Admin
       Arquivar Ordem: 3: Admin
-</lov-mermaid>
+```
 
 ## 📱 Fluxo Detalhado por Persona
 
@@ -64,7 +64,7 @@ journey
 - **Observações Técnicas** → Anotações sobre dificuldades
 - **Materiais Utilizados** → Registro de peças e consumíveis
 
-<lov-mermaid>
+```mermaid
 flowchart TD
     A[Login do Operador] --> B[Dashboard Pessoal]
     B --> C[Lista de Ordens Atribuídas]
@@ -84,7 +84,7 @@ flowchart TD
     M --> N{Mais Ordens?}
     N -->|Sim| C
     N -->|Não| O[Fim do Turno]
-</lov-mermaid>
+```
 
 ### 👨‍💼 Jornada do Supervisor de Operações
 
@@ -103,7 +103,7 @@ flowchart TD
 - **Aprovação de Entregas** → Controle final de qualidade
 - **Gestão de Não-Conformidades** → Tratamento de problemas
 
-<lov-mermaid>
+```mermaid
 flowchart TD
     A[Login Supervisor] --> B[Dashboard Gerencial]
     B --> C[Análise Diária]
@@ -124,7 +124,7 @@ flowchart TD
     N -->|Não| O[Retornar para Correção]
     O --> H
     H --> P[Fim do Período]
-</lov-mermaid>
+```
 
 ### 👨‍💻 Jornada do Administrador
 

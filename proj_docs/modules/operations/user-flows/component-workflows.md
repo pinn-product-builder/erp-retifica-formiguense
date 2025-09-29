@@ -6,7 +6,7 @@ Esta documentação detalha os workflows específicos para cada componente do mo
 
 O sistema suporta cinco tipos principais de componentes de motor, cada um com seu workflow específico e características técnicas únicas.
 
-<lov-mermaid>
+```mermaid
 graph TD
     A[Motor Completo] --> B[Bloco do Motor]
     A --> C[Eixo Virabrequim]  
@@ -19,7 +19,7 @@ graph TD
     style D fill:#9999ff
     style E fill:#ffff99
     style F fill:#ff99ff
-</lov-mermaid>
+```
 
 ## 🏗️ **BLOCO DO MOTOR**
 
@@ -31,7 +31,7 @@ graph TD
 
 ### Workflow Específico
 
-<lov-mermaid>
+```mermaid
 flowchart TD
     A[Entrada - Bloco] --> B[Inspeção Visual]
     B --> C[Teste de Pressão]
@@ -52,7 +52,7 @@ flowchart TD
     
     style A fill:#ff9999
     style O fill:#99ff99
-</lov-mermaid>
+```
 
 #### Etapas Detalhadas
 
@@ -98,7 +98,7 @@ flowchart TD
 
 ### Workflow Específico
 
-<lov-mermaid>
+```mermaid
 flowchart TD
     A[Entrada - Eixo] --> B[Inspeção Magnética]
     B --> C[Medição de Ovalizações]
@@ -118,7 +118,7 @@ flowchart TD
     
     style A fill:#99ff99
     style N fill:#99ff99
-</lov-mermaid>
+```
 
 #### Processos Especializados
 
@@ -146,7 +146,7 @@ flowchart TD
 
 ### Workflow Específico
 
-<lov-mermaid>
+```mermaid
 flowchart TD
     A[Entrada - Bielas] --> B[Separação de Conjuntos]
     B --> C[Identificação por Cilindro]
@@ -165,7 +165,7 @@ flowchart TD
     
     style A fill:#9999ff
     style N fill:#99ff99
-</lov-mermaid>
+```
 
 #### Controles Específicos
 
@@ -193,7 +193,7 @@ flowchart TD
 
 ### Workflow Específico
 
-<lov-mermaid>
+```mermaid
 flowchart TD
     A[Entrada - Comando] --> B[Teste de Pressão]
     B --> C[Medição de Cames]
@@ -214,7 +214,7 @@ flowchart TD
     
     style A fill:#ffff99
     style O fill:#99ff99
-</lov-mermaid>
+```
 
 #### Processos Críticos
 
@@ -242,7 +242,7 @@ flowchart TD
 
 ### Workflow Específico
 
-<lov-mermaid>
+```mermaid
 flowchart TD
     A[Entrada - Cabeçote] --> B[Desmontagem Completa]
     B --> C[Teste de Trincas]
@@ -263,7 +263,7 @@ flowchart TD
     
     style A fill:#ff99ff
     style P fill:#99ff99
-</lov-mermaid>
+```
 
 #### Processos Especializados
 
@@ -281,7 +281,7 @@ flowchart TD
 
 ## ⏱️ Cronograma Consolidado
 
-<lov-mermaid>
+```mermaid
 gantt
     title Cronograma de Workflows por Componente
     dateFormat X
@@ -316,7 +316,7 @@ gantt
     Usinagem       :e2, after e1, 5d
     Montagem       :e3, after e2, 3d
     Finalização    :e4, after e3, 1d
-</lov-mermaid>
+```
 
 ## 📊 Métricas por Componente
 

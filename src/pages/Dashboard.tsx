@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { QuickActions } from "@/components/QuickActions";
 import { EnhancedInsights } from "@/components/EnhancedInsights";
+import { PurchaseNeedsDashboard } from "@/components/dashboard/PurchaseNeedsDashboard";
 import { useSEO } from "@/hooks/useSEO";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { useDashboard } from "@/hooks/useDashboard";
@@ -401,6 +402,15 @@ export default function Dashboard() {
           ))}
         </motion.div>
       )}
+
+      {/* Purchase Needs Dashboard */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.6 }}
+      >
+        <PurchaseNeedsDashboard />
+      </motion.div>
     </motion.div>
   );
 }

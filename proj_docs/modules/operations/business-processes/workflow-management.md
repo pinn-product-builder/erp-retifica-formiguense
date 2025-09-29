@@ -6,7 +6,7 @@ Esta documentação detalha o sistema completo de gestão de workflows no módul
 
 O sistema de gestão de workflows é responsável por orquestrar todos os processos operacionais, garantindo fluidez, rastreabilidade e otimização contínua dos fluxos de trabalho.
 
-<lov-mermaid>
+```mermaid
 graph TB
     A[Configuração de Workflows] --> B[Execução Monitorada]
     B --> C[Análise de Performance]
@@ -23,7 +23,7 @@ graph TB
     
     style A fill:#e3f2fd
     style H fill:#f3e5f5
-</lov-mermaid>
+```
 
 ## ⚙️ Configuração de Workflows
 
@@ -57,7 +57,7 @@ interface WorkflowConfig {
 ```
 
 #### 1.2 Regras de Transição
-<lov-mermaid>
+```mermaid
 stateDiagram-v2
     [*] --> entrada
     entrada --> metrologia: Auto
@@ -72,7 +72,7 @@ stateDiagram-v2
     
     note right of metrologia: Controle de Qualidade\nObrigatório
     note right of pronto: Inspeção Final\nCompulsória
-</lov-mermaid>
+```
 
 #### 1.3 Configurações por Componente
 ```json
@@ -135,7 +135,7 @@ class WorkflowRouter {
 ```
 
 #### 2.2 Balanceamento de Carga
-<lov-mermaid>
+```mermaid
 flowchart TD
     A[Nova Tarefa] --> B{Análise de Carga}
     B --> C[Operador A - 70%]
@@ -161,7 +161,7 @@ flowchart TD
     
     style M fill:#4caf50
     style P fill:#2196f3
-</lov-mermaid>
+```
 
 ## 📊 Monitoramento em Tempo Real
 
@@ -196,7 +196,7 @@ interface RealTimeMetrics {
 ```
 
 #### 3.2 Visualização de Fluxos
-<lov-mermaid>
+```mermaid
 sankey-beta
     Entrada,Metrologia,15
     Entrada,Usinagem,5
@@ -207,7 +207,7 @@ sankey-beta
     Montagem,Pronto,22
     Montagem,Correção,1
     Pronto,Entrega,23
-</lov-mermaid>
+```
 
 ### 4. **Sistema de Alertas Inteligentes**
 
@@ -238,7 +238,7 @@ interface AlertConfig {
 ```
 
 #### 4.2 Escalonamento Automático
-<lov-mermaid>
+```mermaid
 flowchart TD
     A[Alerta Detectado] --> B{Severidade}
     B -->|Low| C[Log + Email]
@@ -260,7 +260,7 @@ flowchart TD
     
     style F fill:#f44336
     style M fill:#4caf50
-</lov-mermaid>
+```
 
 ## 🔄 Otimização Contínua
 
@@ -293,7 +293,7 @@ interface WorkflowKPIs {
 ```
 
 #### 5.2 Análise de Gargalos
-<lov-mermaid>
+```mermaid
 graph TD
     A[Coleta de Dados] --> B[Identificação de Gargalos]
     B --> C[Análise Root Cause]
@@ -313,7 +313,7 @@ graph TD
     style G fill:#ff9800
     style H fill:#ff9800
     style I fill:#ff9800
-</lov-mermaid>
+```
 
 ### 6. **Simulação e Modelagem**
 
@@ -337,7 +337,7 @@ class WorkflowSimulator {
 ```
 
 #### 6.2 Otimização de Layout
-<lov-mermaid>
+```mermaid
 flowchart LR
     subgraph "Layout Atual"
         A1[Entrada] --> B1[Metrologia]
@@ -357,7 +357,7 @@ flowchart LR
     
     style A2 fill:#4caf50
     style C3 fill:#4caf50
-</lov-mermaid>
+```
 
 ## 🎛️ Configurações Avançadas
 
@@ -433,7 +433,7 @@ interface Prediction {
 ```
 
 #### 8.2 Otimização Automática
-<lov-mermaid>
+```mermaid
 flowchart TD
     A[Dados Históricos] --> B[Modelo ML]
     C[Dados Tempo Real] --> B
@@ -455,7 +455,7 @@ flowchart TD
     
     style B fill:#2196f3
     style F fill:#4caf50
-</lov-mermaid>
+```
 
 ## 📈 Relatórios e Analytics
 
@@ -489,14 +489,14 @@ interface ExecutiveDashboard {
 ```
 
 #### 9.2 Tendências e Projeções
-<lov-mermaid>
+```mermaid
 xychart-beta
     title "Eficiência do Workflow - Últimos 6 Meses"
     x-axis [Jan, Fev, Mar, Abr, Mai, Jun]
     y-axis "Eficiência %" 60 --> 100
     bar [75, 78, 82, 85, 88, 92]
     line [72, 79, 84, 87, 89, 93]
-</lov-mermaid>
+```
 
 ### 10. **Auditoria e Compliance**
 

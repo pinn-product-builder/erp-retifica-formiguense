@@ -2,7 +2,7 @@
 
 ## 🏗️ Visão Geral da Arquitetura
 
-<lov-mermaid>
+```mermaid
 graph TB
     A[pages/Workflow.tsx] --> B[components/workflow/KanbanBoard.tsx]
     B --> C[components/workflow/KanbanColumn.tsx]
@@ -18,7 +18,7 @@ graph TB
     style A fill:#e3f2fd
     style H fill:#f3e5f5
     style I fill:#f3e5f5
-</lov-mermaid>
+```
 
 ## 📦 Componentes Principais
 
