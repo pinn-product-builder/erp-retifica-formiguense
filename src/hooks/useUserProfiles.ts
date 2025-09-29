@@ -450,6 +450,402 @@ export const useUserProfiles = () => {
     }
   };
 
+  // Atualizar perfil
+  const updateProfile = async (profileId: string, profileData: Partial<CreateUserProfileData>): Promise<boolean> => {
+    if (!currentOrganization?.id) return false;
+
+    // Validações básicas
+    if (profileData.name && !profileData.name.trim()) {
+      toast({
+        title: 'Erro de validação',
+        description: 'O nome do perfil é obrigatório',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    if (profileData.name && profileData.name.trim().length < 2) {
+      toast({
+        title: 'Erro de validação',
+        description: 'O nome do perfil deve ter pelo menos 2 caracteres',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    if (profileData.name && profileData.name.trim().length > 100) {
+      toast({
+        title: 'Erro de validação',
+        description: 'O nome do perfil deve ter no máximo 100 caracteres',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    // Verificar se já existe um perfil com o mesmo nome (exceto o atual)
+    if (profileData.name) {
+      const existingProfile = profiles.find(profile => 
+        profile.id !== profileId &&
+        profile.name.toLowerCase().trim() === profileData.name!.toLowerCase().trim()
+      );
+      
+      if (existingProfile) {
+        toast({
+          title: 'Erro de validação',
+          description: 'Já existe um perfil com este nome na organização',
+          variant: 'destructive',
+        });
+        return false;
+      }
+    }
+
+    setCreateLoading(true);
+    try {
+      // Atualizar o perfil
+      const updateData: any = {};
+      if (profileData.name) updateData.name = profileData.name.trim();
+      if (profileData.description !== undefined) updateData.description = profileData.description?.trim() || null;
+      if (profileData.sector_id) updateData.sector_id = profileData.sector_id;
+
+      const { error: profileError } = await (supabase as unknown as ExtendedSupabaseClient)
+        .from('user_profiles')
+        .update(updateData)
+        .eq('id', profileId)
+        .eq('org_id', currentOrganization.id);
+
+      if (profileError) throw profileError;
+
+      // Atualizar permissões se fornecidas
+      if (profileData.page_permissions) {
+        // Remover permissões existentes
+        const { error: deleteError } = await (supabase as unknown as ExtendedSupabaseClient)
+          .from('profile_page_permissions')
+          .delete()
+          .eq('profile_id', profileId);
+
+        if (deleteError) throw deleteError;
+
+        // Inserir novas permissões
+        if (profileData.page_permissions.length > 0) {
+          const permissions = profileData.page_permissions.map(perm => ({
+            ...perm,
+            profile_id: profileId,
+          }));
+
+          const { error: permissionsError } = await (supabase as unknown as ExtendedSupabaseClient)
+            .from('profile_page_permissions')
+            .insert(permissions);
+
+          if (permissionsError) throw permissionsError;
+        }
+      }
+
+      toast({
+        title: 'Perfil atualizado',
+        description: 'Perfil foi atualizado com sucesso',
+      });
+
+      await fetchProfiles();
+      return true;
+    } catch (error: unknown) {
+      console.error('Error updating profile:', error);
+      
+      let errorMessage = 'Falha ao atualizar perfil';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('unique_violation')) {
+          errorMessage = 'Já existe um perfil com este nome na organização';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast({
+        title: 'Erro ao atualizar perfil',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  // Deletar perfil
+  const deleteProfile = async (profileId: string): Promise<boolean> => {
+    if (!currentOrganization?.id) return false;
+
+    setCreateLoading(true);
+    try {
+      // Verificar se o perfil tem usuários atribuídos
+      const { data: assignments, error: checkError } = await (supabase as unknown as ExtendedSupabaseClient)
+        .from('user_profile_assignments')
+        .select('id')
+        .eq('profile_id', profileId)
+        .eq('is_active', true);
+
+      if (checkError) throw checkError;
+
+      if (assignments && assignments.length > 0) {
+        toast({
+          title: 'Não é possível excluir',
+          description: 'Este perfil possui usuários atribuídos. Remova os usuários primeiro.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      // Deletar permissões do perfil
+      const { error: permissionsError } = await (supabase as unknown as ExtendedSupabaseClient)
+        .from('profile_page_permissions')
+        .delete()
+        .eq('profile_id', profileId);
+
+      if (permissionsError) throw permissionsError;
+
+      // Deletar o perfil
+      const { error: profileError } = await (supabase as unknown as ExtendedSupabaseClient)
+        .from('user_profiles')
+        .delete()
+        .eq('id', profileId)
+        .eq('org_id', currentOrganization.id);
+
+      if (profileError) throw profileError;
+
+      toast({
+        title: 'Perfil excluído',
+        description: 'Perfil foi excluído com sucesso',
+      });
+
+      await fetchProfiles();
+      return true;
+    } catch (error: unknown) {
+      console.error('Error deleting profile:', error);
+      
+      toast({
+        title: 'Erro ao excluir perfil',
+        description: error instanceof Error ? error.message : 'Falha ao excluir perfil',
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  // Alternar status do perfil
+  const toggleProfileStatus = async (profileId: string, currentStatus: boolean): Promise<boolean> => {
+    if (!currentOrganization?.id) return false;
+
+    try {
+      const { error } = await (supabase as unknown as ExtendedSupabaseClient)
+        .from('user_profiles')
+        .update({ is_active: !currentStatus })
+        .eq('id', profileId)
+        .eq('org_id', currentOrganization.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Status atualizado',
+        description: `Perfil foi ${!currentStatus ? 'ativado' : 'desativado'} com sucesso`,
+      });
+
+      await fetchProfiles();
+      return true;
+    } catch (error: unknown) {
+      console.error('Error toggling profile status:', error);
+      
+      toast({
+        title: 'Erro ao alterar status',
+        description: error instanceof Error ? error.message : 'Falha ao alterar status do perfil',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+  // Atualizar setor
+  const updateSector = async (sectorId: string, sectorData: Partial<CreateSectorData>): Promise<boolean> => {
+    if (!currentOrganization?.id) return false;
+
+    // Validações básicas
+    if (sectorData.name && !sectorData.name.trim()) {
+      toast({
+        title: 'Erro de validação',
+        description: 'O nome do setor é obrigatório',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    if (sectorData.name && sectorData.name.trim().length < 2) {
+      toast({
+        title: 'Erro de validação',
+        description: 'O nome do setor deve ter pelo menos 2 caracteres',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    if (sectorData.name && sectorData.name.trim().length > 100) {
+      toast({
+        title: 'Erro de validação',
+        description: 'O nome do setor deve ter no máximo 100 caracteres',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
+    // Verificar se já existe um setor com o mesmo nome (exceto o atual)
+    if (sectorData.name) {
+      const existingSector = sectors.find(sector => 
+        sector.id !== sectorId &&
+        sector.name.toLowerCase().trim() === sectorData.name!.toLowerCase().trim()
+      );
+      
+      if (existingSector) {
+        toast({
+          title: 'Erro de validação',
+          description: 'Já existe um setor com este nome na organização',
+          variant: 'destructive',
+        });
+        return false;
+      }
+    }
+
+    setCreateLoading(true);
+    try {
+      const updateData: any = {};
+      if (sectorData.name) updateData.name = sectorData.name.trim();
+      if (sectorData.description !== undefined) updateData.description = sectorData.description?.trim() || null;
+      if (sectorData.color) updateData.color = sectorData.color;
+
+      const { error } = await (supabase as unknown as ExtendedSupabaseClient)
+        .from('user_sectors')
+        .update(updateData)
+        .eq('id', sectorId)
+        .eq('org_id', currentOrganization.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Setor atualizado',
+        description: 'Setor foi atualizado com sucesso',
+      });
+
+      await fetchSectors();
+      return true;
+    } catch (error: unknown) {
+      console.error('Error updating sector:', error);
+      
+      let errorMessage = 'Falha ao atualizar setor';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('unique_violation')) {
+          errorMessage = 'Já existe um setor com este nome na organização';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      toast({
+        title: 'Erro ao atualizar setor',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  // Deletar setor
+  const deleteSector = async (sectorId: string): Promise<boolean> => {
+    if (!currentOrganization?.id) return false;
+
+    setCreateLoading(true);
+    try {
+      // Verificar se o setor tem perfis atribuídos
+      const { data: profiles, error: checkError } = await (supabase as unknown as ExtendedSupabaseClient)
+        .from('user_profiles')
+        .select('id')
+        .eq('sector_id', sectorId)
+        .eq('is_active', true);
+
+      if (checkError) throw checkError;
+
+      if (profiles && profiles.length > 0) {
+        toast({
+          title: 'Não é possível excluir',
+          description: 'Este setor possui perfis atribuídos. Remova os perfis primeiro.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      // Deletar o setor
+      const { error: sectorError } = await (supabase as unknown as ExtendedSupabaseClient)
+        .from('user_sectors')
+        .delete()
+        .eq('id', sectorId)
+        .eq('org_id', currentOrganization.id);
+
+      if (sectorError) throw sectorError;
+
+      toast({
+        title: 'Setor excluído',
+        description: 'Setor foi excluído com sucesso',
+      });
+
+      await fetchSectors();
+      return true;
+    } catch (error: unknown) {
+      console.error('Error deleting sector:', error);
+      
+      toast({
+        title: 'Erro ao excluir setor',
+        description: error instanceof Error ? error.message : 'Falha ao excluir setor',
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  // Alternar status do setor
+  const toggleSectorStatus = async (sectorId: string, currentStatus: boolean): Promise<boolean> => {
+    if (!currentOrganization?.id) return false;
+
+    try {
+      const { error } = await (supabase as unknown as ExtendedSupabaseClient)
+        .from('user_sectors')
+        .update({ is_active: !currentStatus })
+        .eq('id', sectorId)
+        .eq('org_id', currentOrganization.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Status atualizado',
+        description: `Setor foi ${!currentStatus ? 'ativado' : 'desativado'} com sucesso`,
+      });
+
+      await fetchSectors();
+      return true;
+    } catch (error: unknown) {
+      console.error('Error toggling sector status:', error);
+      
+      toast({
+        title: 'Erro ao alterar status',
+        description: error instanceof Error ? error.message : 'Falha ao alterar status do setor',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   // Verificar se pode gerenciar perfis
   const canManageProfiles = (): boolean => {
     return ['owner', 'admin'].includes(userRole || '');
@@ -483,7 +879,13 @@ export const useUserProfiles = () => {
     fetchProfiles,
     fetchProfilePermissions,
     createSector,
+    updateSector,
+    deleteSector,
+    toggleSectorStatus,
     createProfile,
+    updateProfile,
+    deleteProfile,
+    toggleProfileStatus,
     assignProfileToUser,
 
     // Verificações

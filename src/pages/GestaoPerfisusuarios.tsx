@@ -30,7 +30,7 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-react';
-import { useUserProfiles, type CreateUserProfileData, type CreateSectorData } from '@/hooks/useUserProfiles';
+import { useUserProfiles, type CreateUserProfileData, type CreateSectorData, type UserProfile, type UserSector } from '@/hooks/useUserProfiles';
 import { useRoleGuard } from '@/hooks/useRoleGuard';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -81,14 +81,27 @@ export default function GestaoPerfiUsuarios() {
     createLoading,
     fetchProfilePermissions,
     createSector,
+    updateSector,
+    deleteSector,
+    toggleSectorStatus,
     createProfile,
+    updateProfile,
+    deleteProfile,
+    toggleProfileStatus,
     canManageProfiles,
     currentOrganization
   } = useUserProfiles();
 
   // Estados para diálogos
   const [isCreateSectorOpen, setIsCreateSectorOpen] = useState(false);
+  const [isEditSectorOpen, setIsEditSectorOpen] = useState(false);
+  const [isDeleteSectorOpen, setIsDeleteSectorOpen] = useState(false);
+  const [selectedSector, setSelectedSector] = useState<UserSector | null>(null);
   const [isCreateProfileOpen, setIsCreateProfileOpen] = useState(false);
+  const [isViewProfileOpen, setIsViewProfileOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isDeleteProfileOpen, setIsDeleteProfileOpen] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState('profiles');
 
   // Estados para formulários
@@ -98,7 +111,20 @@ export default function GestaoPerfiUsuarios() {
     color: DEFAULT_COLORS[0]
   });
 
+  const [editSectorData, setEditSectorData] = useState<CreateSectorData>({
+    name: '',
+    description: '',
+    color: DEFAULT_COLORS[0]
+  });
+
   const [newProfileData, setNewProfileData] = useState<CreateUserProfileData>({
+    name: '',
+    description: '',
+    sector_id: '',
+    page_permissions: []
+  });
+
+  const [editProfileData, setEditProfileData] = useState<CreateUserProfileData>({
     name: '',
     description: '',
     sector_id: '',
@@ -218,6 +244,121 @@ export default function GestaoPerfiUsuarios() {
     acc[module].push(page);
     return acc;
   }, {} as Record<string, typeof systemPages>);
+
+  // Handlers para ações dos setores
+  const handleEditSector = (sector: UserSector) => {
+    setSelectedSector(sector);
+    setEditSectorData({
+      name: sector.name,
+      description: sector.description || '',
+      color: sector.color
+    });
+    setIsEditSectorOpen(true);
+  };
+
+  const handleDeleteSector = (sector: UserSector) => {
+    setSelectedSector(sector);
+    setIsDeleteSectorOpen(true);
+  };
+
+  const handleConfirmDeleteSector = async () => {
+    if (!selectedSector) return;
+    
+    const success = await deleteSector(selectedSector.id);
+    if (success) {
+      setIsDeleteSectorOpen(false);
+      setSelectedSector(null);
+    }
+  };
+
+  const handleUpdateSector = async () => {
+    if (!selectedSector) return;
+
+    const success = await updateSector(selectedSector.id, editSectorData);
+    if (success) {
+      setEditSectorData({ name: '', description: '', color: DEFAULT_COLORS[0] });
+      setIsEditSectorOpen(false);
+      setSelectedSector(null);
+    }
+  };
+
+  // Handlers para ações dos perfis
+  const handleViewProfile = async (profile: UserProfile) => {
+    setSelectedProfile(profile);
+    setIsViewProfileOpen(true);
+  };
+
+  const handleEditProfile = async (profile: UserProfile) => {
+    setSelectedProfile(profile);
+    
+    // Carregar permissões do perfil
+    const permissions = await fetchProfilePermissions(profile.id);
+    const permissionsMap: Record<string, { view: boolean; edit: boolean; delete: boolean }> = {};
+    
+    permissions.forEach(perm => {
+      permissionsMap[perm.page_id] = {
+        view: perm.can_view,
+        edit: perm.can_edit,
+        delete: perm.can_delete
+      };
+    });
+    
+    setSelectedPermissions(permissionsMap);
+    setEditProfileData({
+      name: profile.name,
+      description: profile.description || '',
+      sector_id: profile.sector_id || '',
+      page_permissions: permissions.map(perm => ({
+        page_id: perm.page_id,
+        can_view: perm.can_view,
+        can_edit: perm.can_edit,
+        can_delete: perm.can_delete
+      }))
+    });
+    
+    setIsEditProfileOpen(true);
+  };
+
+  const handleDeleteProfile = (profile: UserProfile) => {
+    setSelectedProfile(profile);
+    setIsDeleteProfileOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedProfile) return;
+    
+    const success = await deleteProfile(selectedProfile.id);
+    if (success) {
+      setIsDeleteProfileOpen(false);
+      setSelectedProfile(null);
+    }
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!selectedProfile) return;
+
+    const permissions = Object.entries(selectedPermissions)
+      .filter(([_, perms]) => perms.view || perms.edit || perms.delete)
+      .map(([pageId, perms]) => ({
+        page_id: pageId,
+        can_view: perms.view,
+        can_edit: perms.edit,
+        can_delete: perms.delete
+      }));
+
+    const profileWithPermissions = {
+      ...editProfileData,
+      page_permissions: permissions
+    };
+
+    const success = await updateProfile(selectedProfile.id, profileWithPermissions);
+    if (success) {
+      setEditProfileData({ name: '', description: '', sector_id: '', page_permissions: [] });
+      setSelectedPermissions({});
+      setIsEditProfileOpen(false);
+      setSelectedProfile(null);
+    }
+  };
 
   return (
     <div className="w-full max-w-full px-4 py-6 mx-auto space-y-6 overflow-hidden">
@@ -530,15 +671,30 @@ export default function GestaoPerfiUsuarios() {
                                 
                                 {/* Ações */}
                                 <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
-                                  <Button variant="outline" size="sm" className="w-full sm:flex-1">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="w-full sm:flex-1"
+                                    onClick={() => handleViewProfile(profile)}
+                                  >
                                     <Eye className="h-4 w-4 mr-2" />
                                     Ver
                                   </Button>
-                                  <Button variant="outline" size="sm" className="w-full sm:flex-1">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="w-full sm:flex-1"
+                                    onClick={() => handleEditProfile(profile)}
+                                  >
                                     <Edit className="h-4 w-4 mr-2" />
                                     Editar
                                   </Button>
-                                  <Button variant="outline" size="sm" className="w-full sm:flex-1">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="w-full sm:flex-1"
+                                    onClick={() => handleDeleteProfile(profile)}
+                                  >
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     Excluir
                                   </Button>
@@ -624,13 +780,25 @@ export default function GestaoPerfiUsuarios() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1 sm:gap-2">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleViewProfile(profile)}
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleEditProfile(profile)}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleDeleteProfile(profile)}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -765,10 +933,18 @@ export default function GestaoPerfiUsuarios() {
                       {sector.is_active ? 'Ativo' : 'Inativo'}
                     </Badge>
                     <div className="flex gap-1 sm:gap-2">
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEditSector(sector)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDeleteSector(sector)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -822,6 +998,386 @@ export default function GestaoPerfiUsuarios() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Diálogo de Visualização de Perfil */}
+      <Dialog open={isViewProfileOpen} onOpenChange={setIsViewProfileOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Perfil</DialogTitle>
+            <DialogDescription>
+              Informações completas do perfil selecionado
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedProfile && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Nome</Label>
+                  <p className="text-sm text-muted-foreground">{selectedProfile.name}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Status</Label>
+                  <Badge variant={selectedProfile.is_active ? 'default' : 'secondary'} className="ml-2">
+                    {selectedProfile.is_active ? (
+                      <>
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Ativo
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="h-3 w-3 mr-1" />
+                        Inativo
+                      </>
+                    )}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium">Descrição</Label>
+                <p className="text-sm text-muted-foreground">
+                  {selectedProfile.description || 'Sem descrição'}
+                </p>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium">Setor</Label>
+                {selectedProfile.sector ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: selectedProfile.sector.color }}
+                    />
+                    <span className="text-sm">{selectedProfile.sector.name}</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Sem setor</p>
+                )}
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium">Criado em</Label>
+                <p className="text-sm text-muted-foreground">
+                  {formatDistanceToNow(new Date(selectedProfile.created_at), { 
+                    addSuffix: true, 
+                    locale: ptBR 
+                  })}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Edição de Perfil */}
+      <Dialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Perfil</DialogTitle>
+            <DialogDescription>
+              Altere as informações e permissões do perfil
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-profile-name">Nome do Perfil *</Label>
+                <Input
+                  id="edit-profile-name"
+                  value={editProfileData.name}
+                  onChange={(e) => setEditProfileData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Digite o nome do perfil"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-profile-sector">Setor *</Label>
+                <Select 
+                  value={editProfileData.sector_id} 
+                  onValueChange={(value) => setEditProfileData(prev => ({ ...prev, sector_id: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um setor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sectors.map((sector) => (
+                      <SelectItem key={sector.id} value={sector.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: sector.color }}
+                          />
+                          {sector.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-profile-description">Descrição</Label>
+              <Textarea
+                id="edit-profile-description"
+                value={editProfileData.description}
+                onChange={(e) => setEditProfileData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Digite uma descrição para o perfil (opcional)"
+                rows={3}
+              />
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <div>
+                <Label className="text-base font-medium">Permissões de Páginas</Label>
+                <p className="text-sm text-muted-foreground">
+                  Configure quais páginas este perfil pode acessar e as ações permitidas
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {Object.entries(groupedPages).map(([module, pages]) => (
+                  <Collapsible key={module}>
+                    <CollapsibleTrigger className="flex items-center justify-between w-full p-3 border rounded-lg hover:bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <Badge className={MODULE_COLORS[module as keyof typeof MODULE_COLORS] || 'bg-gray-100 text-gray-800'}>
+                          {module.charAt(0).toUpperCase() + module.slice(1)}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          {pages.length} página{pages.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <ChevronDown className="h-4 w-4" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-2 mt-2">
+                      {pages.map((page) => (
+                        <div key={page.id} className="p-3 border rounded-lg bg-muted/20">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <div className="font-medium text-sm">{page.display_name}</div>
+                              <div className="text-xs text-muted-foreground">{page.description}</div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`edit-view-${page.id}`}
+                                checked={selectedPermissions[page.id]?.view || false}
+                                onCheckedChange={(checked) => 
+                                  handlePermissionChange(page.id, 'view', checked as boolean)
+                                }
+                              />
+                              <Label htmlFor={`edit-view-${page.id}`} className="text-sm">
+                                <Eye className="h-3 w-3 inline mr-1" />
+                                Ver
+                              </Label>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`edit-edit-${page.id}`}
+                                checked={selectedPermissions[page.id]?.edit || false}
+                                onCheckedChange={(checked) => 
+                                  handlePermissionChange(page.id, 'edit', checked as boolean)
+                                }
+                              />
+                              <Label htmlFor={`edit-edit-${page.id}`} className="text-sm">
+                                <Edit className="h-3 w-3 inline mr-1" />
+                                Editar
+                              </Label>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`edit-delete-${page.id}`}
+                                checked={selectedPermissions[page.id]?.delete || false}
+                                onCheckedChange={(checked) => 
+                                  handlePermissionChange(page.id, 'delete', checked as boolean)
+                                }
+                              />
+                              <Label htmlFor={`edit-delete-${page.id}`} className="text-sm">
+                                <Trash2 className="h-3 w-3 inline mr-1" />
+                                Excluir
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditProfileOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateProfile} disabled={createLoading}>
+              {createLoading ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Confirmação de Exclusão */}
+      <Dialog open={isDeleteProfileOpen} onOpenChange={setIsDeleteProfileOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Esta ação não pode ser desfeita. O perfil será removido permanentemente.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedProfile && (
+            <div className="space-y-4">
+              <div className="p-4 border rounded-lg bg-muted/50">
+                <div className="font-medium">{selectedProfile.name}</div>
+                <div className="text-sm text-muted-foreground">
+                  {selectedProfile.description || 'Sem descrição'}
+                </div>
+                {selectedProfile.sector && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: selectedProfile.sector.color }}
+                    />
+                    <span className="text-sm">{selectedProfile.sector.name}</span>
+                  </div>
+                )}
+              </div>
+              
+              <p className="text-sm text-muted-foreground">
+                Tem certeza que deseja excluir este perfil? Esta ação removerá todas as permissões 
+                associadas e não poderá ser desfeita.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteProfileOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete} disabled={createLoading}>
+              {createLoading ? 'Excluindo...' : 'Excluir Perfil'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Edição de Setor */}
+      <Dialog open={isEditSectorOpen} onOpenChange={setIsEditSectorOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Setor</DialogTitle>
+            <DialogDescription>
+              Altere as informações do setor
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-sector-name">Nome do Setor *</Label>
+              <Input
+                id="edit-sector-name"
+                value={editSectorData.name}
+                onChange={(e) => setEditSectorData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Digite o nome do setor"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-sector-description">Descrição</Label>
+              <Textarea
+                id="edit-sector-description"
+                value={editSectorData.description}
+                onChange={(e) => setEditSectorData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Digite uma descrição para o setor (opcional)"
+                rows={3}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Cor do Setor</Label>
+              <div className="flex gap-2 mt-2">
+                {DEFAULT_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`w-8 h-8 rounded-full border-2 ${
+                      editSectorData.color === color ? 'border-gray-800' : 'border-gray-300'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setEditSectorData(prev => ({ ...prev, color }))}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditSectorOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateSector} disabled={createLoading || !editSectorData.name.trim()}>
+              {createLoading ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Confirmação de Exclusão de Setor */}
+      <Dialog open={isDeleteSectorOpen} onOpenChange={setIsDeleteSectorOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Esta ação não pode ser desfeita. O setor será removido permanentemente.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedSector && (
+            <div className="space-y-4">
+              <div className="p-4 border rounded-lg bg-muted/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <div 
+                    className="w-4 h-4 rounded-full" 
+                    style={{ backgroundColor: selectedSector.color }}
+                  />
+                  <div className="font-medium">{selectedSector.name}</div>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {selectedSector.description || 'Sem descrição'}
+                </div>
+                <Badge variant={selectedSector.is_active ? 'default' : 'secondary'} className="mt-2">
+                  {selectedSector.is_active ? 'Ativo' : 'Inativo'}
+                </Badge>
+              </div>
+              
+              <p className="text-sm text-muted-foreground">
+                Tem certeza que deseja excluir este setor? Esta ação removerá o setor 
+                e não poderá ser desfeita. Certifique-se de que não há perfis atribuídos a este setor.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteSectorOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDeleteSector} disabled={createLoading}>
+              {createLoading ? 'Excluindo...' : 'Excluir Setor'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

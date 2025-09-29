@@ -729,33 +729,33 @@ export type Database = {
       }
       consultants: {
         Row: {
-          active: boolean | null
           commission_rate: number | null
           created_at: string
           email: string | null
           id: string
+          is_active: boolean | null
           name: string
           org_id: string | null
           phone: string | null
           updated_at: string
         }
         Insert: {
-          active?: boolean | null
           commission_rate?: number | null
           created_at?: string
           email?: string | null
           id?: string
+          is_active?: boolean | null
           name: string
           org_id?: string | null
           phone?: string | null
           updated_at?: string
         }
         Update: {
-          active?: boolean | null
           commission_rate?: number | null
           created_at?: string
           email?: string | null
           id?: string
+          is_active?: boolean | null
           name?: string
           org_id?: string | null
           phone?: string | null
