@@ -293,13 +293,13 @@ export default function Coleta() {
                           {searchResults.map((customer) => (
                             <div
                               key={customer.id}
-                              className="p-3 border rounded cursor-pointer hover:bg-gray-50"
+                              className="p-3 border rounded cursor-pointer hover:bg-muted/50 transition-colors"
                               onClick={() => handleSelectCustomer(customer)}
                             >
-                              <div className="font-medium">{customer.name}</div>
-                              <div className="text-sm text-gray-600">{customer.document}</div>
+                              <div className="font-medium text-foreground">{customer.name}</div>
+                              <div className="text-sm text-muted-foreground">{customer.document}</div>
                               {customer.phone && (
-                                <div className="text-sm text-gray-600">{customer.phone}</div>
+                                <div className="text-sm text-muted-foreground">{customer.phone}</div>
                               )}
                             </div>
                           ))}

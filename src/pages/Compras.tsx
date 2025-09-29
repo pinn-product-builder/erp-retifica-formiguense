@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
 
 const STATUS_COLORS = {
@@ -32,6 +33,7 @@ export default function Compras() {
     updateRequisitionStatus,
     createPurchaseOrder 
   } = usePurchasing();
+  const { toast } = useToast();
 
   const [newSupplier, setNewSupplier] = useState({
     name: '',
@@ -52,51 +54,92 @@ export default function Compras() {
   });
 
   const handleCreateSupplier = async () => {
-    if (!newSupplier.name) return;
+    if (!newSupplier.name) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Nome do fornecedor é obrigatório"
+      });
+      return;
+    }
     
-    await createSupplier({
-      ...newSupplier,
-      rating: 5.0,
-      is_active: true,
-    });
-    
-    setNewSupplier({
-      name: '',
-      cnpj: '',
-      email: '',
-      phone: '',
-      address: '',
-      contact_person: '',
-      payment_terms: '',
-      delivery_days: 0,
-    });
+    try {
+      await createSupplier({
+        ...newSupplier,
+        rating: 5.0,
+        is_active: true,
+      });
+      
+      setNewSupplier({
+        name: '',
+        cnpj: '',
+        email: '',
+        phone: '',
+        address: '',
+        contact_person: '',
+        payment_terms: '',
+        delivery_days: 0,
+      });
+
+      toast({
+        title: "Sucesso",
+        description: "Fornecedor criado com sucesso"
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Falha ao criar fornecedor"
+      });
+    }
   };
 
   const handleCreateRequisition = async () => {
-    if (!newRequisition.department || newRequisition.items.length === 0) return;
+    if (!newRequisition.department || newRequisition.items.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Dados incompletos",
+        description: "Por favor, preencha o departamento e adicione pelo menos um item.",
+      });
+      return;
+    }
     
-    const totalValue = newRequisition.items.reduce((sum, item) => 
-      sum + (item.quantity * (item.unit_price || 0)), 0
-    );
+    try {
+      const totalValue = newRequisition.items.reduce((sum, item) => 
+        sum + (item.quantity * (item.unit_price || 0)), 0
+      );
 
-    await createRequisition(
-      {
-        ...newRequisition,
-        total_estimated_value: totalValue,
-        status: 'pending',
-      },
-      newRequisition.items.map(item => ({
-        ...item,
-        total_price: item.quantity * (item.unit_price || 0),
-      }))
-    );
-    
-    setNewRequisition({
-      department: '',
-      priority: 'medium',
-      justification: '',
-      items: [{ item_name: '', description: '', quantity: 1, unit_price: 0 }],
-    });
+      await createRequisition(
+        {
+          ...newRequisition,
+          total_estimated_value: totalValue,
+          status: 'pending',
+        },
+        newRequisition.items.map(item => ({
+          ...item,
+          total_price: item.quantity * (item.unit_price || 0),
+        }))
+      );
+      
+      setNewRequisition({
+        department: '',
+        priority: 'medium',
+        justification: '',
+        items: [{ item_name: '', description: '', quantity: 1, unit_price: 0 }],
+      });
+
+      toast({
+        title: "Requisição criada",
+        description: "Requisição de compra criada com sucesso",
+      });
+    } catch (error) {
+      console.error('Erro ao criar requisição:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao criar requisição",
+        description: "Não foi possível criar a requisição. Tente novamente.",
+      });
+    }
   };
 
   const addRequisitionItem = () => {

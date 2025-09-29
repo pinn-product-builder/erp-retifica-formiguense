@@ -145,10 +145,6 @@ export const usePCP = () => {
       if (error) throw error;
       
       await fetchSchedules();
-      toast({
-        title: 'Sucesso',
-        description: 'Cronograma criado com sucesso',
-      });
       
       return data;
     } catch (error) {

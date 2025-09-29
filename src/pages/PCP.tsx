@@ -3,13 +3,15 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, AlertTriangle, Users, Settings, Plus } from 'lucide-react';
-import { usePCP } from '@/hooks/usePCP';
+import { usePCP, ProductionSchedule } from '@/hooks/usePCP';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { OrderSelect } from '@/components/ui/order-select';
 import { EngineComponent } from '@/hooks/usePCP';
+import { useToast } from '@/hooks/use-toast';
 
 const STATUS_COLORS = {
   planned: 'bg-blue-500/20 text-blue-700',
@@ -27,7 +29,10 @@ const ALERT_COLORS = {
 
 export default function PCP() {
   const { schedules, resources, alerts, loading, createSchedule, updateSchedule, markAlertRead } = usePCP();
-  const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
+  const { toast } = useToast();
+  const [selectedSchedule, setSelectedSchedule] = useState<ProductionSchedule | null>(null);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newSchedule, setNewSchedule] = useState({
     order_id: '',
     component: '' as EngineComponent | '',
@@ -39,15 +44,7 @@ export default function PCP() {
     notes: '',
   });
 
-  const handleCreateSchedule = async () => {
-    if (!newSchedule.order_id || !newSchedule.component) return;
-    
-    await createSchedule({
-      ...newSchedule,
-      component: newSchedule.component as EngineComponent,
-      status: 'planned',
-    });
-    
+  const resetForm = () => {
     setNewSchedule({
       order_id: '',
       component: '' as EngineComponent | '',
@@ -60,8 +57,54 @@ export default function PCP() {
     });
   };
 
+  const handleDialogChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      resetForm(); // Limpar formulário quando modal fechar
+    }
+  };
+
+  const handleCreateSchedule = async () => {
+    if (!newSchedule.order_id || !newSchedule.component) {
+      toast({
+        variant: "destructive",
+        title: "Dados incompletos",
+        description: "Por favor, selecione uma ordem de serviço e um componente.",
+      });
+      return;
+    }
+    
+    setCreateLoading(true);
+    try {
+      const result = await createSchedule({
+        ...newSchedule,
+        component: newSchedule.component as EngineComponent,
+        status: 'planned',
+      });
+
+      if (result) {
+        resetForm(); // Limpar formulário
+        setIsDialogOpen(false); // Fechar o modal
+
+        toast({
+          title: "Cronograma criado",
+          description: "Cronograma de produção criado com sucesso",
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao criar cronograma:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao criar cronograma",
+        description: "Não foi possível criar o cronograma. Tente novamente.",
+      });
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   const handleUpdateStatus = async (id: string, status: string) => {
-    const updates: any = { status };
+    const updates: { status: string; actual_start_date?: string; actual_end_date?: string } = { status };
     
     if (status === 'in_progress' && !selectedSchedule?.actual_start_date) {
       updates.actual_start_date = new Date().toISOString().split('T')[0];
@@ -98,7 +141,7 @@ export default function PCP() {
           <p className="text-muted-foreground">Gerencie cronogramas, recursos e monitore a produção</p>
         </div>
         
-        <Dialog>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -110,14 +153,13 @@ export default function PCP() {
               <DialogTitle>Criar Cronograma</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <Label>Ordem de Serviço</Label>
-                <Input
-                  value={newSchedule.order_id}
-                  onChange={(e) => setNewSchedule({...newSchedule, order_id: e.target.value})}
-                  placeholder="ID da OS"
-                />
-              </div>
+              <OrderSelect
+                label="Ordem de Serviço"
+                value={newSchedule.order_id}
+                onValueChange={(orderId) => setNewSchedule({...newSchedule, order_id: orderId})}
+                placeholder="Selecionar Ordem de Serviço"
+                required
+              />
               <div>
                 <Label>Componente</Label>
                         <Select 
@@ -190,8 +232,12 @@ export default function PCP() {
                   placeholder="Observações adicionais"
                 />
               </div>
-              <Button onClick={handleCreateSchedule} className="w-full">
-                Criar Cronograma
+              <Button 
+                onClick={handleCreateSchedule} 
+                className="w-full"
+                disabled={createLoading || !newSchedule.order_id || !newSchedule.component}
+              >
+                {createLoading ? 'Criando...' : 'Criar Cronograma'}
               </Button>
             </div>
           </DialogContent>

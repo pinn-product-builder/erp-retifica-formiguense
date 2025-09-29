@@ -57,12 +57,13 @@ interface DiagnosticResponse {
   diagnosed_at: string;
   diagnosed_by: string;
   diagnosed_by_name?: string;
+  responses?: Record<string, string | number | boolean>;
   order?: {
     order_number: string;
-    customer: {
+    customer?: {
       name: string;
     };
-    engine: {
+    engine?: {
       type: string;
       brand: string;
       model: string;
@@ -82,6 +83,8 @@ const Diagnosticos = () => {
   const [selectedOrder, setSelectedOrder] = useState<string>("none");
   const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
   const [showChecklistsConfig, setShowChecklistsConfig] = useState(false);
+  const [selectedDiagnostic, setSelectedDiagnostic] = useState<DiagnosticResponse | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const checklistsFunctions = useDiagnosticChecklists();
   const ordersData = useOrders();
@@ -187,13 +190,18 @@ const Diagnosticos = () => {
     setIsDiagnosticOpen(true);
   };
 
-  const handleDiagnosticComplete = (response: any) => {
+  const handleDiagnosticComplete = (response: DiagnosticResponse) => {
     toast({
       title: "Sucesso",
       description: "Diagnóstico concluído com sucesso"
     });
     setIsDiagnosticOpen(false);
     setSelectedOrder("");
+  };
+
+  const handleViewDetails = (diagnostic: DiagnosticResponse) => {
+    setSelectedDiagnostic(diagnostic);
+    setIsDetailsModalOpen(true);
   };
 
   return (
@@ -419,7 +427,12 @@ const Diagnosticos = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleViewDetails(response)}
+                          title="Ver Detalhes"
+                        >
                           <Eye className="w-4 h-4" />
                         </Button>
                         {response.status === 'pending' && (
@@ -462,6 +475,74 @@ const Diagnosticos = () => {
             orderId={selectedOrder}
             onComplete={handleDiagnosticComplete}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Details Modal */}
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Diagnóstico</DialogTitle>
+            <DialogDescription>
+              Visualize os detalhes completos do diagnóstico realizado
+            </DialogDescription>
+          </DialogHeader>
+          {selectedDiagnostic && (
+            <div className="space-y-6">
+              {/* Informações da Ordem */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Ordem de Serviço</h4>
+                  <p className="font-medium">{selectedDiagnostic.order?.order_number || 'N/A'}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Cliente</h4>
+                  <p className="font-medium">{selectedDiagnostic.order?.customer?.name || 'N/A'}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Motor</h4>
+                  <p className="font-medium">
+                    {selectedDiagnostic.order?.engine ? 
+                      `${selectedDiagnostic.order.engine.brand} ${selectedDiagnostic.order.engine.model} - ${selectedDiagnostic.order.engine.type}` 
+                      : 'N/A'
+                    }
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Componente</h4>
+                  <p className="font-medium">{getComponentLabel(selectedDiagnostic.component)}</p>
+                </div>
+              </div>
+
+              {/* Respostas do Checklist */}
+              <div>
+                <h4 className="font-semibold mb-4">Respostas do Checklist</h4>
+                <div className="space-y-3">
+                  {selectedDiagnostic.responses && Object.entries(selectedDiagnostic.responses).map(([key, value]) => (
+                    <div key={key} className="flex justify-between items-center p-3 border rounded-lg">
+                      <span className="font-medium">{key}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {typeof value === 'boolean' ? (value ? 'Sim' : 'Não') : String(value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Status e Data */}
+              <div className="flex justify-between items-center pt-4 border-t">
+                <div>
+                  <span className="text-sm text-muted-foreground">Status: </span>
+                  <Badge variant={selectedDiagnostic.status === 'completed' ? 'default' : 'secondary'}>
+                    {selectedDiagnostic.status === 'completed' ? 'Concluído' : 'Pendente'}
+                  </Badge>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Realizado em: {new Date(selectedDiagnostic.diagnosed_at).toLocaleString('pt-BR')}
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

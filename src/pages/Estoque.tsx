@@ -10,11 +10,38 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Package, AlertTriangle, Plus, Search, Filter, TrendingDown } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
+import { useToast } from "@/hooks/use-toast";
 
 const Estoque = () => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('todos');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+
+  const handleSavePart = async () => {
+    setCreateLoading(true);
+    try {
+      // Simular salvamento (aqui seria a integração real com o backend)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast({
+        title: "Peça salva",
+        description: "Peça adicionada ao estoque com sucesso",
+      });
+      
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error('Erro ao salvar peça:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar peça",
+        description: "Não foi possível adicionar a peça ao estoque. Tente novamente.",
+      });
+    } finally {
+      setCreateLoading(false);
+    }
+  };
 
   // Dados de exemplo para estoque
   const pecas = [
@@ -136,8 +163,19 @@ const Estoque = () => {
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" onClick={() => setIsDialogOpen(false)}>
-                Salvar Peça
+              <Button 
+                variant="outline" 
+                onClick={() => setIsDialogOpen(false)}
+                disabled={createLoading}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                onClick={handleSavePart}
+                disabled={createLoading}
+              >
+                {createLoading ? 'Salvando...' : 'Salvar Peça'}
               </Button>
             </DialogFooter>
           </DialogContent>

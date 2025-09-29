@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useOrganization } from '@/hooks/useOrganization';
 
 export interface Customer {
   id?: string;
@@ -47,8 +48,9 @@ export interface Order {
 export function useSupabase() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { currentOrganization } = useOrganization();
 
-  const handleError = (error: any, message: string) => {
+  const handleError = (error: unknown, message: string) => {
     console.error(message, error);
     toast({
       title: "Erro",
@@ -77,11 +79,22 @@ export function useSupabase() {
   };
 
   const createCustomer = async (customer: Customer) => {
+    if (!currentOrganization?.id) {
+      handleError(new Error('Organização não encontrada'), 'Erro: organização não encontrada');
+      return null;
+    }
+
     try {
       setLoading(true);
+      const { data: user } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from('customers')
-        .insert(customer)
+        .insert({
+          ...customer,
+          org_id: currentOrganization.id,
+          created_by: user.user?.id
+        })
         .select()
         .single();
 
@@ -115,11 +128,19 @@ export function useSupabase() {
   };
 
   const createOrder = async (order: Order) => {
+    if (!currentOrganization?.id) {
+      handleError(new Error('Organização não encontrada'), 'Erro: organização não encontrada');
+      return null;
+    }
+
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('orders')
-        .insert(order as any)
+        .insert({
+          ...order,
+          org_id: currentOrganization.id
+        } as any)
         .select()
         .single();
 
@@ -139,7 +160,7 @@ export function useSupabase() {
     }
   };
 
-  const uploadPhoto = async (file: File, orderId: string, photoType: string, component?: string, workflowStep?: string) => {
+  const uploadPhoto = async (file: File, orderId: string, photoType: string, component?: string, workflowStep?: string): Promise<string | null> => {
     try {
       setLoading(true);
       
@@ -159,18 +180,18 @@ export function useSupabase() {
         .from('order_photos')
         .insert({
           order_id: orderId,
-          component: component as any,
-          workflow_step: workflowStep as any,
+          component: component,
+          workflow_step: workflowStep,
           photo_type: photoType,
           file_path: uploadData.path,
           file_name: file.name,
           uploaded_by: (await supabase.auth.getUser()).data.user?.id || 'Sistema'
-        })
+        } as any)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return data?.file_path || null;
     } catch (error) {
       handleError(error, 'Erro ao fazer upload da foto');
       return null;

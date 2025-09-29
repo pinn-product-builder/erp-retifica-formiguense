@@ -2490,7 +2490,7 @@ export type Database = {
           final_observations?: string | null
           id?: string
           initial_observations?: string | null
-          order_number: string
+          order_number?: string
           org_id?: string | null
           priority?: number | null
           status?: Database["public"]["Enums"]["order_status"] | null

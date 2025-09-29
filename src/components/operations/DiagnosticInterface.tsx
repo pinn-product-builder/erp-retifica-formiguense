@@ -215,8 +215,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
         responses,
         photos: Object.values(responses).flatMap(r => r.photos),
         generated_services: generatedServices,
-        diagnosed_by: (await supabase.auth.getUser()).data.user?.user_metadata?.name || 
-                   (await supabase.auth.getUser()).data.user?.email?.split('@')[0] || 'Usuário',
+        diagnosed_by: (await supabase.auth.getUser()).data.user?.id,
         status: 'completed'
       });
 
