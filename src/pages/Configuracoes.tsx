@@ -7,12 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, User, Shield, Database, Bell, Mail, Cog, Wrench, ClipboardList } from "lucide-react";
+import { Settings, User, Shield, Database, Bell, Mail, Cog } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import SystemConfigAdmin from "@/components/admin/SystemConfigAdmin";
-import { EngineTypesConfig } from "@/components/operations/EngineTypesConfig";
 import { WorkflowStatusConfigAdmin } from "@/components/admin/WorkflowStatusConfigAdmin";
-import DiagnosticChecklistsConfig from "@/components/operations/DiagnosticChecklistsConfig";
 import { Badge } from '@/components/ui/badge';
 
 const Configuracoes = () => {
@@ -52,22 +50,10 @@ const Configuracoes = () => {
 
       <Tabs defaultValue="geral" className="w-full">
         {/* Tabs responsivas */}
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 h-auto">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 h-auto">
           <TabsTrigger value="geral" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
             <Settings className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             <span className="hidden sm:inline">Geral</span>
-          </TabsTrigger>
-          <TabsTrigger value="tipos-motor" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
-            <Wrench className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Motores</span>
-          </TabsTrigger>
-          <TabsTrigger value="checklists" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
-            <ClipboardList className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Checklists</span>
-          </TabsTrigger>
-          <TabsTrigger value="workflow" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
-            <Cog className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Workflow</span>
           </TabsTrigger>
           <TabsTrigger value="notificacoes" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
             <Bell className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -101,37 +87,37 @@ const Configuracoes = () => {
             <CardContent className="space-y-4 sm:space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="empresa" className="text-sm font-medium">Nome da Empresa</Label>
-                <Input 
-                  id="empresa" 
-                  defaultValue="Retífica Formiguense" 
+                <Input
+                  id="empresa"
+                  defaultValue="Retífica Formiguense"
                   className="h-9 sm:h-10"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="endereco" className="text-sm font-medium">Endereço</Label>
-                <Input 
-                  id="endereco" 
-                  defaultValue="Rua das Retíficas, 123 - São Paulo/SP" 
+                <Input
+                  id="endereco"
+                  defaultValue="Rua das Retíficas, 123 - São Paulo/SP"
                   className="h-9 sm:h-10"
                 />
               </div>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="telefone" className="text-sm font-medium">Telefone</Label>
-                  <Input 
-                    id="telefone" 
-                    defaultValue="(11) 1234-5678" 
+                  <Input
+                    id="telefone"
+                    defaultValue="(11) 1234-5678"
                     className="h-9 sm:h-10"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    defaultValue="contato@retifica.com" 
+                  <Input
+                    id="email"
+                    type="email"
+                    defaultValue="contato@retifica.com"
                     className="h-9 sm:h-10"
                   />
                 </div>
@@ -141,13 +127,13 @@ const Configuracoes = () => {
 
               <div className="space-y-4">
                 <h4 className="font-medium text-sm sm:text-base">Preferências do Sistema</h4>
-                
+
                 <div className="flex items-center justify-between p-3 sm:p-4 bg-muted/30 rounded-lg">
                   <div className="flex-1">
                     <Label htmlFor="tema" className="text-sm font-medium">Tema Escuro</Label>
                     <p className="text-xs sm:text-sm text-muted-foreground">Usar tema escuro na interface</p>
                   </div>
-                  <Switch 
+                  <Switch
                     id="tema"
                     checked={configuracoes.tema_escuro}
                     onCheckedChange={(checked) => handleConfigChange('tema_escuro', checked)}
@@ -156,14 +142,8 @@ const Configuracoes = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="tipos-motor" className="space-y-4 sm:space-y-6">
-          <EngineTypesConfig />
-        </TabsContent>
 
-        <TabsContent value="checklists" className="space-y-4 sm:space-y-6">
-          <DiagnosticChecklistsConfig />
         </TabsContent>
 
         <TabsContent value="notificacoes" className="space-y-4 sm:space-y-6">
@@ -183,7 +163,7 @@ const Configuracoes = () => {
                   <Label htmlFor="email-notif" className="text-sm font-medium">Notificações por Email</Label>
                   <p className="text-xs sm:text-sm text-muted-foreground">Receber alertas por email</p>
                 </div>
-                <Switch 
+                <Switch
                   id="email-notif"
                   checked={configuracoes.notificacaoEmail}
                   onCheckedChange={(checked) => handleConfigChange('notificacaoEmail', checked)}
@@ -195,7 +175,7 @@ const Configuracoes = () => {
                   <Label htmlFor="sms-notif" className="text-sm font-medium">Notificações por SMS</Label>
                   <p className="text-xs sm:text-sm text-muted-foreground">Receber alertas por SMS</p>
                 </div>
-                <Switch 
+                <Switch
                   id="sms-notif"
                   checked={configuracoes.notificacaoSMS}
                   onCheckedChange={(checked) => handleConfigChange('notificacaoSMS', checked)}
@@ -206,22 +186,22 @@ const Configuracoes = () => {
 
               <div className="space-y-4">
                 <h4 className="font-medium text-sm sm:text-base">Configurações de Contato</h4>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="email-alerts" className="text-sm font-medium">Email para Alertas</Label>
-                  <Input 
-                    id="email-alerts" 
-                    type="email" 
-                    defaultValue="admin@retifica.com" 
+                  <Input
+                    id="email-alerts"
+                    type="email"
+                    defaultValue="admin@retifica.com"
                     className="h-9 sm:h-10"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="telefone-alerts" className="text-sm font-medium">Telefone para SMS</Label>
-                  <Input 
-                    id="telefone-alerts" 
-                    defaultValue="(11) 99999-9999" 
+                  <Input
+                    id="telefone-alerts"
+                    defaultValue="(11) 99999-9999"
                     className="h-9 sm:h-10"
                   />
                 </div>
@@ -247,7 +227,7 @@ const Configuracoes = () => {
                   <Label htmlFor="backup-auto" className="text-sm font-medium">Backup Automático</Label>
                   <p className="text-xs sm:text-sm text-muted-foreground">Backup diário às 02:00</p>
                 </div>
-                <Switch 
+                <Switch
                   id="backup-auto"
                   checked={configuracoes.backup_automatico}
                   onCheckedChange={(checked) => handleConfigChange('backup_automatico', checked)}
@@ -293,7 +273,7 @@ const Configuracoes = () => {
                   <Label htmlFor="relatorio-auto" className="text-sm font-medium">Relatórios Mensais</Label>
                   <p className="text-xs sm:text-sm text-muted-foreground">Enviar relatório mensal por email</p>
                 </div>
-                <Switch 
+                <Switch
                   id="relatorio-auto"
                   checked={configuracoes.relatorio_automatico}
                   onCheckedChange={(checked) => handleConfigChange('relatorio_automatico', checked)}
@@ -304,15 +284,15 @@ const Configuracoes = () => {
 
               <div className="space-y-4">
                 <h4 className="font-medium text-sm sm:text-base">Configurações de Envio</h4>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="dia-envio" className="text-sm font-medium">Dia do Envio</Label>
-                  <Input 
-                    id="dia-envio" 
-                    type="number" 
-                    min="1" 
-                    max="28" 
-                    defaultValue="1" 
+                  <Input
+                    id="dia-envio"
+                    type="number"
+                    min="1"
+                    max="28"
+                    defaultValue="1"
                     className="h-9 sm:h-10"
                   />
                   <p className="text-xs sm:text-sm text-muted-foreground">Dia do mês para envio (1-28)</p>
@@ -320,9 +300,9 @@ const Configuracoes = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="emails-relatorio" className="text-sm font-medium">Emails para Envio</Label>
-                  <Input 
-                    id="emails-relatorio" 
-                    defaultValue="admin@retifica.com, gerente@retifica.com" 
+                  <Input
+                    id="emails-relatorio"
+                    defaultValue="admin@retifica.com, gerente@retifica.com"
                     className="h-9 sm:h-10"
                   />
                   <p className="text-xs sm:text-sm text-muted-foreground">Separar emails com vírgula</p>
@@ -356,9 +336,9 @@ const Configuracoes = () => {
 
       {/* Botão de Salvar responsivo */}
       <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4">
-        <Button 
-          onClick={salvarConfiguracoes} 
-          size="lg" 
+        <Button
+          onClick={salvarConfiguracoes}
+          size="lg"
           className="w-full sm:w-auto h-10 sm:h-11"
         >
           Salvar Configurações

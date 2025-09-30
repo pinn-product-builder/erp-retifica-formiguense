@@ -70,6 +70,9 @@ Este módulo oferece uma interface Kanban para gestão visual de workflows, perm
 - [Critérios de Aceite](./product-specs/acceptance-criteria.md)
 - [Métricas de Performance](./product-specs/performance-metrics.md)
 
+### [📖 Guias do Usuário](./user-guides/)
+- [**Guia de Configurações do Módulo**](./user-guides/operations-configuration-guide.md) 🆕
+
 ## 🚀 Funcionalidades Principais
 
 ### Interface Kanban

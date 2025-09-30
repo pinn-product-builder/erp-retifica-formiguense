@@ -29,6 +29,7 @@ const Orcamentos = lazy(() => import('@/pages/Orcamentos'));
 const Diagnosticos = lazy(() => import('@/pages/Diagnosticos'));
 const Relatorios = lazy(() => import('@/pages/Relatorios'));
 const Configuracoes = lazy(() => import('@/pages/Configuracoes'));
+const ConfiguracoesOperacoes = lazy(() => import('@/pages/ConfiguracoesOperacoes'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 const Financeiro = lazy(() => import('@/pages/Financeiro'));
 const ContasReceber = lazy(() => import('@/pages/ContasReceber'));
@@ -83,6 +84,7 @@ function AppContent() {
             <Route path="/orcamentos" element={<ProfileProtectedRoute><Layout><Orcamentos /></Layout></ProfileProtectedRoute>} />
             <Route path="/relatorios" element={<ProfileProtectedRoute><Layout><Relatorios /></Layout></ProfileProtectedRoute>} />
             <Route path="/configuracoes" element={<ProfileProtectedRoute><Layout><Configuracoes /></Layout></ProfileProtectedRoute>} />
+            <Route path="/configuracoes/operacoes" element={<ProfileProtectedRoute><Layout><ConfiguracoesOperacoes /></Layout></ProfileProtectedRoute>} />
             <Route path="/financeiro" element={<ProfileProtectedRoute><Layout><Financeiro /></Layout></ProfileProtectedRoute>} />
             <Route path="/contas-receber" element={<ProfileProtectedRoute><Layout><ContasReceber /></Layout></ProfileProtectedRoute>} />
             <Route path="/contas-pagar" element={<ProfileProtectedRoute><Layout><ContasPagar /></Layout></ProfileProtectedRoute>} />

@@ -101,6 +101,11 @@ const operationsItems = [
     url: "/diagnosticos",
     icon: ClipboardList,
   },
+  {
+    title: "Configurações Operações",
+    url: "/configuracoes/operacoes",
+    icon: Settings,
+  },
 ];
 
 // Gestão de Pessoas
