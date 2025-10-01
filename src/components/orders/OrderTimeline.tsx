@@ -1,14 +1,25 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Clock, User, FileText } from 'lucide-react';
+import { Clock, User, FileText, Package, Shield, FileCheck, GitBranch, Activity, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { OrderStatusHistory } from '@/hooks/useOrders';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useOrderTimeline } from '@/hooks/useOrderTimeline';
 
 interface OrderTimelineProps {
-  statusHistory: OrderStatusHistory[];
+  orderId: string;
 }
+
+const ICON_MAP = {
+  status: Activity,
+  workflow: GitBranch,
+  diagnostic: FileCheck,
+  budget: CheckCircle,
+  package: Package,
+  file: FileText,
+  shield: Shield,
+};
 
 const STATUS_COLORS = {
   'coletado': 'bg-blue-500',
@@ -30,13 +41,27 @@ const STATUS_LABELS = {
   'cancelado': 'Cancelado'
 };
 
-export function OrderTimeline({ statusHistory }: OrderTimelineProps) {
-  if (!statusHistory || statusHistory.length === 0) {
+export function OrderTimeline({ orderId }: OrderTimelineProps) {
+  const { events, loading } = useOrderTimeline(orderId);
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+    );
+  }
+
+  if (!events || events.length === 0) {
     return (
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <Clock className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Nenhum evento registrado</h3>
           <p className="text-muted-foreground text-center">
-            Nenhum histórico de status disponível.
+            O histórico de eventos desta ordem aparecerá aqui conforme o progresso.
           </p>
         </CardContent>
       </Card>
@@ -45,57 +70,69 @@ export function OrderTimeline({ statusHistory }: OrderTimelineProps) {
 
   return (
     <Card>
-      <CardContent className="p-4">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+      <CardContent className="p-6">
+        <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
           <Clock className="h-5 w-5" />
-          Histórico de Status
+          Linha do Tempo - {events.length} Eventos
         </h3>
         
-        <div className="space-y-4">
-          {statusHistory.map((entry, index) => {
+        <div className="space-y-6">
+          {events.map((event, index) => {
             const isFirst = index === 0;
-            const statusColor = STATUS_COLORS[entry.new_status as keyof typeof STATUS_COLORS] || 'bg-gray-500';
+            const EventIcon = ICON_MAP[event.icon_type] || Activity;
             
             return (
-              <div key={entry.id} className="flex items-start gap-3">
-                {/* Timeline dot */}
+              <div key={event.id} className="flex items-start gap-4">
+                {/* Timeline line and icon */}
                 <div className="flex flex-col items-center">
                   <div 
-                    className={`w-3 h-3 rounded-full ${statusColor} ${isFirst ? 'ring-2 ring-background shadow-lg' : ''}`}
-                  />
-                  {index < statusHistory.length - 1 && (
-                    <div className="w-0.5 h-8 bg-border mt-2" />
+                    className={`w-10 h-10 rounded-full ${event.color} flex items-center justify-center ${
+                      isFirst ? 'ring-4 ring-background shadow-lg' : ''
+                    }`}
+                  >
+                    <EventIcon className="h-5 w-5 text-white" />
+                  </div>
+                  {index < events.length - 1 && (
+                    <div className="w-0.5 h-full min-h-[40px] bg-border mt-2" />
                   )}
                 </div>
                 
                 {/* Content */}
-                <div className="flex-1 min-w-0 pb-4">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline">
-                      {STATUS_LABELS[entry.new_status as keyof typeof STATUS_LABELS] || entry.new_status}
+                <div className="flex-1 min-w-0 pb-6">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-foreground">{event.title}</h4>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {format(new Date(event.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {event.event_type}
                     </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {format(new Date(entry.changed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    </span>
                   </div>
                   
-                  {entry.old_status && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Alterado de: {STATUS_LABELS[entry.old_status as keyof typeof STATUS_LABELS] || entry.old_status}
-                    </p>
+                  {event.description && (
+                    <p className="text-sm text-foreground mt-2">{event.description}</p>
                   )}
                   
-                  {entry.notes && (
-                    <div className="mt-2 flex items-start gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-foreground">{entry.notes}</p>
+                  {event.details && Object.keys(event.details).length > 0 && (
+                    <div className="mt-3 p-3 bg-muted rounded-md">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Detalhes:</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(event.details).map(([key, value]) => (
+                          <div key={key} className="text-xs">
+                            <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span>{' '}
+                            <span className="text-muted-foreground">{String(value)}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                   
-                  {entry.changed_by && (
-                    <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                  {event.user_id && (
+                    <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                       <User className="h-3 w-3" />
-                      <span>Alterado por usuário ID: {entry.changed_by}</span>
+                      <span>Usuário ID: {event.user_id}</span>
                     </div>
                   )}
                 </div>

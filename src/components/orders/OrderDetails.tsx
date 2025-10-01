@@ -25,6 +25,8 @@ import { Separator } from '@/components/ui/separator';
 import { Order, useOrders } from '@/hooks/useOrders';
 import { OrderTimeline } from './OrderTimeline';
 import { OrderPhotosTab } from './OrderPhotosTab';
+import { OrderMaterialsTab } from './OrderMaterialsTab';
+import { OrderWarrantyTab } from './OrderWarrantyTab';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface OrderDetailsProps {
@@ -280,54 +282,18 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
         </TabsContent>
 
         <TabsContent value="timeline">
-          <OrderTimeline statusHistory={order.status_history || []} />
+          <OrderTimeline orderId={orderId} />
         </TabsContent>
 
         <TabsContent value="materials">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Materiais Utilizados
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {order.materials && order.materials.length > 0 ? (
-                <div className="space-y-4">
-                  {order.materials.map((material) => (
-                    <div key={material.id} className="flex justify-between items-center p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{material.part_name}</p>
-                        {material.part_code && (
-                          <p className="text-sm text-muted-foreground">
-                            Código: {material.part_code}
-                          </p>
-                        )}
-                        <p className="text-sm text-muted-foreground">
-                          Quantidade: {material.quantity}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">
-                          R$ {material.total_cost.toFixed(2)}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Unit: R$ {material.unit_cost.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-4">
-                  Nenhum material registrado ainda.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <OrderMaterialsTab orderId={orderId} />
         </TabsContent>
 
         <TabsContent value="warranties">
+          <OrderWarrantyTab orderId={orderId} />
+        </TabsContent>
+
+        <TabsContent value="warranties-old">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
