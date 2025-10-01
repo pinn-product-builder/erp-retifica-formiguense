@@ -122,7 +122,22 @@ export function useDetailedBudgets() {
       const { data, error } = await query;
       if (error) throw error;
 
-      return data as DetailedBudget[];
+      // Mapear o resultado do Supabase para o tipo correto
+      const mappedData = (data || []).map((budget: any) => ({
+        ...budget,
+        order: budget.orders ? {
+          order_number: budget.orders.order_number,
+          customer: budget.orders.customers ? {
+            name: budget.orders.customers.name,
+            document: budget.orders.customers.document,
+            phone: budget.orders.customers.phone,
+            email: budget.orders.customers.email,
+          } : undefined
+        } : undefined,
+        approvals: budget.budget_approvals || []
+      }));
+
+      return mappedData as DetailedBudget[];
     } catch (error) {
       handleError(error, 'Erro ao carregar orçamentos detalhados');
       return [];

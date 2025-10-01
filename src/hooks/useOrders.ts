@@ -94,8 +94,8 @@ export function useOrders() {
         .from('orders')
         .select(`
           *,
-          customer:customers(id, name, phone, email),
-          engine:engines(id, type, brand, model)
+          customers!inner(id, name, phone, email),
+          engines(id, type, brand, model)
         `)
         .eq('org_id', currentOrganization.id)
         .order('created_at', { ascending: false });
@@ -117,8 +117,8 @@ export function useOrders() {
 
           return {
             ...order,
-            customer: order.customer || null,
-            engine: order.engine || null,
+            customer: order.customers || null,
+            engine: order.engines || null,
             consultant
           };
         })
@@ -146,8 +146,8 @@ export function useOrders() {
         .from('orders')
         .select(`
           *,
-          customer:customers(id, name, phone, email),
-          engine:engines(id, type, brand, model)
+          customers!inner(id, name, phone, email),
+          engines(id, type, brand, model)
         `)
         .eq('id', orderId)
         .eq('org_id', currentOrganization.id)
@@ -189,8 +189,8 @@ export function useOrders() {
 
       return {
         ...orderData,
-        customer: orderData.customer || null,
-        engine: orderData.engine || null,
+        customer: orderData.customers || null,
+        engine: orderData.engines || null,
         consultant,
         materials: materials || [],
         warranties: warranties || [],
@@ -282,9 +282,12 @@ export function useOrders() {
     if (!currentOrganization?.id) return false;
 
     try {
+      // Remove campos read-only antes de fazer update
+      const { customer: _customer, engine: _engine, consultant: _consultant, materials: _materials, warranties: _warranties, status_history: _status_history, ...updateData } = updates as Record<string, unknown>;
+      
       const { error } = await supabase
         .from('orders')
-        .update(updates as any)
+        .update(updateData)
         .eq('id', orderId)
         .eq('org_id', currentOrganization.id);
 
@@ -312,7 +315,7 @@ export function useOrders() {
     if (currentOrganization?.id) {
       fetchOrders();
     }
-  }, [currentOrganization?.id]);
+  }, [currentOrganization?.id, fetchOrders]);
 
   return {
     orders,

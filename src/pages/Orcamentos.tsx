@@ -47,6 +47,7 @@ import { useDetailedBudgets, type DetailedBudget } from "@/hooks/useDetailedBudg
 import { useQuery } from "@tanstack/react-query";
 import BudgetApprovalModal from "@/components/budgets/BudgetApprovalModal";
 import BudgetDetails from "@/components/budgets/BudgetDetails";
+import { BudgetForm } from "@/components/budgets/BudgetForm";
 import { useToast } from "@/hooks/use-toast";
 import { useOrganization } from "@/contexts/OrganizationContext";
 
@@ -57,8 +58,10 @@ const Orcamentos = () => {
   const [selectedBudget, setSelectedBudget] = useState<DetailedBudget | null>(null);
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<DetailedBudget | null>(null);
   
-  const { getDetailedBudgets, duplicateBudget, loading } = useDetailedBudgets();
+  const { getDetailedBudgets, createDetailedBudget, updateDetailedBudget, duplicateBudget, loading } = useDetailedBudgets();
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
 
@@ -72,12 +75,20 @@ const Orcamentos = () => {
     enabled: !!currentOrganization?.id
   });
 
-  const filteredBudgets = budgets.filter(budget => {
-    const matchesSearch = budget.order?.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         budget.order?.customer.name.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesSearch;
-  });
+  const filteredBudgets = React.useMemo(() => {
+    return budgets.filter(budget => {
+      // Se não há termo de busca, mostrar todos
+      if (!searchTerm) return true;
+      
+      const orderNumber = budget.order?.order_number?.toLowerCase() || '';
+      const customerName = budget.order?.customer?.name?.toLowerCase() || '';
+      const searchLower = searchTerm.toLowerCase();
+      
+      const matchesSearch = orderNumber.includes(searchLower) || customerName.includes(searchLower);
+      
+      return matchesSearch;
+    });
+  }, [budgets, searchTerm]);
 
   const stats = {
     total: budgets.length,
@@ -123,6 +134,29 @@ const Orcamentos = () => {
     setSelectedBudget(null);
   };
 
+  const handleCreateBudget = async (budgetData: Partial<DetailedBudget>) => {
+    const result = await createDetailedBudget(budgetData);
+    if (result) {
+      refetch();
+      setIsFormOpen(false);
+    }
+  };
+
+  const handleUpdateBudget = async (budgetData: Partial<DetailedBudget>) => {
+    if (!editingBudget) return;
+    const result = await updateDetailedBudget(editingBudget.id, budgetData);
+    if (result) {
+      refetch();
+      setIsFormOpen(false);
+      setEditingBudget(null);
+    }
+  };
+
+  const handleEditBudget = (budget: DetailedBudget) => {
+    setEditingBudget(budget);
+    setIsFormOpen(true);
+  };
+
   const handleGenerateReport = () => {
     if (!currentOrganization) {
       toast({
@@ -160,7 +194,17 @@ const Orcamentos = () => {
             disabled={isPageLoading}
           >
             <Download className="w-4 h-4 mr-2" />
-            Relatório de Orçamentos
+            Relatório
+          </Button>
+          <Button 
+            onClick={() => {
+              setEditingBudget(null);
+              setIsFormOpen(true);
+            }}
+            disabled={isPageLoading}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Orçamento
           </Button>
         </div>
       </div>
@@ -276,9 +320,9 @@ const Orcamentos = () => {
                     {budget.budget_number || `#${budget.id.slice(-6)}`}
                   </TableCell>
                   <TableCell className="font-medium">
-                    {budget.order?.order_number}
+                    {budget.order?.order_number || '-'}
                   </TableCell>
-                  <TableCell>{budget.order?.customer.name}</TableCell>
+                  <TableCell>{budget.order?.customer?.name || '-'}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
                       {budget.component.charAt(0).toUpperCase() + budget.component.slice(1)}
@@ -304,16 +348,25 @@ const Orcamentos = () => {
                         <Eye className="w-4 h-4" />
                       </Button>
                       {budget.status === 'draft' && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            setSelectedBudget(budget);
-                            setIsApprovalModalOpen(true);
-                          }}
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                        </Button>
+                        <>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleEditBudget(budget)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => {
+                              setSelectedBudget(budget);
+                              setIsApprovalModalOpen(true);
+                            }}
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                        </>
                       )}
                       <Button 
                         variant="ghost" 
@@ -367,6 +420,34 @@ const Orcamentos = () => {
               }}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Formulário de Orçamento */}
+      <Dialog open={isFormOpen} onOpenChange={(open) => {
+        setIsFormOpen(open);
+        if (!open) setEditingBudget(null);
+      }}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingBudget ? 'Editar Orçamento' : 'Novo Orçamento'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingBudget 
+                ? 'Atualize os dados do orçamento. Apenas orçamentos em rascunho podem ser editados.'
+                : 'Preencha os dados para criar um novo orçamento detalhado.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <BudgetForm
+            budget={editingBudget || undefined}
+            onSave={editingBudget ? handleUpdateBudget : handleCreateBudget}
+            onCancel={() => {
+              setIsFormOpen(false);
+              setEditingBudget(null);
+            }}
+          />
         </DialogContent>
       </Dialog>
     </div>

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Database } from '@/integrations/supabase/types';
 
 export function useWorkflowUpdate() {
   const [loading, setLoading] = useState(false);
@@ -217,9 +218,51 @@ export function useWorkflowUpdate() {
     }
   };
 
-  const advanceToNextStatus = async (currentWorkflow: { id: string; status: string; component: string }) => {
+  const advanceToNextStatus = async (currentWorkflow: { id: string; status: string; component: string; order_id?: string }) => {
     try {
-      // Buscar próximo status permitido
+      // 1. VERIFICAR CHECKLISTS OBRIGATÓRIOS
+      const { data: requiredChecklists, error: checklistError } = await supabase
+        .from('workflow_checklists')
+        .select('id, checklist_name, blocks_workflow_advance')
+        .eq('step_key', currentWorkflow.status)
+        .eq('component', currentWorkflow.component as Database["public"]["Enums"]["engine_component"])
+        .eq('is_mandatory', true)
+        .eq('is_active', true);
+
+      if (checklistError) {
+        console.error('Erro ao verificar checklists:', checklistError);
+      }
+
+      // Se existem checklists obrigatórios que bloqueiam o avanço
+      if (requiredChecklists && requiredChecklists.length > 0) {
+        for (const checklist of requiredChecklists) {
+          if (checklist.blocks_workflow_advance) {
+            // Verificar se o checklist foi preenchido e aprovado
+            const { data: response, error: responseError } = await supabase
+              .from('workflow_checklist_responses')
+              .select('overall_status')
+              .eq('order_workflow_id', currentWorkflow.id)
+              .eq('checklist_id', checklist.id)
+              .maybeSingle();
+
+            if (responseError) {
+              console.error('Erro ao verificar resposta do checklist:', responseError);
+            }
+
+            // Se não foi preenchido ou não está aprovado, bloquear
+            if (!response || response.overall_status !== 'approved') {
+              toast({
+                title: "🔒 Checklist Obrigatório Pendente",
+                description: `O checklist "${checklist.checklist_name}" deve ser completado e aprovado antes de avançar.`,
+                variant: "destructive"
+              });
+              return false;
+            }
+          }
+        }
+      }
+
+      // 2. BUSCAR PRÓXIMO STATUS PERMITIDO
       const { data: nextStatusData, error: nextStatusError } = await supabase
         .from('status_prerequisites')
         .select('to_status_key, transition_type')
@@ -236,21 +279,20 @@ export function useWorkflowUpdate() {
           title: "Etapa concluída!",
           description: "Não há próxima etapa configurada",
         });
-        return;
+        return false;
       }
 
-      // Para transições automáticas e manuais, avançar
-      // Apenas bloquear se for approval_required
+      // 3. VERIFICAR TIPO DE TRANSIÇÃO
       if (nextStatusData.transition_type === 'approval_required') {
         toast({
           title: "Etapa concluída!",
           description: "Próxima etapa requer aprovação de supervisor",
           variant: "default"
         });
-        return;
+        return false;
       }
 
-      // Avançar para próximo status (automatic ou manual)
+      // 4. AVANÇAR PARA PRÓXIMO STATUS
       const success = await updateWorkflowStatus(
         currentWorkflow.id, 
         nextStatusData.to_status_key,
@@ -264,7 +306,12 @@ export function useWorkflowUpdate() {
           title: "✅ Etapa avançada!",
           description: `Workflow movido para: ${nextStatusData.to_status_key}`,
         });
+        
+        // 5. VERIFICAR SE PRECISA GERAR RELATÓRIO TÉCNICO
+        await checkAndGenerateTechnicalReport(currentWorkflow);
       }
+
+      return success;
     } catch (error) {
       console.error('Erro ao avançar para próximo status:', error);
       toast({
@@ -272,6 +319,70 @@ export function useWorkflowUpdate() {
         description: "Não foi possível avançar para a próxima etapa",
         variant: "destructive"
       });
+      return false;
+    }
+  };
+
+  const checkAndGenerateTechnicalReport = async (workflow: { id: string; status: string; component: string; order_id?: string }) => {
+    try {
+      // Buscar se a etapa concluída requer relatório técnico
+      const { data: stepConfig, error: stepError } = await supabase
+        .from('workflow_steps')
+        .select('technical_report_required, step_name')
+        .eq('step_key', workflow.status)
+        .eq('component', workflow.component as Database["public"]["Enums"]["engine_component"])
+        .maybeSingle();
+
+      if (stepError || !stepConfig || !stepConfig.technical_report_required) {
+        return; // Não requer relatório
+      }
+
+      // Buscar dados do checklist para incluir no relatório
+      const { data: checklistResponse } = await supabase
+        .from('workflow_checklist_responses')
+        .select('*')
+        .eq('order_workflow_id', workflow.id)
+        .maybeSingle();
+
+      // Buscar ordem para pegar org_id
+      const { data: order } = await supabase
+        .from('orders')
+        .select('org_id')
+        .eq('id', workflow.order_id)
+        .single();
+
+      if (!order) return;
+
+      // Gerar relatório técnico automático
+      const { error: reportError } = await supabase
+        .from('technical_reports')
+        .insert({
+          order_id: workflow.order_id,
+          component: workflow.component as Database["public"]["Enums"]["engine_component"],
+          report_type: workflow.status,
+          report_template: 'standard',
+          report_data: {
+            step_name: stepConfig.step_name,
+            checklist_data: checklistResponse?.responses || {},
+            measurements: checklistResponse?.measurements || {},
+          },
+          measurements_data: checklistResponse?.measurements || {},
+          photos_data: checklistResponse?.photos || [],
+          conformity_status: checklistResponse?.overall_status === 'approved' ? 'conforming' : 'pending',
+          generated_automatically: true,
+          org_id: order.org_id,
+        });
+
+      if (reportError) {
+        console.error('Erro ao gerar relatório técnico:', reportError);
+      } else {
+        toast({
+          title: "📄 Relatório Técnico Gerado",
+          description: `Relatório automático criado para ${stepConfig.step_name}`,
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao verificar necessidade de relatório:', error);
     }
   };
 
