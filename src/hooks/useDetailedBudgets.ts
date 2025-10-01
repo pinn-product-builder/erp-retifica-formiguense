@@ -277,8 +277,8 @@ export function useDetailedBudgets() {
     }
   };
 
-  // Duplicar orçamento
-  const duplicateBudget = async (budgetId: string) => {
+  // Duplicar orçamento (apenas retorna dados para o formulário)
+  const getBudgetDataForDuplication = async (budgetId: string) => {
     try {
       setLoading(true);
       
@@ -291,29 +291,30 @@ export function useDetailedBudgets() {
 
       if (fetchError) throw fetchError;
 
-      // Criar nova versão
-      const { id, created_at, updated_at, budget_number, ...budgetToDuplicate } = originalBudget;
-      const { data, error } = await supabase
-        .from('detailed_budgets')
-        .insert({
-          ...budgetToDuplicate,
-          status: 'draft',
-          created_by: (await supabase.auth.getUser()).data.user?.id
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      // Retornar apenas os dados (sem criar no banco)
+      // Remove campos que não devem ser copiados
+      const { 
+        id, 
+        created_at, 
+        updated_at, 
+        budget_number, 
+        order_id,
+        component,
+        diagnostic_response_id,
+        ...budgetData 
+      } = originalBudget;
       
-      handleSuccess('Orçamento duplicado com sucesso!');
-      return data;
+      return budgetData;
     } catch (error) {
-      handleError(error, 'Erro ao duplicar orçamento');
+      handleError(error, 'Erro ao buscar dados do orçamento');
       return null;
     } finally {
       setLoading(false);
     }
   };
+
+  // Alias para manter compatibilidade
+  const duplicateBudget = getBudgetDataForDuplication;
 
   return {
     loading,

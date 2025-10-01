@@ -47,6 +47,7 @@ import { useOrders } from "@/hooks/useOrders";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { DIAGNOSTIC_STATUS, translateStatus, translateAction, translateMessage } from "@/utils/statusTranslations";
 
 interface DiagnosticResponse {
   id: string;
@@ -169,7 +170,7 @@ const Diagnosticos = () => {
     return (
       <Badge className={colors[status as keyof typeof colors]}>
         <IconComponent className="w-3 h-3 mr-1" />
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {translateStatus(status, 'diagnostic')}
       </Badge>
     );
   };
@@ -349,9 +350,9 @@ const Diagnosticos = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos os Status</SelectItem>
-                <SelectItem value="pending">Pendente</SelectItem>
-                <SelectItem value="completed">Concluído</SelectItem>
-                <SelectItem value="approved">Aprovado</SelectItem>
+                <SelectItem value="pending">{translateStatus('pending', 'diagnostic')}</SelectItem>
+                <SelectItem value="completed">{translateStatus('completed', 'diagnostic')}</SelectItem>
+                <SelectItem value="approved">{translateStatus('approved', 'diagnostic')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -534,7 +535,7 @@ const Diagnosticos = () => {
                 <div>
                   <span className="text-sm text-muted-foreground">Status: </span>
                   <Badge variant={selectedDiagnostic.status === 'completed' ? 'default' : 'secondary'}>
-                    {selectedDiagnostic.status === 'completed' ? 'Concluído' : 'Pendente'}
+                    {translateStatus(selectedDiagnostic.status, 'diagnostic')}
                   </Badge>
                 </div>
                 <div className="text-sm text-muted-foreground">

@@ -13,6 +13,8 @@ import { OrderSelect } from '@/components/ui/order-select';
 import { EngineComponent } from '@/hooks/usePCP';
 import { useToast } from '@/hooks/use-toast';
 
+import { SCHEDULE_STATUS, translateStatus, translateAction, translateMessage } from '@/utils/statusTranslations';
+
 const STATUS_COLORS = {
   planned: 'bg-blue-500/20 text-blue-700',
   in_progress: 'bg-yellow-500/20 text-yellow-700',
@@ -145,12 +147,12 @@ export default function PCP() {
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Novo Cronograma
+              {translateAction('new')} Cronograma
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Criar Cronograma</DialogTitle>
+              <DialogTitle>{translateAction('create')} Cronograma</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <OrderSelect
@@ -237,7 +239,7 @@ export default function PCP() {
                 className="w-full"
                 disabled={createLoading || !newSchedule.order_id || !newSchedule.component}
               >
-                {createLoading ? 'Criando...' : 'Criar Cronograma'}
+                {createLoading ? translateMessage('creating') : `${translateAction('create')} Cronograma`}
               </Button>
             </div>
           </DialogContent>
@@ -339,9 +341,9 @@ export default function PCP() {
         <CardContent>
           <div className="space-y-4">
             {loading ? (
-              <p>Carregando cronogramas...</p>
+              <p>{translateMessage('loading')} cronogramas...</p>
             ) : schedules.length === 0 ? (
-              <p className="text-muted-foreground">Nenhum cronograma encontrado</p>
+              <p className="text-muted-foreground">{translateMessage('no_data')}</p>
             ) : (
               schedules.map((schedule) => (
                 <div
@@ -356,7 +358,7 @@ export default function PCP() {
                           {schedule.order?.order_number || `OS-${schedule.order_id.slice(-4)}`}
                         </p>
                         <Badge className={STATUS_COLORS[schedule.status as keyof typeof STATUS_COLORS] || 'bg-gray-100'}>
-                          {schedule.status}
+                          {translateStatus(schedule.status, 'schedule')}
                         </Badge>
                         <Badge variant="outline">
                           Prioridade {schedule.priority}
@@ -384,7 +386,7 @@ export default function PCP() {
                             handleUpdateStatus(schedule.id, 'in_progress');
                           }}
                         >
-                          Iniciar
+                          {translateAction('start')}
                         </Button>
                       )}
                       {schedule.status === 'in_progress' && (
@@ -395,7 +397,7 @@ export default function PCP() {
                             handleUpdateStatus(schedule.id, 'completed');
                           }}
                         >
-                          Concluir
+                          {translateAction('complete')}
                         </Button>
                       )}
                     </div>

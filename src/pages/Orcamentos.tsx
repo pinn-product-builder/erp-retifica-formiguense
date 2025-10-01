@@ -50,6 +50,7 @@ import BudgetDetails from "@/components/budgets/BudgetDetails";
 import { BudgetForm } from "@/components/budgets/BudgetForm";
 import { useToast } from "@/hooks/use-toast";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { BUDGET_STATUS, translateStatus, translateAction, translateMessage } from "@/utils/statusTranslations";
 
 const Orcamentos = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -60,6 +61,7 @@ const Orcamentos = () => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<DetailedBudget | null>(null);
+  const [duplicatedBudgetData, setDuplicatedBudgetData] = useState<Partial<DetailedBudget> | null>(null);
   
   const { getDetailedBudgets, createDetailedBudget, updateDetailedBudget, duplicateBudget, loading } = useDetailedBudgets();
   const { toast } = useToast();
@@ -108,10 +110,10 @@ const Orcamentos = () => {
     };
 
     const labels = {
-      draft: "Rascunho",
-      approved: "Aprovado",
-      partially_approved: "Parcial",
-      rejected: "Rejeitado"
+      draft: translateStatus('draft', 'budget'),
+      approved: translateStatus('approved', 'budget'),
+      partially_approved: translateStatus('partial', 'budget'),
+      rejected: translateStatus('rejected', 'budget')
     };
 
     return (
@@ -124,7 +126,15 @@ const Orcamentos = () => {
   const handleDuplicate = async (budget: DetailedBudget) => {
     const result = await duplicateBudget(budget.id);
     if (result) {
-      refetch();
+      // Guardar os dados duplicados e abrir formulário
+      setDuplicatedBudgetData(result as Partial<DetailedBudget>);
+      setEditingBudget(null); // Modo criar novo, não editar
+      setIsFormOpen(true);
+      
+      toast({
+        title: "Dados copiados!",
+        description: "Selecione a ordem e componente para criar o novo orçamento.",
+      });
     }
   };
 
@@ -139,6 +149,7 @@ const Orcamentos = () => {
     if (result) {
       refetch();
       setIsFormOpen(false);
+      setDuplicatedBudgetData(null); // Limpar dados duplicados
     }
   };
 
@@ -199,6 +210,7 @@ const Orcamentos = () => {
           <Button 
             onClick={() => {
               setEditingBudget(null);
+              setDuplicatedBudgetData(null); // Clear duplicated data
               setIsFormOpen(true);
             }}
             disabled={isPageLoading}
@@ -270,10 +282,10 @@ const Orcamentos = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos os Status</SelectItem>
-                <SelectItem value="draft">Rascunho</SelectItem>
-                <SelectItem value="approved">Aprovado</SelectItem>
-                <SelectItem value="partially_approved">Parcial</SelectItem>
-                <SelectItem value="rejected">Rejeitado</SelectItem>
+                <SelectItem value="draft">{translateStatus('draft', 'budget')}</SelectItem>
+                <SelectItem value="approved">{translateStatus('approved', 'budget')}</SelectItem>
+                <SelectItem value="partially_approved">{translateStatus('partial', 'budget')}</SelectItem>
+                <SelectItem value="rejected">{translateStatus('rejected', 'budget')}</SelectItem>
               </SelectContent>
             </Select>
             
@@ -441,11 +453,12 @@ const Orcamentos = () => {
             </DialogDescription>
           </DialogHeader>
           <BudgetForm
-            budget={editingBudget || undefined}
+            budget={(editingBudget || duplicatedBudgetData || undefined) as DetailedBudget | undefined}
             onSave={editingBudget ? handleUpdateBudget : handleCreateBudget}
             onCancel={() => {
               setIsFormOpen(false);
               setEditingBudget(null);
+              setDuplicatedBudgetData(null);
             }}
           />
         </DialogContent>

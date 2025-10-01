@@ -111,7 +111,7 @@ export function useOrders() {
               .from('employees')
               .select('id, full_name')
               .eq('id', order.consultant_id)
-              .single();
+              .maybeSingle();
             consultant = consultantData;
           }
 
@@ -162,7 +162,7 @@ export function useOrders() {
           .from('employees')
           .select('id, full_name')
           .eq('id', orderData.consultant_id)
-          .single();
+          .maybeSingle();
         consultant = consultantData;
       }
 
