@@ -138,6 +138,20 @@ export default function GestaoPerfiUsuarios() {
   const [sectorValidationTouched, setSectorValidationTouched] = useState({ name: false });
   const [profileValidationTouched, setProfileValidationTouched] = useState({ name: false, sector_id: false });
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [isCreatePageOpen, setIsCreatePageOpen] = useState(false);
+  const [newPageData, setNewPageData] = useState({
+    name: '',
+    display_name: '',
+    description: '',
+    route_path: '',
+    module: '',
+    icon: ''
+  });
+  const [pageValidationTouched, setPageValidationTouched] = useState({
+    name: false,
+    display_name: false,
+    route_path: false
+  });
 
   // Função para toggle das linhas expandidas
   const toggleRowExpansion = (profileId: string) => {
@@ -492,7 +506,45 @@ export default function GestaoPerfiUsuarios() {
                     <Separator />
                     
                     <div>
-                      <h4 className="text-lg font-medium mb-4">Permissões de Páginas</h4>
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-medium">Permissões de Páginas</h4>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const allPermissions: Record<string, { view: boolean; edit: boolean; delete: boolean }> = {};
+                              systemPages.forEach(page => {
+                                allPermissions[page.id] = { view: true, edit: true, delete: true };
+                              });
+                              setSelectedPermissions(allPermissions);
+                              toast({
+                                title: "Todas as permissões selecionadas",
+                                description: "Todas as páginas foram marcadas com permissões completas",
+                              });
+                            }}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Selecionar Todos
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPermissions({});
+                              toast({
+                                title: "Permissões desmarcadas",
+                                description: "Todas as permissões foram removidas",
+                              });
+                            }}
+                          >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Desmarcar Todos
+                          </Button>
+                        </div>
+                      </div>
                       <div className="space-y-6">
                         {Object.entries(groupedPages).map(([module, pages]) => (
                           <div key={module} className="space-y-3">
@@ -1132,11 +1184,49 @@ export default function GestaoPerfiUsuarios() {
             <Separator />
 
             <div className="space-y-4">
-              <div>
-                <Label className="text-base font-medium">Permissões de Páginas</Label>
-                <p className="text-sm text-muted-foreground">
-                  Configure quais páginas este perfil pode acessar e as ações permitidas
-                </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base font-medium">Permissões de Páginas</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Configure quais páginas este perfil pode acessar e as ações permitidas
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const allPermissions: Record<string, { view: boolean; edit: boolean; delete: boolean }> = {};
+                      systemPages.forEach(page => {
+                        allPermissions[page.id] = { view: true, edit: true, delete: true };
+                      });
+                      setSelectedPermissions(allPermissions);
+                      toast({
+                        title: "Todas as permissões selecionadas",
+                        description: "Todas as páginas foram marcadas com permissões completas",
+                      });
+                    }}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Selecionar Todos
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedPermissions({});
+                      toast({
+                        title: "Permissões desmarcadas",
+                        description: "Todas as permissões foram removidas",
+                      });
+                    }}
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Desmarcar Todos
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-4">
