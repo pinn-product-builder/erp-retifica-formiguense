@@ -180,13 +180,13 @@ export function useSupabase() {
         .from('order_photos')
         .insert({
           order_id: orderId,
-          component: component,
-          workflow_step: workflowStep,
+          component: component || null,
+          workflow_step: workflowStep || null,
           photo_type: photoType,
           file_path: uploadData.path,
           file_name: file.name,
-          uploaded_by: (await supabase.auth.getUser()).data.user?.id || 'Sistema'
-        } as any)
+          uploaded_by: (await supabase.auth.getUser()).data.user?.id || null
+        })
         .select()
         .single();
 

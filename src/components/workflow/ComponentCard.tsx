@@ -11,9 +11,10 @@ import { WorkflowModal } from './WorkflowModal';
 interface ComponentCardProps {
   workflow: any;
   componentColor: string;
+  onUpdate?: () => void;
 }
 
-export function ComponentCard({ workflow, componentColor }: ComponentCardProps) {
+export function ComponentCard({ workflow, componentColor, onUpdate }: ComponentCardProps) {
   const [showModal, setShowModal] = useState(false);
 
   const formatDate = (dateString: string) => {
@@ -25,17 +26,55 @@ export function ComponentCard({ workflow, componentColor }: ComponentCardProps) 
   };
 
   const getDaysInStatus = () => {
-    if (!workflow.started_at) return 0;
-    const startDate = new Date(workflow.started_at);
-    const now = new Date();
-    return Math.floor((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    // Para workflows concluídos, calcular tempo entre início e conclusão
+    // Para workflows em andamento, calcular tempo desde o início até agora
+    
+    const startDate = workflow.started_at ? new Date(workflow.started_at) : 
+                     workflow.created_at ? new Date(workflow.created_at) : null;
+    
+    if (!startDate) return '0m';
+    
+    const endDate = workflow.completed_at ? new Date(workflow.completed_at) : new Date();
+    
+    // Calcular diferença em milissegundos (endDate - startDate deve ser positivo)
+    const diffMs = endDate.getTime() - startDate.getTime();
+    
+    // Se a diferença for negativa (dados inconsistentes), retornar 0
+    if (diffMs < 0) {
+      return '0m';
+    }
+    
+    // Calcular diferença em horas
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const days = Math.floor(diffHours / 24);
+    const hours = diffHours % 24;
+    
+    if (days > 0) {
+      return `${days}d ${hours}h`;
+    } else if (hours > 0) {
+      return `${hours}h`;
+    } else {
+      const minutes = Math.floor(diffMs / (1000 * 60));
+      return `${Math.max(0, minutes)}m`;
+    }
   };
 
   const getProgressColor = () => {
-    const days = getDaysInStatus();
-    if (days <= 2) return 'text-green-600';
-    if (days <= 5) return 'text-yellow-600';
-    return 'text-red-600';
+    const timeString = getDaysInStatus();
+    if (typeof timeString === 'string') {
+      if (timeString.includes('d')) {
+        const days = parseInt(timeString.split('d')[0]);
+        if (days <= 2) return 'text-green-600';
+        if (days <= 5) return 'text-yellow-600';
+        return 'text-red-600';
+      } else if (timeString.includes('h')) {
+        const hours = parseInt(timeString.split('h')[0]);
+        if (hours <= 48) return 'text-green-600'; // 2 dias
+        if (hours <= 120) return 'text-yellow-600'; // 5 dias
+        return 'text-red-600';
+      }
+    }
+    return 'text-green-600';
   };
 
   return (
@@ -77,7 +116,7 @@ export function ComponentCard({ workflow, componentColor }: ComponentCardProps) 
             {workflow.started_at && (
               <div className={`flex items-center gap-1 ${getProgressColor()} flex-shrink-0`}>
                 <Clock className="w-3 h-3" />
-                <span>{getDaysInStatus()}d</span>
+                <span>{getDaysInStatus()}</span>
               </div>
             )}
           </div>
@@ -121,6 +160,7 @@ export function ComponentCard({ workflow, componentColor }: ComponentCardProps) 
         workflow={workflow}
         open={showModal}
         onClose={() => setShowModal(false)}
+        onUpdate={onUpdate}
       />
     </>
   );

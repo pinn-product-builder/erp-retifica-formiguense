@@ -16,13 +16,15 @@ interface WorkflowModalProps {
   workflow: any;
   open: boolean;
   onClose: () => void;
+  onUpdate?: () => void;
 }
 
-export function WorkflowModal({ workflow, open, onClose }: WorkflowModalProps) {
+export function WorkflowModal({ workflow, open, onClose, onUpdate }: WorkflowModalProps) {
   const { updateWorkflowDetails, startWorkflow, completeWorkflow } = useWorkflowUpdate();
   const [notes, setNotes] = useState(workflow.notes || '');
   const [assignedTo, setAssignedTo] = useState(workflow.assigned_to || '');
   const [saving, setSaving] = useState(false);
+  const [completing, setCompleting] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
@@ -32,6 +34,7 @@ export function WorkflowModal({ workflow, open, onClose }: WorkflowModalProps) {
     });
     
     if (success) {
+      onUpdate?.(); // Atualizar o board
       onClose();
     }
     setSaving(false);
@@ -40,15 +43,19 @@ export function WorkflowModal({ workflow, open, onClose }: WorkflowModalProps) {
   const handleStart = async () => {
     const success = await startWorkflow(workflow.id);
     if (success) {
+      onUpdate?.(); // Atualizar o board
       onClose();
     }
   };
 
-  const handleComplete = async () => {
-    const success = await completeWorkflow(workflow.id);
+  const handleComplete = async (autoAdvance: boolean = true) => {
+    setCompleting(true);
+    const success = await completeWorkflow(workflow.id, autoAdvance);
     if (success) {
+      onUpdate?.(); // Atualizar o board
       onClose();
     }
+    setCompleting(false);
   };
 
   const formatDateTime = (dateString: string) => {
@@ -145,10 +152,25 @@ export function WorkflowModal({ workflow, open, onClose }: WorkflowModalProps) {
                 )}
                 
                 {workflow.started_at && !workflow.completed_at && (
-                  <Button onClick={handleComplete} className="w-full">
-                    <Pause className="w-4 h-4 mr-2" />
-                    Concluir Etapa
-                  </Button>
+                  <div className="space-y-2">
+                    <Button 
+                      onClick={() => handleComplete(true)} 
+                      className="w-full"
+                      disabled={completing}
+                    >
+                      <Pause className="w-4 h-4 mr-2" />
+                      {completing ? "Concluindo..." : "Concluir e Avançar"}
+                    </Button>
+                    <Button 
+                      onClick={() => handleComplete(false)} 
+                      variant="outline" 
+                      className="w-full"
+                      disabled={completing}
+                    >
+                      <Pause className="w-4 h-4 mr-2" />
+                      Apenas Concluir
+                    </Button>
+                  </div>
                 )}
               </div>
             </CardContent>

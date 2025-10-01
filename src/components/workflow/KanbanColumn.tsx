@@ -29,9 +29,10 @@ interface KanbanColumnProps {
   workflows: any[];
   componentColor: string;
   statusColors?: Record<string, { bgColor: string; textColor: string }>;
+  onUpdate?: () => void;
 }
 
-export function KanbanColumn({ status, workflows, componentColor, statusColors }: KanbanColumnProps) {
+export function KanbanColumn({ status, workflows, componentColor, statusColors, onUpdate }: KanbanColumnProps) {
   return (
     <div className="bg-muted/30 rounded-lg p-3 sm:p-4 h-full flex flex-col">
       {/* Column Header */}
@@ -82,7 +83,8 @@ export function KanbanColumn({ status, workflows, componentColor, statusColors }
                     >
                       <ComponentCard 
                         workflow={workflow}
-                        componentColor={componentColor}
+                        componentColor={workflow.componentColor || componentColor}
+                        onUpdate={onUpdate}
                       />
                     </div>
                   )}

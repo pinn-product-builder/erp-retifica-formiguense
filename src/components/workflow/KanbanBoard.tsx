@@ -9,6 +9,7 @@ import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { Badge } from '@/components/ui/badge';
 
 const COMPONENTS = [
+  { id: 'todos', name: 'Todos', color: 'bg-blue-500' },
   { id: 'bloco', name: 'Bloco', color: 'bg-green-500' },
   { id: 'eixo', name: 'Eixo', color: 'bg-orange-500' },
   { id: 'biela', name: 'Biela', color: 'bg-yellow-500' },
@@ -27,7 +28,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
   const { updateWorkflowStatus } = useWorkflowUpdate();
   const { workflowStatuses, getStatusColors, getNextAllowedStatuses, loading } = useWorkflowStatusConfig();
   const { isMobile, isTablet } = useBreakpoint();
-  const [selectedComponent, setSelectedComponent] = useState<string>('bloco');
+  const [selectedComponent, setSelectedComponent] = useState<string>('todos');
 
   // Obter ordem dos status das configurações
   const statusOrder = workflowStatuses
@@ -36,6 +37,12 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
     .map(status => status.status_key);
 
   const statusColors = getStatusColors();
+
+  // Função para obter cor do componente
+  const getComponentColor = (component: string) => {
+    const componentData = COMPONENTS.find(c => c.id === component);
+    return componentData?.color || 'bg-gray-500';
+  };
 
   // Organizar workflows por status para o componente selecionado
   const organizeWorkflowsByStatus = () => {
@@ -47,21 +54,40 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
 
     orders.forEach(order => {
       if (order.order_workflow) {
-        const componentWorkflow = order.order_workflow.find(
-          (wf: any) => wf.component === selectedComponent
-        );
-        
-        if (componentWorkflow) {
-          const workflowItem = {
-            ...componentWorkflow,
-            order: order,
-            orderNumber: order.order_number,
-            customerName: order.customer?.name,
-            engineModel: `${order.engine?.brand} ${order.engine?.model}`,
-            collectionDate: order.collection_date
-          };
+        if (selectedComponent === 'todos') {
+          // Mostrar todos os componentes com suas respectivas cores
+          order.order_workflow.forEach((workflow: any) => {
+            const workflowItem = {
+              ...workflow,
+              order: order,
+              orderNumber: order.order_number,
+              customerName: order.customer?.name,
+              engineModel: `${order.engine?.brand} ${order.engine?.model}`,
+              collectionDate: order.collection_date,
+              componentColor: getComponentColor(workflow.component) // Adicionar cor específica do componente
+            };
+            
+            workflowsByStatus[workflow.status]?.push(workflowItem);
+          });
+        } else {
+          // Mostrar apenas o componente selecionado
+          const componentWorkflow = order.order_workflow.find(
+            (wf: any) => wf.component === selectedComponent
+          );
           
-          workflowsByStatus[componentWorkflow.status]?.push(workflowItem);
+          if (componentWorkflow) {
+            const workflowItem = {
+              ...componentWorkflow,
+              order: order,
+              orderNumber: order.order_number,
+              customerName: order.customer?.name,
+              engineModel: `${order.engine?.brand} ${order.engine?.model}`,
+              collectionDate: order.collection_date,
+              componentColor: getComponentColor(componentWorkflow.component) // Adicionar cor específica do componente
+            };
+            
+            workflowsByStatus[componentWorkflow.status]?.push(workflowItem);
+          }
         }
       }
     });
@@ -178,6 +204,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
                     workflows={workflowsByStatus[status] || []}
                     componentColor={selectedComponentData?.color || 'bg-gray-500'}
                     statusColors={statusColors}
+                    onUpdate={onOrderUpdate}
                   />
                 </div>
               ))}

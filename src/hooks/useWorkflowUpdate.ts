@@ -20,19 +20,43 @@ export function useWorkflowUpdate() {
 
       if (fetchError) throw fetchError;
 
-      const updateData: any = { 
+      const currentTime = new Date().toISOString();
+      const updateData: Record<string, string | null> = { 
         status: newStatus,
-        updated_at: new Date().toISOString()
+        updated_at: currentTime
       };
 
-      // Se está movendo para uma nova etapa, marcar como iniciado
-      if (newStatus !== 'entrada' && !['pronto', 'garantia', 'entregue'].includes(newStatus)) {
-        updateData.started_at = new Date().toISOString();
-      }
+      // Buscar dados completos do workflow atual
+      const { data: fullWorkflow, error: fullFetchError } = await supabase
+        .from('order_workflow')
+        .select('*')
+        .eq('id', workflowId)
+        .single();
 
-      // Se está marcando como pronto, marcar como concluído
-      if (['pronto', 'garantia', 'entregue'].includes(newStatus)) {
-        updateData.completed_at = new Date().toISOString();
+      if (fullFetchError) throw fullFetchError;
+
+      // Lógica corrigida para timestamps
+      if (newStatus === 'entrada') {
+        // Entrada: apenas marcar como iniciado se não foi iniciado antes
+        if (!fullWorkflow.started_at) {
+          updateData.started_at = currentTime;
+        }
+        // Limpar completed_at se estava concluído
+        updateData.completed_at = null;
+      } else if (['pronto', 'garantia', 'entregue'].includes(newStatus)) {
+        // Status finais: marcar como concluído
+        updateData.completed_at = currentTime;
+        // Garantir que tem started_at
+        if (!fullWorkflow.started_at) {
+          updateData.started_at = currentTime;
+        }
+      } else {
+        // Status intermediários: marcar como iniciado se não foi iniciado
+        if (!fullWorkflow.started_at) {
+          updateData.started_at = currentTime;
+        }
+        // Limpar completed_at se estava concluído
+        updateData.completed_at = null;
       }
 
       const { error } = await supabase
@@ -48,8 +72,8 @@ export function useWorkflowUpdate() {
           .from('workflow_status_history')
           .insert({
             order_workflow_id: workflowId,
-            old_status: currentWorkflow.status as any,
-            new_status: newStatus as any,
+            old_status: currentWorkflow.status as "entrada" | "metrologia" | "usinagem" | "montagem" | "pronto" | "garantia" | "entregue",
+            new_status: newStatus as "entrada" | "metrologia" | "usinagem" | "montagem" | "pronto" | "garantia" | "entregue",
             changed_by: (await supabase.auth.getUser()).data.user?.id,
             reason: changeReason,
           });
@@ -79,7 +103,7 @@ export function useWorkflowUpdate() {
     }
   };
 
-  const updateWorkflowDetails = async (workflowId: string, details: any) => {
+  const updateWorkflowDetails = async (workflowId: string, details: { notes?: string; assigned_to?: string }) => {
     try {
       setLoading(true);
 
@@ -145,11 +169,21 @@ export function useWorkflowUpdate() {
     }
   };
 
-  const completeWorkflow = async (workflowId: string) => {
+  const completeWorkflow = async (workflowId: string, autoAdvance: boolean = true) => {
     try {
       setLoading(true);
 
-      const { error } = await supabase
+      // Buscar dados do workflow atual
+      const { data: currentWorkflow, error: fetchError } = await supabase
+        .from('order_workflow')
+        .select('*')
+        .eq('id', workflowId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Marcar como concluído
+      const { error: updateError } = await supabase
         .from('order_workflow')
         .update({
           completed_at: new Date().toISOString(),
@@ -157,11 +191,16 @@ export function useWorkflowUpdate() {
         })
         .eq('id', workflowId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Se auto-avanço está habilitado, tentar avançar para próxima etapa
+      if (autoAdvance) {
+        await advanceToNextStatus(currentWorkflow);
+      }
 
       toast({
         title: "Etapa concluída!",
-        description: "O trabalho nesta etapa foi finalizado"
+        description: autoAdvance ? "Avançando para próxima etapa..." : "O trabalho nesta etapa foi finalizado"
       });
 
       return true;
@@ -178,11 +217,70 @@ export function useWorkflowUpdate() {
     }
   };
 
+  const advanceToNextStatus = async (currentWorkflow: { id: string; status: string; component: string }) => {
+    try {
+      // Buscar próximo status permitido
+      const { data: nextStatusData, error: nextStatusError } = await supabase
+        .from('status_prerequisites')
+        .select('to_status_key, transition_type')
+        .eq('from_status_key', currentWorkflow.status)
+        .eq('entity_type', 'workflow')
+        .eq('is_active', true)
+        .order('id')
+        .limit(1)
+        .single();
+
+      if (nextStatusError || !nextStatusData) {
+        console.log('Nenhum próximo status encontrado ou workflow finalizado');
+        toast({
+          title: "Etapa concluída!",
+          description: "Não há próxima etapa configurada",
+        });
+        return;
+      }
+
+      // Para transições automáticas e manuais, avançar
+      // Apenas bloquear se for approval_required
+      if (nextStatusData.transition_type === 'approval_required') {
+        toast({
+          title: "Etapa concluída!",
+          description: "Próxima etapa requer aprovação de supervisor",
+          variant: "default"
+        });
+        return;
+      }
+
+      // Avançar para próximo status (automatic ou manual)
+      const success = await updateWorkflowStatus(
+        currentWorkflow.id, 
+        nextStatusData.to_status_key,
+        nextStatusData.transition_type === 'automatic' 
+          ? 'Avanço automático após conclusão da etapa anterior'
+          : 'Avançado manualmente pelo usuário após conclusão'
+      );
+
+      if (success) {
+        toast({
+          title: "✅ Etapa avançada!",
+          description: `Workflow movido para: ${nextStatusData.to_status_key}`,
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao avançar para próximo status:', error);
+      toast({
+        title: "Erro ao avançar",
+        description: "Não foi possível avançar para a próxima etapa",
+        variant: "destructive"
+      });
+    }
+  };
+
   return {
     loading,
     updateWorkflowStatus,
     updateWorkflowDetails,
     startWorkflow,
-    completeWorkflow
+    completeWorkflow,
+    advanceToNextStatus
   };
 }

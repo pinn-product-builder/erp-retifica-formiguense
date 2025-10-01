@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Order, useOrders } from '@/hooks/useOrders';
 import { OrderTimeline } from './OrderTimeline';
+import { OrderPhotosTab } from './OrderPhotosTab';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface OrderDetailsProps {
@@ -380,9 +381,7 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground text-center py-4">
-                Funcionalidade de fotos será implementada em breve.
-              </p>
+              <OrderPhotosTab orderId={orderId} />
             </CardContent>
           </Card>
         </TabsContent>
