@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import type { DetailedBudget } from '@/hooks/useDetailedBudgets';
+import { MaskedInput } from '@/components/ui/masked-input';
 
 interface BudgetFormProps {
   budget?: DetailedBudget;
@@ -61,9 +62,76 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   const [loadingParts, setLoadingParts] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Estados para campos de texto
+  const [laborHoursText, setLaborHoursText] = useState<string>('');
+  const [discountText, setDiscountText] = useState<string>('');
+  const [taxText, setTaxText] = useState<string>('');
+  const [warrantyText, setWarrantyText] = useState<string>('');
+  const [deliveryText, setDeliveryText] = useState<string>('');
+
   // Novo serviço/peça temporário
   const [newService, setNewService] = useState<Partial<Service>>({ description: '', quantity: 1, unit_price: 0 });
   const [searchPartTerm, setSearchPartTerm] = useState('');
+
+  // Funções de validação e formatação
+  const validateAndSetHours = (value: string) => {
+    // Permitir vírgula como separador decimal
+    let numericValue = value.replace(/[^\d.,]/g, '');
+    
+    // Se tem vírgula, substituir por ponto para parseFloat
+    if (numericValue.includes(',')) {
+      numericValue = numericValue.replace(',', '.');
+    }
+    
+    const numValue = parseFloat(numericValue) || 0;
+    
+    // Limitar a 999 horas
+    const limitedValue = Math.min(numValue, 999);
+    setLaborHours(limitedValue);
+    
+    // Manter vírgula na exibição se o usuário digitou vírgula
+    const displayValue = value.includes(',') ? limitedValue.toString().replace('.', ',') : limitedValue.toString();
+    setLaborHoursText(displayValue);
+  };
+
+  const validateAndSetPercentage = (value: string, setter: (value: number) => void, textSetter: (value: string) => void) => {
+    // Permitir vírgula como separador decimal
+    let numericValue = value.replace(/[^\d.,]/g, '');
+    
+    // Se tem vírgula, substituir por ponto para parseFloat
+    if (numericValue.includes(',')) {
+      numericValue = numericValue.replace(',', '.');
+    }
+    
+    const numValue = parseFloat(numericValue) || 0;
+    
+    // Limitar a 100% e permitir valores decimais como 0,5
+    const limitedValue = Math.min(Math.max(numValue, 0), 100);
+    setter(limitedValue);
+    
+    // Manter vírgula na exibição se o usuário digitou vírgula
+    const displayValue = value.includes(',') ? limitedValue.toString().replace('.', ',') : limitedValue.toString();
+    textSetter(displayValue);
+  };
+
+  const validateAndSetInteger = (value: string, setter: (value: number) => void, textSetter: (value: string) => void, max: number = 999) => {
+    const numericValue = value.replace(/[^\d]/g, '');
+    const numValue = parseInt(numericValue) || 0;
+    
+    // Limitar ao máximo
+    const limitedValue = Math.min(numValue, max);
+    setter(limitedValue);
+    textSetter(limitedValue.toString());
+  };
+
+  // Inicializar campos de texto com valores dos números
+  useEffect(() => {
+    setLaborHoursText(laborHours.toString());
+    setDiscountText(discount.toString());
+    setTaxText(taxPercentage.toString());
+    setWarrantyText(warrantyMonths.toString());
+    setDeliveryText(estimatedDeliveryDays.toString());
+  }, [laborHours, discount, taxPercentage, warrantyMonths, estimatedDeliveryDays]);
 
   // Carregar ordens disponíveis
   useEffect(() => {
@@ -90,6 +158,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
         }
         
         console.log('Ordens carregadas:', data);
+        console.log('Quantidade de ordens:', data?.length || 0);
         setOrders(data || []);
       } catch (error) {
         console.error('Erro ao carregar ordens:', error);
@@ -323,20 +392,21 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
               <Label htmlFor="laborHours">Horas de Trabalho</Label>
               <Input
                 id="laborHours"
-                type="number"
-                step="0.5"
-                value={laborHours}
-                onChange={(e) => setLaborHours(parseFloat(e.target.value) || 0)}
+                type="text"
+                placeholder="Ex: 8.5"
+                value={laborHoursText}
+                onChange={(e) => validateAndSetHours(e.target.value)}
               />
             </div>
             <div>
               <Label htmlFor="laborRate">Valor por Hora (R$)</Label>
-              <Input
+              <MaskedInput
                 id="laborRate"
-                type="number"
-                step="0.01"
-                value={laborRate}
-                onChange={(e) => setLaborRate(parseFloat(e.target.value) || 0)}
+                mask="currency"
+                value={laborRate.toString()}
+                onChange={(maskedValue, rawValue) => {
+                  setLaborRate(parseFloat(rawValue) || 0);
+                }}
               />
             </div>
             <div>
@@ -370,12 +440,13 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
               />
             </div>
             <div className="md:col-span-3">
-              <Input
-                type="number"
-                step="0.01"
+              <MaskedInput
+                mask="currency"
                 placeholder="Valor unitário"
-                value={newService.unit_price || 0}
-                onChange={(e) => setNewService({ ...newService, unit_price: parseFloat(e.target.value) || 0 })}
+                value={(newService.unit_price || 0).toString()}
+                onChange={(maskedValue, rawValue) => {
+                  setNewService({ ...newService, unit_price: parseFloat(rawValue) || 0 });
+                }}
               />
             </div>
             <div className="md:col-span-1">
@@ -476,7 +547,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                     <TableCell>{part.part_name}</TableCell>
                     <TableCell>
                       {part.available_stock !== undefined && (
-                        <Badge variant={part.available_stock >= part.quantity ? 'success' : 'destructive'}>
+                        <Badge variant={part.available_stock >= part.quantity ? 'default' : 'destructive'}>
                           {part.available_stock}
                         </Badge>
                       )}
@@ -530,43 +601,52 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="discount">Desconto (%)</Label>
-              <Input
+              <MaskedInput
                 id="discount"
-                type="number"
-                step="0.01"
-                max="100"
-                value={discount}
-                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                mask="decimal"
+                placeholder="Ex: 10,5"
+                value={discountText}
+                onChange={(maskedValue, rawValue) => {
+                  const numericValue = parseFloat(rawValue) || 0;
+                  const limitedValue = Math.min(Math.max(numericValue, 0), 100);
+                  setDiscount(limitedValue);
+                  setDiscountText(maskedValue);
+                }}
               />
             </div>
             <div>
               <Label htmlFor="tax">Impostos (%)</Label>
-              <Input
+              <MaskedInput
                 id="tax"
-                type="number"
-                step="0.01"
-                value={taxPercentage}
-                onChange={(e) => setTaxPercentage(parseFloat(e.target.value) || 0)}
+                mask="decimal"
+                placeholder="Ex: 18,5"
+                value={taxText}
+                onChange={(maskedValue, rawValue) => {
+                  const numericValue = parseFloat(rawValue) || 0;
+                  const limitedValue = Math.min(Math.max(numericValue, 0), 100);
+                  setTaxPercentage(limitedValue);
+                  setTaxText(maskedValue);
+                }}
               />
             </div>
             <div>
               <Label htmlFor="warranty">Garantia (meses)</Label>
               <Input
                 id="warranty"
-                type="number"
-                min="1"
-                value={warrantyMonths}
-                onChange={(e) => setWarrantyMonths(parseInt(e.target.value) || 3)}
+                type="text"
+                placeholder="Ex: 12"
+                value={warrantyText}
+                onChange={(e) => validateAndSetInteger(e.target.value, setWarrantyMonths, setWarrantyText, 60)}
               />
             </div>
             <div>
               <Label htmlFor="delivery">Prazo de Entrega (dias)</Label>
               <Input
                 id="delivery"
-                type="number"
-                min="1"
-                value={estimatedDeliveryDays}
-                onChange={(e) => setEstimatedDeliveryDays(parseInt(e.target.value) || 15)}
+                type="text"
+                placeholder="Ex: 30"
+                value={deliveryText}
+                onChange={(e) => validateAndSetInteger(e.target.value, setEstimatedDeliveryDays, setDeliveryText, 365)}
               />
             </div>
           </div>

@@ -1,6 +1,8 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Input } from "./input"
+import InputMask from 'react-input-mask'
+import { NumericFormat } from 'react-number-format'
 
 interface MaskedInputProps extends Omit<React.ComponentProps<"input">, 'onChange'> {
   mask: 'cpf' | 'cnpj' | 'phone' | 'cep' | 'currency' | 'decimal';
@@ -9,51 +11,12 @@ interface MaskedInputProps extends Omit<React.ComponentProps<"input">, 'onChange
 }
 
 const masks = {
-  cpf: (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-      .replace(/(-\d{2})\d+?$/, '$1');
-  },
-  cnpj: (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{2})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1/$2')
-      .replace(/(\d{4})(\d{1,2})/, '$1-$2')
-      .replace(/(-\d{2})\d+?$/, '$1');
-  },
-  phone: (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{4})(\d)/, '$1-$2')
-      .replace(/(\d{4})-(\d)(\d{4})/, '$1$2-$3')
-      .replace(/(-\d{4})\d+?$/, '$1');
-  },
-  cep: (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{5})(\d)/, '$1-$2')
-      .replace(/(-\d{3})\d+?$/, '$1');
-  },
-  currency: (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    const amount = parseFloat(numbers) / 100;
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(amount || 0);
-  },
-  decimal: (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d)(\d{2})$/, '$1,$2')
-      .replace(/(?=(\d{3})+(\D))\B/g, '.');
-  }
+  cpf: '999.999.999-99',
+  cnpj: '99.999.999/9999-99',
+  phone: '(99) 99999-9999',
+  cep: '99999-999',
+  currency: 'R$ 999999999,99',
+  decimal: '999999999,99'
 };
 
 const rawValue = {
@@ -62,30 +25,95 @@ const rawValue = {
   phone: (value: string) => value.replace(/\D/g, ''),
   cep: (value: string) => value.replace(/\D/g, ''),
   currency: (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    return (parseFloat(numbers) / 100).toString();
+    // Remove R$ e espaços, converte vírgula para ponto
+    return value.replace(/[^\d.,]/g, '').replace(',', '.');
   },
-  decimal: (value: string) => value.replace(/[^\d,]/g, '').replace(',', '.')
+  decimal: (value: string) => {
+    // Remove caracteres não numéricos, converte vírgula para ponto
+    return value.replace(/[^\d.,]/g, '').replace(',', '.');
+  }
 };
 
 const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
   ({ className, mask, value = '', onChange, ...props }, ref) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value;
-      const maskedValue = masks[mask](inputValue);
       const raw = rawValue[mask](inputValue);
       
-      onChange?.(maskedValue, raw);
+      onChange?.(inputValue, raw);
     };
 
+    // Para campos de moeda, usar react-number-format
+    if (mask === 'currency') {
+      const { type, defaultValue, ...restProps } = props;
+      return (
+        <NumericFormat
+          {...restProps}
+          value={value}
+          onValueChange={(values) => {
+            const formattedValue = values.formattedValue;
+            const rawValue = values.floatValue !== undefined ? values.floatValue.toString() : '0';
+            onChange?.(formattedValue, rawValue);
+          }}
+          thousandSeparator="."
+          decimalSeparator=","
+          prefix="R$ "
+          decimalScale={2}
+          fixedDecimalScale
+          allowNegative={false}
+          placeholder="R$ 0,00"
+          customInput={Input}
+          className={cn(className)}
+        />
+      );
+    }
+
+    // Para campos decimais, usar react-number-format sem prefixo
+    if (mask === 'decimal') {
+      const { type, defaultValue, ...restProps } = props;
+      return (
+        <NumericFormat
+          {...restProps}
+          value={value}
+          onValueChange={(values) => {
+            const formattedValue = values.formattedValue;
+            const rawValue = values.floatValue !== undefined ? values.floatValue.toString() : '0';
+            onChange?.(formattedValue, rawValue);
+          }}
+          thousandSeparator="."
+          decimalSeparator=","
+          decimalScale={2}
+          fixedDecimalScale={false}
+          allowNegative={false}
+          allowLeadingZeros={false}
+          isAllowed={(values) => {
+            // Permitir valores até 999.999,99
+            return values.floatValue === undefined || values.floatValue <= 999999.99;
+          }}
+          customInput={Input}
+          className={cn(className)}
+        />
+      );
+    }
+
+    // Para outros campos, usar react-input-mask
     return (
-      <Input
-        {...props}
-        ref={ref}
-        className={cn(className)}
-        value={masks[mask](value)}
+      <InputMask
+        mask={masks[mask]}
+        value={value}
         onChange={handleChange}
-      />
+        maskChar="_"
+        alwaysShowMask={false}
+      >
+        {(inputProps: React.InputHTMLAttributes<HTMLInputElement>) => (
+          <Input
+            {...props}
+            {...inputProps}
+            ref={ref}
+            className={cn(className)}
+          />
+        )}
+      </InputMask>
     );
   }
 );

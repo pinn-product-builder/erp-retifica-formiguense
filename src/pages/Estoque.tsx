@@ -1,309 +1,405 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, AlertTriangle, Plus, Search, Filter, TrendingDown } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  Plus,
+  Search,
+  Filter,
+  Eye,
+  Edit,
+  Trash2,
+  Package,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Loader2
+} from "lucide-react";
 import { StatCard } from "@/components/StatCard";
-import { useToast } from "@/hooks/use-toast";
+import { usePartsInventory, type PartInventory } from "@/hooks/usePartsInventory";
+import { PartForm } from "@/components/inventory/PartForm";
+import { PartDetails } from "@/components/inventory/PartDetails";
 
 const Estoque = () => {
-  const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState('todos');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [createLoading, setCreateLoading] = useState(false);
+  const { parts, loading, deletePart, fetchParts } = usePartsInventory();
+  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("todos");
+  const [componentFilter, setComponentFilter] = useState<string>("todos");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedPart, setSelectedPart] = useState<PartInventory | null>(null);
 
-  const handleSavePart = async () => {
-    setCreateLoading(true);
-    try {
-      // Simular salvamento (aqui seria a integração real com o backend)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Peça salva",
-        description: "Peça adicionada ao estoque com sucesso",
-      });
-      
-      setIsDialogOpen(false);
-    } catch (error) {
-      console.error('Erro ao salvar peça:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao salvar peça",
-        description: "Não foi possível adicionar a peça ao estoque. Tente novamente.",
-      });
-    } finally {
-      setCreateLoading(false);
+  const filteredParts = parts.filter(part => {
+    const matchesSearch = 
+      part.part_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      part.part_code?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'todos' || part.status === statusFilter;
+    const matchesComponent = componentFilter === 'todos' || part.component === componentFilter;
+
+    return matchesSearch && matchesStatus && matchesComponent;
+  });
+
+  const stats = {
+    total: parts.reduce((sum, p) => sum + p.quantity, 0),
+    disponivel: parts.filter(p => p.status === 'disponivel').reduce((sum, p) => sum + p.quantity, 0),
+    reservado: parts.filter(p => p.status === 'reservado').reduce((sum, p) => sum + p.quantity, 0),
+    tipos: new Set(parts.map(p => p.part_code)).size,
+    valor: parts.reduce((sum, p) => sum + (p.unit_cost * p.quantity), 0)
+  };
+
+  const getStatusBadge = (status: string) => {
+    const config = {
+      disponivel: { variant: 'default' as const, icon: CheckCircle, label: 'Disponível', color: 'bg-green-100 text-green-800' },
+      reservado: { variant: 'secondary' as const, icon: Clock, label: 'Reservado', color: 'bg-yellow-100 text-yellow-800' },
+      usado: { variant: 'secondary' as const, icon: Package, label: 'Usado', color: 'bg-blue-100 text-blue-800' },
+      pendente: { variant: 'secondary' as const, icon: AlertCircle, label: 'Pendente', color: 'bg-gray-100 text-gray-800' }
+    };
+
+    const { icon: Icon, label, color } = config[status as keyof typeof config] || config.pendente;
+
+    return (
+      <Badge className={color}>
+        <Icon className="w-3 h-3 mr-1" />
+        {label}
+      </Badge>
+    );
+  };
+
+  const getComponentLabel = (component?: string) => {
+    const components = {
+      bloco: "Bloco",
+      cabecote: "Cabeçote",
+      virabrequim: "Virabrequim",
+      pistao: "Pistão",
+      biela: "Biela",
+      comando: "Comando",
+      eixo: "Eixo"
+    };
+    return component ? components[component as keyof typeof components] || component : '-';
+  };
+
+  const handleDelete = async () => {
+    if (!selectedPart) return;
+    
+    const success = await deletePart(selectedPart.id);
+    if (success) {
+      setIsDeleteDialogOpen(false);
+      setSelectedPart(null);
+      fetchParts();
     }
   };
 
-  // Dados de exemplo para estoque
-  const pecas = [
-    {
-      id: 1,
-      codigo: "PIV-001",
-      nome: "Pistão 1.0 8V",
-      categoria: "Pistão",
-      quantidade: 15,
-      minimo: 10,
-      preco: 45.90,
-      fornecedor: "AutoPeças SP",
-      localizacao: "A1-P2"
-    },
-    {
-      id: 2,
-      codigo: "BIE-002", 
-      nome: "Biela Corsa 1.4",
-      categoria: "Biela",
-      quantidade: 5,
-      minimo: 8,
-      preco: 89.50,
-      fornecedor: "Metal Parts",
-      localizacao: "B2-P1"
-    },
-    {
-      id: 3,
-      codigo: "VAL-003",
-      nome: "Válvula Admissão",
-      categoria: "Válvula", 
-      quantidade: 25,
-      minimo: 20,
-      preco: 12.30,
-      fornecedor: "Válvulas Brasil",
-      localizacao: "C1-P3"
-    },
-    {
-      id: 4,
-      codigo: "RET-004",
-      nome: "Retentor Válvula",
-      categoria: "Vedação",
-      quantidade: 3,
-      minimo: 15,
-      preco: 2.80,
-      fornecedor: "Vedações Tech",
-      localizacao: "D1-P1"
-    }
-  ];
-
-  const pecasFiltradas = pecas.filter(peca => {
-    const matchesSearch = peca.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         peca.codigo.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === 'todos' || peca.categoria === filterCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const totalPecas = pecas.length;
-  const pecasAbaixoMinimo = pecas.filter(p => p.quantidade < p.minimo).length;
-  const valorTotalEstoque = pecas.reduce((sum, p) => sum + (p.quantidade * p.preco), 0);
-  const categorias = [...new Set(pecas.map(p => p.categoria))];
+  if (loading && parts.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="ml-2">Carregando estoque...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6 p-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Estoque de Peças</h1>
-          <p className="text-muted-foreground">Controle de inventário e alertas de reposição</p>
+          <h1 className="text-3xl font-bold">Estoque de Peças</h1>
+          <p className="text-muted-foreground">
+            Gerencie o inventário de peças e componentes
+          </p>
         </div>
-        
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
               Nova Peça
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Cadastrar Peça</DialogTitle>
+              <DialogTitle>Adicionar Peça ao Estoque</DialogTitle>
               <DialogDescription>
-                Adicione uma nova peça ao estoque
+                Preencha os dados da peça para adicionar ao inventário
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="codigo" className="text-right">Código</Label>
-                <Input id="codigo" className="col-span-3" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="nome" className="text-right">Nome</Label>
-                <Input id="nome" className="col-span-3" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="categoria" className="text-right">Categoria</Label>
-                <Select>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Selecione a categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pistao">Pistão</SelectItem>
-                    <SelectItem value="biela">Biela</SelectItem>
-                    <SelectItem value="valvula">Válvula</SelectItem>
-                    <SelectItem value="vedacao">Vedação</SelectItem>
-                    <SelectItem value="rolamento">Rolamento</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="quantidade" className="text-right">Quantidade</Label>
-                <Input id="quantidade" type="number" className="col-span-3" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="minimo" className="text-right">Mínimo</Label>
-                <Input id="minimo" type="number" className="col-span-3" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="preco" className="text-right">Preço</Label>
-                <Input id="preco" type="number" step="0.01" className="col-span-3" />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsDialogOpen(false)}
-                disabled={createLoading}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                type="submit" 
-                onClick={handleSavePart}
-                disabled={createLoading}
-              >
-                {createLoading ? 'Salvando...' : 'Salvar Peça'}
-              </Button>
-            </DialogFooter>
+            <PartForm 
+              onSuccess={() => {
+                setIsCreateDialogOpen(false);
+                fetchParts();
+              }} 
+            />
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           title="Total de Peças"
-          value={totalPecas}
+          value={stats.total}
           icon={Package}
-          subtitle="Itens cadastrados"
+          subtitle="Quantidade total em estoque"
         />
         <StatCard
-          title="Alertas de Reposição"
-          value={pecasAbaixoMinimo}
-          icon={AlertTriangle}
-          subtitle="Abaixo do mínimo"
+          title="Disponíveis"
+          value={stats.disponivel}
+          icon={CheckCircle}
+          subtitle="Peças prontas para uso"
+          variant="success"
         />
         <StatCard
-          title="Valor do Estoque"
-          value={`R$ ${valorTotalEstoque.toFixed(2)}`}
-          icon={TrendingDown}
-          subtitle="Valor total"
+          title="Reservadas"
+          value={stats.reservado}
+          icon={Clock}
+          subtitle="Peças reservadas"
+          variant="warning"
         />
         <StatCard
-          title="Categorias"
-          value={categorias.length}
-          icon={Filter}
-          subtitle="Tipos diferentes"
+          title="Tipos de Peças"
+          value={stats.tipos}
+          icon={Package}
+          subtitle="Códigos diferentes"
+        />
+        <StatCard
+          title="Valor Total"
+          value={`R$ ${stats.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+          icon={Package}
+          subtitle="Valor do estoque"
+          variant="primary"
         />
       </div>
 
-      {/* Alertas */}
-      {pecasAbaixoMinimo > 0 && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardHeader>
-            <CardTitle className="text-orange-800 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5" />
-              Atenção: Peças com estoque baixo
-            </CardTitle>
-            <CardDescription className="text-orange-700">
-              {pecasAbaixoMinimo} peça(s) estão abaixo do estoque mínimo e precisam de reposição
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      )}
-
-      {/* Lista de peças */}
+      {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Inventário de Peças</CardTitle>
+          <CardTitle>Filtros</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-4">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome ou código..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-48">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os Status</SelectItem>
+              <SelectItem value="disponivel">Disponível</SelectItem>
+              <SelectItem value="reservado">Reservado</SelectItem>
+              <SelectItem value="usado">Usado</SelectItem>
+              <SelectItem value="pendente">Pendente</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={componentFilter} onValueChange={setComponentFilter}>
+            <SelectTrigger className="w-48">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os Componentes</SelectItem>
+              <SelectItem value="bloco">Bloco</SelectItem>
+              <SelectItem value="cabecote">Cabeçote</SelectItem>
+              <SelectItem value="virabrequim">Virabrequim</SelectItem>
+              <SelectItem value="pistao">Pistão</SelectItem>
+              <SelectItem value="biela">Biela</SelectItem>
+              <SelectItem value="comando">Comando</SelectItem>
+              <SelectItem value="eixo">Eixo</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
+      {/* Parts Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Inventário</CardTitle>
           <CardDescription>
-            Visualize e gerencie o estoque de peças
+            {filteredParts.length} {filteredParts.length === 1 ? 'peça' : 'peças'} encontrada{filteredParts.length !== 1 ? 's' : ''}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome ou código..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-[180px]">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todas</SelectItem>
-                {categorias.map(categoria => (
-                  <SelectItem key={categoria} value={categoria}>{categoria}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Nome</TableHead>
-                <TableHead>Categoria</TableHead>
+                <TableHead>Componente</TableHead>
                 <TableHead>Quantidade</TableHead>
+                <TableHead>Valor Unit.</TableHead>
+                <TableHead>Valor Total</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Preço Unit.</TableHead>
-                <TableHead>Localização</TableHead>
-                <TableHead>Ações</TableHead>
+                <TableHead>Fornecedor</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pecasFiltradas.map((peca) => (
-                <TableRow key={peca.id}>
-                  <TableCell className="font-medium">{peca.codigo}</TableCell>
-                  <TableCell>{peca.nome}</TableCell>
-                  <TableCell>{peca.categoria}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span>{peca.quantidade}</span>
-                      {peca.quantidade < peca.minimo && (
-                        <AlertTriangle className="w-4 h-4 text-orange-500" />
-                      )}
-                    </div>
+              {filteredParts.map((part) => (
+                <TableRow key={part.id}>
+                  <TableCell className="font-medium">
+                    {part.part_code || '-'}
                   </TableCell>
+                  <TableCell>{part.part_name}</TableCell>
                   <TableCell>
-                    <Badge variant={peca.quantidade >= peca.minimo ? 'default' : 'destructive'}>
-                      {peca.quantidade >= peca.minimo ? 'OK' : 'Baixo'}
+                    <Badge variant="outline">
+                      {getComponentLabel(part.component)}
                     </Badge>
                   </TableCell>
-                  <TableCell>R$ {peca.preco.toFixed(2)}</TableCell>
-                  <TableCell>{peca.localizacao}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">Editar</Button>
-                      <Button variant="outline" size="sm">Movimentar</Button>
+                    <span className={part.quantity < 5 ? 'text-red-600 font-bold' : ''}>
+                      {part.quantity}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    R$ {part.unit_cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    R$ {(part.unit_cost * part.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </TableCell>
+                  <TableCell>{getStatusBadge(part.status)}</TableCell>
+                  <TableCell>{part.supplier || '-'}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPart(part);
+                          setIsDetailsDialogOpen(true);
+                        }}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPart(part);
+                          setIsEditDialogOpen(true);
+                        }}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPart(part);
+                          setIsDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          {filteredParts.length === 0 && (
+            <p className="text-center text-muted-foreground py-8">Nenhuma peça encontrada.</p>
+          )}
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar Peça</DialogTitle>
+            <DialogDescription>
+              Atualize as informações da peça no estoque
+            </DialogDescription>
+          </DialogHeader>
+          {selectedPart && (
+            <PartForm 
+              part={selectedPart} 
+              onSuccess={() => {
+                setIsEditDialogOpen(false);
+                setSelectedPart(null);
+                fetchParts();
+              }} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Peça</DialogTitle>
+          </DialogHeader>
+          {selectedPart && <PartDetails part={selectedPart} />}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja remover esta peça do estoque? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedPart && (
+            <div className="py-4">
+              <p className="font-medium">{selectedPart.part_name}</p>
+              <p className="text-sm text-muted-foreground">
+                Código: {selectedPart.part_code || 'N/A'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Quantidade: {selectedPart.quantity}
+              </p>
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Excluir
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

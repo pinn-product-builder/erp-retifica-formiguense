@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ import { UserCheck, TrendingUp, UserPlus, Search, Filter, DollarSign, Edit, Tras
 import { StatCard } from "@/components/StatCard";
 import { useConsultants, Consultant } from "@/hooks/useConsultants";
 import { useToast } from "@/hooks/use-toast";
+import { MaskedInput } from "@/components/ui/masked-input";
+import { validatePhone, getPhoneErrorMessage } from "@/utils/validators";
 
 const Consultores = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,17 +27,21 @@ const Consultores = () => {
     commission_rate: 0,
     is_active: true
   });
+  
+  const [errors, setErrors] = useState({
+    phone: ''
+  });
 
   const { consultants, loading, fetchConsultants, createConsultant, updateConsultant, deleteConsultant, toggleConsultantStatus } = useConsultants();
   const { toast } = useToast();
 
+  const loadConsultants = useCallback(async () => {
+    await fetchConsultants();
+  }, [fetchConsultants]);
+
   useEffect(() => {
     loadConsultants();
-  }, []);
-
-  const loadConsultants = async () => {
-    await fetchConsultants();
-  };
+  }, [loadConsultants]);
 
   const handleSearch = async (term: string) => {
     setSearchTerm(term);
@@ -53,6 +59,9 @@ const Consultores = () => {
       email: '',
       commission_rate: 0,
       is_active: true
+    });
+    setErrors({
+      phone: ''
     });
     setEditingConsultant(null);
   };
@@ -76,6 +85,20 @@ const Consultores = () => {
       toast({
         title: "Erro",
         description: "Nome é obrigatório",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validar telefone (se preenchido)
+    if (formData.phone && !validatePhone(formData.phone)) {
+      setErrors(prev => ({ 
+        ...prev, 
+        phone: getPhoneErrorMessage(formData.phone) 
+      }));
+      toast({
+        title: "Erro de Validação",
+        description: getPhoneErrorMessage(formData.phone),
         variant: "destructive"
       });
       return;
@@ -182,12 +205,22 @@ const Consultores = () => {
               </div>
               <div>
                 <Label htmlFor="phone">Telefone</Label>
-                <Input
+                <MaskedInput
                   id="phone"
+                  mask="phone"
                   value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  onChange={(maskedValue, rawValue) => {
+                    setFormData(prev => ({ ...prev, phone: rawValue }));
+                    // Limpar erro ao digitar
+                    if (errors.phone) {
+                      setErrors(prev => ({ ...prev, phone: '' }));
+                    }
+                  }}
                   placeholder="(00) 00000-0000"
                 />
+                {errors.phone && (
+                  <p className="text-sm text-red-500 mt-1">{errors.phone}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="email">E-mail</Label>
@@ -243,25 +276,21 @@ const Consultores = () => {
           title="Total de Consultores"
           value={totalConsultants}
           icon={Users}
-          loading={loading}
         />
         <StatCard
           title="Consultores Ativos"
           value={activeConsultants}
           icon={UserCheck}
-          loading={loading}
         />
         <StatCard
           title="Consultores Inativos"
           value={inactiveConsultants}
           icon={Users}
-          loading={loading}
         />
         <StatCard
           title="Comissão Média"
           value={`${(averageCommission * 100).toFixed(1)}%`}
           icon={DollarSign}
-          loading={loading}
         />
       </div>
 
@@ -352,7 +381,6 @@ const Consultores = () => {
                           <Switch
                             checked={consultant.is_active}
                             onCheckedChange={(checked) => handleToggleStatus(consultant.id, checked)}
-                            size="sm"
                           />
                         </div>
                       </TableCell>

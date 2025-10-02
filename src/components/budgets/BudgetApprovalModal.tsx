@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { z } from 'zod';
 import {
   Dialog,
@@ -34,6 +34,7 @@ import {
 import { useDetailedBudgets, type DetailedBudget } from "@/hooks/useDetailedBudgets";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/contexts/OrganizationContext";
 
 const approvalSchema = z.object({
   approval_type: z.enum(['total', 'partial', 'rejected'], {
@@ -62,6 +63,7 @@ const BudgetApprovalModal = ({
 }: BudgetApprovalModalProps) => {
   const { approveBudget, loading } = useDetailedBudgets();
   const { toast } = useToast();
+  const { currentOrganization } = useOrganization();
   
   const [formData, setFormData] = useState({
     approval_type: '',
@@ -75,6 +77,16 @@ const BudgetApprovalModal = ({
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [approvalDocument, setApprovalDocument] = useState<File | null>(null);
+
+  // Preencher automaticamente o nome do cliente quando o orçamento for carregado
+  useEffect(() => {
+    if (budget?.order?.customer?.name) {
+      setFormData(prev => ({
+        ...prev,
+        approved_by_customer: budget.order.customer.name
+      }));
+    }
+  }, [budget?.order?.customer?.name]);
 
   if (!budget) return null;
 
@@ -118,13 +130,16 @@ const BudgetApprovalModal = ({
 
       // Upload do documento se houver
       let documentData = null;
-      if (approvalDocument) {
+      if (approvalDocument && currentOrganization) {
         const fileExt = approvalDocument.name.split('.').pop();
-        const fileName = `approval_${budget.id}_${Date.now()}.${fileExt}`;
+        const fileName = `${currentOrganization.id}/approval_${budget.id}_${Date.now()}.${fileExt}`;
         
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('reports')
-          .upload(fileName, approvalDocument);
+          .upload(fileName, approvalDocument, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
         if (uploadError) throw uploadError;
         
@@ -406,12 +421,12 @@ const BudgetApprovalModal = ({
               <Input
                 placeholder="Nome completo do cliente"
                 value={formData.approved_by_customer}
-                onChange={(e) => setFormData(prev => ({ ...prev, approved_by_customer: e.target.value }))}
-                className={errors.approved_by_customer ? "border-red-500" : ""}
+                disabled
+                className="bg-background border-input text-foreground cursor-not-allowed opacity-100"
               />
-              {errors.approved_by_customer && (
-                <p className="text-sm text-red-500">{errors.approved_by_customer}</p>
-              )}
+              <p className="text-xs text-muted-foreground">
+                Nome preenchido automaticamente com base na ordem de serviço
+              </p>
             </div>
           </div>
 

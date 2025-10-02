@@ -12,6 +12,8 @@ import { Users, Building2, UserPlus, Search, Filter, Phone, Edit, Trash2, Loader
 import { StatCard } from "@/components/StatCard";
 import { useCustomers, Customer } from "@/hooks/useCustomers";
 import { useToast } from "@/hooks/use-toast";
+import { MaskedInput } from "@/components/ui/masked-input";
+import { validateCPFCNPJ, validatePhone, getCPFCNPJErrorMessage, getPhoneErrorMessage } from "@/utils/validators";
 
 const Clientes = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,6 +29,13 @@ const Clientes = () => {
     address: '',
     type: 'direto' as 'direto' | 'oficina',
     workshop_name: '',
+    workshop_cnpj: '',
+    workshop_contact: ''
+  });
+  
+  const [errors, setErrors] = useState({
+    document: '',
+    phone: '',
     workshop_cnpj: '',
     workshop_contact: ''
   });
@@ -193,22 +202,42 @@ const Clientes = () => {
                 <Label htmlFor="document">
                   {formData.type === 'direto' ? 'CPF' : 'CNPJ'} *
                 </Label>
-                <Input
+                <MaskedInput
                   id="document"
+                  mask={formData.type === 'direto' ? 'cpf' : 'cnpj'}
                   value={formData.document}
-                  onChange={(e) => setFormData(prev => ({ ...prev, document: e.target.value }))}
+                  onChange={(maskedValue, rawValue) => {
+                    setFormData(prev => ({ ...prev, document: rawValue }));
+                    // Limpar erro ao digitar
+                    if (errors.document) {
+                      setErrors(prev => ({ ...prev, document: '' }));
+                    }
+                  }}
                   placeholder={formData.type === 'direto' ? '000.000.000-00' : '00.000.000/0000-00'}
                   required
                 />
+                {errors.document && (
+                  <p className="text-sm text-red-500 mt-1">{errors.document}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="phone">Telefone</Label>
-                <Input
+                <MaskedInput
                   id="phone"
+                  mask="phone"
                   value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  onChange={(maskedValue, rawValue) => {
+                    setFormData(prev => ({ ...prev, phone: rawValue }));
+                    // Limpar erro ao digitar
+                    if (errors.phone) {
+                      setErrors(prev => ({ ...prev, phone: '' }));
+                    }
+                  }}
                   placeholder="(00) 00000-0000"
                 />
+                {errors.phone && (
+                  <p className="text-sm text-red-500 mt-1">{errors.phone}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="email">E-mail</Label>
@@ -244,21 +273,41 @@ const Clientes = () => {
                   </div>
                   <div>
                     <Label htmlFor="workshop_cnpj">CNPJ da Oficina</Label>
-                    <Input
+                    <MaskedInput
                       id="workshop_cnpj"
+                      mask="cnpj"
                       value={formData.workshop_cnpj}
-                      onChange={(e) => setFormData(prev => ({ ...prev, workshop_cnpj: e.target.value }))}
+                      onChange={(maskedValue, rawValue) => {
+                        setFormData(prev => ({ ...prev, workshop_cnpj: rawValue }));
+                        // Limpar erro ao digitar
+                        if (errors.workshop_cnpj) {
+                          setErrors(prev => ({ ...prev, workshop_cnpj: '' }));
+                        }
+                      }}
                       placeholder="00.000.000/0000-00"
                     />
+                    {errors.workshop_cnpj && (
+                      <p className="text-sm text-red-500 mt-1">{errors.workshop_cnpj}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="workshop_contact">Contato da Oficina</Label>
-                    <Input
+                    <MaskedInput
                       id="workshop_contact"
+                      mask="phone"
                       value={formData.workshop_contact}
-                      onChange={(e) => setFormData(prev => ({ ...prev, workshop_contact: e.target.value }))}
-                      placeholder="Nome do responsável"
+                      onChange={(maskedValue, rawValue) => {
+                        setFormData(prev => ({ ...prev, workshop_contact: rawValue }));
+                        // Limpar erro ao digitar
+                        if (errors.workshop_contact) {
+                          setErrors(prev => ({ ...prev, workshop_contact: '' }));
+                        }
+                      }}
+                      placeholder="(00) 00000-0000"
                     />
+                    {errors.workshop_contact && (
+                      <p className="text-sm text-red-500 mt-1">{errors.workshop_contact}</p>
+                    )}
                   </div>
                 </>
               )}
