@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
@@ -92,7 +93,7 @@ export default function GestaoUsuarios() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editingRole, setEditingRole] = useState<AppRole>('user');
-  const [editingProfile, setEditingProfile] = useState<string>('');
+  const [editingProfiles, setEditingProfiles] = useState<string[]>([]);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const [newUserData, setNewUserData] = useState<CreateUserData>({
@@ -103,8 +104,37 @@ export default function GestaoUsuarios() {
   });
 
   // Hook para gerenciar perfis
-  const profilesData = useUserProfiles();
-  const profiles = profilesData?.profiles || [];
+  const { profiles, assignProfileToUser, removeProfileFromUser, fetchUserAssignments } = useUserProfiles();
+  
+  // Estado para armazenar vinculações de perfis (agora suporta múltiplos perfis por usuário)
+  const [userProfileAssignments, setUserProfileAssignments] = useState<Record<string, string[]>>({});
+
+  // Função para carregar vinculações de perfis
+  const loadUserProfileAssignments = useCallback(async () => {
+    try {
+      const assignments = await fetchUserAssignments();
+      setUserProfileAssignments(assignments);
+      console.log('Vinculações de perfis carregadas:', assignments);
+    } catch (error) {
+      console.error('Erro ao carregar vinculações de perfis:', error);
+    }
+  }, [fetchUserAssignments]);
+
+  // Função para obter os perfis atuais de um usuário
+  const getUserCurrentProfiles = (userId: string): string[] => {
+    return userProfileAssignments[userId] || [];
+  };
+
+  // Função para lidar com seleção múltipla de perfis
+  const handleProfileToggle = (profileId: string, checked: boolean) => {
+    setEditingProfiles(prev => {
+      if (checked) {
+        return [...prev, profileId];
+      } else {
+        return prev.filter(id => id !== profileId);
+      }
+    });
+  };
 
   // Função para toggle das linhas expandidas
   const toggleRowExpansion = (userId: string) => {
@@ -116,6 +146,11 @@ export default function GestaoUsuarios() {
     }
     setExpandedRows(newExpanded);
   };
+
+  // Carregar vinculações de perfis quando o componente monta
+  useEffect(() => {
+    loadUserProfileAssignments();
+  }, [loadUserProfileAssignments]);
 
 
   // Se não tem permissão, mostrar mensagem
@@ -179,18 +214,42 @@ export default function GestaoUsuarios() {
 
   const handleUpdateRole = async (userId: string) => {
     try {
-      console.log('Atualizando usuário:', { userId, editingRole, editingProfile });
+      console.log('Atualizando usuário:', { userId, editingRole, editingProfiles });
       
       const success = await updateUserRole(userId, editingRole);
       console.log('Resultado da atualização:', success);
       
       if (success) {
+        // Gerenciar perfis do usuário
+        const currentProfiles = getUserCurrentProfiles(userId);
+        console.log('Perfis atuais:', currentProfiles);
+        console.log('Perfis selecionados:', editingProfiles);
+        
+        // Remover perfis que não estão mais selecionados
+        for (const profileId of currentProfiles) {
+          if (!editingProfiles.includes(profileId)) {
+            console.log(`Removendo perfil ${profileId}`);
+            await removeProfileFromUser(userId, profileId);
+          }
+        }
+        
+        // Adicionar perfis que foram selecionados
+        for (const profileId of editingProfiles) {
+          if (!currentProfiles.includes(profileId)) {
+            console.log(`Adicionando perfil ${profileId}`);
+            await assignProfileToUser(userId, profileId);
+          }
+        }
+        
         setEditingUser(null);
-        setEditingProfile('');
+        setEditingProfiles([]);
+        
+        // Recarregar vinculações de perfis
+        await loadUserProfileAssignments();
         
         toast({
           title: 'Usuário atualizado',
-          description: 'Nível de acesso atualizado com sucesso',
+          description: 'Nível de acesso e perfis atualizados com sucesso',
         });
       }
     } catch (error) {
@@ -533,7 +592,7 @@ export default function GestaoUsuarios() {
                                   onClick={() => {
                                     setEditingUser(user.user_id);
                                     setEditingRole(user.role);
-                                    setEditingProfile('');
+                                    setEditingProfiles(getUserCurrentProfiles(user.user_id));
                                   }}
                                 >
                                   <Edit className="h-4 w-4 mr-2" />
@@ -640,7 +699,7 @@ export default function GestaoUsuarios() {
                                   onClick={() => {
                                     setEditingUser(user.user_id);
                                     setEditingRole(user.role);
-                                    setEditingProfile(''); // Perfil será buscado quando implementado sistema de perfis por usuário
+                                    setEditingProfiles(getUserCurrentProfiles(user.user_id));
                                   }}
                                 >
                                   <Edit className="h-4 w-4" />
@@ -690,36 +749,44 @@ export default function GestaoUsuarios() {
                                   </div>
                                   
                                   <div>
-                                    <Label>Perfil de Usuário (Opcional)</Label>
-                                    <Select
-                                      value={editingProfile || 'none'}
-                                      onValueChange={(value) => setEditingProfile(value === 'none' ? '' : value)}
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Selecione um perfil (opcional)" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="none">
-                                          <span className="text-muted-foreground">Nenhum perfil</span>
-                                        </SelectItem>
-                                        {profiles.map((profile) => (
-                                          <SelectItem key={profile.id} value={profile.id}>
-                                            <div className="flex items-center gap-2">
+                                    <Label>Perfis de Usuário (Múltipla Seleção)</Label>
+                                    <div className="mt-2 space-y-2 max-h-40 overflow-y-auto border rounded-md p-3">
+                                      {profiles.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">Nenhum perfil disponível</p>
+                                      ) : (
+                                        profiles.map((profile) => (
+                                          <div key={profile.id} className="flex items-center space-x-2">
+                                            <Checkbox
+                                              id={`profile-${profile.id}`}
+                                              checked={editingProfiles.includes(profile.id)}
+                                              onCheckedChange={(checked) => 
+                                                handleProfileToggle(profile.id, checked as boolean)
+                                              }
+                                            />
+                                            <Label 
+                                              htmlFor={`profile-${profile.id}`}
+                                              className="flex items-center gap-2 cursor-pointer flex-1"
+                                            >
                                               <div 
                                                 className="w-3 h-3 rounded-full" 
                                                 style={{ backgroundColor: profile.sector?.color || '#3B82F6' }}
                                               />
                                               <span>{profile.name}</span>
                                               {profile.sector && (
-                                                <span className="text-xs text-muted-foreground">
-                                                  ({profile.sector.name})
-                                                </span>
+                                                <Badge variant="outline" className="text-xs">
+                                                  {profile.sector.name}
+                                                </Badge>
                                               )}
-                                            </div>
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
+                                            </Label>
+                                          </div>
+                                        ))
+                                      )}
+                                    </div>
+                                    {editingProfiles.length > 0 && (
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        {editingProfiles.length} perfil(s) selecionado(s)
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                                 

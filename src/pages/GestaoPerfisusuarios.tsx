@@ -24,11 +24,11 @@ import {
   Users,
   Palette,
   Settings,
-  CheckCircle,
-  XCircle,
   ArrowLeft,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Check,
+  X
 } from 'lucide-react';
 import { useUserProfiles, type CreateUserProfileData, type CreateSectorData, type UserProfile, type UserSector } from '@/hooks/useUserProfiles';
 import { useRoleGuard } from '@/hooks/useRoleGuard';
@@ -83,11 +83,9 @@ export default function GestaoPerfiUsuarios() {
     createSector,
     updateSector,
     deleteSector,
-    toggleSectorStatus,
     createProfile,
     updateProfile,
     deleteProfile,
-    toggleProfileStatus,
     canManageProfiles,
     currentOrganization
   } = useUserProfiles();
@@ -525,7 +523,7 @@ export default function GestaoPerfiUsuarios() {
                               });
                             }}
                           >
-                            <CheckCircle className="h-4 w-4 mr-2" />
+                            <Check className="h-4 w-4 mr-2" />
                             Selecionar Todos
                           </Button>
                           <Button
@@ -540,7 +538,7 @@ export default function GestaoPerfiUsuarios() {
                               });
                             }}
                           >
-                            <XCircle className="h-4 w-4 mr-2" />
+                            <X className="h-4 w-4 mr-2" />
                             Desmarcar Todos
                           </Button>
                         </div>
@@ -675,19 +673,6 @@ export default function GestaoPerfiUsuarios() {
                             </div>
                           )}
                           <div className="flex justify-center">
-                            <Badge variant={profile.is_active ? 'default' : 'secondary'}>
-                              {profile.is_active ? (
-                                <>
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Ativo
-                                </>
-                              ) : (
-                                <>
-                                  <XCircle className="h-3 w-3 mr-1" />
-                                  Inativo
-                                </>
-                              )}
-                            </Badge>
                           </div>
                         </div>
 
@@ -810,19 +795,6 @@ export default function GestaoPerfiUsuarios() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={profile.is_active ? 'default' : 'secondary'}>
-                            {profile.is_active ? (
-                              <>
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Ativo
-                              </>
-                            ) : (
-                              <>
-                                <XCircle className="h-3 w-3 mr-1" />
-                                Inativo
-                              </>
-                            )}
-                          </Badge>
                         </TableCell>
                         <TableCell className={isMobile ? 'hidden' : ''}>
                           {formatDistanceToNow(new Date(profile.created_at), { 
@@ -981,9 +953,6 @@ export default function GestaoPerfiUsuarios() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
-                    <Badge variant={sector.is_active ? 'default' : 'secondary'}>
-                      {sector.is_active ? 'Ativo' : 'Inativo'}
-                    </Badge>
                     <div className="flex gap-1 sm:gap-2">
                       <Button 
                         variant="ghost" 
@@ -1069,20 +1038,10 @@ export default function GestaoPerfiUsuarios() {
                   <p className="text-sm text-muted-foreground">{selectedProfile.name}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Status</Label>
-                  <Badge variant={selectedProfile.is_active ? 'default' : 'secondary'} className="ml-2">
-                    {selectedProfile.is_active ? (
-                      <>
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Ativo
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="h-3 w-3 mr-1" />
-                        Inativo
-                      </>
-                    )}
-                  </Badge>
+                  <Label className="text-sm font-medium">Setor</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedProfile.sector?.name || 'Sem setor'}
+                  </p>
                 </div>
               </div>
               
@@ -1208,7 +1167,7 @@ export default function GestaoPerfiUsuarios() {
                       });
                     }}
                   >
-                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <Check className="h-4 w-4 mr-2" />
                     Selecionar Todos
                   </Button>
                   <Button
@@ -1223,7 +1182,7 @@ export default function GestaoPerfiUsuarios() {
                       });
                     }}
                   >
-                    <XCircle className="h-4 w-4 mr-2" />
+                    <X className="h-4 w-4 mr-2" />
                     Desmarcar Todos
                   </Button>
                 </div>
@@ -1306,7 +1265,13 @@ export default function GestaoPerfiUsuarios() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditProfileOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              console.log('Cancelando edição de perfil');
+              setIsEditProfileOpen(false);
+              setSelectedProfile(null);
+              setEditProfileData({ name: '', description: '', sector_id: '', page_permissions: [] });
+              setSelectedPermissions({});
+            }}>
               Cancelar
             </Button>
             <Button onClick={handleUpdateProfile} disabled={createLoading}>
@@ -1446,9 +1411,6 @@ export default function GestaoPerfiUsuarios() {
                 <div className="text-sm text-muted-foreground">
                   {selectedSector.description || 'Sem descrição'}
                 </div>
-                <Badge variant={selectedSector.is_active ? 'default' : 'secondary'} className="mt-2">
-                  {selectedSector.is_active ? 'Ativo' : 'Inativo'}
-                </Badge>
               </div>
               
               <p className="text-sm text-muted-foreground">

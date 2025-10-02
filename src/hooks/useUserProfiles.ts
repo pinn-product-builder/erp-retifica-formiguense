@@ -349,6 +349,14 @@ export const useUserProfiles = () => {
 
     setCreateLoading(true);
     try {
+      console.log('Criando perfil com dados:', {
+        name: profileData.name.trim(),
+        description: profileData.description?.trim() || null,
+        sector_id: profileData.sector_id,
+        org_id: currentOrganization.id,
+        is_active: true,
+      });
+
       // Criar o perfil
       const { data: profileResult, error: profileError } = await (supabase as unknown as ExtendedSupabaseClient)
         .from('user_profiles')
@@ -357,9 +365,12 @@ export const useUserProfiles = () => {
           description: profileData.description?.trim() || null,
           sector_id: profileData.sector_id,
           org_id: currentOrganization.id,
+          is_active: true,
         })
         .select()
         .single();
+
+      console.log('Resultado da criação do perfil:', { profileResult, profileError });
 
       if (profileError) throw profileError;
 
@@ -367,14 +378,20 @@ export const useUserProfiles = () => {
 
       // Criar permissões de páginas
       if (profileData.page_permissions.length > 0) {
+        console.log('Criando permissões:', profileData.page_permissions);
+        
         const permissions = profileData.page_permissions.map(perm => ({
           ...perm,
           profile_id: newProfile.id,
         }));
 
+        console.log('Permissões mapeadas:', permissions);
+
         const { error: permissionsError } = await (supabase as unknown as ExtendedSupabaseClient)
           .from('profile_page_permissions')
           .insert(permissions);
+
+        console.log('Resultado da criação de permissões:', { permissionsError });
 
         if (permissionsError) throw permissionsError;
       }
@@ -418,20 +435,122 @@ export const useUserProfiles = () => {
     }
   };
 
-  // Atribuir perfil a usuário
-  const assignProfileToUser = async (userId: string, profileId: string): Promise<boolean> => {
-    if (!currentOrganization?.id) return false;
+  // Buscar vinculações de usuários (agora suporta múltiplos perfis por usuário)
+  const fetchUserAssignments = useCallback(async (): Promise<Record<string, string[]>> => {
+    if (!currentOrganization?.id) return {};
 
     try {
-      const { error } = await (supabase as unknown as ExtendedSupabaseClient)
+      const { data, error } = await (supabase as unknown as ExtendedSupabaseClient)
         .from('user_profile_assignments')
-        .insert({
-          user_id: userId,
-          profile_id: profileId,
-          org_id: currentOrganization.id,
-        });
+        .select('user_id, profile_id')
+        .eq('org_id', currentOrganization.id)
+        .eq('is_active', true);
 
       if (error) throw error;
+
+      const assignments: Record<string, string[]> = {};
+      data?.forEach(assignment => {
+        if (!assignments[assignment.user_id]) {
+          assignments[assignment.user_id] = [];
+        }
+        assignments[assignment.user_id].push(assignment.profile_id);
+      });
+
+      return assignments;
+    } catch (error) {
+      console.error('Erro ao buscar vinculações de usuários:', error);
+      return {};
+    }
+  }, [currentOrganization?.id]);
+
+  // Remover perfil de usuário
+  const removeProfileFromUser = async (userId: string, profileId: string): Promise<boolean> => {
+    if (!currentOrganization?.id) {
+      console.error('Organização não encontrada');
+      return false;
+    }
+
+    try {
+      console.log('Removendo perfil:', { userId, profileId, orgId: currentOrganization.id });
+      
+      const { error } = await (supabase as unknown as ExtendedSupabaseClient)
+        .from('user_profile_assignments')
+        .update({ is_active: false })
+        .eq('user_id', userId)
+        .eq('profile_id', profileId)
+        .eq('org_id', currentOrganization.id);
+
+      if (error) {
+        console.error('Erro ao remover perfil:', error);
+        throw error;
+      }
+
+      console.log('Perfil removido com sucesso');
+      return true;
+    } catch (error: unknown) {
+      console.error('Error removing profile:', error);
+      return false;
+    }
+  };
+
+  // Atribuir perfil a usuário
+  const assignProfileToUser = async (userId: string, profileId: string): Promise<boolean> => {
+    if (!currentOrganization?.id) {
+      console.error('Organização não encontrada');
+      return false;
+    }
+
+    console.log('Atribuindo perfil:', { userId, profileId, orgId: currentOrganization.id });
+
+    try {
+      // Verificar se a vinculação já existe
+      console.log('Verificando se vinculação já existe...');
+      const { data: existingAssignment, error: checkError } = await (supabase as unknown as ExtendedSupabaseClient)
+        .from('user_profile_assignments')
+        .select('id, is_active')
+        .eq('user_id', userId)
+        .eq('profile_id', profileId)
+        .eq('org_id', currentOrganization.id)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Erro ao verificar vinculação existente:', checkError);
+        throw checkError;
+      }
+
+      if (existingAssignment) {
+        // Se existe, apenas ativar se estiver inativa
+        if (!existingAssignment.is_active) {
+          console.log('Ativando vinculação existente...');
+          const { error: activateError } = await (supabase as unknown as ExtendedSupabaseClient)
+            .from('user_profile_assignments')
+            .update({ is_active: true })
+            .eq('id', existingAssignment.id);
+
+          if (activateError) {
+            console.error('Erro ao ativar vinculação existente:', activateError);
+            throw activateError;
+          }
+        } else {
+          console.log('Vinculação já está ativa');
+        }
+      } else {
+        // Se não existe, inserir nova vinculação
+        console.log('Inserindo nova vinculação...');
+        const { data, error } = await (supabase as unknown as ExtendedSupabaseClient)
+          .from('user_profile_assignments')
+          .insert({
+            user_id: userId,
+            profile_id: profileId,
+            org_id: currentOrganization.id,
+            is_active: true,
+          })
+          .select();
+
+        console.log('Resultado da inserção:', { data, error });
+
+        if (error) throw error;
+      }
 
       toast({
         title: 'Perfil atribuído',
@@ -887,6 +1006,8 @@ export const useUserProfiles = () => {
     deleteProfile,
     toggleProfileStatus,
     assignProfileToUser,
+    removeProfileFromUser,
+    fetchUserAssignments,
 
     // Verificações
     canManageProfiles,
