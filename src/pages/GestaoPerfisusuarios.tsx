@@ -51,6 +51,20 @@ const MODULE_COLORS = {
   settings: 'bg-slate-100 text-slate-800',
 };
 
+const MODULE_LABELS = {
+  dashboard: 'Dashboard',
+  fiscal: 'Fiscal',
+  financial: 'Financeiro',
+  production: 'Produção',
+  inventory: 'Estoque',
+  purchasing: 'Compras',
+  hr: 'RH',
+  customers: 'Clientes',
+  reports: 'Relatórios',
+  admin: 'Administração',
+  settings: 'Configurações',
+};
+
 const DEFAULT_COLORS = [
   '#3B82F6', // blue
   '#10B981', // green
@@ -509,8 +523,9 @@ export default function GestaoPerfiUsuarios() {
                         <div className="flex gap-2">
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="default"
                             size="sm"
+                            className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
                             onClick={() => {
                               const allPermissions: Record<string, { view: boolean; edit: boolean; delete: boolean }> = {};
                               systemPages.forEach(page => {
@@ -519,40 +534,82 @@ export default function GestaoPerfiUsuarios() {
                               setSelectedPermissions(allPermissions);
                               toast({
                                 title: "Todas as permissões selecionadas",
-                                description: "Todas as páginas foram marcadas com permissões completas",
+                                description: "Todas as páginas de todos os módulos foram marcadas com permissões completas",
                               });
                             }}
                           >
                             <Check className="h-4 w-4 mr-2" />
-                            Selecionar Todos
+                            Selecionar Todos os Módulos
                           </Button>
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="destructive"
                             size="sm"
                             onClick={() => {
                               setSelectedPermissions({});
                               toast({
                                 title: "Permissões desmarcadas",
-                                description: "Todas as permissões foram removidas",
+                                description: "Todas as permissões de todos os módulos foram removidas",
                               });
                             }}
                           >
                             <X className="h-4 w-4 mr-2" />
-                            Desmarcar Todos
+                            Desmarcar Todos os Módulos
                           </Button>
                         </div>
                       </div>
                       <div className="space-y-6">
                         {Object.entries(groupedPages).map(([module, pages]) => (
                           <div key={module} className="space-y-3">
-                            <div className="flex items-center gap-2">
-                              <Badge className={MODULE_COLORS[module as keyof typeof MODULE_COLORS] || 'bg-gray-100 text-gray-800'}>
-                                {module.charAt(0).toUpperCase() + module.slice(1)}
-                              </Badge>
-                              <span className="text-sm text-muted-foreground">
-                                {pages.length} página{pages.length !== 1 ? 's' : ''}
-                              </span>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Badge className={MODULE_COLORS[module as keyof typeof MODULE_COLORS] || 'bg-gray-100 text-gray-800'}>
+                                  {MODULE_LABELS[module as keyof typeof MODULE_LABELS] || module.charAt(0).toUpperCase() + module.slice(1)}
+                                </Badge>
+                                <span className="text-sm text-muted-foreground">
+                                  {pages.length} página{pages.length !== 1 ? 's' : ''}
+                                </span>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const modulePermissions: Record<string, { view: boolean; edit: boolean; delete: boolean }> = {};
+                                    pages.forEach(page => {
+                                      modulePermissions[page.id] = { view: true, edit: true, delete: true };
+                                    });
+                                    setSelectedPermissions(prev => ({ ...prev, ...modulePermissions }));
+                                    toast({
+                                      title: "Permissões selecionadas",
+                                      description: `Todas as páginas do módulo ${MODULE_LABELS[module as keyof typeof MODULE_LABELS] || module} foram marcadas com permissões completas`,
+                                    });
+                                  }}
+                                >
+                                  <Check className="h-4 w-4 mr-2" />
+                                  Selecionar Todas
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const modulePermissions: Record<string, { view: boolean; edit: boolean; delete: boolean }> = {};
+                                    pages.forEach(page => {
+                                      modulePermissions[page.id] = { view: false, edit: false, delete: false };
+                                    });
+                                    setSelectedPermissions(prev => ({ ...prev, ...modulePermissions }));
+                                    toast({
+                                      title: "Permissões desmarcadas",
+                                      description: `Todas as páginas do módulo ${MODULE_LABELS[module as keyof typeof MODULE_LABELS] || module} foram desmarcadas`,
+                                    });
+                                  }}
+                                >
+                                  <X className="h-4 w-4 mr-2" />
+                                  Desmarcar Todas
+                                </Button>
+                              </div>
                             </div>
                             
                             <div className="grid gap-3">
@@ -991,7 +1048,7 @@ export default function GestaoPerfiUsuarios() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Badge className={MODULE_COLORS[module as keyof typeof MODULE_COLORS] || 'bg-gray-100 text-gray-800'}>
-                      {module.charAt(0).toUpperCase() + module.slice(1)}
+                      {MODULE_LABELS[module as keyof typeof MODULE_LABELS] || module.charAt(0).toUpperCase() + module.slice(1)}
                     </Badge>
                     <span className="text-sm font-normal text-muted-foreground">
                       {pages.length} página{pages.length !== 1 ? 's' : ''}
@@ -1153,8 +1210,9 @@ export default function GestaoPerfiUsuarios() {
                 <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="default"
                     size="sm"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
                     onClick={() => {
                       const allPermissions: Record<string, { view: boolean; edit: boolean; delete: boolean }> = {};
                       systemPages.forEach(page => {
@@ -1163,27 +1221,27 @@ export default function GestaoPerfiUsuarios() {
                       setSelectedPermissions(allPermissions);
                       toast({
                         title: "Todas as permissões selecionadas",
-                        description: "Todas as páginas foram marcadas com permissões completas",
+                        description: "Todas as páginas de todos os módulos foram marcadas com permissões completas",
                       });
                     }}
                   >
                     <Check className="h-4 w-4 mr-2" />
-                    Selecionar Todos
+                    Selecionar Todos os Módulos
                   </Button>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="destructive"
                     size="sm"
                     onClick={() => {
                       setSelectedPermissions({});
                       toast({
                         title: "Permissões desmarcadas",
-                        description: "Todas as permissões foram removidas",
+                        description: "Todas as permissões de todos os módulos foram removidas",
                       });
                     }}
                   >
                     <X className="h-4 w-4 mr-2" />
-                    Desmarcar Todos
+                    Desmarcar Todos os Módulos
                   </Button>
                 </div>
               </div>
@@ -1194,7 +1252,7 @@ export default function GestaoPerfiUsuarios() {
                     <CollapsibleTrigger className="flex items-center justify-between w-full p-3 border rounded-lg hover:bg-muted/50">
                       <div className="flex items-center gap-2">
                         <Badge className={MODULE_COLORS[module as keyof typeof MODULE_COLORS] || 'bg-gray-100 text-gray-800'}>
-                          {module.charAt(0).toUpperCase() + module.slice(1)}
+                          {MODULE_LABELS[module as keyof typeof MODULE_LABELS] || module.charAt(0).toUpperCase() + module.slice(1)}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
                           {pages.length} página{pages.length !== 1 ? 's' : ''}
@@ -1203,6 +1261,46 @@ export default function GestaoPerfiUsuarios() {
                       <ChevronDown className="h-4 w-4" />
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-2 mt-2">
+                      <div className="flex justify-end gap-2 mb-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const modulePermissions: Record<string, { view: boolean; edit: boolean; delete: boolean }> = {};
+                            pages.forEach(page => {
+                              modulePermissions[page.id] = { view: true, edit: true, delete: true };
+                            });
+                            setSelectedPermissions(prev => ({ ...prev, ...modulePermissions }));
+                            toast({
+                              title: "Permissões selecionadas",
+                              description: `Todas as páginas do módulo ${MODULE_LABELS[module as keyof typeof MODULE_LABELS] || module} foram marcadas com permissões completas`,
+                            });
+                          }}
+                        >
+                          <Check className="h-4 w-4 mr-2" />
+                          Selecionar Todas
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const modulePermissions: Record<string, { view: boolean; edit: boolean; delete: boolean }> = {};
+                            pages.forEach(page => {
+                              modulePermissions[page.id] = { view: false, edit: false, delete: false };
+                            });
+                            setSelectedPermissions(prev => ({ ...prev, ...modulePermissions }));
+                            toast({
+                              title: "Permissões desmarcadas",
+                              description: `Todas as páginas do módulo ${MODULE_LABELS[module as keyof typeof MODULE_LABELS] || module} foram desmarcadas`,
+                            });
+                          }}
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Desmarcar Todas
+                        </Button>
+                      </div>
                       {pages.map((page) => (
                         <div key={page.id} className="p-3 border rounded-lg bg-muted/20">
                           <div className="flex items-center justify-between mb-3">
