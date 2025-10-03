@@ -1353,6 +1353,7 @@ export type Database = {
           id: string
           is_complete: boolean | null
           model: string
+          org_id: string | null
           reception_form_data: Json | null
           serial_number: string | null
           turns_manually: boolean | null
@@ -1373,6 +1374,7 @@ export type Database = {
           id?: string
           is_complete?: boolean | null
           model: string
+          org_id?: string | null
           reception_form_data?: Json | null
           serial_number?: string | null
           turns_manually?: boolean | null
@@ -1393,6 +1395,7 @@ export type Database = {
           id?: string
           is_complete?: boolean | null
           model?: string
+          org_id?: string | null
           reception_form_data?: Json | null
           serial_number?: string | null
           turns_manually?: boolean | null
@@ -1405,6 +1408,13 @@ export type Database = {
             columns: ["engine_type_id"]
             isOneToOne: false
             referencedRelation: "engine_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "engines_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]

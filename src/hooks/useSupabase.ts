@@ -110,11 +110,19 @@ export function useSupabase() {
   };
 
   const createEngine = async (engine: Engine) => {
+    if (!currentOrganization?.id) {
+      handleError(new Error('Organização não encontrada'), 'Erro: organização não encontrada');
+      return null;
+    }
+
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('engines')
-        .insert(engine)
+        .insert({
+          ...engine,
+          org_id: currentOrganization.id
+        })
         .select()
         .single();
 
