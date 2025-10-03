@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { OrderSelect } from '@/components/ui/order-select';
-import { EngineComponent } from '@/hooks/usePCP';
+import { EngineComponent } from '@/hooks/useEngineComponents';
+import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { useToast } from '@/hooks/use-toast';
 
 import { SCHEDULE_STATUS, translateStatus, translateAction, translateMessage } from '@/utils/statusTranslations';
@@ -31,6 +32,7 @@ const ALERT_COLORS = {
 
 export default function PCP() {
   const { schedules, resources, alerts, loading, createSchedule, updateSchedule, markAlertRead } = usePCP();
+  const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
   const { toast } = useToast();
   const [selectedSchedule, setSelectedSchedule] = useState<ProductionSchedule | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
@@ -172,11 +174,15 @@ export default function PCP() {
                     <SelectValue placeholder="Selecione o componente" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="bloco">Bloco</SelectItem>
-                    <SelectItem value="cabecote">Cabeçote</SelectItem>
-                    <SelectItem value="virabrequim">Virabrequim</SelectItem>
-                    <SelectItem value="pistao">Pistão</SelectItem>
-                    <SelectItem value="biela">Biela</SelectItem>
+                    {componentsLoading ? (
+                      <SelectItem value="loading" disabled>Carregando componentes...</SelectItem>
+                    ) : (
+                      engineComponents.map((component) => (
+                        <SelectItem key={component.value} value={component.value}>
+                          {component.label}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

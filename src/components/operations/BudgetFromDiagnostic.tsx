@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { useDiagnosticChecklists } from "@/hooks/useDiagnosticChecklists";
 import { useBudgets } from "@/hooks/useBudgets";
+import { useDetailedBudgets } from "@/hooks/useDetailedBudgets";
 import { useToast } from "@/hooks/use-toast";
 
 interface ServiceItem {
@@ -79,6 +80,7 @@ const BudgetFromDiagnostic = ({
 }: BudgetFromDiagnosticProps) => {
   const { toast } = useToast();
   const { createBudget, calculateBudgetFromServices } = useBudgets();
+  const { checkBudgetExists } = useDetailedBudgets();
   const [isOpen, setIsOpen] = useState(false);
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [parts, setParts] = useState<PartItem[]>([]);
@@ -239,6 +241,19 @@ const BudgetFromDiagnostic = ({
     setIsCreating(true);
 
     try {
+      // Verificar se já existe orçamento para este componente
+      const existingBudget = await checkBudgetExists(orderId, diagnosticResponse.component);
+      
+      if (existingBudget) {
+        toast({
+          title: "Orçamento já existe",
+          description: `Já existe um orçamento para o componente "${diagnosticResponse.component}" nesta ordem de serviço. Orçamento: ${existingBudget.budget_number || 'N/A'} (Status: ${existingBudget.status})`,
+          variant: "destructive"
+        });
+        setIsCreating(false);
+        return;
+      }
+
       // Calcular orçamento usando a tabela de preços
       const calculatedBudget = await calculateBudgetFromServices(selectedServices, selectedParts);
       

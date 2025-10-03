@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useDiagnosticChecklists, useDiagnosticChecklistsQuery, useDiagnosticChecklistMutations } from '@/hooks/useDiagnosticChecklists';
 import { useEngineTypes } from '@/hooks/useEngineTypes';
+import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { z } from 'zod';
 
 // Schemas de validação
@@ -50,6 +51,7 @@ export default function DiagnosticChecklistsConfig() {
   const { currentOrganization } = useOrganization();
   const { toast } = useToast();
   const { confirm } = useConfirmDialog();
+  const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
   const [selectedChecklistId, setSelectedChecklistId] = useState<string | null>(null);
@@ -454,11 +456,15 @@ export default function DiagnosticChecklistsConfig() {
                     <SelectValue placeholder="Selecionar componente" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="bloco">Bloco</SelectItem>
-                    <SelectItem value="eixo">Eixo</SelectItem>
-                    <SelectItem value="biela">Biela</SelectItem>
-                    <SelectItem value="comando">Comando</SelectItem>
-                    <SelectItem value="cabecote">Cabeçote</SelectItem>
+                    {componentsLoading ? (
+                      <SelectItem value="loading" disabled>Carregando componentes...</SelectItem>
+                    ) : (
+                      engineComponents.map((component) => (
+                        <SelectItem key={component.value} value={component.value}>
+                          {component.label}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 {validationErrors.component && (

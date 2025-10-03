@@ -108,11 +108,14 @@ export function useOrders() {
           let consultant = null;
           if (order.consultant_id) {
             const { data: consultantData } = await supabase
-              .from('employees')
-              .select('id, full_name')
+              .from('consultants')
+              .select('id, name')
               .eq('id', order.consultant_id)
               .maybeSingle();
-            consultant = consultantData;
+            consultant = consultantData ? {
+              id: consultantData.id,
+              full_name: consultantData.name
+            } : null;
           }
 
           return {
@@ -159,11 +162,14 @@ export function useOrders() {
       let consultant = null;
       if (orderData.consultant_id) {
         const { data: consultantData } = await supabase
-          .from('employees')
-          .select('id, full_name')
+          .from('consultants')
+          .select('id, name')
           .eq('id', orderData.consultant_id)
           .maybeSingle();
-        consultant = consultantData;
+        consultant = consultantData ? {
+          id: consultantData.id,
+          full_name: consultantData.name
+        } : null;
       }
 
       // Fetch materials

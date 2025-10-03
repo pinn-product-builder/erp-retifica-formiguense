@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { usePartsInventory, type PartInventory, type ComponentType, type PartStatus } from "@/hooks/usePartsInventory";
+import { useEngineComponents } from '@/hooks/useEngineComponents';
 
 interface PartFormProps {
   part?: PartInventory;
@@ -20,6 +21,7 @@ interface PartFormProps {
 
 export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess }) => {
   const { createPart, updatePart, loading } = usePartsInventory();
+  const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
   
   const [formData, setFormData] = useState({
     part_name: '',
@@ -138,13 +140,15 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess }) => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Nenhum</SelectItem>
-              <SelectItem value="bloco">Bloco</SelectItem>
-              <SelectItem value="cabecote">Cabeçote</SelectItem>
-              <SelectItem value="virabrequim">Virabrequim</SelectItem>
-              <SelectItem value="pistao">Pistão</SelectItem>
-              <SelectItem value="biela">Biela</SelectItem>
-              <SelectItem value="comando">Comando</SelectItem>
-              <SelectItem value="eixo">Eixo</SelectItem>
+              {componentsLoading ? (
+                <SelectItem value="loading" disabled>Carregando componentes...</SelectItem>
+              ) : (
+                engineComponents.map((component) => (
+                  <SelectItem key={component.value} value={component.value}>
+                    {component.label}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>

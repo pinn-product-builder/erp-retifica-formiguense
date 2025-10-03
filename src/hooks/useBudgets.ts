@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { Database } from '@/integrations/supabase/types';
 
 export function useBudgets() {
   const [loading, setLoading] = useState(false);
@@ -50,11 +51,43 @@ export function useBudgets() {
     }
   };
 
+  // Verificar se já existe orçamento para o componente
+  const checkBudgetExists = async (orderId: string, component: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('budgets')
+        .select('id, status')
+        .eq('order_id', orderId)
+        .eq('component', component as Database['public']['Enums']['engine_component'])
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        throw error;
+      }
+
+      return data; // Retorna o orçamento existente ou null
+    } catch (error) {
+      console.error('Erro ao verificar orçamento existente:', error);
+      return null;
+    }
+  };
+
   const createBudget = async (budget: any) => {
     if (!orgId) {
       handleError(null, 'Organização não encontrada.');
       return null;
     }
+
+    // Validar se já existe orçamento para este componente
+    if (budget.order_id && budget.component) {
+      const existingBudget = await checkBudgetExists(budget.order_id, budget.component);
+      
+      if (existingBudget) {
+        handleError(null, `Já existe um orçamento para o componente "${budget.component}" nesta ordem de serviço. (Status: ${existingBudget.status})`);
+        return null;
+      }
+    }
+
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -294,5 +327,6 @@ export function useBudgets() {
     getPartsPrices,
     getPartPrice,
     calculateBudgetFromServices,
+    checkBudgetExists,
   };
 }

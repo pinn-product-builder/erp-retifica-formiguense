@@ -140,13 +140,43 @@ export function useOrderMaterials(orderId: string) {
 
   const markAsApplied = async (reservationId: string, userId: string) => {
     try {
+      // Primeiro buscar os dados da reserva
+      const { data: reservation, error: fetchError } = await supabase
+        .from('parts_reservations')
+        .select('quantity_reserved, part_code, part_name')
+        .eq('id', reservationId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Buscar a quantidade atual do estoque
+      const { data: currentStock, error: stockFetchError } = await supabase
+        .from('parts_inventory')
+        .select('quantity')
+        .eq('part_code', reservation.part_code)
+        .single();
+
+      if (stockFetchError) throw stockFetchError;
+
+      // Reduzir o estoque na tabela parts_inventory
+      const { error: stockError } = await supabase
+        .from('parts_inventory')
+        .update({
+          quantity: currentStock.quantity - reservation.quantity_reserved,
+          applied_at: new Date().toISOString(),
+        })
+        .eq('part_code', reservation.part_code);
+
+      if (stockError) throw stockError;
+
+      // Depois fazer o update da reserva
       const { error } = await supabase
         .from('parts_reservations')
         .update({
           reservation_status: 'applied',
           applied_at: new Date().toISOString(),
           applied_by: userId,
-          quantity_applied: supabase.rpc('get_reservation_quantity', { reservation_id: reservationId }),
+          quantity_applied: reservation.quantity_reserved,
         })
         .eq('id', reservationId);
 

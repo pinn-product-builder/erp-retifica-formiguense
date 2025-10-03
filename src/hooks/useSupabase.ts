@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
+import { Database } from '@/integrations/supabase/types';
 
 export interface Customer {
   id?: string;
@@ -140,7 +141,7 @@ export function useSupabase() {
         .insert({
           ...order,
           org_id: currentOrganization.id
-        } as any)
+        })
         .select()
         .single();
 
@@ -176,17 +177,19 @@ export function useSupabase() {
       if (uploadError) throw uploadError;
 
       // Save photo record in database
+      const photoData = {
+        order_id: orderId,
+        component: component || null,
+        workflow_step: workflowStep || null,
+        photo_type: photoType,
+        file_path: uploadData.path,
+        file_name: file.name,
+        uploaded_by: (await supabase.auth.getUser()).data.user?.id || null
+      };
+      
       const { data, error } = await supabase
         .from('order_photos')
-        .insert({
-          order_id: orderId,
-          component: component || null,
-          workflow_step: workflowStep || null,
-          photo_type: photoType,
-          file_path: uploadData.path,
-          file_name: file.name,
-          uploaded_by: (await supabase.auth.getUser()).data.user?.id || null
-        })
+        .insert(photoData as any)
         .select()
         .single();
 
@@ -207,9 +210,9 @@ export function useSupabase() {
         .from('orders')
         .select(`
           *,
-          customer:customers(*),
-          consultant:consultants(*),
-          engine:engines(*),
+          customers!inner(id, name, phone, email),
+          consultants!inner(id, name, email, phone),
+          engines(id, type, brand, model),
           order_workflow(*)
         `)
         .order('created_at', { ascending: false });

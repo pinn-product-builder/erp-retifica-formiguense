@@ -13,6 +13,7 @@ import { Plus, Edit, Trash2, Save, X, Settings, Clock, Shield, ArrowRight } from
 import { useWorkflowStatusConfig, WorkflowStatusConfig, StatusPrerequisite } from '@/hooks/useWorkflowStatusConfig';
 import { useWorkflowHistory } from '@/hooks/useWorkflowHistory';
 import { useToast } from '@/hooks/use-toast';
+import { useEngineComponents } from '@/hooks/useEngineComponents';
 
 export const WorkflowStatusConfigAdmin = () => {
   const {
@@ -28,6 +29,7 @@ export const WorkflowStatusConfigAdmin = () => {
     getStatusColors,
     fetchWorkflowStatuses
   } = useWorkflowStatusConfig();
+  const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
   const { toast } = useToast();
   
   const [editingStatus, setEditingStatus] = useState<WorkflowStatusConfig | null>(null);
@@ -907,11 +909,15 @@ export const WorkflowStatusConfigAdmin = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos os componentes</SelectItem>
-                    <SelectItem value="bloco">Bloco</SelectItem>
-                    <SelectItem value="eixo">Eixo</SelectItem>
-                    <SelectItem value="biela">Biela</SelectItem>
-                    <SelectItem value="comando">Comando</SelectItem>
-                    <SelectItem value="cabecote">Cabeçote</SelectItem>
+                    {componentsLoading ? (
+                      <SelectItem value="loading" disabled>Carregando componentes...</SelectItem>
+                    ) : (
+                      engineComponents.map((component) => (
+                        <SelectItem key={component.value} value={component.value}>
+                          {component.label}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

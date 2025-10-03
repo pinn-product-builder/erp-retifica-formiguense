@@ -146,11 +146,42 @@ export function useDetailedBudgets() {
     }
   };
 
+  // Verificar se já existe orçamento para o componente
+  const checkBudgetExists = async (orderId: string, component: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('detailed_budgets')
+        .select('id, budget_number, status')
+        .eq('order_id', orderId)
+        .eq('component', component as Database['public']['Enums']['engine_component'])
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        throw error;
+      }
+
+      return data; // Retorna o orçamento existente ou null
+    } catch (error) {
+      console.error('Erro ao verificar orçamento existente:', error);
+      return null;
+    }
+  };
+
   // Criar orçamento detalhado
   const createDetailedBudget = async (budgetData: Partial<DetailedBudget>) => {
     if (!orgId) {
       handleError(null, 'Organização não encontrada.');
       return null;
+    }
+
+    // Validar se já existe orçamento para este componente
+    if (budgetData.order_id && budgetData.component) {
+      const existingBudget = await checkBudgetExists(budgetData.order_id, budgetData.component);
+      
+      if (existingBudget) {
+        handleError(null, `Já existe um orçamento para o componente "${budgetData.component}" nesta ordem de serviço. Orçamento: ${existingBudget.budget_number} (Status: ${existingBudget.status})`);
+        return null;
+      }
     }
 
     try {
@@ -324,5 +355,6 @@ export function useDetailedBudgets() {
     approveBudget,
     getPendingBudgets,
     duplicateBudget,
+    checkBudgetExists
   };
 }

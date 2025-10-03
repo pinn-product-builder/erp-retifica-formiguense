@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import type { DetailedBudget } from '@/hooks/useDetailedBudgets';
+import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { MaskedInput } from '@/components/ui/masked-input';
 
 interface BudgetFormProps {
@@ -42,6 +43,7 @@ interface Part {
 export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProps) {
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
+  const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
 
   // Estados do formulário
   const [selectedOrderId, setSelectedOrderId] = useState<string>(orderId || budget?.order_id || '');
@@ -369,11 +371,15 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bloco">Bloco</SelectItem>
-                  <SelectItem value="cabecote">Cabeçote</SelectItem>
-                  <SelectItem value="eixo">Eixo</SelectItem>
-                  <SelectItem value="biela">Biela</SelectItem>
-                  <SelectItem value="comando">Comando</SelectItem>
+                  {componentsLoading ? (
+                    <SelectItem value="loading" disabled>Carregando componentes...</SelectItem>
+                  ) : (
+                    engineComponents.map((component) => (
+                      <SelectItem key={component.value} value={component.value}>
+                        {component.label}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

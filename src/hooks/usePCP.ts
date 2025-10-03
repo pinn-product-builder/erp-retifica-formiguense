@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
-
-export type EngineComponent = 'bloco' | 'eixo' | 'biela' | 'comando' | 'cabecote';
+import { EngineComponent } from '@/hooks/useEngineComponents';
 
 export interface ProductionSchedule {
   id: string;
