@@ -27,6 +27,9 @@ export function useBudgetPDF() {
         'approved': 'Aprovado',
         'rejected': 'Rejeitado',
         'partially_approved': 'Parcialmente Aprovado',
+        'draft': 'Rascunho',
+        'cancelled': 'Cancelado',
+        'expired': 'Expirado',
       };
       return labels[status] || status;
     };

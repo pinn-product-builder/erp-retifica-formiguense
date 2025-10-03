@@ -98,7 +98,7 @@ const Orcamentos = () => {
 
   const stats = {
     total: budgets.length,
-    pendentes: budgets.filter(b => b.status === 'draft').length,
+    rascunhos: budgets.filter(b => b.status === 'draft').length,
     aprovados: budgets.filter(b => b.status === 'approved').length,
     reprovados: budgets.filter(b => b.status === 'rejected').length,
     parciais: budgets.filter(b => b.status === 'partially_approved').length,
@@ -234,7 +234,7 @@ const Orcamentos = () => {
         />
         <StatCard
           title="Rascunhos"
-          value={stats.pendentes}
+          value={stats.rascunhos}
           icon={Clock}
           variant="warning"
         />
