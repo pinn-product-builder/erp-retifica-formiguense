@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -71,6 +71,7 @@ export const useUserManagement = () => {
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null); // userId sendo deletado
   const { currentOrganization, userRole } = useOrganization();
   const { user: currentUser } = useAuth();
+  const { toast } = useToast();
 
   // Buscar usuários da organização
   const fetchUsers = useCallback(async () => {
@@ -91,7 +92,7 @@ export const useUserManagement = () => {
       // Buscar informações básicas dos usuários
       const userIds = orgUsers?.map(u => u.user_id) || [];
       let userBasicInfo: Array<{ user_id: string; email: string; name: string }> = [];
-      
+
       // Buscar informações de super admin para filtrar usando RPC
       let superAdminIds: string[] = [];
       try {
@@ -102,7 +103,7 @@ export const useUserManagement = () => {
       } catch (error) {
         console.warn('Erro ao buscar super admins:', error);
       }
-      
+
       if (userIds.length > 0) {
         // Buscar dados da tabela user_basic_info (substitui profiles)
         try {
@@ -110,7 +111,7 @@ export const useUserManagement = () => {
             .from('user_basic_info')
             .select('user_id, email, name')
             .in('user_id', userIds);
-                
+
           if (!basicInfoError && basicInfoData) {
             userBasicInfo = basicInfoData.map(p => ({
               user_id: p.user_id || '',
@@ -141,7 +142,7 @@ export const useUserManagement = () => {
       // Transformar os dados para incluir informações do usuário
       const usersWithProfile = orgUsers?.map(orgUser => {
         const basicInfo = userBasicInfo.find(u => u.user_id === orgUser.user_id);
-        
+
         return {
           ...orgUser,
           user: {
@@ -154,7 +155,7 @@ export const useUserManagement = () => {
       }) || [];
 
       // Filtrar super admins da listagem de usuários da organização
-      const filteredUsers = usersWithProfile.filter(user => 
+      const filteredUsers = usersWithProfile.filter(user =>
         !superAdminIds.includes(user.user_id)
       );
 
@@ -162,8 +163,10 @@ export const useUserManagement = () => {
       setUsers(filteredUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
-      toast.error('Erro ao carregar usuários', {
-        description: 'Falha ao carregar usuários da organização'
+      toast({
+        title: 'Erro ao carregar usuários',
+        description: 'Falha ao carregar usuários da organização',
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);
@@ -178,12 +181,12 @@ export const useUserManagement = () => {
     setCreateLoading(true);
     try {
       console.log('🔍 Tentando criar usuário via Edge Function:', userData);
-      
+
       // Gerar senha temporária padrão
       const tempPassword = 'RetificaTemp2024!';
 
       // Chamar a Edge Function para criar o usuário sem fazer login automático
-      const { data, error } = await supabase.functions.invoke('create-user-admin', {
+      const { data, error,response } = await supabase.functions.invoke('create-user-admin', {
         body: {
           email: userData.email,
           name: userData.name,
@@ -195,7 +198,18 @@ export const useUserManagement = () => {
         }
       });
 
+        console.error("Status:", response)
       if (error) {
+        if (response.status === 422) {
+          console.log(' EXIBINDO TOAST DE USUÁRIO JÁ EXISTS');
+          toast({
+            title: 'Usuário já cadastrado',
+            description: 'Este email já está cadastrado no sistema.',
+            variant: 'destructive'
+          });
+          console.log('✅ Toast exibido, retornando false');
+          return false;
+        }
         console.error('Error from create-user-admin function:', error);
         throw error;
       }
@@ -204,30 +218,23 @@ export const useUserManagement = () => {
         console.log('🔴 ERRO RETORNADO PELA EDGE FUNCTION:');
         console.log('- Error:', data.error);
         console.log('- Message:', data.message);
-        
-        // Verificar se é usuário já existente
-        if (data.error === 'user_already_exists') {
-          console.log('🚨 EXIBINDO TOAST DE USUÁRIO JÁ EXISTS');
-          toast.error('Usuário já cadastrado', {
-            description: 'Este email já está cadastrado no sistema.'
-          });
-          console.log('✅ Toast exibido, retornando false');
-          return false;
-        }
-        
+
+
         // Para outros erros
         console.log('🚨 EXIBINDO TOAST DE ERRO GENÉRICO');
-        toast.error('Erro ao criar usuário', {
-          description: data.message || 'Falha ao criar usuário. Tente novamente.'
+        toast({
+          title: 'Erro ao criar usuário',
+          description: data.message || 'Falha ao criar usuário. Tente novamente.',
+          variant: 'destructive'
         });
         console.log('✅ Toast de erro genérico exibido, retornando false');
         return false;
       }
 
       console.log('🎉 USUÁRIO CRIADO COM SUCESSO - EXIBINDO TOAST');
-      toast.success('Usuário criado com sucesso', {
+      toast({
+        title: 'Usuário criado com sucesso',
         description: `${userData.name} foi adicionado à organização. Senha temporária: ${tempPassword} (será solicitada alteração no primeiro login)`,
-        duration: 8000, // 8 segundos para dar tempo de copiar
       });
       console.log('✅ Toast de sucesso exibido');
 
@@ -237,9 +244,22 @@ export const useUserManagement = () => {
       console.log('✅ Lista de usuários atualizada - retornando true');
       return true;
     } catch (error: unknown) {
+
+      if (error instanceof Error && error.message === 'user_already_exists') {
+        console.log('🚨 EXIBINDO TOAST DE USUÁRIO JÁ EXISTS');
+        toast({
+          title: 'Usuário já cadastrado',
+          description: 'Este email já está cadastrado no sistema.',
+          variant: 'destructive'
+        });
+        console.log('✅ Toast exibido, retornando false');
+        return false;
+      }
       console.error('Error creating user:', error);
-      toast.error('Erro ao criar usuário', {
-        description: error instanceof Error ? error.message : 'Falha ao criar usuário'
+      toast({
+        title: 'Erro ao criar usuário',
+        description: error instanceof Error ? error.message : 'Falha ao criar usuário',
+        variant: 'destructive'
       });
       return false;
     } finally {
@@ -250,18 +270,22 @@ export const useUserManagement = () => {
   // Atualizar role do usuário
   const updateUserRole = async (userId: string, newRole: AppRole): Promise<boolean> => {
     if (!currentOrganization?.id) return false;
-    
+
     // Verificar se o usuário está tentando alterar sua própria role
     if (currentUser?.id === userId) {
-      toast.error('Ação não permitida', {
-        description: 'Você não pode alterar sua própria role.'
+      toast({
+        title: 'Ação não permitida',
+        description: 'Você não pode alterar sua própria role.',
+        variant: 'destructive'
       });
       return false;
     }
-    
+
     if (!canEditUser(userId)) {
-      toast.error('Acesso Negado', {
-        description: 'Você não tem permissão para alterar a role deste usuário.'
+      toast({
+        title: 'Acesso Negado',
+        description: 'Você não tem permissão para alterar a role deste usuário.',
+        variant: 'destructive'
       });
       return false;
     }
@@ -269,7 +293,7 @@ export const useUserManagement = () => {
     try {
       const { error } = await supabase
         .from('organization_users')
-        .update({ 
+        .update({
           role: newRole,
           updated_at: new Date().toISOString()
         })
@@ -278,7 +302,8 @@ export const useUserManagement = () => {
 
       if (error) throw error;
 
-      toast.success('Role atualizado', {
+      toast({
+        title: 'Role atualizado',
         description: `Role do usuário foi alterado para ${newRole}`
       });
 
@@ -286,8 +311,10 @@ export const useUserManagement = () => {
       return true;
     } catch (error: unknown) {
       console.error('Error updating user role:', error);
-      toast.error('Erro ao atualizar role', {
-        description: error instanceof Error ? error.message : 'Falha ao atualizar role do usuário'
+      toast({
+        title: 'Erro ao atualizar role',
+        description: error instanceof Error ? error.message : 'Falha ao atualizar role do usuário',
+        variant: 'destructive'
       });
       return false;
     }
@@ -296,18 +323,22 @@ export const useUserManagement = () => {
   // Ativar/desativar usuário
   const toggleUserStatus = async (userId: string, isActive: boolean): Promise<boolean> => {
     if (!currentOrganization?.id) return false;
-    
+
     // Verificar se o usuário está tentando desativar a si mesmo
     if (currentUser?.id === userId && !isActive) {
-      toast.error('Ação não permitida', {
-        description: 'Você não pode desativar sua própria conta.'
+      toast({
+        title: 'Ação não permitida',
+        description: 'Você não pode desativar sua própria conta.',
+        variant: 'destructive'
       });
       return false;
     }
-    
+
     if (!canEditUser(userId)) {
-      toast.error('Acesso Negado', {
-        description: 'Você não tem permissão para alterar o status deste usuário.'
+      toast({
+        title: 'Acesso Negado',
+        description: 'Você não tem permissão para alterar o status deste usuário.',
+        variant: 'destructive'
       });
       return false;
     }
@@ -315,7 +346,7 @@ export const useUserManagement = () => {
     try {
       const { error } = await supabase
         .from('organization_users')
-        .update({ 
+        .update({
           is_active: isActive,
           updated_at: new Date().toISOString()
         })
@@ -324,7 +355,8 @@ export const useUserManagement = () => {
 
       if (error) throw error;
 
-      toast.success(isActive ? 'Usuário ativado' : 'Usuário desativado', {
+      toast({
+        title: isActive ? 'Usuário ativado' : 'Usuário desativado',
         description: `Usuário foi ${isActive ? 'ativado' : 'desativado'} com sucesso`
       });
 
@@ -332,8 +364,10 @@ export const useUserManagement = () => {
       return true;
     } catch (error: unknown) {
       console.error('Error toggling user status:', error);
-      toast.error('Erro ao alterar status', {
-        description: error instanceof Error ? error.message : 'Falha ao alterar status do usuário'
+      toast({
+        title: 'Erro ao alterar status',
+        description: error instanceof Error ? error.message : 'Falha ao alterar status do usuário',
+        variant: 'destructive'
       });
       return false;
     }
@@ -342,18 +376,22 @@ export const useUserManagement = () => {
   // Remover usuário completamente (da organização e do sistema)
   const removeUser = async (userId: string): Promise<boolean> => {
     if (!currentOrganization?.id) return false;
-    
+
     // Verificar se o usuário está tentando remover a si mesmo
     if (currentUser?.id === userId) {
-      toast.error('Ação não permitida', {
-        description: 'Você não pode remover sua própria conta.'
+      toast({
+        title: 'Ação não permitida',
+        description: 'Você não pode remover sua própria conta.',
+        variant: 'destructive'
       });
       return false;
     }
-    
+
     if (!canEditUser(userId)) {
-      toast.error('Acesso Negado', {
-        description: 'Você não tem permissão para remover este usuário.'
+      toast({
+        title: 'Acesso Negado',
+        description: 'Você não tem permissão para remover este usuário.',
+        variant: 'destructive'
       });
       return false;
     }
@@ -363,7 +401,7 @@ export const useUserManagement = () => {
 
     try {
       console.log('🗑️ Iniciando remoção de usuário:', userId);
-      
+
       // Chamar a Edge Function para deletar o usuário completamente
       const { data, error } = await supabase.functions.invoke('delete-user', {
         body: {
@@ -385,11 +423,13 @@ export const useUserManagement = () => {
 
       // Mostrar toast apropriado baseado no resultado
       if (data.deletedCompletely) {
-        toast.success('Usuário removido completamente', {
+        toast({
+          title: 'Usuário removido completamente',
           description: 'Usuário foi removido completamente do sistema.'
         });
       } else {
-        toast.success('Usuário removido da organização', {
+        toast({
+          title: 'Usuário removido da organização',
           description: 'Usuário foi removido desta organização mas permanece em outras.'
         });
       }
@@ -399,8 +439,10 @@ export const useUserManagement = () => {
       return true;
     } catch (error: unknown) {
       console.error('Error removing user:', error);
-      toast.error('Erro ao remover usuário', {
-        description: error instanceof Error ? error.message : 'Falha ao remover usuário'
+      toast({
+        title: 'Erro ao remover usuário',
+        description: error instanceof Error ? error.message : 'Falha ao remover usuário',
+        variant: 'destructive'
       });
       return false;
     } finally {
@@ -423,20 +465,20 @@ export const useUserManagement = () => {
   // Verificar se pode editar um usuário específico
   const canEditUser = (targetUserId: string): boolean => {
     if (!canManageUsers()) return false;
-    
+
     // Não pode editar a si mesmo
     if (isSelfUser(targetUserId)) return false;
-    
+
     // Buscar o usuário alvo para verificar sua role
     const targetUser = users.find(u => u.user_id === targetUserId);
     if (!targetUser) return false;
-    
+
     // Owner pode editar qualquer um (exceto a si mesmo, já verificado acima)
     if (userRole === 'owner') return true;
-    
+
     // Admin pode editar todos exceto owner
     if (userRole === 'admin' && targetUser.role !== 'owner') return true;
-    
+
     return false;
   };
 
@@ -453,19 +495,19 @@ export const useUserManagement = () => {
     loading,
     createLoading,
     deleteLoading,
-    
+
     // Ações
     fetchUsers,
     createUser,
     updateUserRole,
     toggleUserStatus,
     removeUser,
-    
+
     // Verificações de permissão
     canManageUsers,
     canEditUser,
     isSelfUser,
-    
+
     // Dados da organização
     currentOrganization,
     userRole
