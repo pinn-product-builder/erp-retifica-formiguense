@@ -149,7 +149,7 @@ export type Database = {
             foreignKeyName: "accounts_receivable_budget_id_fkey"
             columns: ["budget_id"]
             isOneToOne: false
-            referencedRelation: "budgets"
+            referencedRelation: "detailed_budgets"
             referencedColumns: ["id"]
           },
           {
@@ -368,6 +368,7 @@ export type Database = {
           budget_id: string | null
           customer_signature: string | null
           id: string
+          org_id: string | null
           registered_by: string | null
         }
         Insert: {
@@ -383,6 +384,7 @@ export type Database = {
           budget_id?: string | null
           customer_signature?: string | null
           id?: string
+          org_id?: string | null
           registered_by?: string | null
         }
         Update: {
@@ -398,6 +400,7 @@ export type Database = {
           budget_id?: string | null
           customer_signature?: string | null
           id?: string
+          org_id?: string | null
           registered_by?: string | null
         }
         Relationships: [
@@ -406,6 +409,13 @@ export type Database = {
             columns: ["budget_id"]
             isOneToOne: false
             referencedRelation: "detailed_budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_approvals_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -772,7 +782,7 @@ export type Database = {
           email: string | null
           id: string
           name: string
-          org_id: string | null
+          org_id: string
           phone: string
           type: Database["public"]["Enums"]["customer_type"]
           updated_at: string
@@ -788,7 +798,7 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
-          org_id?: string | null
+          org_id: string
           phone: string
           type: Database["public"]["Enums"]["customer_type"]
           updated_at?: string
@@ -804,7 +814,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
-          org_id?: string | null
+          org_id?: string
           phone?: string
           type?: Database["public"]["Enums"]["customer_type"]
           updated_at?: string
@@ -872,6 +882,7 @@ export type Database = {
           labor_rate: number | null
           labor_total: number | null
           order_id: string | null
+          org_id: string | null
           parts: Json
           parts_total: number | null
           services: Json
@@ -895,6 +906,7 @@ export type Database = {
           labor_rate?: number | null
           labor_total?: number | null
           order_id?: string | null
+          org_id?: string | null
           parts?: Json
           parts_total?: number | null
           services?: Json
@@ -918,6 +930,7 @@ export type Database = {
           labor_rate?: number | null
           labor_total?: number | null
           order_id?: string | null
+          org_id?: string | null
           parts?: Json
           parts_total?: number | null
           services?: Json
@@ -941,6 +954,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "detailed_budgets_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1006,6 +1026,7 @@ export type Database = {
           generated_services: Json | null
           id: string
           order_id: string | null
+          org_id: string | null
           photos: Json | null
           responses: Json
           status: string | null
@@ -1020,6 +1041,7 @@ export type Database = {
           generated_services?: Json | null
           id?: string
           order_id?: string | null
+          org_id?: string | null
           photos?: Json | null
           responses?: Json
           status?: string | null
@@ -1034,6 +1056,7 @@ export type Database = {
           generated_services?: Json | null
           id?: string
           order_id?: string | null
+          org_id?: string | null
           photos?: Json | null
           responses?: Json
           status?: string | null
@@ -1051,6 +1074,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diagnostic_checklist_responses_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -2469,7 +2499,7 @@ export type Database = {
           id: string
           initial_observations: string | null
           order_number: string
-          org_id: string | null
+          org_id: string
           priority: number | null
           status: Database["public"]["Enums"]["order_status"] | null
           updated_at: string
@@ -2490,8 +2520,8 @@ export type Database = {
           final_observations?: string | null
           id?: string
           initial_observations?: string | null
-          order_number?: string
-          org_id?: string | null
+          order_number: string
+          org_id: string
           priority?: number | null
           status?: Database["public"]["Enums"]["order_status"] | null
           updated_at?: string
@@ -2513,7 +2543,7 @@ export type Database = {
           id?: string
           initial_observations?: string | null
           order_number?: string
-          org_id?: string | null
+          org_id?: string
           priority?: number | null
           status?: Database["public"]["Enums"]["order_status"] | null
           updated_at?: string
@@ -2603,6 +2633,7 @@ export type Database = {
           created_by: string
           description: string | null
           id: string
+          is_active: boolean
           name: string
           settings: Json | null
           slug: string
@@ -2613,6 +2644,7 @@ export type Database = {
           created_by: string
           description?: string | null
           id?: string
+          is_active?: boolean
           name: string
           settings?: Json | null
           slug: string
@@ -2623,6 +2655,7 @@ export type Database = {
           created_by?: string
           description?: string | null
           id?: string
+          is_active?: boolean
           name?: string
           settings?: Json | null
           slug?: string
@@ -3105,7 +3138,7 @@ export type Database = {
           id: string
           notes: string | null
           order_id: string
-          org_id: string | null
+          org_id: string
           planned_end_date: string
           planned_start_date: string
           priority: number | null
@@ -3123,7 +3156,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_id: string
-          org_id?: string | null
+          org_id: string
           planned_end_date: string
           planned_start_date: string
           priority?: number | null
@@ -3141,7 +3174,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_id?: string
-          org_id?: string | null
+          org_id?: string
           planned_end_date?: string
           planned_start_date?: string
           priority?: number | null
@@ -4266,7 +4299,7 @@ export type Database = {
           maximum_stock: number | null
           minimum_stock: number
           org_id: string | null
-          part_code: string
+          part_code: string | null
           part_name: string
           resolved_at: string | null
         }
@@ -4282,7 +4315,7 @@ export type Database = {
           maximum_stock?: number | null
           minimum_stock: number
           org_id?: string | null
-          part_code: string
+          part_code?: string | null
           part_name: string
           resolved_at?: string | null
         }
@@ -4298,7 +4331,7 @@ export type Database = {
           maximum_stock?: number | null
           minimum_stock?: number
           org_id?: string | null
-          part_code?: string
+          part_code?: string | null
           part_name?: string
           resolved_at?: string | null
         }
@@ -4467,7 +4500,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
-          org_id: string | null
+          org_id: string
           payment_terms: string | null
           phone: string | null
           rating: number | null
@@ -4483,7 +4516,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
-          org_id?: string | null
+          org_id: string
           payment_terms?: string | null
           phone?: string | null
           rating?: number | null
@@ -4499,7 +4532,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
-          org_id?: string | null
+          org_id?: string
           payment_terms?: string | null
           phone?: string | null
           rating?: number | null
@@ -5903,6 +5936,13 @@ export type Database = {
             referencedRelation: "order_workflow"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "workflow_checklist_responses_order_workflow_id_fkey"
+            columns: ["order_workflow_id"]
+            isOneToOne: false
+            referencedRelation: "v_workflows_with_pending_checklists"
+            referencedColumns: ["workflow_id"]
+          },
         ]
       }
       workflow_checklists: {
@@ -6039,6 +6079,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "workflow_status_history_order_workflow_id_fkey"
+            columns: ["order_workflow_id"]
+            isOneToOne: false
+            referencedRelation: "v_workflows_with_pending_checklists"
+            referencedColumns: ["workflow_id"]
+          },
+          {
             foreignKeyName: "workflow_status_history_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
@@ -6111,12 +6158,48 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_workflows_with_pending_checklists: {
+        Row: {
+          component: Database["public"]["Enums"]["engine_component"] | null
+          missing_checklists: Json | null
+          order_id: string | null
+          order_number: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["workflow_status"] | null
+          workflow_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_workflow_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       can_manage_organizations: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      can_workflow_advance: {
+        Args: { p_workflow_id: string }
+        Returns: Json
+      }
+      create_notification: {
+        Args: {
+          p_action_url?: string
+          p_message: string
+          p_metadata?: Json
+          p_notification_type_id: string
+          p_org_id: string
+          p_severity?: string
+          p_title: string
+          p_user_id: string
+        }
+        Returns: string
       }
       current_org_id: {
         Args: Record<PropertyKey, never>
@@ -6156,6 +6239,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_enum_values: {
+        Args: { enum_name: string }
+        Returns: string[]
+      }
       get_organization_users_info: {
         Args: { org_id: string }
         Returns: {
@@ -6163,6 +6250,19 @@ export type Database = {
           email: string
           name: string
           user_id: string
+        }[]
+      }
+      get_workflows_pending_checklists: {
+        Args: { p_org_id: string }
+        Returns: {
+          component: string
+          created_at: string
+          id: string
+          missing_checklist: string
+          order_id: string
+          order_number: string
+          started_at: string
+          status: string
         }[]
       }
       has_org_role: {
@@ -6188,6 +6288,22 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      mark_all_notifications_as_read: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: number
+      }
+      mark_notification_as_read: {
+        Args: { p_notification_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      notify_workflow_blocked_by_checklist: {
+        Args: {
+          p_checklist_name: string
+          p_order_number: string
+          p_workflow_id: string
+        }
+        Returns: undefined
+      }
       promote_user_to_super_admin: {
         Args: { user_id: string }
         Returns: boolean
@@ -6210,7 +6326,14 @@ export type Database = {
       budget_status: "pendente" | "aprovado" | "reprovado" | "em_producao"
       classification_type: "produto" | "servico"
       customer_type: "oficina" | "direto"
-      engine_component: "bloco" | "eixo" | "biela" | "comando" | "cabecote"
+      engine_component:
+        | "bloco"
+        | "eixo"
+        | "biela"
+        | "comando"
+        | "cabecote"
+        | "virabrequim"
+        | "pistao"
       expense_category:
         | "fixed"
         | "variable"
@@ -6222,7 +6345,14 @@ export type Database = {
       filing_status: "rascunho" | "gerado" | "validado" | "enviado" | "erro"
       jurisdiction: "federal" | "estadual" | "municipal"
       operation_type: "venda" | "compra" | "prestacao_servico"
-      order_status: "ativa" | "concluida" | "cancelada"
+      order_status:
+        | "ativa"
+        | "concluida"
+        | "cancelada"
+        | "entregue"
+        | "pendente"
+        | "em_andamento"
+        | "aguardando_aprovacao"
       payment_method:
         | "cash"
         | "pix"
@@ -6386,7 +6516,15 @@ export const Constants = {
       budget_status: ["pendente", "aprovado", "reprovado", "em_producao"],
       classification_type: ["produto", "servico"],
       customer_type: ["oficina", "direto"],
-      engine_component: ["bloco", "eixo", "biela", "comando", "cabecote"],
+      engine_component: [
+        "bloco",
+        "eixo",
+        "biela",
+        "comando",
+        "cabecote",
+        "virabrequim",
+        "pistao",
+      ],
       expense_category: [
         "fixed",
         "variable",
@@ -6399,7 +6537,15 @@ export const Constants = {
       filing_status: ["rascunho", "gerado", "validado", "enviado", "erro"],
       jurisdiction: ["federal", "estadual", "municipal"],
       operation_type: ["venda", "compra", "prestacao_servico"],
-      order_status: ["ativa", "concluida", "cancelada"],
+      order_status: [
+        "ativa",
+        "concluida",
+        "cancelada",
+        "entregue",
+        "pendente",
+        "em_andamento",
+        "aguardando_aprovacao",
+      ],
       payment_method: [
         "cash",
         "pix",
