@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, FileText, BarChart3 } from 'lucide-react';
+import { Plus, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { OrdersList } from '@/components/orders/OrdersList';
@@ -56,11 +56,6 @@ export default function OrdensServico() {
         </div>
         
         <div className="flex items-center gap-3">
-          <Button variant="outline">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Relatórios
-          </Button>
-          
           <Button onClick={() => navigate('/coleta')}>
             <Plus className="h-4 w-4 mr-2" />
             Nova OS
