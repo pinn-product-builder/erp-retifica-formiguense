@@ -15,7 +15,8 @@ import {
   Package,
   Shield,
   FileText,
-  Camera
+  Camera,
+  Printer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Order, useOrders } from '@/hooks/useOrders';
+import { usePrintOrder } from '@/hooks/usePrintOrder';
 import { OrderTimeline } from './OrderTimeline';
 import { OrderPhotosTab } from './OrderPhotosTab';
 import { OrderMaterialsTab } from './OrderMaterialsTab';
@@ -65,6 +67,7 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const { fetchOrderDetails } = useOrders();
+  const { printOrder } = usePrintOrder();
 
   useEffect(() => {
     const loadOrderDetails = async () => {
@@ -140,6 +143,15 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
           <Badge variant="outline">
             Prioridade {PRIORITY_LABELS[order.priority as keyof typeof PRIORITY_LABELS]}
           </Badge>
+          
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={() => printOrder(order)}
+          >
+            <Printer className="h-4 w-4 mr-2" />
+            Imprimir
+          </Button>
           
           {onEdit && (
             <Button size="sm" onClick={() => onEdit(order)}>

@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Order } from '@/hooks/useOrders';
+import { usePrintOrder } from '@/hooks/usePrintOrder';
 
 interface OrdersListProps {
   orders: Order[];
@@ -60,6 +61,7 @@ const PRIORITY_LABELS = {
 };
 
 export function OrdersList({ orders, loading, onViewOrder, onEditOrder }: OrdersListProps) {
+  const { printOrder } = usePrintOrder();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
@@ -271,6 +273,7 @@ export function OrdersList({ orders, loading, onViewOrder, onEditOrder }: Orders
                     <Button
                       size="sm"
                       variant="outline"
+                      onClick={() => printOrder(order)}
                     >
                       <Printer className="h-4 w-4 mr-2" />
                       Imprimir
