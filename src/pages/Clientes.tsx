@@ -34,8 +34,12 @@ const Clientes = () => {
   });
   
   const [errors, setErrors] = useState({
+    name: '',
     document: '',
     phone: '',
+    email: '',
+    address: '',
+    workshop_name: '',
     workshop_cnpj: '',
     workshop_contact: ''
   });
@@ -72,6 +76,16 @@ const Clientes = () => {
       workshop_cnpj: '',
       workshop_contact: ''
     });
+    setErrors({
+      name: '',
+      document: '',
+      phone: '',
+      email: '',
+      address: '',
+      workshop_name: '',
+      workshop_cnpj: '',
+      workshop_contact: ''
+    });
     setEditingClient(null);
   };
 
@@ -91,13 +105,80 @@ const Clientes = () => {
     setIsDialogOpen(true);
   };
 
+  const validateForm = () => {
+    const newErrors = {
+      name: '',
+      document: '',
+      phone: '',
+      email: '',
+      address: '',
+      workshop_name: '',
+      workshop_cnpj: '',
+      workshop_contact: ''
+    };
+
+    // Validar nome
+    if (!formData.name.trim()) {
+      newErrors.name = 'Nome é obrigatório';
+    } else if (formData.name.length < 2) {
+      newErrors.name = 'Nome deve ter pelo menos 2 caracteres';
+    } else if (formData.name.length > 50) {
+      newErrors.name = 'Nome deve ter no máximo 50 caracteres';
+    }
+
+    // Validar documento
+    if (!formData.document.trim()) {
+      newErrors.document = 'Documento é obrigatório';
+    }
+
+    // Validar telefone (se preenchido)
+    if (formData.phone && formData.phone.length > 0) {
+      if (formData.phone.length < 10) {
+        newErrors.phone = 'Telefone deve ter pelo menos 10 dígitos';
+      } else if (formData.phone.length > 11) {
+        newErrors.phone = 'Telefone deve ter no máximo 11 dígitos';
+      }
+    }
+
+    // Validar email (se preenchido)
+    if (formData.email && formData.email.length > 0) {
+      if (formData.email.length > 50) {
+        newErrors.email = 'E-mail deve ter no máximo 50 caracteres';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = 'E-mail inválido';
+      }
+    }
+
+    // Validar endereço (se preenchido)
+    if (formData.address && formData.address.length > 200) {
+      newErrors.address = 'Endereço deve ter no máximo 200 caracteres';
+    }
+
+    // Validar nome da oficina (se preenchido)
+    if (formData.workshop_name && formData.workshop_name.length > 50) {
+      newErrors.workshop_name = 'Nome da oficina deve ter no máximo 50 caracteres';
+    }
+
+    // Validar telefone da oficina (se preenchido)
+    if (formData.workshop_contact && formData.workshop_contact.length > 0) {
+      if (formData.workshop_contact.length < 10) {
+        newErrors.workshop_contact = 'Telefone da oficina deve ter pelo menos 10 dígitos';
+      } else if (formData.workshop_contact.length > 11) {
+        newErrors.workshop_contact = 'Telefone da oficina deve ter no máximo 11 dígitos';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.values(newErrors).every(error => error === '');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.document) {
+    if (!validateForm()) {
       toast({
-        title: "Erro",
-        description: "Nome e documento são obrigatórios",
+        title: "Erro de Validação",
+        description: "Por favor, corrija os erros nos campos destacados",
         variant: "destructive"
       });
       return;
@@ -176,10 +257,21 @@ const Clientes = () => {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => {
+                    const value = e.target.value.slice(0, 50); // Truncar para máximo 50 caracteres
+                    setFormData(prev => ({ ...prev, name: value }));
+                    if (errors.name) {
+                      setErrors(prev => ({ ...prev, name: '' }));
+                    }
+                  }}
                   placeholder="Nome completo ou razão social"
+                  className={errors.name ? 'border-red-500' : ''}
+                  maxLength={50}
                   required
                 />
+                {errors.name && (
+                  <p className="text-sm text-red-500 mt-1">{errors.name}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="type">Tipo de Cliente *</Label>
@@ -245,18 +337,40 @@ const Clientes = () => {
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) => {
+                    const value = e.target.value.slice(0, 50); // Truncar para máximo 50 caracteres
+                    setFormData(prev => ({ ...prev, email: value }));
+                    if (errors.email) {
+                      setErrors(prev => ({ ...prev, email: '' }));
+                    }
+                  }}
                   placeholder="cliente@email.com"
+                  className={errors.email ? 'border-red-500' : ''}
+                  maxLength={50}
                 />
+                {errors.email && (
+                  <p className="text-sm text-red-500 mt-1">{errors.email}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="address">Endereço</Label>
                 <Input
                   id="address"
                   value={formData.address}
-                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                  onChange={(e) => {
+                    const value = e.target.value.slice(0, 200); // Truncar para máximo 200 caracteres
+                    setFormData(prev => ({ ...prev, address: value }));
+                    if (errors.address) {
+                      setErrors(prev => ({ ...prev, address: '' }));
+                    }
+                  }}
                   placeholder="Endereço completo"
+                  className={errors.address ? 'border-red-500' : ''}
+                  maxLength={200}
                 />
+                {errors.address && (
+                  <p className="text-sm text-red-500 mt-1">{errors.address}</p>
+                )}
               </div>
               
               {/* Campos específicos para oficina */}
@@ -267,9 +381,20 @@ const Clientes = () => {
                     <Input
                       id="workshop_name"
                       value={formData.workshop_name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, workshop_name: e.target.value }))}
+                      onChange={(e) => {
+                        const value = e.target.value.slice(0, 50); // Truncar para máximo 50 caracteres
+                        setFormData(prev => ({ ...prev, workshop_name: value }));
+                        if (errors.workshop_name) {
+                          setErrors(prev => ({ ...prev, workshop_name: '' }));
+                        }
+                      }}
                       placeholder="Nome da oficina"
+                      className={errors.workshop_name ? 'border-red-500' : ''}
+                      maxLength={50}
                     />
+                    {errors.workshop_name && (
+                      <p className="text-sm text-red-500 mt-1">{errors.workshop_name}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="workshop_cnpj">CNPJ da Oficina</Label>

@@ -29,7 +29,9 @@ const Consultores = () => {
   });
   
   const [errors, setErrors] = useState({
-    phone: ''
+    name: '',
+    phone: '',
+    email: ''
   });
 
   const { consultants, loading, fetchConsultants, createConsultant, updateConsultant, deleteConsultant, toggleConsultantStatus } = useConsultants();
@@ -61,7 +63,9 @@ const Consultores = () => {
       is_active: true
     });
     setErrors({
-      phone: ''
+      name: '',
+      phone: '',
+      email: ''
     });
     setEditingConsultant(null);
   };
@@ -78,27 +82,51 @@ const Consultores = () => {
     setIsDialogOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name) {
-      toast({
-        title: "Erro",
-        description: "Nome é obrigatório",
-        variant: "destructive"
-      });
-      return;
+  const validateForm = () => {
+    const newErrors = {
+      name: '',
+      phone: '',
+      email: ''
+    };
+
+    // Validar nome
+    if (!formData.name.trim()) {
+      newErrors.name = 'Nome é obrigatório';
+    } else if (formData.name.length < 2) {
+      newErrors.name = 'Nome deve ter pelo menos 2 caracteres';
+    } else if (formData.name.length > 50) {
+      newErrors.name = 'Nome deve ter no máximo 50 caracteres';
     }
 
     // Validar telefone (se preenchido)
-    if (formData.phone && !validatePhone(formData.phone)) {
-      setErrors(prev => ({ 
-        ...prev, 
-        phone: getPhoneErrorMessage(formData.phone) 
-      }));
+    if (formData.phone && formData.phone.length > 0) {
+      if (formData.phone.length < 10) {
+        newErrors.phone = 'Telefone deve ter pelo menos 10 dígitos';
+      } else if (formData.phone.length > 11) {
+        newErrors.phone = 'Telefone deve ter no máximo 11 dígitos';
+      }
+    }
+
+    // Validar email (se preenchido)
+    if (formData.email && formData.email.length > 0) {
+      if (formData.email.length > 50) {
+        newErrors.email = 'E-mail deve ter no máximo 50 caracteres';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = 'E-mail inválido';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.values(newErrors).every(error => error === '');
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
       toast({
         title: "Erro de Validação",
-        description: getPhoneErrorMessage(formData.phone),
+        description: "Por favor, corrija os erros nos campos destacados",
         variant: "destructive"
       });
       return;
@@ -198,10 +226,21 @@ const Consultores = () => {
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => {
+                    const value = e.target.value.slice(0, 50); // Truncar para máximo 50 caracteres
+                    setFormData(prev => ({ ...prev, name: value }));
+                    if (errors.name) {
+                      setErrors(prev => ({ ...prev, name: '' }));
+                    }
+                  }}
                   placeholder="Nome completo do consultor"
+                  className={errors.name ? 'border-red-500' : ''}
+                  maxLength={50}
                   required
                 />
+                {errors.name && (
+                  <p className="text-sm text-red-500 mt-1">{errors.name}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="phone">Telefone</Label>
@@ -228,9 +267,20 @@ const Consultores = () => {
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) => {
+                    const value = e.target.value.slice(0, 50); // Truncar para máximo 50 caracteres
+                    setFormData(prev => ({ ...prev, email: value }));
+                    if (errors.email) {
+                      setErrors(prev => ({ ...prev, email: '' }));
+                    }
+                  }}
                   placeholder="consultor@email.com"
+                  className={errors.email ? 'border-red-500' : ''}
+                  maxLength={50}
                 />
+                {errors.email && (
+                  <p className="text-sm text-red-500 mt-1">{errors.email}</p>
+                )}
               </div>
               <div>
                 <Label htmlFor="commission_rate">Taxa de Comissão (%)</Label>
