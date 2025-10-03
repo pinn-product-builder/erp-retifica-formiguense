@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -32,10 +34,17 @@ import {
   Unlink,
   ChevronDown,
   ChevronRight,
-  Eye
+  Eye,
+  Plus,
+  Edit,
+  Trash2,
+  Save,
+  X,
+  Loader2,
+  RotateCcw
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useSuperAdmin } from '@/hooks/useSuperAdmin';
+import { useSuperAdmin, useSuperAdminActions } from '@/hooks/useSuperAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { Navigate } from 'react-router-dom';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -69,8 +78,15 @@ interface Organization {
   name: string;
   slug: string;
   description?: string;
+  is_active: boolean;
   created_at: string;
   created_by: string;
+  organization_users?: Array<{
+    id: string;
+    user_id: string;
+    role: string;
+    profiles: { name: string } | null;
+  }>;
   _count?: {
     users: number;
   };
@@ -105,6 +121,14 @@ interface UserOrgLinkForm {
 const SuperAdmin: React.FC = () => {
   const { user: currentUser } = useAuth();
   const { isSuperAdmin, loading: superAdminLoading } = useSuperAdmin();
+  const { 
+    loading: actionsLoading, 
+    getAllOrganizations,
+    createOrganization, 
+    updateOrganization, 
+    deleteOrganization,
+    reactivateOrganization
+  } = useSuperAdminActions();
   const { isMobile, padding, layout, componentSize, gridCols, textSize } = useResponsive();
   
   const [users, setUsers] = useState<UserWithOrganizations[]>([]);
@@ -125,6 +149,22 @@ const SuperAdmin: React.FC = () => {
     organizationId: '',
     role: 'user'
   });
+
+  // Estados para CRUD de organizações
+  const [orgDialog, setOrgDialog] = useState(false);
+  const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
+  const [orgForm, setOrgForm] = useState({
+    name: '',
+    slug: '',
+    description: ''
+  });
+  const [orgFormErrors, setOrgFormErrors] = useState({
+    name: '',
+    slug: '',
+    description: ''
+  });
+  const [deletingOrgId, setDeletingOrgId] = useState<string | null>(null);
+  const [showInactiveOrgs, setShowInactiveOrgs] = useState(false);
   const [linkLoading, setLinkLoading] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
@@ -236,25 +276,8 @@ const SuperAdmin: React.FC = () => {
   };
 
   const fetchOrganizations = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('organizations')
-        .select(`
-          id,
-          name,
-          slug,
-          description,
-          created_at,
-          created_by
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setOrganizations(data || []);
-    } catch (error) {
-      console.error('Error fetching organizations:', error);
-      toast.error('Erro ao carregar organizações');
-    }
+    const orgs = await getAllOrganizations(showInactiveOrgs);
+    setOrganizations(orgs as unknown as Organization[]);
   };
 
   const handleLinkUserToOrganization = async () => {
@@ -350,8 +373,15 @@ const SuperAdmin: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
-    fetchOrganizations();
   }, []);
+
+  useEffect(() => {
+    const loadOrganizations = async () => {
+      const orgs = await getAllOrganizations(showInactiveOrgs);
+      setOrganizations(orgs as unknown as Organization[]);
+    };
+    loadOrganizations();
+  }, [getAllOrganizations, showInactiveOrgs]);
 
   const filteredUsers = users.filter(user => 
     // Remover super admins da listagem de usuários normais
@@ -362,6 +392,121 @@ const SuperAdmin: React.FC = () => {
 
   const getUserName = (user: UserWithOrganizations) => {
     return user.user_basic_info?.[0]?.name || user.email.split('@')[0];
+  };
+
+  // Funções para CRUD de organizações
+  const validateOrgForm = () => {
+    const errors = { name: '', slug: '', description: '' };
+    
+    if (!orgForm.name.trim()) {
+      errors.name = 'Nome é obrigatório';
+    } else if (orgForm.name.length < 2) {
+      errors.name = 'Nome deve ter pelo menos 2 caracteres';
+    } else if (orgForm.name.length > 100) {
+      errors.name = 'Nome deve ter no máximo 100 caracteres';
+    }
+
+    if (!orgForm.slug.trim()) {
+      errors.slug = 'Slug é obrigatório';
+    } else if (!/^[a-z0-9-]+$/.test(orgForm.slug)) {
+      errors.slug = 'Slug deve conter apenas letras minúsculas, números e hífens';
+    } else if (orgForm.slug.length < 2) {
+      errors.slug = 'Slug deve ter pelo menos 2 caracteres';
+    } else if (orgForm.slug.length > 50) {
+      errors.slug = 'Slug deve ter no máximo 50 caracteres';
+    }
+
+    if (orgForm.description && orgForm.description.length > 500) {
+      errors.description = 'Descrição deve ter no máximo 500 caracteres';
+    }
+
+    setOrgFormErrors(errors);
+    return !Object.values(errors).some(error => error !== '');
+  };
+
+  const resetOrgForm = () => {
+    setOrgForm({ name: '', slug: '', description: '' });
+    setOrgFormErrors({ name: '', slug: '', description: '' });
+    setEditingOrg(null);
+  };
+
+  const openOrgDialog = (org?: Organization) => {
+    if (org) {
+      setEditingOrg(org);
+      setOrgForm({
+        name: org.name,
+        slug: org.slug,
+        description: org.description || ''
+      });
+    } else {
+      resetOrgForm();
+    }
+    setOrgDialog(true);
+  };
+
+  const closeOrgDialog = () => {
+    setOrgDialog(false);
+    resetOrgForm();
+  };
+
+  const handleCreateOrg = async () => {
+    if (!validateOrgForm()) return;
+
+    const success = await createOrganization({
+      name: orgForm.name.trim(),
+      slug: orgForm.slug.trim(),
+      description: orgForm.description.trim() || undefined
+    });
+
+    if (success) {
+      closeOrgDialog();
+      fetchOrganizations();
+    }
+  };
+
+  const handleUpdateOrg = async () => {
+    if (!editingOrg || !validateOrgForm()) return;
+
+    const success = await updateOrganization(editingOrg.id, {
+      name: orgForm.name.trim(),
+      slug: orgForm.slug.trim(),
+      description: orgForm.description.trim() || undefined
+    });
+
+    if (success) {
+      closeOrgDialog();
+      fetchOrganizations();
+    }
+  };
+
+  const handleDeleteOrg = async (org: Organization) => {
+    setDeletingOrgId(org.id);
+    try {
+      const success = await deleteOrganization(org.id);
+      if (success) {
+        fetchOrganizations();
+      }
+    } finally {
+      setDeletingOrgId(null);
+    }
+  };
+
+  const handleReactivateOrg = async (org: Organization) => {
+    const success = await reactivateOrganization(org.id);
+    if (success) {
+      fetchOrganizations();
+    }
+  };
+
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
+      .replace(/\s+/g, '-') // Substitui espaços por hífens
+      .replace(/-+/g, '-') // Remove hífens duplicados
+      .trim();
   };
 
   // Verificações condicionais - DEPOIS de todos os hooks
@@ -469,7 +614,7 @@ const SuperAdmin: React.FC = () => {
                       
                       <div>
                         <Label htmlFor="role-select">Role</Label>
-                        <Select value={linkForm.role} onValueChange={(value: any) => setLinkForm(prev => ({ ...prev, role: value }))}>
+                        <Select value={linkForm.role} onValueChange={(value: 'owner' | 'admin' | 'manager' | 'user') => setLinkForm(prev => ({ ...prev, role: value }))}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -942,49 +1087,276 @@ const SuperAdmin: React.FC = () => {
         <TabsContent value="organizations" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="text-center sm:text-left">
-                <CardTitle className="flex items-center justify-center sm:justify-start gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Organizações
-                </CardTitle>
-                <CardDescription>
-                  Visualize todas as organizações do sistema
-                </CardDescription>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="text-center sm:text-left">
+                  <CardTitle className="flex items-center justify-center sm:justify-start gap-2">
+                    <Building2 className="h-5 w-5" />
+                    Gerenciar Organizações
+                  </CardTitle>
+                  <CardDescription>
+                    Crie, edite e gerencie todas as organizações do sistema
+                  </CardDescription>
+                </div>
+                <Button onClick={() => openOrgDialog()} className="w-full sm:w-auto">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Organização
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-md mx-auto sm:max-w-none">
-                {organizations.map(org => (
-                  <Card key={org.id} className="p-4">
-                    <div className="space-y-3 text-center sm:text-left">
-                      <h4 className="font-medium text-lg">{org.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Slug: {org.slug}
-                      </p>
-                      {org.description && (
-                        <p className="text-sm text-muted-foreground">
-                          {org.description}
-                        </p>
-                      )}
-                      <div className="space-y-2 text-xs text-muted-foreground">
-                        <div className="flex items-center justify-center sm:justify-start gap-2">
-                          <span>Criada em: {new Date(org.created_at).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex items-center justify-center sm:justify-start gap-2">
-                          <Users className="h-3 w-3" />
-                          <span>
-                            {users.filter(u => u.organizations.some(o => o.organization_id === org.id)).length} usuários
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
+              {/* Filtro de Status */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="show-inactive"
+                    checked={showInactiveOrgs}
+                    onCheckedChange={setShowInactiveOrgs}
+                  />
+                  <Label htmlFor="show-inactive" className="text-sm">
+                    Mostrar organizações inativas
+                  </Label>
+                </div>
+                <Badge variant={showInactiveOrgs ? "secondary" : "default"}>
+                  {showInactiveOrgs ? "Mostrando todas" : "Apenas ativas"}
+                </Badge>
               </div>
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <Building2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                    <p>Carregando organizações...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {organizations.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <h3 className="text-lg font-medium mb-2">Nenhuma organização encontrada</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Comece criando sua primeira organização
+                      </p>
+                      <Button onClick={() => openOrgDialog()}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Criar Primeira Organização
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                      {organizations.map(org => (
+                        <Card key={org.id} className="p-4 hover:shadow-md transition-shadow">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-medium text-lg truncate">{org.name}</h4>
+                                  <Badge variant={org.is_active ? "default" : "secondary"}>
+                                    {org.is_active ? "Ativa" : "Inativa"}
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  Slug: <code className="bg-muted px-1 rounded text-xs">{org.slug}</code>
+                                </p>
+                              </div>
+                              <div className="flex gap-1 ml-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openOrgDialog(org)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                {!org.is_active && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleReactivateOrg(org)}
+                                    className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                                    title="Reativar organização"
+                                  >
+                                    <RotateCcw className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      disabled={deletingOrgId === org.id}
+                                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                    >
+                                      {deletingOrgId === org.id ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="h-3 w-3" />
+                                      )}
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Inativar Organização</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Tem certeza que deseja inativar a organização <strong>"{org.name}"</strong>?
+                                        <br />
+                                        <br />
+                                        A organização será marcada como inativa e não poderá ser acessada, mas todos os dados serão preservados.
+                                        <br />
+                                        <br />
+                                        <strong>Nota:</strong> Organizações que possuem usuários ativos não podem ser inativadas.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel disabled={deletingOrgId === org.id}>
+                                        Cancelar
+                                      </AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => handleDeleteOrg(org)}
+                                        disabled={deletingOrgId === org.id}
+                                        className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                                      >
+                                        {deletingOrgId === org.id ? (
+                                          <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Inativando...
+                                          </>
+                                        ) : (
+                                          'Inativar Organização'
+                                        )}
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </div>
+                            
+                            {org.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {org.description}
+                              </p>
+                            )}
+                            
+                            <div className="space-y-2 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-2">
+                                <span>Criada em: {new Date(org.created_at).toLocaleDateString('pt-BR')}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Users className="h-3 w-3" />
+                                <span>
+                                  {users.filter(u => u.organizations.some(o => o.organization_id === org.id)).length} usuários
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Modal de Criação/Edição de Organização */}
+      <Dialog open={orgDialog} onOpenChange={setOrgDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              {editingOrg ? 'Editar Organização' : 'Nova Organização'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingOrg 
+                ? 'Atualize as informações da organização' 
+                : 'Preencha os dados para criar uma nova organização'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="org-name">Nome da Organização *</Label>
+              <Input
+                id="org-name"
+                value={orgForm.name}
+                onChange={(e) => {
+                  const name = e.target.value.slice(0, 100);
+                  setOrgForm(prev => ({ 
+                    ...prev, 
+                    name,
+                    slug: !editingOrg ? generateSlug(name) : prev.slug
+                  }));
+                }}
+                placeholder="Ex: Empresa ABC Ltda"
+                className={orgFormErrors.name ? 'border-red-500' : ''}
+              />
+              {orgFormErrors.name && (
+                <p className="text-sm text-red-500">{orgFormErrors.name}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="org-slug">Slug *</Label>
+              <Input
+                id="org-slug"
+                value={orgForm.slug}
+                onChange={(e) => {
+                  const slug = e.target.value
+                    .toLowerCase()
+                    .replace(/[^a-z0-9-]/g, '')
+                    .slice(0, 50);
+                  setOrgForm(prev => ({ ...prev, slug }));
+                }}
+                placeholder="Ex: empresa-abc-ltda"
+                className={orgFormErrors.slug ? 'border-red-500' : ''}
+              />
+              {orgFormErrors.slug && (
+                <p className="text-sm text-red-500">{orgFormErrors.slug}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                O slug será usado na URL e deve conter apenas letras minúsculas, números e hífens
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="org-description">Descrição</Label>
+              <textarea
+                id="org-description"
+                value={orgForm.description}
+                onChange={(e) => {
+                  const description = e.target.value.slice(0, 500);
+                  setOrgForm(prev => ({ ...prev, description }));
+                }}
+                placeholder="Descrição opcional da organização"
+                className={`flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${orgFormErrors.description ? 'border-red-500' : ''}`}
+                rows={3}
+              />
+              {orgFormErrors.description && (
+                <p className="text-sm text-red-500">{orgFormErrors.description}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {orgForm.description.length}/500 caracteres
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={closeOrgDialog}>
+              <X className="h-4 w-4 mr-2" />
+              Cancelar
+            </Button>
+            <Button 
+              onClick={editingOrg ? handleUpdateOrg : handleCreateOrg}
+              disabled={actionsLoading}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {actionsLoading ? 'Salvando...' : (editingOrg ? 'Atualizar' : 'Criar')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

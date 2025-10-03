@@ -8,6 +8,7 @@ export interface Organization {
   slug: string;
   description?: string;
   settings: any;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
   created_by: string;
@@ -22,8 +23,6 @@ export interface OrganizationUser {
   joined_at?: string;
   invited_by?: string;
   is_active: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 interface OrganizationContextType {
@@ -34,10 +33,10 @@ interface OrganizationContextType {
   error: string | null;
   switchOrganization: (orgId: string) => Promise<void>;
   refreshOrganizations: () => Promise<void>;
-  createOrganization: (name: string, description?: string) => Promise<Organization>;
+  createOrganization: (name: string, description?: string) => Promise<void>;
   updateOrganization: (orgId: string, updates: Partial<Organization>) => Promise<void>;
-  inviteUser: (email: string, role: 'admin' | 'manager' | 'user') => Promise<void>;
-  updateUserRole: (userId: string, role: 'super_admin' | 'owner' | 'admin' | 'manager' | 'user') => Promise<void>;
+  inviteUser: (email: string, role: string) => Promise<void>;
+  updateUserRole: (userId: string, role: string) => Promise<void>;
   removeUser: (userId: string) => Promise<void>;
   leaveOrganization: () => Promise<void>;
 }
@@ -63,6 +62,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const fetchUserOrganizations = async () => {
     if (!user) return;
 
+    console.log('fetchUserOrganizations chamado para usuário:', user.id);
     try {
       setLoading(true);
       setError(null);
@@ -76,23 +76,29 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           user_id,
           role,
           is_active,
-          organizations (
+          organizations!inner (
             id,
             name,
             slug,
             description,
             settings,
+            is_active,
             created_at,
             updated_at,
             created_by
           )
         `)
         .eq('user_id', user.id)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('organizations.is_active', true);
+
+      console.log('Consulta Supabase - orgUsers:', orgUsers);
+      console.log('Consulta Supabase - error:', orgUsersError);
 
       if (orgUsersError) throw orgUsersError;
 
       const organizations = orgUsers?.map(ou => ou.organizations).filter(Boolean) as Organization[];
+      console.log('Organizações carregadas:', organizations);
       setUserOrganizations(organizations);
 
       // Set current organization (first one if none set)
@@ -113,7 +119,10 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const org = userOrganizations.find(o => o.id === orgId);
     if (!org) return;
 
-    // Get user's role in this organization
+    setCurrentOrganization(org);
+    localStorage.setItem('currentOrganizationId', orgId);
+
+    // Fetch user role for this organization
     const { data: orgUser } = await supabase
       .from('organization_users')
       .select('role')
@@ -122,81 +131,116 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       .eq('is_active', true)
       .single();
 
-    setCurrentOrganization(org);
     setUserRole(orgUser?.role || null);
-    
-    // Store preference in localStorage
-    localStorage.setItem('currentOrganizationId', orgId);
   };
 
   const refreshOrganizations = async () => {
     await fetchUserOrganizations();
   };
 
-  const createOrganization = async (name: string, description?: string): Promise<Organization> => {
+  const createOrganization = async (name: string, description?: string) => {
     if (!user) throw new Error('User not authenticated');
 
-    // Verificar se usuário é super admin
-    const { data: superAdminCheck } = await supabase
+    // Verificar se é super admin
+    const { data: superAdminCheck, error: checkError } = await supabase
       .rpc('is_super_admin');
 
-    if (!superAdminCheck) {
+    if (checkError || !superAdminCheck) {
       throw new Error('Apenas super administradores podem criar organizações');
     }
 
-    // Generate slug from name
-    const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+    // Validações
+    if (!name?.trim()) {
+      throw new Error('Nome da organização é obrigatório');
+    }
 
-    const { data: org, error: orgError } = await supabase
+    if (name.trim().length < 2) {
+      throw new Error('Nome da organização deve ter pelo menos 2 caracteres');
+    }
+
+    if (name.trim().length > 100) {
+      throw new Error('Nome da organização deve ter no máximo 100 caracteres');
+    }
+
+    if (description && description.length > 500) {
+      throw new Error('Descrição deve ter no máximo 500 caracteres');
+    }
+
+    // Verificar se já existe uma organização com o mesmo nome
+    const { data: existingOrgs } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .eq('name', name.trim())
+      .eq('is_active', true);
+
+    if (existingOrgs && existingOrgs.length > 0) {
+      throw new Error('Já existe uma organização com este nome');
+    }
+
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    
+    const { data, error } = await supabase
       .from('organizations')
       .insert({
-        name,
+        name: name.trim(),
         slug,
-        description,
-        created_by: user.id
+        description: description?.trim() || null,
+        created_by: user.id,
+        settings: {}
       })
       .select()
       .single();
 
-    if (orgError) throw orgError;
+    if (error) throw error;
 
     // Add user as owner
-    const { error: userError } = await supabase
+    const { error: orgUserError } = await supabase
       .from('organization_users')
       .insert({
-        organization_id: org.id,
+        organization_id: data.id,
         user_id: user.id,
         role: 'owner',
-        joined_at: new Date().toISOString()
+        is_active: true
       });
 
-    if (userError) throw userError;
+    if (orgUserError) throw orgUserError;
 
-    await refreshOrganizations();
-    return org;
+    // Refresh organizations
+    await fetchUserOrganizations();
   };
 
   const updateOrganization = async (orgId: string, updates: Partial<Organization>) => {
     const { error } = await supabase
       .from('organizations')
-      .update(updates)
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', orgId);
 
     if (error) throw error;
 
-    await refreshOrganizations();
+    // Refresh organizations
+    await fetchUserOrganizations();
   };
 
-  const inviteUser = async (email: string, role: 'admin' | 'manager' | 'user') => {
-    if (!currentOrganization || !user) return;
+  const inviteUser = async (email: string, role: string) => {
+    if (!currentOrganization) throw new Error('No organization selected');
 
-    // Note: This would typically send an email invitation
-    // For now, we'll just create a pending invitation
-    console.log(`Invitation sent to ${email} with role ${role}`);
+    const { error } = await supabase
+      .from('organization_users')
+      .insert({
+        organization_id: currentOrganization.id,
+        user_id: email, // This should be the actual user ID after they accept the invitation
+        role,
+        is_active: false // Will be activated when they accept
+      });
+
+    if (error) throw error;
   };
 
-  const updateUserRole = async (userId: string, role: 'owner' | 'admin' | 'manager' | 'user') => {
-    if (!currentOrganization) return;
+  const updateUserRole = async (userId: string, role: string) => {
+    if (!currentOrganization) throw new Error('No organization selected');
 
     const { error } = await supabase
       .from('organization_users')
@@ -208,7 +252,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const removeUser = async (userId: string) => {
-    if (!currentOrganization) return;
+    if (!currentOrganization) throw new Error('No organization selected');
 
     const { error } = await supabase
       .from('organization_users')
@@ -230,9 +274,17 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     if (error) throw error;
 
-    await refreshOrganizations();
+    // Switch to another organization or clear current
+    const remainingOrgs = userOrganizations.filter(org => org.id !== currentOrganization.id);
+    if (remainingOrgs.length > 0) {
+      await switchOrganization(remainingOrgs[0].id);
+    } else {
+      setCurrentOrganization(null);
+      setUserRole(null);
+    }
   };
 
+  // Load organizations when user changes
   useEffect(() => {
     if (user) {
       fetchUserOrganizations();

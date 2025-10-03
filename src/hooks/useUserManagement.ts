@@ -83,6 +83,7 @@ export const useUserManagement = () => {
         .from('organization_users')
         .select('*')
         .eq('organization_id', currentOrganization.id)
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (orgError) throw orgError;
