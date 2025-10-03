@@ -84,6 +84,16 @@ export default function CheckIn() {
       return;
     }
     
+    // Verificar campos obrigatórios
+    if (!formData.montado) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Selecione o estado de montagem do motor",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Verificar fotos obrigatórias
     const fotosObrigatorias = ['frente', 'traseira', 'lateral1', 'lateral2', 'cabecote', 'carter'];
     const fotosFaltando = fotosObrigatorias.filter(tipo => !fotos[tipo as keyof typeof fotos]);
@@ -331,8 +341,8 @@ export default function CheckIn() {
             </div>
 
             <div>
-              <Label htmlFor="montado">Estado de montagem</Label>
-              <Select value={formData.montado} onValueChange={(value) => handleInputChange('montado', value)}>
+              <Label htmlFor="montado">Estado de montagem <span className="text-red-500">*</span></Label>
+              <Select value={formData.montado} onValueChange={(value) => handleInputChange('montado', value)} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>

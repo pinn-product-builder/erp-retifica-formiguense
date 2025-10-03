@@ -165,7 +165,7 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="timeline">Linha do Tempo</TabsTrigger>
           <TabsTrigger value="materials">Materiais</TabsTrigger>
           <TabsTrigger value="warranties">Garantias</TabsTrigger>
           <TabsTrigger value="photos">Fotos</TabsTrigger>

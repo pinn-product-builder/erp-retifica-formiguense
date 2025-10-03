@@ -5,7 +5,7 @@ import InputMask from 'react-input-mask'
 import { NumericFormat } from 'react-number-format'
 
 interface MaskedInputProps extends Omit<React.ComponentProps<"input">, 'onChange'> {
-  mask: 'cpf' | 'cnpj' | 'phone' | 'cep' | 'currency' | 'decimal';
+  mask: 'cpf' | 'cnpj' | 'cpfcnpj' | 'phone' | 'cep' | 'currency' | 'decimal';
   value?: string;
   onChange?: (value: string, rawValue: string) => void;
 }
@@ -22,6 +22,7 @@ const masks = {
 const rawValue = {
   cpf: (value: string) => value.replace(/\D/g, ''),
   cnpj: (value: string) => value.replace(/\D/g, ''),
+  cpfcnpj: (value: string) => value.replace(/\D/g, ''),
   phone: (value: string) => value.replace(/\D/g, ''),
   cep: (value: string) => value.replace(/\D/g, ''),
   currency: (value: string) => {
@@ -34,8 +35,14 @@ const rawValue = {
   }
 };
 
+// Função para detectar se é CPF ou CNPJ baseado no tamanho
+const detectCPForCNPJ = (value: string): 'cpf' | 'cnpj' => {
+  const numbers = value.replace(/\D/g, '');
+  return numbers.length <= 11 ? 'cpf' : 'cnpj';
+};
+
 const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
-  ({ className, mask, value = '', onChange, ...props }, ref) => {
+  ({ className, mask, value = '', onChange, disabled, ...props }, ref) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value;
       const raw = rawValue[mask](inputValue);
@@ -62,6 +69,7 @@ const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
           fixedDecimalScale
           allowNegative={false}
           placeholder="R$ 0,00"
+          disabled={disabled}
           customInput={Input}
           className={cn(className)}
         />
@@ -86,6 +94,7 @@ const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
           fixedDecimalScale={false}
           allowNegative={false}
           allowLeadingZeros={false}
+          disabled={disabled}
           isAllowed={(values) => {
             // Permitir valores até 999.999,99
             return values.floatValue === undefined || values.floatValue <= 999999.99;
@@ -93,6 +102,32 @@ const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
           customInput={Input}
           className={cn(className)}
         />
+      );
+    }
+
+    // Para campos CPF/CNPJ automático, detectar o tipo baseado no valor
+    if (mask === 'cpfcnpj') {
+      const detectedType = detectCPForCNPJ(value);
+      const actualMask = masks[detectedType];
+      
+      return (
+        <InputMask
+          mask={actualMask}
+          value={value}
+          onChange={handleChange}
+          maskChar="_"
+          alwaysShowMask={false}
+          disabled={disabled}
+        >
+          {(inputProps: React.InputHTMLAttributes<HTMLInputElement>) => (
+            <Input
+              {...props}
+              {...inputProps}
+              ref={ref}
+              className={cn(className)}
+            />
+          )}
+        </InputMask>
       );
     }
 
@@ -104,6 +139,7 @@ const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
         onChange={handleChange}
         maskChar="_"
         alwaysShowMask={false}
+        disabled={disabled}
       >
         {(inputProps: React.InputHTMLAttributes<HTMLInputElement>) => (
           <Input

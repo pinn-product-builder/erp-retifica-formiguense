@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useAuth } from '@/hooks/useAuth';
 import { Database } from '@/integrations/supabase/types';
 
 export interface Customer {
@@ -32,6 +33,7 @@ export interface Engine {
   has_piston?: boolean;
   has_connecting_rod?: boolean;
   turns_manually?: boolean;
+  org_id?: string;
 }
 
 export interface Order {
@@ -50,6 +52,7 @@ export function useSupabase() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
+  const { user } = useAuth();
 
   const handleError = (error: unknown, message: string) => {
     console.error(message, error);
@@ -87,14 +90,13 @@ export function useSupabase() {
 
     try {
       setLoading(true);
-      const { data: user } = await supabase.auth.getUser();
       
       const { data, error } = await supabase
         .from('customers')
         .insert({
           ...customer,
           org_id: currentOrganization.id,
-          created_by: user.user?.id
+          created_by: user?.id
         })
         .select()
         .single();
@@ -110,11 +112,20 @@ export function useSupabase() {
   };
 
   const createEngine = async (engine: Engine) => {
+    if (!currentOrganization?.id) {
+      handleError(new Error('Organização não encontrada'), 'Erro: organização não encontrada');
+      return null;
+    }
+
     try {
       setLoading(true);
+      
       const { data, error } = await supabase
         .from('engines')
-        .insert(engine)
+        .insert({
+          ...engine,
+          org_id: currentOrganization.id
+        })
         .select()
         .single();
 
@@ -184,7 +195,7 @@ export function useSupabase() {
         photo_type: photoType,
         file_path: uploadData.path,
         file_name: file.name,
-        uploaded_by: (await supabase.auth.getUser()).data.user?.id || null
+        uploaded_by: user?.id || null
       };
       
       const { data, error } = await supabase

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { MaskedInput } from "@/components/ui/masked-input";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useCustomers, Customer } from "@/hooks/useCustomers";
@@ -39,6 +40,9 @@ export default function Coleta() {
     // Consultor
     consultor: ""
   });
+
+  // Estado para controlar o tipo de documento (CPF/CNPJ)
+  const [documentType, setDocumentType] = useState<'cpf' | 'cnpj' | 'auto'>('auto');
 
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Customer[]>([]);
@@ -84,6 +88,8 @@ export default function Coleta() {
       cnpjOficina: customer.workshop_cnpj || "",
       contatoOficina: customer.workshop_contact || ""
     }));
+    // Resetar tipo de documento para auto quando cliente é selecionado
+    setDocumentType('auto');
     setShowSearchResults(false);
     setSearchTerm("");
     setShowSearchDialog(false); // Fechar o modal após seleção
@@ -113,6 +119,24 @@ export default function Coleta() {
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // Função para detectar automaticamente o tipo de documento
+  const detectDocumentType = (value: string): 'cpf' | 'cnpj' => {
+    const numbers = value.replace(/\D/g, '');
+    return numbers.length <= 11 ? 'cpf' : 'cnpj';
+  };
+
+  // Função para lidar com mudanças no campo de documento
+  const handleDocumentChange = (maskedValue: string, rawValue: string) => {
+    setFormData(prev => ({ ...prev, documento: rawValue }));
+    // Atualizar o tipo de documento baseado no tamanho
+    if (rawValue.length > 0) {
+      setDocumentType(detectDocumentType(rawValue));
+    } else {
+      setDocumentType('auto');
+    }
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -338,20 +362,26 @@ export default function Coleta() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="newClientDoc">CPF / CNPJ</Label>
-                        <Input
+                        <Label htmlFor="newClientDoc">
+                          {documentType === 'auto' ? 'CPF / CNPJ' : documentType === 'cpf' ? 'CPF' : 'CNPJ'}
+                        </Label>
+                        <MaskedInput
                           id="newClientDoc"
+                          mask={documentType === 'auto' ? 'cpfcnpj' : documentType}
                           value={formData.documento}
-                          onChange={(e) => handleInputChange('documento', e.target.value)}
-                          placeholder="000.000.000-00"
+                          onChange={handleDocumentChange}
+                          placeholder={documentType === 'auto' ? '000.000.000-00' : documentType === 'cpf' ? '000.000.000-00' : '00.000.000/0000-00'}
                         />
                       </div>
                       <div>
                         <Label htmlFor="newClientPhone">Telefone</Label>
-                        <Input
+                        <MaskedInput
                           id="newClientPhone"
+                          mask="phone"
                           value={formData.telefone}
-                          onChange={(e) => handleInputChange('telefone', e.target.value)}
+                          onChange={(maskedValue, rawValue) => {
+                            setFormData(prev => ({ ...prev, telefone: rawValue }));
+                          }}
                           placeholder="(00) 00000-0000"
                         />
                       </div>
@@ -408,23 +438,29 @@ export default function Coleta() {
               />
             </div>
             <div>
-              <Label htmlFor="documento">CPF / CNPJ</Label>
-              <Input
+              <Label htmlFor="documento">
+                {documentType === 'auto' ? 'CPF / CNPJ' : documentType === 'cpf' ? 'CPF' : 'CNPJ'}
+              </Label>
+              <MaskedInput
                 id="documento"
-                placeholder="000.000.000-00"
+                mask={documentType === 'auto' ? 'cpfcnpj' : documentType}
                 value={formData.documento}
-                onChange={(e) => handleInputChange('documento', e.target.value)}
+                onChange={handleDocumentChange}
+                placeholder={documentType === 'auto' ? '000.000.000-00' : documentType === 'cpf' ? '000.000.000-00' : '00.000.000/0000-00'}
                 required
                 disabled={!!selectedCustomer}
               />
             </div>
             <div>
               <Label htmlFor="telefone">Telefone</Label>
-              <Input
+              <MaskedInput
                 id="telefone"
-                placeholder="(00) 00000-0000"
+                mask="phone"
                 value={formData.telefone}
-                onChange={(e) => handleInputChange('telefone', e.target.value)}
+                onChange={(maskedValue, rawValue) => {
+                  setFormData(prev => ({ ...prev, telefone: rawValue }));
+                }}
+                placeholder="(00) 00000-0000"
                 required
                 disabled={!!selectedCustomer}
               />
@@ -477,20 +513,26 @@ export default function Coleta() {
               </div>
               <div>
                 <Label htmlFor="cnpjOficina">CNPJ / CPF</Label>
-                <Input
+                <MaskedInput
                   id="cnpjOficina"
-                  placeholder="00.000.000/0000-00"
+                  mask="cpfcnpj"
                   value={formData.cnpjOficina}
-                  onChange={(e) => handleInputChange('cnpjOficina', e.target.value)}
+                  onChange={(maskedValue, rawValue) => {
+                    setFormData(prev => ({ ...prev, cnpjOficina: rawValue }));
+                  }}
+                  placeholder="00.000.000/0000-00"
                 />
               </div>
               <div className="md:col-span-2">
                 <Label htmlFor="contatoOficina">Contato (WhatsApp)</Label>
-                <Input
+                <MaskedInput
                   id="contatoOficina"
-                  placeholder="(00) 00000-0000"
+                  mask="phone"
                   value={formData.contatoOficina}
-                  onChange={(e) => handleInputChange('contatoOficina', e.target.value)}
+                  onChange={(maskedValue, rawValue) => {
+                    setFormData(prev => ({ ...prev, contatoOficina: rawValue }));
+                  }}
+                  placeholder="(00) 00000-0000"
                 />
               </div>
             </CardContent>
