@@ -251,7 +251,7 @@ const BudgetApprovalModal = ({
                 </div>
                 <div>
                   <Label className="text-sm text-muted-foreground">Valor Total</Label>
-                  <p className="font-medium text-lg">
+                  <p className="font-medium text-lg whitespace-nowrap">
                     R$ {budget.total_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>

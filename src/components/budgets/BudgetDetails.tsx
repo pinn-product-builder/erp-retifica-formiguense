@@ -20,6 +20,7 @@ import {
   Copy
 } from "lucide-react";
 import { type DetailedBudget } from "@/hooks/useDetailedBudgets";
+import { useBudgetPDF } from '@/hooks/useBudgetPDF';
 
 interface BudgetDetailsProps {
   budget: DetailedBudget;
@@ -28,6 +29,7 @@ interface BudgetDetailsProps {
 }
 
 const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProps) => {
+  const { generateBudgetPDF } = useBudgetPDF();
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'approved': return <CheckCircle className="w-4 h-4 text-green-600" />;
@@ -83,12 +85,13 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
               Duplicar
             </Button>
           )}
-          {onGeneratePDF && (
-            <Button variant="outline" onClick={onGeneratePDF}>
-              <Download className="w-4 h-4 mr-2" />
-              PDF
-            </Button>
-          )}
+          <Button 
+            variant="outline" 
+            onClick={() => generateBudgetPDF(budget)}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            PDF
+          </Button>
         </div>
       </div>
 
@@ -197,7 +200,7 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
 
               <div className="flex justify-between text-lg font-bold">
                 <span>Total</span>
-                <span>
+                <span className="whitespace-nowrap">
                   R$ {budget.total_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
               </div>
@@ -269,7 +272,7 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {budget.services.map((service: any, index: number) => (
+              {budget.services && Array.isArray(budget.services) ? budget.services.map((service: any, index: number) => (
                 <div key={index} className="flex justify-between items-start p-4 border rounded-lg">
                   <div className="flex-1">
                     <h4 className="font-medium">{service.name}</h4>
@@ -289,7 +292,7 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
                     </p>
                   </div>
                 </div>
-              ))}
+              )) : <p className="text-muted-foreground">Nenhum serviço cadastrado</p>}
             </div>
           </CardContent>
         </Card>
@@ -306,7 +309,7 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {budget.parts.map((part: any, index: number) => (
+              {budget.parts && Array.isArray(budget.parts) ? budget.parts.map((part: any, index: number) => (
                 <div key={index} className="flex justify-between items-start p-4 border rounded-lg">
                   <div className="flex-1">
                     <h4 className="font-medium">{part.name}</h4>
@@ -326,7 +329,7 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
                     </p>
                   </div>
                 </div>
-              ))}
+              )) : <p className="text-muted-foreground">Nenhuma peça cadastrada</p>}
             </div>
           </CardContent>
         </Card>

@@ -39,6 +39,7 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
+  XCircle,
   Copy,
   Download
 } from "lucide-react";
@@ -50,6 +51,7 @@ import BudgetDetails from "@/components/budgets/BudgetDetails";
 import { BudgetForm } from "@/components/budgets/BudgetForm";
 import { useToast } from "@/hooks/use-toast";
 import { useOrganization } from "@/contexts/OrganizationContext";
+import { useBudgetReports } from "@/hooks/useBudgetReports";
 import { BUDGET_STATUS, translateStatus, translateAction, translateMessage } from "@/utils/statusTranslations";
 
 const Orcamentos = () => {
@@ -62,6 +64,8 @@ const Orcamentos = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<DetailedBudget | null>(null);
   const [duplicatedBudgetData, setDuplicatedBudgetData] = useState<Partial<DetailedBudget> | null>(null);
+  
+  const { generateBudgetReport, printBudgetReport } = useBudgetReports();
   
   const { getDetailedBudgets, createDetailedBudget, updateDetailedBudget, duplicateBudget, loading } = useDetailedBudgets();
   const { toast } = useToast();
@@ -116,8 +120,16 @@ const Orcamentos = () => {
       rejected: translateStatus('rejected', 'budget')
     };
 
+    const icons = {
+      draft: <Clock className="w-3 h-3 mr-1" />,
+      approved: <CheckCircle className="w-3 h-3 mr-1" />,
+      partially_approved: <AlertTriangle className="w-3 h-3 mr-1" />,
+      rejected: <XCircle className="w-3 h-3 mr-1" />
+    };
+
     return (
-      <Badge className={colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800"}>
+      <Badge className={`${colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800"} text-xs px-2 py-1`}>
+        {icons[status as keyof typeof icons]}
         {labels[status as keyof typeof labels] || status}
       </Badge>
     );
@@ -168,20 +180,11 @@ const Orcamentos = () => {
     setIsFormOpen(true);
   };
 
-  const handleGenerateReport = () => {
-    if (!currentOrganization) {
-      toast({
-        title: "Erro", 
-        description: "Selecione uma organização para gerar relatórios",
-        variant: "destructive"
-      });
-      return;
+  const handleGenerateReport = async () => {
+    const reportData = await generateBudgetReport();
+    if (reportData) {
+      printBudgetReport(reportData);
     }
-    
-    toast({
-      title: "Funcionalidade em desenvolvimento",
-      description: "Relatório de orçamentos e aprovações será implementado em breve"
-    });
   };
 
   // Estado de carregamento combinado
@@ -328,10 +331,10 @@ const Orcamentos = () => {
             <TableBody>
               {filteredBudgets.map((budget) => (
                 <TableRow key={budget.id}>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium whitespace-nowrap">
                     {budget.budget_number || `#${budget.id.slice(-6)}`}
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium whitespace-nowrap">
                     {budget.order?.order_number || '-'}
                   </TableCell>
                   <TableCell>{budget.order?.customer?.name || '-'}</TableCell>
@@ -340,7 +343,7 @@ const Orcamentos = () => {
                       {budget.component.charAt(0).toUpperCase() + budget.component.slice(1)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium whitespace-nowrap">
                     R$ {budget.total_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </TableCell>
                   <TableCell>{getStatusBadge(budget.status)}</TableCell>

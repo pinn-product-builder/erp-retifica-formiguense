@@ -43,14 +43,18 @@ export function StatCard({
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className={cn(
-              "text-xs sm:text-sm font-medium truncate",
+              "text-xs sm:text-sm font-medium truncate flex items-center gap-1",
               variant === "primary" ? "text-primary-foreground/80" : "text-muted-foreground"
             )}>
+              <Icon className={cn(
+                "w-3 h-3 sm:w-4 sm:h-4",
+                variant === "primary" ? "text-primary-foreground/80" : "text-muted-foreground"
+              )} />
               {title}
             </div>
             <div className="flex items-baseline gap-1 sm:gap-2 mt-1 sm:mt-2">
               <h3 className={cn(
-                "text-lg sm:text-xl lg:text-2xl font-bold truncate",
+                "text-lg sm:text-xl lg:text-2xl font-bold whitespace-nowrap",
                 variant === "primary" ? "text-primary-foreground" : "text-foreground"
               )}>
                 {value}
@@ -73,17 +77,6 @@ export function StatCard({
                 {subtitle}
               </div>
             )}
-          </div>
-          <div className={cn(
-            "p-2 sm:p-3 rounded-lg flex-shrink-0",
-            variant === "primary" 
-              ? "bg-primary-foreground/20" 
-              : "bg-muted"
-          )}>
-            <Icon className={cn(
-              "w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6",
-              variant === "primary" ? "text-primary-foreground" : "text-muted-foreground"
-            )} />
           </div>
         </div>
       </CardContent>
