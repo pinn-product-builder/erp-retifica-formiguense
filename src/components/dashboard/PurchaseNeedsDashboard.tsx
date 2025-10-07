@@ -68,6 +68,7 @@ export function PurchaseNeedsDashboard() {
     if (currentOrganization?.id) {
       fetchPurchaseNeeds();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentOrganization?.id]);
 
   const fetchPurchaseNeeds = async () => {
@@ -102,7 +103,7 @@ export function PurchaseNeedsDashboard() {
         })
       );
 
-      setNeeds(needsWithSuggestions);
+      setNeeds(needsWithSuggestions as PurchaseNeed[]);
     } catch (error) {
       console.error('Erro ao buscar necessidades:', error);
       toast({
@@ -203,86 +204,91 @@ export function PurchaseNeedsDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <ShoppingCart className="w-5 h-5 text-blue-600" />
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Package className="w-5 h-5" />
+          Necessidades de Compra Pendentes
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Estatísticas */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-card border">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <ShoppingCart className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total de Necessidades</p>
+                  <p className="text-2xl font-bold">{totalNeeds}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total de Necessidades</p>
-                <p className="text-2xl font-bold">{totalNeeds}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
+          <Card className="bg-card border">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-destructive/10 rounded-lg">
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Urgentes</p>
+                  <p className="text-2xl font-bold">{urgentNeeds}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Urgentes</p>
-                <p className="text-2xl font-bold">{urgentNeeds}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <DollarSign className="w-5 h-5 text-green-600" />
+          <Card className="bg-card border">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-success/10 rounded-lg">
+                  <DollarSign className="w-5 h-5 text-success" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Valor Total</p>
+                  <p className="text-2xl font-bold">
+                    {new Intl.NumberFormat('pt-BR', { 
+                      style: 'currency', 
+                      currency: 'BRL' 
+                    }).format(totalValue)}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Valor Total</p>
-                <p className="text-2xl font-bold">R$ {totalValue.toFixed(2)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Clock className="w-5 h-5 text-orange-600" />
+          <Card className="bg-card border">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-warning/10 rounded-lg">
+                  <Clock className="w-5 h-5 text-warning" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Emergenciais</p>
+                  <p className="text-2xl font-bold">{emergencyNeeds}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Emergenciais</p>
-                <p className="text-2xl font-bold">{emergencyNeeds}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Lista de Necessidades */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Necessidades de Compra Pendentes
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {needs.length === 0 ? (
-            <div className="text-center py-8">
-              <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhuma necessidade pendente</h3>
-              <p className="text-muted-foreground">
-                Todas as necessidades de compra foram atendidas
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {needs.map((need) => (
+        {/* Lista de Necessidades */}
+        <div>
+        {needs.length === 0 ? (
+          <div className="text-center py-8">
+            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">Nenhuma necessidade pendente</h3>
+            <p className="text-muted-foreground">
+              Todas as necessidades de compra foram atendidas
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {needs.map((need) => (
                 <div 
                   key={need.id} 
                   className={`border rounded-lg p-4 border-l-4 ${getUrgencyColor(need.delivery_urgency_date)}`}
@@ -384,11 +390,11 @@ export function PurchaseNeedsDashboard() {
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            ))}
+          </div>
+        )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

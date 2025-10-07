@@ -97,8 +97,8 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (orgUsersError) throw orgUsersError;
 
+      // @ts-ignore - Supabase retorna organizations como objeto, não array
       const organizations = orgUsers?.map(ou => ou.organizations).filter(Boolean) as Organization[];
-      console.log('Organizações carregadas:', organizations);
       setUserOrganizations(organizations);
 
       // Set current organization (first one if none set)

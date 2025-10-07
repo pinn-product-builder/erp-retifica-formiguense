@@ -14,6 +14,8 @@ export interface KPI {
   is_active: boolean;
   display_order: number;
   value?: number;
+  formattedValue?: string; // Valor formatado para exibição
+  calculationInfo?: string; // Descrição de como o cálculo é feito
   subtitle?: string;
   trend?: {
     value: number;
@@ -32,6 +34,7 @@ export interface QuickAction {
   is_active: boolean;
   display_order: number;
   permissions: string[];
+  count?: number; // Contador dinâmico
 }
 
 export interface StatusConfig {
@@ -78,8 +81,55 @@ export const useDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Calculate actual KPI values
+  // Função para formatar valores baseado na unidade
+  const formatValue = (value: number, unit: string): string => {
+    switch (unit) {
+      case 'currency':
+        return new Intl.NumberFormat('pt-BR', { 
+          style: 'currency', 
+          currency: 'BRL',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(value);
+      
+      case 'percentage':
+        return new Intl.NumberFormat('pt-BR', {
+          style: 'percent',
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1
+        }).format(value / 100);
+      
+      case 'number':
+      default:
+        return new Intl.NumberFormat('pt-BR', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        }).format(value);
+    }
+  };
+
+  // Função para obter descrição do cálculo do KPI
+  const getCalculationInfo = (kpiCode: string): string => {
+    const calculationDescriptions: Record<string, string> = {
+      'total_orders': 'Conta todos os pedidos da sua organização criados nos últimos 30 dias.',
+      'orders_in_progress': 'Conta pedidos com situação "ativa" ou "em andamento" nos últimos 30 dias.',
+      'completed_orders': 'Conta pedidos com situação "concluída" nos últimos 30 dias.',
+      'pending_budget_approvals': 'Conta orçamentos detalhados com situação "rascunho" ou "pendente" nos últimos 30 dias.',
+      'revenue_current_month': 'Soma o valor total de todos os orçamentos com situação "aprovado" nos últimos 30 dias.',
+      'average_order_value': 'Calcula a média dos valores de orçamentos aprovados nos últimos 30 dias.',
+      'customer_satisfaction': 'Índice de satisfação do cliente (em desenvolvimento - será calculado com base em avaliações futuras).',
+      'orders_today': 'Conta pedidos criados hoje.',
+      'pending_orders': 'Conta pedidos com situação "pendente".',
+      'completed_today': 'Conta pedidos concluídos hoje (com data de entrega real igual a hoje).'
+    };
+    
+    return calculationDescriptions[kpiCode] || 'Cálculo personalizado baseado nos dados da sua organização.';
+  };
+
+  // Calculate actual KPI values using RPC functions
   const calculateKPIValues = async (kpiList: KPI[]) => {
+    if (!currentOrganization) return kpiList;
+
     const kpisWithValues = await Promise.all(
       kpiList.map(async (kpi) => {
         let value = 0;
@@ -87,46 +137,52 @@ export const useDashboard = () => {
         let trend = undefined;
 
         try {
+          // Use RPC function to calculate KPI value filtered by organization
+          const { data: trendData, error: trendError } = await supabase
+            .rpc('calculate_kpi_trend', {
+              kpi_code: kpi.code,
+              organization_id: currentOrganization.id,
+              current_period: 'current',
+              comparison_period: 'previous'
+            });
+
+          if (trendError) {
+            console.error(`Error calculating KPI ${kpi.code}:`, trendError);
+          } else if (trendData && trendData.length > 0) {
+            const trendResult = trendData[0];
+            value = Number(trendResult.current_value) || 0;
+            
+            // Calculate trend
+            const changePercentage = Number(trendResult.change_percentage) || 0;
+            if (changePercentage !== 0) {
+              trend = {
+                value: Math.abs(changePercentage),
+                isPositive: trendResult.trend_direction === 'up'
+              };
+            }
+          }
+
+          // Set subtitle based on KPI type
           switch (kpi.code) {
             case 'total_orders':
-              const { count: totalCount } = await supabase
-                .from('orders')
-                .select('*', { count: 'exact', head: true });
-              value = totalCount || 0;
               subtitle = 'Total geral';
               break;
-
             case 'orders_in_progress':
-              const { count: progressCount } = await supabase
-                .from('orders')
-                .select('*', { count: 'exact', head: true })
-                .in('status', ['ativa'] as const);
-              value = progressCount || 0;
               subtitle = 'Em processamento';
               break;
-
             case 'completed_orders':
-              const { count: completedCount } = await supabase
-                .from('orders')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'concluida');
-              value = completedCount || 0;
               subtitle = 'Finalizados';
               break;
-
             case 'pending_budget_approvals':
-              const { count: pendingCount } = await supabase
-                .from('budgets')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'pendente');
-              value = pendingCount || 0;
               subtitle = 'Aguardando';
-              trend = { value: -12, isPositive: false };
               break;
-
+            case 'revenue_current_month':
+              subtitle = 'Receita aprovada';
+              break;
+            case 'average_order_value':
+              subtitle = 'Ticket médio';
+              break;
             default:
-              // For custom KPIs, we would need to implement a more sophisticated calculation engine
-              value = Math.floor(Math.random() * 100); // Placeholder
               subtitle = 'Calculado';
           }
         } catch (error) {
@@ -138,6 +194,8 @@ export const useDashboard = () => {
         return {
           ...kpi,
           value,
+          formattedValue: formatValue(value, kpi.unit),
+          calculationInfo: getCalculationInfo(kpi.code),
           subtitle,
           trend,
         };
@@ -147,8 +205,10 @@ export const useDashboard = () => {
     return kpisWithValues;
   };
 
-  // Fetch recent services from orders
+  // Fetch recent services from orders filtered by organization
   const fetchRecentServices = async () => {
+    if (!currentOrganization) return;
+
     try {
       const { data: orders, error } = await supabase
         .from('orders')
@@ -160,6 +220,7 @@ export const useDashboard = () => {
           customers (name),
           engines (brand, model)
         `)
+        .eq('org_id', currentOrganization.id) // Filtrar por organização
         .order('created_at', { ascending: false })
         .limit(5);
 
@@ -181,6 +242,81 @@ export const useDashboard = () => {
     }
   };
 
+  // Calcular contadores dinâmicos para ações rápidas
+  const calculateActionCounters = async (actions: QuickAction[]): Promise<QuickAction[]> => {
+    if (!currentOrganization) return actions;
+
+    const actionsWithCounters = await Promise.all(
+      actions.map(async (action) => {
+        let count = 0;
+
+        try {
+          switch (action.href) {
+            case '/coleta':
+              // Contar pedidos pendentes
+              const { count: pendingOrders } = await supabase
+                .from('orders')
+                .select('*', { count: 'exact', head: true })
+                .eq('org_id', currentOrganization.id)
+                .eq('status', 'pendente');
+              count = pendingOrders || 0;
+              break;
+
+            case '/workflow':
+              // Contar pedidos em andamento
+              const { count: inProgressOrders } = await supabase
+                .from('orders')
+                .select('*', { count: 'exact', head: true })
+                .eq('org_id', currentOrganization.id)
+                .in('status', ['ativa', 'em_andamento']);
+              count = inProgressOrders || 0;
+              break;
+
+            case '/dre':
+              // Contar DREs do mês atual que ainda não foram finalizados
+              const currentMonth = new Date().getMonth() + 1;
+              const currentYear = new Date().getFullYear();
+              const { count: pendingDRE } = await supabase
+                .from('monthly_dre')
+                .select('*', { count: 'exact', head: true })
+                .eq('org_id', currentOrganization.id)
+                .eq('month', currentMonth)
+                .eq('year', currentYear);
+              // Se não existe DRE para o mês atual, contar como 1 pendente
+              count = pendingDRE === 0 ? 1 : 0;
+              break;
+
+            case '/contas-receber':
+              // Contar contas a receber vencidas ou a vencer nos próximos 7 dias
+              const today = new Date().toISOString().split('T')[0];
+              const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+              const { count: receivables } = await supabase
+                .from('accounts_receivable')
+                .select('*', { count: 'exact', head: true })
+                .eq('org_id', currentOrganization.id)
+                .in('status', ['pendente', 'vencido'])
+                .lte('due_date', nextWeek);
+              count = receivables || 0;
+              break;
+
+            default:
+              count = 0;
+          }
+        } catch (error) {
+          console.error(`Error calculating counter for ${action.title}:`, error);
+          count = 0;
+        }
+
+        return {
+          ...action,
+          count
+        };
+      })
+    );
+
+    return actionsWithCounters;
+  };
+
   // Fetch dashboard data
   const fetchDashboardData = async () => {
     if (!currentOrganization) return;
@@ -189,10 +325,11 @@ export const useDashboard = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch KPIs
+      // Fetch KPIs (templates globais)
       const { data: kpisData, error: kpisError } = await supabase
         .from('kpis')
         .select('*')
+        .is('org_id', null) // Buscar apenas templates globais
         .eq('is_active', true)
         .order('display_order');
 
@@ -210,12 +347,16 @@ export const useDashboard = () => {
         .order('display_order');
 
       if (actionsError) throw actionsError;
-      setQuickActions((actionsData || []).map(action => ({
+      
+      // Calcular contadores dinâmicos
+      const actionsWithCounters = await calculateActionCounters((actionsData || []).map(action => ({
         ...action,
         permissions: Array.isArray(action.permissions) 
           ? (action.permissions as string[])
           : []
       })));
+      
+      setQuickActions(actionsWithCounters);
 
       // Fetch Status Configs
       const { data: statusData, error: statusError } = await supabase
@@ -285,6 +426,72 @@ export const useDashboard = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [currentOrganization]);
+
+  // WebSocket para atualização em tempo real dos contadores
+  useEffect(() => {
+    if (!currentOrganization) return;
+
+    const channel = supabase
+      .channel(`dashboard-counters-${currentOrganization.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `org_id=eq.${currentOrganization.id}`
+        },
+        async (payload) => {
+          console.log('Orders change detected for counters:', payload);
+          // Recalcular contadores das ações
+          if (quickActions.length > 0) {
+            const updatedActions = await calculateActionCounters(quickActions);
+            setQuickActions(updatedActions);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'accounts_receivable',
+          filter: `org_id=eq.${currentOrganization.id}`
+        },
+        async (payload) => {
+          console.log('Accounts receivable change detected:', payload);
+          // Recalcular contadores das ações
+          if (quickActions.length > 0) {
+            const updatedActions = await calculateActionCounters(quickActions);
+            setQuickActions(updatedActions);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'monthly_dre',
+          filter: `org_id=eq.${currentOrganization.id}`
+        },
+        async (payload) => {
+          console.log('Monthly DRE change detected:', payload);
+          // Recalcular contadores das ações
+          if (quickActions.length > 0) {
+            const updatedActions = await calculateActionCounters(quickActions);
+            setQuickActions(updatedActions);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Dashboard counters WebSocket status:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentOrganization, quickActions]);
 
   return {
     kpis,
