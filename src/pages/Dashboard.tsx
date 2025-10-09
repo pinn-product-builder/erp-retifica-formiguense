@@ -11,6 +11,10 @@ import { PurchaseNeedsDashboard } from "@/components/dashboard/PurchaseNeedsDash
 import { PerformanceInsights } from "@/components/dashboard/PerformanceInsights";
 import { IntelligentAlerts } from "@/components/dashboard/IntelligentAlerts";
 import { GoalsManager } from "@/components/dashboard/GoalsManager";
+import { AchievementSystem } from "@/components/dashboard/AchievementSystem";
+import { PerformanceRanking } from "@/components/dashboard/PerformanceRanking";
+import { UserLevelProgress } from "@/components/dashboard/UserLevelProgress";
+import { CelebrationAnimations, useCelebration } from "@/components/dashboard/CelebrationAnimations";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useSEO } from "@/hooks/useSEO";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
@@ -41,6 +45,7 @@ export default function Dashboard() {
     dismissAlert,
     refetch 
   } = useDashboard();
+  const { celebration, triggerCelebration, hideCelebration } = useCelebration();
 
   // SEO optimization
   useSEO({
@@ -254,15 +259,55 @@ export default function Dashboard() {
         <GoalsManager />
       </motion.div>
 
+      {/* Gamification Section */}
+      <div className={`grid gap-${isMobile ? '4' : '6'} ${getMainGridCols()} mt-8`}>
+        {/* User Level Progress - 1/3 em desktop, full em mobile */}
+        <motion.div
+          className={`${isDesktop ? 'lg:col-span-1' : ''}`}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.8 }}
+        >
+          <UserLevelProgress />
+        </motion.div>
+
+        {/* Achievement System - 2/3 em desktop, full em mobile */}
+        <motion.div
+          className={`${isDesktop ? 'lg:col-span-2' : ''}`}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.9 }}
+        >
+          <AchievementSystem />
+        </motion.div>
+      </div>
+
+      {/* Performance Ranking */}
+      <motion.div
+        className="mt-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 1.0 }}
+      >
+        <PerformanceRanking />
+      </motion.div>
+
       {/* Purchase Needs Dashboard */}
       <motion.div
         className="mt-8"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.8 }}
+        transition={{ duration: 0.5, delay: 1.1 }}
       >
         <PurchaseNeedsDashboard />
       </motion.div>
+
+      {/* Celebration Animations */}
+      <CelebrationAnimations
+        trigger={celebration.show}
+        type={celebration.type}
+        onComplete={hideCelebration}
+      />
       </motion.div>
     </ThemeProvider>
   );
