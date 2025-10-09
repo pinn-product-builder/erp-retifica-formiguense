@@ -7,9 +7,9 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useSEO } from "@/hooks/useSEO";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { useDashboard } from "@/hooks/useDashboard";
+import { useDashboardPDF } from "@/hooks/useDashboardPDF";
 import { motion } from "framer-motion";
 import { 
-  Filter,
   Download,
   RefreshCw
 } from "lucide-react";
@@ -18,6 +18,7 @@ export default function Dashboard() {
   const { isMobile } = useBreakpoint();
   const { loading, refetch } = useDashboard();
   const { celebration, hideCelebration } = useCelebration();
+  const { generateDashboardPDF } = useDashboardPDF();
 
   // SEO optimization
   useSEO({
@@ -74,14 +75,6 @@ export default function Dashboard() {
               variant="outline" 
               className="hover:bg-primary/10 border-primary/20" 
               size={isMobile ? "sm" : "default"}
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              Filtros
-            </Button>
-            <Button 
-              variant="outline" 
-              className="hover:bg-primary/10 border-primary/20" 
-              size={isMobile ? "sm" : "default"}
               onClick={refetch}
               disabled={loading}
             >
@@ -91,6 +84,7 @@ export default function Dashboard() {
             <Button 
               className="button-primary-enhanced" 
               size={isMobile ? "sm" : "default"}
+              onClick={generateDashboardPDF}
             >
               <Download className="w-4 h-4 mr-2" />
               Relatório
