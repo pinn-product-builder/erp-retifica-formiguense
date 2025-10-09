@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGamification, useAchievements } from '@/hooks/useGamification';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useAuth } from '@/hooks/useAuth';
 import { GamificationService, AchievementConfig } from '@/services/gamificationService';
 import { 
   Trophy, 
@@ -37,6 +38,7 @@ export function AchievementSystem() {
   const { processAction } = useGamification();
   const { achievements, recentAchievements, loading, error } = useAchievements();
   const { currentOrganization } = useOrganization();
+  const { user } = useAuth();
   const [availableAchievements, setAvailableAchievements] = useState<AchievementConfig[]>([]);
   const [achievementProgress, setAchievementProgress] = useState<AchievementProgress[]>([]);
   const [loadingProgress, setLoadingProgress] = useState(true);
@@ -70,11 +72,11 @@ export function AchievementSystem() {
     return 'text-muted-foreground bg-muted';
   };
 
-  const fetchAchievementProgress = async () => {
+  const fetchAchievementProgress = useCallback(async () => {
     try {
       setLoadingProgress(true);
       
-      if (!currentOrganization) {
+      if (!currentOrganization || !user) {
         setLoadingProgress(false);
         return;
       }
@@ -82,6 +84,7 @@ export function AchievementSystem() {
       const progressPromises = availableAchievements.map(async (achievement) => {
         const progress = await GamificationService.getAchievementProgress(
           currentOrganization.id,
+          user.id,
           achievement.achievement_key
         );
         
@@ -107,7 +110,7 @@ export function AchievementSystem() {
     } finally {
       setLoadingProgress(false);
     }
-  };
+  }, [currentOrganization, user, availableAchievements, achievements]);
 
   useEffect(() => {
     const fetchAvailableAchievements = async () => {
@@ -128,7 +131,7 @@ export function AchievementSystem() {
     if (availableAchievements.length > 0) {
       fetchAchievementProgress();
     }
-  }, [availableAchievements, achievements]);
+  }, [availableAchievements, achievements, fetchAchievementProgress]);
 
   if (loading) {
     return (
