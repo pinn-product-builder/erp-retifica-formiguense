@@ -33,6 +33,7 @@ export function useBudgets() {
             customers!inner(name)
           )
         `)
+        .eq('orders.org_id', orgId)
         .order('created_at', { ascending: false });
 
       if (orderId) {

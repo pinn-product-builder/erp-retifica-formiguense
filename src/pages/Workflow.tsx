@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSupabase } from '@/hooks/useSupabase';
+import { useOrganization } from '@/hooks/useOrganization';
 import { KanbanBoard } from '@/components/workflow/KanbanBoard';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Loader2, RefreshCw } from 'lucide-react';
@@ -9,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function Workflow() {
   const { getOrders, loading } = useSupabase();
+  const { currentOrganization } = useOrganization();
   const { toast } = useToast();
   const [orders, setOrders] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -52,6 +54,9 @@ export default function Workflow() {
   };
 
   useEffect(() => {
+    // Só carrega se houver organização selecionada
+    if (!currentOrganization?.id) return;
+
     // Função interna para evitar warning de dependência
     const initialLoad = async () => {
       try {
@@ -70,7 +75,7 @@ export default function Workflow() {
     };
     
     initialLoad();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentOrganization?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (

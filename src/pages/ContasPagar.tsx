@@ -97,6 +97,27 @@ export default function ContasPagar() {
     return matchesSearch;
   });
 
+  const resetForm = () => {
+    setFormData({
+      supplier_name: '',
+      description: '',
+      amount: 0,
+      due_date: '',
+      status: 'pending',
+      payment_method: undefined,
+      invoice_number: '',
+      notes: ''
+    });
+    setEditingPayable(null);
+  };
+
+  const handleModalChange = (open: boolean) => {
+    setIsModalOpen(open);
+    if (!open) {
+      resetForm(); // Resetar formulário quando fechar
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -173,7 +194,7 @@ export default function ContasPagar() {
           <p className="text-muted-foreground">Gerencie fornecedores e despesas da empresa</p>
         </div>
         
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <Dialog open={isModalOpen} onOpenChange={handleModalChange}>
           <DialogTrigger asChild>
             <Button onClick={() => {
               setEditingPayable(null);
@@ -318,7 +339,7 @@ export default function ContasPagar() {
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => handleModalChange(false)}>
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={loading}>

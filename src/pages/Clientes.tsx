@@ -89,6 +89,13 @@ const Clientes = () => {
     setEditingClient(null);
   };
 
+  const handleDialogChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      resetForm(); // Resetar formulário quando fechar
+    }
+  };
+
   const handleEdit = (client: Customer) => {
     setEditingClient(client);
     setFormData({
@@ -235,7 +242,7 @@ const Clientes = () => {
           </p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
             <Button onClick={resetForm}>
               <UserPlus className="h-4 w-4 mr-2" />
@@ -437,7 +444,7 @@ const Clientes = () => {
                 </>
               )}
             <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => handleDialogChange(false)}>
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={loading}>

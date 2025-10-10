@@ -44,6 +44,7 @@ import DiagnosticInterface from "@/components/operations/DiagnosticInterface";
 import DiagnosticChecklistsConfig from "@/components/operations/DiagnosticChecklistsConfig";
 import { useDiagnosticChecklists, useDiagnosticChecklistsQuery } from "@/hooks/useDiagnosticChecklists";
 import { useOrders } from "@/hooks/useOrders";
+import { useOrganization } from "@/hooks/useOrganization";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,6 +78,7 @@ interface DiagnosticResponse {
 
 const Diagnosticos = () => {
   const { toast } = useToast();
+  const { currentOrganization } = useOrganization();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [componentFilter, setComponentFilter] = useState<string>("todos");
@@ -92,7 +94,7 @@ const Diagnosticos = () => {
 
   // Buscar respostas de diagnóstico do banco de dados
   const { data: diagnosticResponsesData, isLoading: isLoadingResponses } = useQuery({
-    queryKey: ['diagnostic-responses'],
+    queryKey: ['diagnostic-responses', currentOrganization?.id],
     queryFn: async () => {
       const responses = await checklistsFunctions.getChecklistResponses();
       
@@ -100,7 +102,7 @@ const Diagnosticos = () => {
       const responsesWithOrderData = await Promise.all(
         responses.map(async (response) => {
           try {
-            // Buscar dados da ordem
+            // Buscar dados da ordem (já filtrado por organização na query anterior)
             const { data: orderData } = await supabase
               .from('orders')
               .select(`
@@ -109,6 +111,7 @@ const Diagnosticos = () => {
                 engine:engines(type, brand, model)
               `)
               .eq('id', response.order_id)
+              .eq('org_id', currentOrganization?.id)
               .single();
 
             return {
@@ -123,7 +126,8 @@ const Diagnosticos = () => {
       );
 
       return responsesWithOrderData;
-    }
+    },
+    enabled: !!currentOrganization?.id
   });
 
   const diagnosticResponses = diagnosticResponsesData || [];

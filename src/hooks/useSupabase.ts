@@ -64,16 +64,25 @@ export function useSupabase() {
   };
 
   const getConsultants = async () => {
+    if (!currentOrganization?.id) {
+      handleError(new Error('Organização não encontrada'), 'Erro: organização não encontrada');
+      return [];
+    }
+
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      // @ts-expect-error - Supabase generated types cause deep instantiation error
+      const query = supabase
         .from('consultants')
         .select('*')
+        .eq('org_id', currentOrganization.id)
         .eq('active', true)
         .order('name');
+      
+      const { data, error } = await query;
 
       if (error) throw error;
-      return data;
+      return data || [];
     } catch (error) {
       handleError(error, 'Erro ao carregar consultores');
       return [];
@@ -147,12 +156,14 @@ export function useSupabase() {
 
     try {
       setLoading(true);
+      const orderData = {
+        ...order,
+        org_id: currentOrganization.id
+      } as Database['public']['Tables']['orders']['Insert'];
+      
       const { data, error } = await supabase
         .from('orders')
-        .insert({
-          ...order,
-          org_id: currentOrganization.id
-        })
+        .insert(orderData)
         .select()
         .single();
 
@@ -196,11 +207,11 @@ export function useSupabase() {
         file_path: uploadData.path,
         file_name: file.name,
         uploaded_by: user?.id || null
-      };
+      } as Database['public']['Tables']['order_photos']['Insert'];
       
       const { data, error } = await supabase
         .from('order_photos')
-        .insert(photoData as any)
+        .insert(photoData)
         .select()
         .single();
 
@@ -215,6 +226,11 @@ export function useSupabase() {
   };
 
   const getOrders = async () => {
+    if (!currentOrganization?.id) {
+      handleError(new Error('Organização não encontrada'), 'Erro: organização não encontrada');
+      return [];
+    }
+
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -226,6 +242,7 @@ export function useSupabase() {
           engines(id, type, brand, model),
           order_workflow(*)
         `)
+        .eq('org_id', currentOrganization.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -239,13 +256,18 @@ export function useSupabase() {
   };
 
   const getWorkflowsByComponent = async (component: 'bloco' | 'eixo' | 'biela' | 'comando' | 'cabecote') => {
+    if (!currentOrganization?.id) {
+      handleError(new Error('Organização não encontrada'), 'Erro: organização não encontrada');
+      return [];
+    }
+
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('order_workflow')
         .select(`
           *,
-          order:orders(
+          order:orders!inner(
             *,
             customer:customers(*),
             consultant:consultants(*),
@@ -253,6 +275,7 @@ export function useSupabase() {
           )
         `)
         .eq('component', component)
+        .eq('order.org_id', currentOrganization.id)
         .order('updated_at', { ascending: false });
 
       if (error) throw error;

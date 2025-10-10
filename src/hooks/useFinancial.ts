@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useOrganization } from '@/hooks/useOrganization';
 import { toast } from 'sonner';
 
 export interface AccountsReceivable {
@@ -92,8 +93,9 @@ export interface MonthlyDRE {
 
 export const useFinancial = () => {
   const [loading, setLoading] = useState(false);
+  const { currentOrganization } = useOrganization();
 
-  const handleError = (error: any, message: string) => {
+  const handleError = (error: unknown, message: string) => {
     console.error(message, error);
     toast.error(message);
     setLoading(false);
@@ -101,6 +103,8 @@ export const useFinancial = () => {
 
   // Contas a Receber
   const getAccountsReceivable = async () => {
+    if (!currentOrganization?.id) return [];
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -110,6 +114,7 @@ export const useFinancial = () => {
           customers (name, document),
           orders (order_number)
         `)
+        .eq('org_id', currentOrganization.id)
         .order('due_date', { ascending: true });
 
       if (error) throw error;
@@ -123,11 +128,16 @@ export const useFinancial = () => {
   };
 
   const createAccountsReceivable = async (receivable: AccountsReceivable) => {
+    if (!currentOrganization?.id) return null;
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('accounts_receivable')
-        .insert([receivable])
+        .insert([{
+          ...receivable,
+          org_id: currentOrganization.id
+        }])
         .select()
         .single();
 
@@ -143,12 +153,15 @@ export const useFinancial = () => {
   };
 
   const updateAccountsReceivable = async (id: string, updates: Partial<AccountsReceivable>) => {
+    if (!currentOrganization?.id) return null;
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('accounts_receivable')
         .update(updates)
         .eq('id', id)
+        .eq('org_id', currentOrganization.id)
         .select()
         .single();
 
@@ -165,6 +178,8 @@ export const useFinancial = () => {
 
   // Contas a Pagar
   const getAccountsPayable = async () => {
+    if (!currentOrganization?.id) return [];
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -173,6 +188,7 @@ export const useFinancial = () => {
           *,
           expense_categories (name, category)
         `)
+        .eq('org_id', currentOrganization.id)
         .order('due_date', { ascending: true });
 
       if (error) throw error;
@@ -186,11 +202,16 @@ export const useFinancial = () => {
   };
 
   const createAccountsPayable = async (payable: AccountsPayable) => {
+    if (!currentOrganization?.id) return null;
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('accounts_payable')
-        .insert([payable])
+        .insert([{
+          ...payable,
+          org_id: currentOrganization.id
+        }])
         .select()
         .single();
 
@@ -206,12 +227,15 @@ export const useFinancial = () => {
   };
 
   const updateAccountsPayable = async (id: string, updates: Partial<AccountsPayable>) => {
+    if (!currentOrganization?.id) return null;
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('accounts_payable')
         .update(updates)
         .eq('id', id)
+        .eq('org_id', currentOrganization.id)
         .select()
         .single();
 
@@ -228,6 +252,8 @@ export const useFinancial = () => {
 
   // Fluxo de Caixa
   const getCashFlow = async (startDate?: string, endDate?: string) => {
+    if (!currentOrganization?.id) return [];
+    
     try {
       setLoading(true);
       let query = supabase
@@ -239,6 +265,7 @@ export const useFinancial = () => {
           accounts_receivable (invoice_number),
           accounts_payable (supplier_name)
         `)
+        .eq('org_id', currentOrganization.id)
         .order('transaction_date', { ascending: false });
 
       if (startDate && endDate) {
@@ -257,11 +284,16 @@ export const useFinancial = () => {
   };
 
   const createCashFlow = async (cashFlow: CashFlow) => {
+    if (!currentOrganization?.id) return null;
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('cash_flow')
-        .insert([cashFlow])
+        .insert([{
+          ...cashFlow,
+          org_id: currentOrganization.id
+        }])
         .select()
         .single();
 
@@ -278,11 +310,15 @@ export const useFinancial = () => {
 
   // Formas de Pagamento
   const getPaymentMethods = async () => {
+    if (!currentOrganization?.id) return [];
+    
     try {
       setLoading(true);
+      // @ts-expect-error - Supabase generated types cause deep instantiation error
       const { data, error } = await supabase
         .from('payment_methods')
         .select('*')
+        .eq('org_id', currentOrganization.id)
         .eq('is_active', true)
         .order('name');
 
@@ -298,11 +334,14 @@ export const useFinancial = () => {
 
   // Categorias de Despesas
   const getExpenseCategories = async () => {
+    if (!currentOrganization?.id) return [];
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('expense_categories')
         .select('*')
+        .eq('org_id', currentOrganization.id)
         .eq('is_active', true)
         .order('name');
 
@@ -318,11 +357,14 @@ export const useFinancial = () => {
 
   // Contas Bancárias
   const getBankAccounts = async () => {
+    if (!currentOrganization?.id) return [];
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('bank_accounts')
         .select('*')
+        .eq('org_id', currentOrganization.id)
         .eq('is_active', true)
         .order('bank_name');
 
@@ -338,11 +380,14 @@ export const useFinancial = () => {
 
   // DRE Mensal
   const getMonthlyDRE = async (year?: number) => {
+    if (!currentOrganization?.id) return [];
+    
     try {
       setLoading(true);
       let query = supabase
         .from('monthly_dre')
         .select('*')
+        .eq('org_id', currentOrganization.id)
         .order('year', { ascending: false })
         .order('month', { ascending: false });
 
@@ -363,11 +408,14 @@ export const useFinancial = () => {
 
   // Clientes
   const getCustomers = async () => {
+    if (!currentOrganization?.id) return [];
+    
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('customers')
         .select('*')
+        .eq('org_id', currentOrganization.id)
         .order('name');
 
       if (error) throw error;
@@ -382,6 +430,8 @@ export const useFinancial = () => {
 
   // Indicadores Financeiros
   const getFinancialKPIs = async () => {
+    if (!currentOrganization?.id) return null;
+    
     try {
       setLoading(true);
       
@@ -390,18 +440,22 @@ export const useFinancial = () => {
       const currentYear = new Date().getFullYear();
       
       const [cashFlowData, receivableData, payableData] = await Promise.all([
+        // @ts-expect-error - Supabase generated types cause deep instantiation error
         supabase
           .from('cash_flow')
           .select('transaction_type, amount')
+          .eq('org_id', currentOrganization.id)
           .gte('transaction_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`),
-        
+        // @ts-expect-error - Supabase generated types cause deep instantiation error
         supabase
           .from('accounts_receivable')
-          .select('status, amount, due_date'),
-        
+          .select('status, amount, due_date')
+          .eq('org_id', currentOrganization.id),
+        // @ts-expect-error - Supabase generated types cause deep instantiation error
         supabase
           .from('accounts_payable')
           .select('status, amount, due_date')
+          .eq('org_id', currentOrganization.id)
       ]);
 
       const income = cashFlowData.data?.filter(t => t.transaction_type === 'income')

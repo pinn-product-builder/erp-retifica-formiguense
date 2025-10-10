@@ -64,6 +64,27 @@ export default function FluxoCaixa() {
     setCategories(categoriesData);
   };
 
+  const resetForm = () => {
+    setFormData({
+      transaction_type: 'income',
+      amount: 0,
+      description: '',
+      transaction_date: format(new Date(), 'yyyy-MM-dd'),
+      payment_method: undefined,
+      bank_account_id: undefined,
+      category_id: undefined,
+      notes: '',
+      reconciled: false
+    });
+  };
+
+  const handleModalChange = (open: boolean) => {
+    setIsModalOpen(open);
+    if (!open) {
+      resetForm(); // Resetar formulário quando fechar
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -149,7 +170,7 @@ export default function FluxoCaixa() {
           <p className="text-muted-foreground">Controle diário de entradas e saídas</p>
         </div>
         
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <Dialog open={isModalOpen} onOpenChange={handleModalChange}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -290,7 +311,7 @@ export default function FluxoCaixa() {
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => handleModalChange(false)}>
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={loading}>

@@ -55,6 +55,25 @@ export default function ContasReceber() {
     return matchesSearch && matchesStatus;
   });
 
+  const resetForm = () => {
+    setFormData({
+      customer_id: '',
+      amount: 0,
+      due_date: '',
+      installment_number: 1,
+      total_installments: 1,
+      status: 'pending'
+    });
+    setEditingReceivable(null);
+  };
+
+  const handleDialogChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      resetForm(); // Resetar formulário quando fechar
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -147,7 +166,7 @@ export default function ContasReceber() {
           <h1 className="text-3xl font-bold">Contas a Receber</h1>
           <p className="text-muted-foreground">Gerencie os recebimentos da empresa</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
             <Button onClick={() => {
               setEditingReceivable(null);
@@ -262,7 +281,7 @@ export default function ContasReceber() {
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button type="button" variant="outline" onClick={() => handleDialogChange(false)}>
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={loading}>

@@ -167,8 +167,7 @@ const BudgetApprovalModal = ({
       const result = await approveBudget(approvalData);
       if (result) {
         onApprovalCreated(result);
-        onOpenChange(false);
-        resetForm();
+        handleOpenChange(false); // Usar handleOpenChange que já reseta o formulário
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -197,6 +196,13 @@ const BudgetApprovalModal = ({
     setApprovalDocument(null);
   };
 
+  const handleOpenChange = (open: boolean) => {
+    onOpenChange(open);
+    if (!open) {
+      resetForm(); // Resetar formulário quando fechar
+    }
+  };
+
   const getApprovalTypeIcon = (type: string) => {
     switch (type) {
       case 'total': return <CheckCircle className="w-4 h-4 text-green-600" />;
@@ -217,7 +223,7 @@ const BudgetApprovalModal = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -466,7 +472,7 @@ const BudgetApprovalModal = ({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleOpenChange(false)}
               className="flex-1"
             >
               Cancelar

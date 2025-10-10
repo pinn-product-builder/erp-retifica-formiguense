@@ -382,13 +382,20 @@ export function useDiagnosticChecklists() {
   // Buscar respostas de checklist
   const getChecklistResponses = async (orderId?: string) => {
     try {
+      // Buscar respostas com join nas orders para filtrar por organização
       let query = supabase
         .from('diagnostic_checklist_responses')
         .select(`
           *,
-          checklist:diagnostic_checklists(*)
+          checklist:diagnostic_checklists(*),
+          order:orders!inner(id, org_id)
         `)
         .order('diagnosed_at', { ascending: false });
+
+      // Filtrar por organização atual
+      if (currentOrganization?.id) {
+        query = query.eq('order.org_id', currentOrganization.id);
+      }
 
       if (orderId) {
         query = query.eq('order_id', orderId);

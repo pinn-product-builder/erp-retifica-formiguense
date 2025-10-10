@@ -85,11 +85,24 @@ export function TaxRuleManagement() {
 
   const brazilianStates = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
 
+  const handleDialogChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      // Resetar formulário quando fechar
+      setFormData({
+        regime_id: '', tax_type_id: '', operation: 'venda', origin_uf: '', destination_uf: '',
+        classification_id: '', calc_method: 'percentual', rate: '', base_reduction: '',
+        is_active: true, priority: '100', valid_from: new Date().toISOString().split('T')[0],
+        valid_to: '', formula: ''
+      });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Regras Fiscais</h3>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -210,7 +223,7 @@ export function TaxRuleManagement() {
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                <Button type="button" variant="outline" onClick={() => handleDialogChange(false)}>Cancelar</Button>
                 <Button type="submit" disabled={loading}>Criar Regra</Button>
               </div>
             </form>
