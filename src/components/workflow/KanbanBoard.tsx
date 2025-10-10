@@ -61,8 +61,8 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
               ...workflow,
               order: order,
               orderNumber: order.order_number,
-              customerName: order.customer?.name,
-              engineModel: `${order.engine?.brand} ${order.engine?.model}`,
+              customerName: order.customers?.name,
+              engineModel: order.engines ? `${order.engines.brand || ''} ${order.engines.model || ''}`.trim() : 'Motor não informado',
               collectionDate: order.collection_date,
               componentColor: getComponentColor(workflow.component) // Adicionar cor específica do componente
             };
@@ -80,8 +80,8 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
               ...componentWorkflow,
               order: order,
               orderNumber: order.order_number,
-              customerName: order.customer?.name,
-              engineModel: `${order.engine?.brand} ${order.engine?.model}`,
+              customerName: order.customers?.name,
+              engineModel: order.engines ? `${order.engines.brand || ''} ${order.engines.model || ''}`.trim() : 'Motor não informado',
               collectionDate: order.collection_date,
               componentColor: getComponentColor(componentWorkflow.component) // Adicionar cor específica do componente
             };
