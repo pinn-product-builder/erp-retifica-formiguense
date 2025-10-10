@@ -176,7 +176,6 @@ export function GoalsManager() {
     try {
       const { error } = await supabase
         .from('kpi_targets')
-        // @ts-expect-error - Schema do Supabase será atualizado após regeneração de tipos
         .insert({
           org_id: currentOrganization?.id,
           kpi_id: null,

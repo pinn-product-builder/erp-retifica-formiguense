@@ -93,7 +93,7 @@ export function DashboardTabs() {
               key={tab.id}
               value={tab.id}
               className="m-0"
-              forceMount={activeTab === tab.id}
+              forceMount={activeTab === tab.id ? true : undefined}
             >
               {activeTab === tab.id && (
                 <motion.div

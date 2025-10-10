@@ -152,8 +152,7 @@ export function IntelligentAlerts() {
         .limit(50); // Últimos 50 alertas
 
       if (error) throw error;
-
-      setAlertHistory(data || []);
+      setAlertHistory(data as AlertHistoryItem[]|| []);
     } catch (error) {
       console.error('Erro ao buscar histórico:', error);
     }

@@ -32,7 +32,7 @@ export const KPIsGrid: React.FC = () => {
     return (
       <Alert variant="destructive">
         <AlertDescription>
-          Erro ao carregar KPIs: {error}
+          Erro ao carregar KPIs: {String(error)}
         </AlertDescription>
       </Alert>
     );
