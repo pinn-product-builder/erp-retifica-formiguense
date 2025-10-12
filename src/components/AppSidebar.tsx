@@ -26,7 +26,8 @@ import {
   Clock,
   Wrench,
   Shield,
-  ClipboardList
+  ClipboardList,
+  ClipboardCheck as Inventory
 } from "lucide-react";
 
 import {
@@ -138,6 +139,11 @@ const inventoryItems = [
     title: "Estoque/Peças",
     url: "/estoque",
     icon: Package,
+  },
+  {
+    title: "Inventário Físico",
+    url: "/inventario",
+    icon: Inventory,
   },
   {
     title: "Separação de Peças",
