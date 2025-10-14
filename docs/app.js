@@ -117,9 +117,15 @@ function displaySearchResults(results) {
 }
 
 function navigateToDoc(path) {
-  // Convert .md to .html for GitHub Pages
-  const htmlPath = path.replace('.md', '.html');
-  window.location.href = htmlPath;
+  // Load markdown content dynamically
+  loadMarkdownContent(path);
+  // Close search modal if open
+  const searchModal = document.getElementById('search-modal');
+  if (searchModal && !searchModal.classList.contains('hidden')) {
+    searchModal.classList.add('hidden');
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-results').innerHTML = '';
+  }
 }
 
 // ===== Smooth Scroll for Anchor Links =====
@@ -165,26 +171,78 @@ window.addEventListener('load', updateActiveNavLink);
 // ===== Dynamic Content Loading =====
 async function loadMarkdownContent(path) {
   try {
-    const response = await fetch(path);
+    // If path doesn't end with .md and isn't a directory, add .md
+    let finalPath = path;
+    if (!path.endsWith('.md') && !path.endsWith('/')) {
+      finalPath = path + '.md';
+    } else if (path.endsWith('/')) {
+      // If it's a directory, load README.md
+      finalPath = path + 'README.md';
+    }
+    
+    // Fetch markdown file
+    const response = await fetch(finalPath);
     if (!response.ok) throw new Error('File not found');
     
     const markdown = await response.text();
+    
+    // Parse markdown to HTML using marked.js
     const html = marked.parse(markdown);
     
-    const contentArea = document.getElementById('dynamic-content');
+    // Get or create content area
+    let contentArea = document.getElementById('dynamic-content');
+    if (!contentArea) {
+      contentArea = document.createElement('div');
+      contentArea.id = 'dynamic-content';
+      contentArea.className = 'dynamic-content';
+      const mainContent = document.querySelector('.content-area');
+      if (mainContent) {
+        mainContent.appendChild(contentArea);
+      }
+    }
+    
+    // Hide sections grid and show dynamic content
+    const sectionsGrid = document.querySelector('.sections-grid');
+    const featuresSection = document.querySelector('.features-section');
+    const gettingStartedSection = document.querySelector('.getting-started-section');
+    
+    if (sectionsGrid) sectionsGrid.style.display = 'none';
+    if (featuresSection) featuresSection.style.display = 'none';
+    if (gettingStartedSection) gettingStartedSection.style.display = 'none';
+    
     contentArea.innerHTML = html;
     contentArea.classList.remove('hidden');
+    contentArea.style.display = 'block';
     
     // Render Mermaid diagrams
-    mermaid.init(undefined, contentArea.querySelectorAll('.language-mermaid'));
+    if (typeof mermaid !== 'undefined') {
+      mermaid.init(undefined, contentArea.querySelectorAll('.language-mermaid, code.language-mermaid'));
+    }
     
     // Highlight code blocks
-    Prism.highlightAllUnder(contentArea);
+    if (typeof Prism !== 'undefined') {
+      Prism.highlightAllUnder(contentArea);
+    }
+    
+    // Make links in markdown work
+    contentArea.querySelectorAll('a[href$=".md"]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const href = link.getAttribute('href');
+        loadMarkdownContent(href);
+      });
+    });
     
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (error) {
     console.error('Error loading content:', error);
+    const contentArea = document.getElementById('dynamic-content');
+    if (contentArea) {
+      contentArea.innerHTML = '<div style="padding: 2rem; text-align: center;"><h2>⚠️ Conteúdo não encontrado</h2><p>O arquivo solicitado não foi encontrado.</p><p><a href="javascript:location.reload()">← Voltar ao início</a></p></div>';
+      contentArea.classList.remove('hidden');
+      contentArea.style.display = 'block';
+    }
   }
 }
 

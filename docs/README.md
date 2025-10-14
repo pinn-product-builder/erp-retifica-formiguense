@@ -1,179 +1,229 @@
-# ERP Retífica Formiguense - Documentação
+# 📚 Documentação ERP Retífica Formiguense
 
-![Status](https://img.shields.io/badge/status-em%20homologação-yellow)
-![Versão](https://img.shields.io/badge/versão-1.0.0-blue)
-![Licença](https://img.shields.io/badge/licença-proprietária-red)
+> Sistema de Gestão para Retíficas Automotivas - Documentação Completa v1.0
 
-Sistema completo de gestão para retíficas automotivas com módulos integrados para operações, financeiro, fiscal, estoque e compras.
+[![Status](https://img.shields.io/badge/Status-Homologação-yellow)](https://github.com/pinn-product-builder/erp-retifica-formiguense)
+[![Versão](https://img.shields.io/badge/Versão-1.0.0-blue)](https://github.com/pinn-product-builder/erp-retifica-formiguense)
+[![Documentação](https://img.shields.io/badge/Docs-Online-green)](https://pinn-product-builder.github.io/erp-retifica-formiguense/)
 
 ## 🚀 Acesso Rápido
 
-- **[Documentação Web](https://pinn-product-builder.github.io/erp-retifica-formiguense/)** - Acesse a documentação completa online
-- **[Início Rápido](quick-start.md)** - Comece a usar o sistema em minutos
-- **[Visão Geral](system-blueprint.md)** - Entenda a arquitetura do sistema
-- **[Guia de Validação](validation/functional-validation-guide.md)** - Guia completo para homologação
-
-## 📋 Índice
-
-### 🏗️ Arquitetura
-- [Visão Geral do Sistema](architecture/system-overview.md)
-- [Schema do Banco de Dados](architecture/database-schema.md)
-- [Sistema Multi-tenant](architecture/multitenancy.md)
-- [Modelo de Segurança](architecture/security-model.md)
-- [Stack Tecnológica](architecture/tech-stack.md)
-- [Sistema de Perfis e Permissões](architecture/profile-permissions-system.md)
-
-### 📖 Regras de Negócio
-- [Autenticação e Multi-tenancy](business-rules/authentication-multitenancy.md)
-- [Workflow de Operações](business-rules/operations-workflow.md)
-- [Dashboard e KPIs](business-rules/dashboard-kpis.md)
-- [Módulo Financeiro](business-rules/financial-module.md)
-- [Módulo Fiscal](business-rules/fiscal-module.md)
-- [Módulo de Estoque](business-rules/inventory-module.md) 📦
-- [Módulo de Compras](business-rules/purchasing-module.md) 🛒
-- [Orçamentos e Aprovação](business-rules/budgets-approval.md)
-
-### 🧩 Módulos
-
-#### Dashboard
-- [README](modules/dashboard/README.md)
-- [Requisitos do Produto](modules/dashboard/product-specs/product-requirements.md)
-- [Arquitetura de Componentes](modules/dashboard/technical-specs/component-architecture.md)
-- [Integração de Dados](modules/dashboard/technical-specs/data-integration.md)
-- [Sistema de Tabs](modules/dashboard/tabs-system-implementation.md)
-- [Sistema de KPIs Unificado](modules/dashboard/unified-kpi-system.md)
-
-#### Operações
-- [README](modules/operations/README.md)
-- [Processo de Ordem de Serviço](modules/operations/business-processes/service-order-process.md)
-- [Gestão de Workflow](modules/operations/business-processes/workflow-management.md)
-- [Configuração Dinâmica de Status](modules/operations/business-processes/dynamic-workflow-status-configuration.md)
-- [Arquitetura de Componentes](modules/operations/technical-specs/component-architecture.md)
-- [Jornada do Usuário](modules/operations/user-flows/operations-user-journey.md)
-- [Ciclo de Vida da Ordem](modules/operations/user-flows/order-lifecycle.md)
-
-#### Fiscal
-- [README](modules/fiscal/README.md)
-
-#### Estoque (Inventário)
-- [README](modules/inventory/README.md) 📦
-- [Plano de Implementação](modules/inventory/implementation-plan.md)
-- [Guia de Deploy](modules/inventory/DEPLOYMENT_GUIDE.md)
-- [Checklist de Implementação](modules/inventory/IMPLEMENTATION_CHECKLIST.md)
-- [Resumo da Implementação](modules/inventory/IMPLEMENTATION_SUMMARY.md)
-
-### 👥 Guias do Usuário
-- [Começando](user-guides/getting-started.md)
-- [Guia do Sistema de Temas](user-guides/theme-system-guide.md)
-- [Guia da Interface](validation/interface-guide.md)
-
-### ✅ Validação e Testes
-- [Guia de Validação Funcional](validation/functional-validation-guide.md)
-- [Matriz de Cenários de Teste](testing/test-scenarios-matrix.md)
-- [Guia de Testes End-to-End](testing/end-to-end-test-guide.md)
-
-### 🔧 API e Integrações
-- [Configuração do Supabase](api/supabase-setup.md)
-
-### 📊 Diagramas
-- [Arquitetura do Sistema](diagrams/system-architecture.mmd)
-
-### 🚀 Desenvolvimento
-- [Guia de Setup](development/setup-guide.md)
-
-### 📝 Outros
-- [Glossário](glossary.md)
-- [FAQ](faq.md)
-- [Melhorias Futuras](future-improvements.md)
-- [Changelog](releases/CHANGELOG.md)
-
-## 🎯 Status de Implementação
-
-### ✅ Módulos Implementados
-- ✅ Dashboard com KPIs e Sistema de Tabs
-- ✅ Operações e Workflow (Ordens de Serviço)
-- ✅ Diagnósticos
-- ✅ Orçamentos com Aprovação
-- ✅ Financeiro (Contas a Pagar/Receber, DRE, Fluxo de Caixa)
-- ✅ Fiscal (Base implementada)
-- ✅ Sistema de Perfis e Permissões
-- ✅ Multi-tenancy Completo
-
-### 🚧 Em Desenvolvimento/Pendente
-- 🚧 Módulo de Compras Completo (cotações, POs, recebimento)
-- 🚧 Movimentação de Estoque (entrada/saída)
-- 🚧 Inventário Físico
-- 🚧 Relatórios Avançados
-
-## 🏢 Características Principais
-
-### Multi-tenant
-Sistema preparado para múltiplas organizações com total isolamento de dados através de Row Level Security (RLS).
-
-### Segurança
-- RLS implementado em todas as tabelas
-- Sistema de perfis e permissões granular
-- Autenticação via Supabase Auth
-
-### Responsivo
-Interface adaptada para desktop, tablet e mobile com breakpoints otimizados.
-
-### Tempo Real
-Atualizações em tempo real utilizando Supabase Realtime para:
-- Notificações
-- KPIs do Dashboard
-- Status de Ordens de Serviço
-
-### Temas
-Suporte completo a tema claro/escuro com sistema de tokens CSS customizáveis.
-
-### Gamificação
-Sistema de pontos, conquistas e ranking de performance para engajamento dos usuários.
-
-## 🛠️ Stack Tecnológica
-
-### Frontend
-- **React 18** - Framework UI
-- **TypeScript** - Type safety
-- **Vite** - Build tool
-- **Tailwind CSS** - Styling
-- **Shadcn/ui** - Componentes
-- **React Router** - Navegação
-- **TanStack Query** - Data fetching
-- **Recharts** - Gráficos
-
-### Backend
-- **Supabase** - BaaS (Backend as a Service)
-  - PostgreSQL - Banco de dados
-  - Row Level Security - Segurança
-  - Realtime - Atualizações em tempo real
-  - Edge Functions - Lógica serverless
-  - Storage - Armazenamento de arquivos
-
-## 📚 Documentação para Homologação
-
-Para iniciar a homologação do sistema, recomendamos seguir esta ordem:
-
-1. **[Início Rápido](quick-start.md)** - Configure o ambiente e faça o primeiro acesso
-2. **[Guia de Validação Funcional](validation/functional-validation-guide.md)** - Siga os cenários de teste
-3. **[Matriz de Cenários de Teste](testing/test-scenarios-matrix.md)** - Checklist completo de funcionalidades
-4. **[Guia da Interface](validation/interface-guide.md)** - Entenda a navegação e componentes
-
-## 🔗 Links Úteis
-
-- **GitHub:** [https://github.com/pinn-product-builder/erp-retifica-formiguense](https://github.com/pinn-product-builder/erp-retifica-formiguense)
-- **Documentação Web:** [https://pinn-product-builder.github.io/erp-retifica-formiguense/](https://pinn-product-builder.github.io/erp-retifica-formiguense/)
-
-## 📞 Suporte
-
-Para dúvidas, sugestões ou problemas:
-- **Email:** suporte@retificaformiguense.com.br
-- **Issues GitHub:** [Criar issue](https://github.com/pinn-product-builder/erp-retifica-formiguense/issues)
+- **[🎯 Início Rápido](quick-start.md)** - Configure e use o sistema em minutos
+- **[📊 Visão Geral do Sistema](system-blueprint.md)** - Entenda a arquitetura completa
+- **[✅ Guia de Validação](validation/functional-validation-guide.md)** - Roteiro de homologação
+- **[📖 Glossário](glossary.md)** - Termos e definições técnicas
+- **[❓ FAQ](faq.md)** - Perguntas frequentes
 
 ---
 
-**Versão:** 1.0.0  
-**Última atualização:** Janeiro 2025  
-**Status:** Em Homologação
+## 📑 Índice Completo
 
-© 2025 Retífica Formiguense. Todos os direitos reservados.
+### 🏗️ Arquitetura
+
+Documentação técnica da arquitetura do sistema:
+
+- **[Visão Geral do Sistema](architecture/system-overview.md)** - Arquitetura geral e componentes
+- **[Schema do Banco de Dados](architecture/database-schema.md)** - Estrutura completa do banco
+- **[Multi-tenancy](architecture/multitenancy.md)** - Sistema multi-organizacional
+- **[Modelo de Segurança](architecture/security-model.md)** - RLS e políticas de segurança
+- **[Sistema de Perfis e Permissões](architecture/profile-permissions-system.md)** - RBAC e permissões granulares
+- **[Stack Técnica](architecture/tech-stack.md)** - Tecnologias utilizadas
+
+### 📖 Regras de Negócio
+
+Processos e regras implementadas:
+
+- **[Autenticação e Multi-tenancy](business-rules/authentication-multitenancy.md)** - Login e organizações
+- **[Dashboard e KPIs](business-rules/dashboard-kpis.md)** - Métricas e indicadores
+- **[Workflow de Operações](business-rules/operations-workflow.md)** - Fluxo de OS e Kanban
+- **[Orçamentos e Aprovação](business-rules/budgets-approval.md)** - Processo de orçamentos
+- **[Módulo Fiscal](business-rules/fiscal-module.md)** - Gestão tributária
+- **[Módulo Financeiro](business-rules/financial-module.md)** - Contas e fluxo de caixa
+- **[Módulo de Estoque](business-rules/inventory-module.md)** - Gestão de peças
+- **[Módulo de Compras](business-rules/purchasing-module.md)** - Processo de compras
+
+### 🧩 Módulos
+
+Documentação detalhada de cada módulo:
+
+#### 📈 Dashboard
+- **[README](modules/dashboard/README.md)** - Visão geral do módulo
+- **[Requisitos do Produto](modules/dashboard/product-specs/product-requirements.md)**
+- **[Arquitetura de Componentes](modules/dashboard/technical-specs/component-architecture.md)**
+- **[Integração de Dados](modules/dashboard/technical-specs/data-integration.md)**
+- **[Sistema Unificado de KPIs](modules/dashboard/unified-kpi-system.md)**
+- **[Jornada do Usuário](modules/dashboard/user-flows/dashboard-user-journey.md)**
+- **[Wireframes](modules/dashboard/wireframes/)** - Interfaces principais
+
+#### 🔧 Operações
+- **[README](modules/operations/README.md)** - Visão geral do módulo
+- **[Processo de Ordens de Serviço](modules/operations/business-processes/service-order-process.md)**
+- **[Gestão de Workflow](modules/operations/business-processes/workflow-management.md)**
+- **[Configuração Dinâmica de Status](modules/operations/business-processes/dynamic-workflow-status-configuration.md)**
+- **[Arquitetura de Componentes](modules/operations/technical-specs/component-architecture.md)**
+- **[Fluxo Kanban](modules/operations/user-flows/kanban-workflow.md)**
+- **[Ciclo de Vida da OS](modules/operations/user-flows/order-lifecycle.md)**
+- **[Guia de Configurações](modules/operations/user-guides/operations-configuration-guide.md)**
+- **[Wireframes](modules/operations/wireframes/)** - Interfaces do módulo
+
+#### 💰 Orçamentos
+- **[README](modules/budgets/README.md)** - Visão geral do módulo
+- **[Arquitetura de Componentes](modules/budgets/technical-specs/component-architecture.md)**
+- **[Fluxo de Aprovação](modules/budgets/user-flows/budget-approval-flow.md)**
+- **[Wireframes](modules/budgets/wireframes/)** - Interfaces de orçamento
+
+#### 📋 Fiscal
+- **[README](modules/fiscal/README.md)** - Visão geral do módulo fiscal
+
+#### 📦 Estoque (Inventário)
+- **[README](modules/inventory/README.md)** - Visão geral do módulo
+- **[Plano de Implementação](modules/inventory/implementation-plan.md)**
+- **[Guia de Deploy](modules/inventory/DEPLOYMENT_GUIDE.md)**
+- **[Checklist de Implementação](modules/inventory/IMPLEMENTATION_CHECKLIST.md)**
+- **[Resumo da Implementação](modules/inventory/IMPLEMENTATION_SUMMARY.md)**
+
+### 👥 Fluxos e Guias do Usuário
+
+- **[Jornadas Completas de Usuário](user-flows/complete-user-journeys.md)** - Fluxos end-to-end
+- **[Matriz de Permissões](user-flows/permissions-matrix.md)** - Controle de acesso
+- **[Primeiros Passos](user-guides/getting-started.md)** - Guia inicial
+- **[Sistema de Temas](user-guides/theme-system-guide.md)** - Personalização visual
+
+### ✅ Validação e Testes
+
+Roteiros para homologação:
+
+- **[Guia de Validação Funcional](validation/functional-validation-guide.md)** - Checklist completo
+- **[Guia de Interface](validation/interface-guide.md)** - Validação de UI/UX
+- **[Testes End-to-End](testing/end-to-end-test-guide.md)** - Cenários E2E
+- **[Matriz de Cenários de Teste](testing/test-scenarios-matrix.md)** - Casos de teste
+
+### 🔧 Desenvolvimento
+
+Guias técnicos para desenvolvedores:
+
+- **[Guia de Configuração](development/setup-guide.md)** - Setup do ambiente
+- **[Setup Supabase](api/supabase-setup.md)** - Configuração do backend
+- **[Verificação de Banco](guidelines/database-verification.md)** - Checklist de BD
+
+### 📝 Documentação Técnica
+
+Especificações técnicas detalhadas:
+
+- **[Geração de Número de Orçamento](technical/budget-number-generation-explained.md)**
+- **[Issue Multi-tenant de Orçamentos](technical/budget-number-multi-tenant-issue.md)**
+
+### 🔄 Fixes e Correções
+
+Documentação de problemas resolvidos:
+
+- **[Fix: Constraint Multi-tenant de Budget](fixes/budget-number-multi-tenant-constraint-fix.md)**
+- **[Fix: Race Condition em Budget Number](fixes/budget-number-race-condition-fix.md)**
+
+### 📊 Diagramas
+
+- **[Arquitetura do Sistema](diagrams/system-architecture.mmd)** - Diagrama Mermaid
+
+### 🔄 Releases
+
+- **[CHANGELOG](releases/CHANGELOG.md)** - Histórico de mudanças
+- **[Roadmap de Implementação](implementation-roadmap.md)** - Status atual
+- **[Melhorias Futuras](future-improvements.md)** - Planejamento futuro
+
+---
+
+## 🎯 Para Homologação do Cliente
+
+### Passo 1: Configuração Inicial
+Siga o **[Guia de Primeiros Passos](user-guides/getting-started.md)** para configurar:
+- Criar organização
+- Adicionar usuários
+- Configurar perfis e permissões
+- Ajustar configurações básicas
+
+### Passo 2: Validação Funcional
+Execute os testes do **[Guia de Validação](validation/functional-validation-guide.md)**:
+- ✅ Dashboard e KPIs
+- ✅ Workflow Kanban
+- ✅ Orçamentos e Aprovações
+- ✅ Módulo Fiscal
+- ✅ Módulo Financeiro
+- ✅ Gestão de Estoque
+- ✅ Módulo de Compras
+
+### Passo 3: Testes por Cenário
+Consulte a **[Matriz de Cenários](testing/test-scenarios-matrix.md)** para:
+- Fluxo completo de OS
+- Isolamento multi-tenant
+- Controle de permissões
+- Integrações entre módulos
+
+---
+
+## 📌 Características Principais
+
+### ✨ Funcionalidades Core
+- ✅ **Multi-tenancy** com isolamento completo de dados
+- ✅ **Autenticação e Autorização** via Supabase Auth
+- ✅ **Sistema de Perfis e Permissões** granular por página
+- ✅ **Dashboard Executivo** com KPIs em tempo real
+- ✅ **Workflow Kanban** com drag-and-drop
+- ✅ **Gestão de Ordens de Serviço** completa
+- ✅ **Diagnóstico por Componente** (biela, bloco, cabeçote, comando, eixo)
+- ✅ **Orçamentos e Aprovação** com workflow
+- ✅ **Módulo Fiscal** com cálculo de impostos
+- ✅ **Módulo Financeiro** (Contas a Pagar/Receber, DRE, Fluxo de Caixa)
+- ✅ **Gestão de Estoque** com movimentações e contagens
+- ✅ **Módulo de Compras** com cotações e recebimentos
+
+### 🎨 Interface e UX
+- 📱 **Design Responsivo** (Desktop, Tablet, Mobile)
+- 🌓 **Tema Claro/Escuro** configurável
+- 🔍 **Busca Global** (Ctrl+K)
+- 🔔 **Central de Notificações** em tempo real
+- ⚡ **Ações Rápidas** contextuais
+- 🎯 **Gamificação** com conquistas e ranking
+
+### 🔐 Segurança
+- 🛡️ **Row Level Security (RLS)** em todas as tabelas
+- 🔒 **Políticas de Acesso** por organização
+- 👥 **Controle de Permissões** por perfil
+- 📝 **Auditoria Completa** de ações
+
+### ⚡ Performance
+- 🚀 **React Query** para cache inteligente
+- 🔄 **WebSocket** para updates em tempo real
+- 📦 **Lazy Loading** de componentes
+- 🎯 **Memoization** de cálculos pesados
+
+---
+
+## 📚 Stack Técnico
+
+### Frontend
+- **React 18** com TypeScript
+- **Vite** para build ultra-rápido
+- **Tailwind CSS** para estilização
+- **shadcn/ui** para componentes
+- **React Query** para gerenciamento de estado
+- **React Router** para navegação
+
+### Backend
+- **Supabase** (PostgreSQL + APIs)
+- **Row Level Security (RLS)** para segurança
+- **Edge Functions** para lógica server-side
+- **Supabase Realtime** para updates ao vivo
+- **Supabase Storage** para arquivos
+
+---
+
+## 🔗 Links Úteis
+
+- **🌐 Documentação Online**: [GitHub Pages](https://pinn-product-builder.github.io/erp-retifica-formiguense/)
+- **📦 Repositório**: [GitHub](https://github.com/pinn-product-builder/erp-retifica-formiguense)
+
+---
+
+**📌 Versão:** 1.0.0  
+**📅 Última Atualização:** Janeiro 2025  
+**🔗 GitHub:** [erp-retifica-formiguense](https://github.com/pinn-product-builder/erp-retifica-formiguense)

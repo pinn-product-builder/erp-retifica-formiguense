@@ -1,0 +1,87 @@
+graph TB
+    %% Frontend Layer
+    subgraph "Frontend (React + TypeScript)"
+        UI[User Interface]
+        Components[React Components]
+        Hooks[Custom Hooks]
+        Context[Context Providers]
+        Router[React Router]
+    end
+
+    %% API Layer
+    subgraph "API Layer"
+        SupabaseClient[Supabase Client]
+        ReactQuery[React Query Cache]
+        Auth[Authentication]
+    end
+
+    %% Backend Services
+    subgraph "Supabase Backend"
+        Database[(PostgreSQL Database)]
+        EdgeFunctions[Edge Functions]
+        Storage[File Storage]
+        RLS[Row Level Security]
+        Auth2[Supabase Auth]
+    end
+
+    %% Database Structure
+    subgraph "Database Schema"
+        OrgTables[Organizations Tables]
+        FiscalTables[Fiscal Module Tables]
+        FinancialTables[Financial Module Tables]
+        WorkflowTables[Workflow Tables]
+        OrderTables[Order Tables]
+        AuditTables[Audit & Logs]
+    end
+
+    %% External Integrations
+    subgraph "External Services"
+        ReceitaFederal[Receita Federal API]
+        EmailService[Email Service]
+        StorageProvider[Cloud Storage]
+        Analytics[Analytics Service]
+    end
+
+    %% User Flow
+    Users[Users] --> UI
+    UI --> Components
+    Components --> Hooks
+    Hooks --> Context
+    Context --> SupabaseClient
+    
+    %% API Communication
+    SupabaseClient --> ReactQuery
+    ReactQuery --> Auth
+    Auth --> Auth2
+    SupabaseClient --> Database
+    SupabaseClient --> EdgeFunctions
+    SupabaseClient --> Storage
+
+    %% Database Relations
+    Database --> RLS
+    RLS --> OrgTables
+    OrgTables --> FiscalTables
+    OrgTables --> FinancialTables
+    OrgTables --> WorkflowTables
+    OrgTables --> OrderTables
+    Database --> AuditTables
+
+    %% External Connections
+    EdgeFunctions --> ReceitaFederal
+    EdgeFunctions --> EmailService
+    Storage --> StorageProvider
+    EdgeFunctions --> Analytics
+
+    %% Routing
+    Router --> Components
+
+    %% Styling
+    classDef frontend fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef backend fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef database fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef external fill:#fff3e0,stroke:#e65100,stroke-width:2px
+
+    class UI,Components,Hooks,Context,Router frontend
+    class Database,EdgeFunctions,Storage,RLS,Auth2 backend
+    class OrgTables,FiscalTables,FinancialTables,WorkflowTables,OrderTables,AuditTables database
+    class ReceitaFederal,EmailService,StorageProvider,Analytics external
