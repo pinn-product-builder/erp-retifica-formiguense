@@ -42,8 +42,8 @@ export const environmentConfig: EnvironmentConfig = {
   isStaging: env === 'staging',
   
   supabase: {
-    url: 'https://citibygettyzjgaewfca.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdGlieWdldHR5empnYWV3ZmNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NjQ3OTUsImV4cCI6MjA2ODQ0MDc5NX0.__NwcDz6CfyRZ0PViXcugbH3FBaffiwcZJb6pbjPeqw',
+    url: import.meta.env.VITE_SUPABASE_URL || 'https://citibygettyzjgaewfca.supabase.co',
+    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdGlieWdldHR5empnYWV3ZmNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NjQ3OTUsImV4cCI6MjA2ODQ0MDc5NX0.__NwcDz6CfyRZ0PViXcugbH3FBaffiwcZJb6pbjPeqw',
   },
   
   api: {
