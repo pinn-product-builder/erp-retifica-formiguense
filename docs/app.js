@@ -210,13 +210,40 @@ async function loadMarkdownContent(path) {
     if (featuresSection) featuresSection.style.display = 'none';
     if (gettingStartedSection) gettingStartedSection.style.display = 'none';
     
+    // Set content with back button
     contentArea.innerHTML = html;
     contentArea.classList.remove('hidden');
     contentArea.style.display = 'block';
     
+    // Force proper styling
+    contentArea.style.backgroundColor = 'var(--color-background)';
+    contentArea.style.color = 'var(--color-text)';
+    
+    // Add back button
+    const backButton = document.createElement('button');
+    backButton.className = 'back-button';
+    backButton.innerHTML = '← Voltar ao Início';
+    backButton.onclick = () => location.reload();
+    contentArea.insertBefore(backButton, contentArea.firstChild);
+    
+    // Wait for libraries to load
+    await waitForLibraries();
+    
     // Render Mermaid diagrams
     if (typeof mermaid !== 'undefined') {
-      mermaid.init(undefined, contentArea.querySelectorAll('.language-mermaid, code.language-mermaid'));
+      const mermaidElements = contentArea.querySelectorAll('code.language-mermaid');
+      mermaidElements.forEach(async (el, i) => {
+        const graphDefinition = el.textContent;
+        const id = `mermaid-${Date.now()}-${i}`;
+        try {
+          const { svg } = await mermaid.render(id, graphDefinition);
+          const wrapper = document.createElement('div');
+          wrapper.innerHTML = svg;
+          el.parentElement.replaceWith(wrapper);
+        } catch (error) {
+          console.error('Mermaid rendering error:', error);
+        }
+      });
     }
     
     // Highlight code blocks
@@ -239,11 +266,27 @@ async function loadMarkdownContent(path) {
     console.error('Error loading content:', error);
     const contentArea = document.getElementById('dynamic-content');
     if (contentArea) {
-      contentArea.innerHTML = '<div style="padding: 2rem; text-align: center;"><h2>⚠️ Conteúdo não encontrado</h2><p>O arquivo solicitado não foi encontrado.</p><p><a href="javascript:location.reload()">← Voltar ao início</a></p></div>';
+      contentArea.innerHTML = '<div style="padding: 2rem; text-align: center; background-color: var(--color-background); color: var(--color-text);"><h2>⚠️ Conteúdo não encontrado</h2><p>O arquivo solicitado não foi encontrado.</p><button class="back-button" onclick="location.reload()">← Voltar ao início</button></div>';
       contentArea.classList.remove('hidden');
       contentArea.style.display = 'block';
     }
   }
+}
+
+// Wait for external libraries to load
+function waitForLibraries() {
+  return new Promise((resolve) => {
+    const checkLibs = () => {
+      if (typeof marked !== 'undefined' && 
+          typeof mermaid !== 'undefined' && 
+          typeof Prism !== 'undefined') {
+        resolve();
+      } else {
+        setTimeout(checkLibs, 50);
+      }
+    };
+    checkLibs();
+  });
 }
 
 // ===== Initialize Mermaid =====
