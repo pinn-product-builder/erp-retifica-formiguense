@@ -129,7 +129,13 @@ export function IntelligentAlerts() {
 
       if (error) throw error;
 
-      setAlerts(data || []);
+      if (data) {
+        const typedAlerts: Alert[] = data.map((alert: any) => ({
+          ...alert,
+          severity: alert.severity as 'info' | 'warning' | 'error' | 'success'
+        }));
+        setAlerts(typedAlerts);
+      }
     } catch (error) {
       console.error('Erro ao buscar alertas:', error);
       toast({

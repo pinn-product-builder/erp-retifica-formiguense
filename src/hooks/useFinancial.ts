@@ -446,12 +446,10 @@ export const useFinancial = () => {
           .select('transaction_type, amount')
           .eq('org_id', currentOrganization.id)
           .gte('transaction_date', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`),
-        // @ts-expect-error - Supabase generated types cause deep instantiation error
         supabase
           .from('accounts_receivable')
           .select('status, amount, due_date')
           .eq('org_id', currentOrganization.id),
-        // @ts-expect-error - Supabase generated types cause deep instantiation error
         supabase
           .from('accounts_payable')
           .select('status, amount, due_date')

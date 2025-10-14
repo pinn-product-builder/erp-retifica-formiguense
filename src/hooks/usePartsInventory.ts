@@ -237,7 +237,7 @@ export function usePartsInventory() {
         .order('part_name');
 
       if (component) {
-        query = query.eq('component', component);
+        query = query.eq('component', component as any);
       }
 
       const { data, error } = await query;

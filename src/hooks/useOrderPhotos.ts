@@ -96,7 +96,7 @@ export function useOrderPhotos(orderId?: string) {
       // Save photo record in database
       const { error } = await supabase
         .from('order_photos')
-        .insert({
+        .insert([{
           order_id: orderId,
           component: component || null,
           workflow_step: workflowStep || null,
@@ -105,7 +105,7 @@ export function useOrderPhotos(orderId?: string) {
           file_name: file.name,
           description: description || null,
           uploaded_by: (await supabase.auth.getUser()).data.user?.id || null
-        });
+        }]);
 
       if (error) throw error;
 

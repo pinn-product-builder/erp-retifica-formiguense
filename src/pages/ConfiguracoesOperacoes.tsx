@@ -105,7 +105,8 @@ const ConfiguracoesOperacoes = () => {
             </CardHeader>
             <CardContent>
               <PermissionGate 
-                requiredPermissions={['admin', 'manager']}
+                resource="system_config"
+                action="edit"
                 fallback={
                   <div className="text-center py-8">
                     <p className="text-muted-foreground">Você não tem permissão para gerenciar tipos de motor.</p>
@@ -132,7 +133,8 @@ const ConfiguracoesOperacoes = () => {
             </CardHeader>
             <CardContent>
               <PermissionGate 
-                requiredPermissions={['admin', 'manager']}
+                resource="system_config"
+                action="edit"
                 fallback={
                   <div className="text-center py-8">
                     <p className="text-muted-foreground">Você não tem permissão para gerenciar checklists de diagnóstico.</p>
@@ -159,7 +161,8 @@ const ConfiguracoesOperacoes = () => {
             </CardHeader>
             <CardContent>
               <PermissionGate 
-                requiredPermissions={['admin']}
+                resource="system_config"
+                action="edit"
                 fallback={
                   <div className="text-center py-8">
                     <p className="text-muted-foreground">

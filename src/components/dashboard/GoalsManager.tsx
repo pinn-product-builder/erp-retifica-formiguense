@@ -126,8 +126,7 @@ export function GoalsManager() {
     try {
       setLoading(true);
 
-      // @ts-expect-error - Schema do Supabase será atualizado após regeneração de tipos
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from('kpi_targets')
         .select('*')
         .eq('org_id', currentOrganization.id)
@@ -213,8 +212,7 @@ export function GoalsManager() {
     try {
       const { error } = await supabase
         .from('kpi_targets')
-        // @ts-expect-error - Schema do Supabase será atualizado após regeneração de tipos
-        .update({ progress_current: newProgress })
+        .update({ progress_current: newProgress } as any)
         .eq('id', goalId);
 
       if (error) throw error;

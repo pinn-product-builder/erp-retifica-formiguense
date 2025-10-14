@@ -85,7 +85,7 @@ export function useOrderTimeline(orderId: string) {
       diagnostics?.forEach(diagnostic => {
         allEvents.push({
           id: `diagnostic-${diagnostic.id}`,
-          timestamp: diagnostic.diagnosed_at || diagnostic.created_at,
+          timestamp: diagnostic.diagnosed_at || new Date().toISOString(),
           event_type: 'diagnostic',
           title: `Diagnóstico de ${diagnostic.component} concluído`,
           description: `Status: ${diagnostic.status}`,
@@ -133,7 +133,7 @@ export function useOrderTimeline(orderId: string) {
       reservations?.forEach(reservation => {
         allEvents.push({
           id: `reservation-${reservation.id}`,
-          timestamp: reservation.reserved_at || reservation.created_at,
+          timestamp: reservation.reserved_at || new Date().toISOString(),
           event_type: 'reservation',
           title: `Peça reservada: ${reservation.part_name}`,
           description: `Quantidade: ${reservation.quantity_reserved} - Status: ${reservation.reservation_status}`,
@@ -186,7 +186,7 @@ export function useOrderTimeline(orderId: string) {
       reports?.forEach(report => {
         allEvents.push({
           id: `report-${report.id}`,
-          timestamp: report.generated_at || report.created_at,
+          timestamp: report.generated_at || new Date().toISOString(),
           event_type: 'report',
           title: `Relatório técnico gerado: ${report.report_type}`,
           description: `Componente: ${report.component} - Status: ${report.conformity_status}`,

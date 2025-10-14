@@ -64,15 +64,26 @@ export const useRealtimeKPIs = () => {
 
           if (trendError) throw trendError;
 
-          const trend = trendData?.[0] as KPITrend;
+          const trendRaw = trendData?.[0] as any;
+          const trend: KPITrend = trendRaw ? {
+            currentValue: trendRaw.current_value || 0,
+            previousValue: trendRaw.previous_value || 0,
+            changePercentage: trendRaw.change_percentage || 0,
+            trendDirection: (trendRaw.trend_direction || 'stable') as 'up' | 'down' | 'stable'
+          } : {
+            currentValue: 0,
+            previousValue: 0,
+            changePercentage: 0,
+            trendDirection: 'stable'
+          };
 
           return {
             id: config.id,
             code: config.code,
             name: config.name,
-            value: trend?.currentValue || 0,
-            previousValue: trend?.previousValue || 0,
-            changePercentage: trend?.changePercentage || 0,
+            value: trend.currentValue,
+            previousValue: trend.previousValue,
+            changePercentage: trend.changePercentage,
             trendDirection: trend?.trendDirection || 'stable',
             lastUpdated: new Date().toISOString(),
             icon: config.icon,
@@ -128,7 +139,7 @@ export const useRealtimeKPIs = () => {
         (payload) => {
           console.log('Orders change detected:', payload);
           // Invalidar cache quando houver mudanças nas ordens
-          queryClient.invalidateQueries(['kpis', 'values', currentOrganization.id]);
+          queryClient.invalidateQueries({ queryKey: ['kpis', 'values', currentOrganization.id] });
         }
       )
       .on(
@@ -142,7 +153,7 @@ export const useRealtimeKPIs = () => {
         (payload) => {
           console.log('Budgets change detected:', payload);
           // Invalidar cache quando houver mudanças nos orçamentos
-          queryClient.invalidateQueries(['kpis', 'values', currentOrganization.id]);
+          queryClient.invalidateQueries({ queryKey: ['kpis', 'values', currentOrganization.id] });
         }
       )
       .subscribe((status) => {
@@ -157,7 +168,7 @@ export const useRealtimeKPIs = () => {
 
   // Função para refresh manual
   const refreshKPIs = useCallback(() => {
-    queryClient.invalidateQueries(['kpis', 'values', currentOrganization?.id]);
+    queryClient.invalidateQueries({ queryKey: ['kpis', 'values', currentOrganization?.id] });
   }, [queryClient, currentOrganization?.id]);
 
   return {

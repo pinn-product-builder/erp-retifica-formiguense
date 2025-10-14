@@ -199,7 +199,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       .insert({
         organization_id: data.id,
         user_id: user.id,
-        role: 'owner',
+        role: 'owner' as const,
         is_active: true
       });
 
@@ -227,14 +227,14 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const inviteUser = async (email: string, role: string) => {
     if (!currentOrganization) throw new Error('No organization selected');
 
-    const { error } = await supabase
-      .from('organization_users')
-      .insert({
-        organization_id: currentOrganization.id,
-        user_id: email, // This should be the actual user ID after they accept the invitation
-        role,
-        is_active: false // Will be activated when they accept
-      });
+      const { error } = await supabase
+        .from('organization_users')
+        .insert([{
+          organization_id: currentOrganization.id,
+          user_id: email, // This should be the actual user ID after they accept the invitation
+          role: role as any,
+          is_active: false // Will be activated when they accept
+        }]);
 
     if (error) throw error;
   };
@@ -244,7 +244,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     const { error } = await supabase
       .from('organization_users')
-      .update({ role })
+      .update({ role: role as any })
       .eq('organization_id', currentOrganization.id)
       .eq('user_id', userId);
 

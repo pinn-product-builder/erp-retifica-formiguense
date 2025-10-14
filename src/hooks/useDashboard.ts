@@ -294,7 +294,7 @@ export const useDashboard = () => {
                 .from('accounts_receivable')
                 .select('*', { count: 'exact', head: true })
                 .eq('org_id', currentOrganization.id)
-                .in('status', ['pendente', 'vencido'])
+                .in('status', ['pending', 'overdue'])
                 .lte('due_date', nextWeek);
               count = receivables || 0;
               break;

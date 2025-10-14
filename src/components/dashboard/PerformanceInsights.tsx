@@ -193,7 +193,6 @@ export function PerformanceInsights() {
     if (!currentOrganization) return [];
 
     try {
-      // @ts-expect-error - Schema do Supabase será atualizado após regeneração de tipos
       const { data: targets, error } = await supabase
         .from('kpi_targets')
         .select('*')
@@ -218,7 +217,7 @@ export function PerformanceInsights() {
             target: 100,
             unit: '%',
             deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            status: 'pending' as const
+            status: 'on_track' as const
           },
           {
             id: 'placeholder-2',
@@ -228,7 +227,7 @@ export function PerformanceInsights() {
             target: 100,
             unit: '%',
             deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            status: 'pending' as const
+            status: 'on_track' as const
           },
           {
             id: 'placeholder-3',
@@ -238,7 +237,7 @@ export function PerformanceInsights() {
             target: 100,
             unit: '%',
             deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            status: 'pending' as const
+            status: 'on_track' as const
           }
         ];
       }
