@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Documentação completa do ERP Retífica Formiguense - Sistema de gestão para retíficas automotivas">
+    <meta name="keywords" content="ERP, Retífica, Automotiva, Documentação, Sistema de Gestão">
+    <meta name="author" content="Retífica Formiguense">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="ERP Retífica Formiguense - Documentação">
+    <meta property="og:description" content="Sistema completo de gestão para retíficas automotivas">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="ERP Retífica Formiguense">
+    
+    <title>ERP Retífica Formiguense - Documentação do Sistema</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-typescript.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-sql.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <svg class="logo-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                    <h1 class="logo-text">ERP Retífica Formiguense</h1>
+                </div>
+                <nav class="header-nav">
+                    <button id="theme-toggle" class="icon-button" aria-label="Alternar tema">
+                        <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"/>
+                            <line x1="12" y1="1" x2="12" y2="3"/>
+                            <line x1="12" y1="21" x2="12" y2="23"/>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                            <line x1="1" y1="12" x2="3" y2="12"/>
+                            <line x1="21" y1="12" x2="23" y2="12"/>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                        </svg>
+                        <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    </button>
+                    <button id="search-toggle" class="icon-button" aria-label="Buscar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.35-4.35"/>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Search Modal -->
+    <div id="search-modal" class="search-modal hidden">
+        <div class="search-modal-content">
+            <div class="search-input-wrapper">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input type="text" id="search-input" placeholder="Buscar na documentação..." autofocus>
+                <button id="search-close" class="icon-button">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div id="search-results" class="search-results"></div>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <span class="hero-badge">Documentação v1.0</span>
+                <h2 class="hero-title">Sistema de Gestão para Retíficas Automotivas</h2>
+                <p class="hero-description">
+                    Documentação completa do ERP Retífica Formiguense. Sistema multi-tenant com módulos integrados 
+                    para Ordens de Serviço, Financeiro, Fiscal, Estoque, Compras e muito mais.
+                </p>
+                <div class="hero-actions">
+                    <a href="#quick-start" class="button button-primary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                        Começar Agora
+                    </a>
+                    <a href="#overview" class="button button-secondary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        Visão Geral
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <div class="content-layout">
+                <!-- Sidebar -->
+                <aside class="sidebar">
+                    <nav class="sidebar-nav">
+                        <div class="nav-section">
+                            <h3 class="nav-section-title">Início</h3>
+                            <ul class="nav-list">
+                                <li><a href="#quick-start" class="nav-link">🚀 Início Rápido</a></li>
+                                <li><a href="#overview" class="nav-link">📊 Visão Geral</a></li>
+                                <li><a href="#getting-started" class="nav-link">👋 Começando</a></li>
+                            </ul>
+                        </div>
+                        <div class="nav-section">
+                            <h3 class="nav-section-title">Arquitetura</h3>
+                            <ul class="nav-list">
+                                <li><a href="#system-overview" class="nav-link">🏗️ Visão do Sistema</a></li>
+                                <li><a href="#database-schema" class="nav-link">🗄️ Schema do Banco</a></li>
+                                <li><a href="#multitenancy" class="nav-link">🏢 Multi-tenant</a></li>
+                                <li><a href="#security" class="nav-link">🔒 Segurança</a></li>
+                                <li><a href="#tech-stack" class="nav-link">⚙️ Stack Técnica</a></li>
+                            </ul>
+                        </div>
+                        <div class="nav-section">
+                            <h3 class="nav-section-title">Módulos</h3>
+                            <ul class="nav-list">
+                                <li><a href="#dashboard" class="nav-link">📈 Dashboard</a></li>
+                                <li><a href="#operations" class="nav-link">🔧 Operações</a></li>
+                                <li><a href="#financial" class="nav-link">💰 Financeiro</a></li>
+                                <li><a href="#fiscal" class="nav-link">📋 Fiscal</a></li>
+                                <li><a href="#inventory" class="nav-link">📦 Estoque</a></li>
+                                <li><a href="#purchasing" class="nav-link">🛒 Compras</a></li>
+                            </ul>
+                        </div>
+                        <div class="nav-section">
+                            <h3 class="nav-section-title">Guias</h3>
+                            <ul class="nav-list">
+                                <li><a href="#user-guides" class="nav-link">👥 Manuais do Usuário</a></li>
+                                <li><a href="#validation" class="nav-link">✅ Validação</a></li>
+                                <li><a href="#testing" class="nav-link">🧪 Testes</a></li>
+                            </ul>
+                        </div>
+                    </nav>
+                </aside>
+
+                <!-- Content Area -->
+                <div class="content-area">
+                    <!-- Cards Grid -->
+                    <section id="sections" class="sections-grid">
+                        <div class="section-card" data-section="quick-start">
+                            <div class="card-icon">🚀</div>
+                            <h3 class="card-title">Início Rápido</h3>
+                            <p class="card-description">Comece a usar o sistema em minutos com nosso guia de início rápido</p>
+                            <a href="quick-start.html" class="card-link">Acessar →</a>
+                        </div>
+
+                        <div class="section-card" data-section="overview">
+                            <div class="card-icon">📊</div>
+                            <h3 class="card-title">Visão Geral</h3>
+                            <p class="card-description">Entenda a arquitetura e os principais componentes do sistema</p>
+                            <a href="system-blueprint.html" class="card-link">Acessar →</a>
+                        </div>
+
+                        <div class="section-card" data-section="architecture">
+                            <div class="card-icon">🏗️</div>
+                            <h3 class="card-title">Arquitetura</h3>
+                            <p class="card-description">Documentação técnica da arquitetura, banco de dados e segurança</p>
+                            <a href="architecture/system-overview.html" class="card-link">Acessar →</a>
+                        </div>
+
+                        <div class="section-card" data-section="modules">
+                            <div class="card-icon">🧩</div>
+                            <h3 class="card-title">Módulos</h3>
+                            <p class="card-description">Documentação detalhada de cada módulo do sistema</p>
+                            <a href="modules/README.html" class="card-link">Acessar →</a>
+                        </div>
+
+                        <div class="section-card" data-section="business-rules">
+                            <div class="card-icon">📖</div>
+                            <h3 class="card-title">Regras de Negócio</h3>
+                            <p class="card-description">Processos e regras de negócio implementadas no sistema</p>
+                            <a href="business-rules/README.html" class="card-link">Acessar →</a>
+                        </div>
+
+                        <div class="section-card" data-section="user-guides">
+                            <div class="card-icon">👥</div>
+                            <h3 class="card-title">Manuais do Usuário</h3>
+                            <p class="card-description">Guias passo a passo para usuários finais</p>
+                            <a href="user-guides/getting-started.html" class="card-link">Acessar →</a>
+                        </div>
+
+                        <div class="section-card" data-section="validation">
+                            <div class="card-icon">✅</div>
+                            <h3 class="card-title">Validação e Testes</h3>
+                            <p class="card-description">Guias de validação funcional e cenários de teste</p>
+                            <a href="validation/functional-validation-guide.html" class="card-link">Acessar →</a>
+                        </div>
+
+                        <div class="section-card" data-section="api">
+                            <div class="card-icon">🔌</div>
+                            <h3 class="card-title">API & Integrações</h3>
+                            <p class="card-description">Documentação de APIs e integrações com Supabase</p>
+                            <a href="api/supabase-setup.html" class="card-link">Acessar →</a>
+                        </div>
+                    </section>
+
+                    <!-- Features Highlight -->
+                    <section class="features-section">
+                        <h2 class="section-title">Principais Características</h2>
+                        <div class="features-grid">
+                            <div class="feature-item">
+                                <div class="feature-icon">🏢</div>
+                                <h4>Multi-tenant</h4>
+                                <p>Suporte completo para múltiplas organizações com isolamento de dados</p>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon">🔐</div>
+                                <h4>Segurança RLS</h4>
+                                <p>Row Level Security implementado em todas as tabelas</p>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon">📱</div>
+                                <h4>Responsivo</h4>
+                                <p>Interface adaptada para desktop, tablet e mobile</p>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon">⚡</div>
+                                <h4>Tempo Real</h4>
+                                <p>Atualizações em tempo real com Supabase Realtime</p>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon">🎨</div>
+                                <h4>Tema Customizável</h4>
+                                <p>Suporte a tema claro/escuro e personalização</p>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon">📊</div>
+                                <h4>Dashboard Avançado</h4>
+                                <p>KPIs, metas e ranking de performance</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Getting Started -->
+                    <section class="getting-started-section">
+                        <h2 class="section-title">Começando a Homologação</h2>
+                        <div class="steps-container">
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <h4>Configuração Inicial</h4>
+                                    <p>Configure as organizações, perfis e usuários iniciais</p>
+                                    <a href="user-guides/getting-started.html#first-access" class="step-link">Ver guia →</a>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <h4>Explore os Módulos</h4>
+                                    <p>Navegue pelos módulos e funcionalidades implementadas</p>
+                                    <a href="validation/functional-validation-guide.html" class="step-link">Ver módulos →</a>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <h4>Execute os Testes</h4>
+                                    <p>Siga os cenários de teste para validação completa</p>
+                                    <a href="testing/test-scenarios-matrix.html" class="step-link">Ver testes →</a>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Dynamic Content Area -->
+                    <div id="dynamic-content" class="dynamic-content hidden"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>ERP Retífica Formiguense</h4>
+                    <p>Sistema de gestão automotiva completo</p>
+                    <p class="footer-version">Versão 1.0.0 | Janeiro 2025</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Documentação</h4>
+                    <ul class="footer-links">
+                        <li><a href="#quick-start">Início Rápido</a></li>
+                        <li><a href="#architecture">Arquitetura</a></li>
+                        <li><a href="#modules">Módulos</a></li>
+                        <li><a href="#user-guides">Guias</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Recursos</h4>
+                    <ul class="footer-links">
+                        <li><a href="glossary.html">Glossário</a></li>
+                        <li><a href="faq.html">FAQ</a></li>
+                        <li><a href="releases/CHANGELOG.html">Changelog</a></li>
+                        <li><a href="https://github.com/pinn-product-builder/erp-retifica-formiguense" target="_blank">GitHub</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Suporte</h4>
+                    <p>Para dúvidas e suporte técnico:</p>
+                    <a href="mailto:suporte@retificaformiguense.com.br" class="footer-email">suporte@retificaformiguense.com.br</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Retífica Formiguense. Todos os direitos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>
