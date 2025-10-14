@@ -133,9 +133,9 @@ const Diagnosticos = () => {
   const diagnosticResponses = diagnosticResponsesData || [];
 
   const filteredResponses = diagnosticResponses.filter(response => {
-    const matchesSearch = response.order?.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         response.order?.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         response.checklist?.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = response.order?.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         response.order?.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (response as any).checklist?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "todos" || response.status === statusFilter;
     const matchesComponent = componentFilter === "todos" || response.component === componentFilter;
@@ -423,7 +423,7 @@ const Diagnosticos = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-xs truncate">
-                      {response.checklist?.name || 'N/A'}
+                      {(response as any).checklist?.name || 'N/A'}
                     </TableCell>
                     <TableCell>{getStatusBadge(response.status)}</TableCell>
                     <TableCell>{response.diagnosed_by_name || response.diagnosed_by || 'N/A'}</TableCell>

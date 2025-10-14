@@ -104,7 +104,7 @@ export class GamificationService {
       throw new Error('Falha ao processar ação do usuário');
     }
 
-    return data;
+    return data as unknown as GamificationResult;
   }
 
   /**
@@ -159,10 +159,11 @@ export class GamificationService {
       const config = configs?.find(c => c.achievement_key === achievement.achievement_type);
       return {
         ...achievement,
+        achievement_data: achievement.achievement_data as Record<string, any>,
         title: config?.title || 'Conquista',
         description: config?.description || 'Conquista conquistada',
         icon: config?.icon || '🏆'
-      };
+      } as UserAchievement;
     });
   }
 
@@ -187,7 +188,10 @@ export class GamificationService {
       throw new Error('Falha ao buscar conquistas disponíveis');
     }
 
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      criteria: item.criteria as Record<string, any>
+    })) as AchievementConfig[];
   }
 
   /**
@@ -226,9 +230,11 @@ export class GamificationService {
       const userInfo = userInfos?.find(u => u.user_id === ranking.user_id);
       return {
         ...ranking,
+        period_type: ranking.period_type as 'daily' | 'weekly' | 'monthly',
+        metrics: ranking.metrics as Record<string, any>,
         user_name: userInfo?.name || 'Usuário',
         user_email: userInfo?.email || ''
-      };
+      } as PerformanceRanking;
     });
   }
 
@@ -266,9 +272,11 @@ export class GamificationService {
 
     return {
       ...data,
+      period_type: data.period_type as 'daily' | 'weekly' | 'monthly',
+      metrics: data.metrics as Record<string, any>,
       user_name: userInfo?.name || 'Usuário',
       user_email: userInfo?.email || ''
-    };
+    } as PerformanceRanking;
   }
 
   /**
@@ -292,7 +300,10 @@ export class GamificationService {
       throw new Error('Falha ao buscar histórico de pontuação');
     }
 
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      metadata: item.metadata as Record<string, any>
+    })) as ScoreHistory[];
   }
 
   /**
@@ -314,41 +325,39 @@ export class GamificationService {
       return null;
     }
 
-    const criteria = config.criteria;
-    const criteriaType = criteria.type;
-    const targetValue = criteria.value;
+    const criteria = config.criteria as Record<string, any>;
+    const criteriaType = criteria?.type;
+    const targetValue = criteria?.value || 0;
 
     let currentValue = 0;
 
     switch (criteriaType) {
-      case 'total_orders':
-        const { count: ordersCount } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('org_id', orgId)
-          .eq('created_by', userId);
-        currentValue = ordersCount || 0;
+      case 'total_orders': {
+        const { count } = await supabase.rpc('count_user_orders', {
+          p_org_id: orgId,
+          p_user_id: userId
+        });
+        currentValue = count || 0;
         break;
+      }
 
-      case 'completed_orders':
-        const { count: completedCount } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('org_id', orgId)
-          .eq('created_by', userId)
-          .eq('status', 'concluida');
-        currentValue = completedCount || 0;
+      case 'completed_orders': {
+        const { count } = await supabase.rpc('count_completed_orders', {
+          p_org_id: orgId,
+          p_user_id: userId
+        });
+        currentValue = count || 0;
         break;
+      }
 
-      case 'approved_budgets':
-        const { count: budgetsCount } = await supabase
-          .from('detailed_budgets')
-          .select('*', { count: 'exact', head: true })
-          .eq('org_id', orgId)
-          .eq('created_by', userId)
-          .eq('status', 'approved');
-        currentValue = budgetsCount || 0;
+      case 'approved_budgets': {
+        const { count } = await supabase.rpc('count_approved_budgets', {
+          p_org_id: orgId,
+          p_user_id: userId
+        });
+        currentValue = count || 0;
         break;
+      }
 
       case 'total_points':
         const { data: score } = await supabase

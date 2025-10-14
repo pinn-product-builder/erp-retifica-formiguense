@@ -256,15 +256,9 @@ export const useFinancial = () => {
     
     try {
       setLoading(true);
-      let query = supabase
+      const query = supabase
         .from('cash_flow')
-        .select(`
-          *,
-          expense_categories (name),
-          bank_accounts (bank_name),
-          accounts_receivable (invoice_number),
-          accounts_payable (supplier_name)
-        `)
+        .select('id, transaction_date, transaction_type, description, amount, category_id, account_id, reference_id, reference_type, created_at, org_id')
         .eq('org_id', currentOrganization.id)
         .order('transaction_date', { ascending: false });
 

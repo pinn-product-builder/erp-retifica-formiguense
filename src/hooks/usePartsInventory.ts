@@ -62,7 +62,7 @@ export function usePartsInventory() {
       }
 
       if (filters?.component && filters.component !== 'todos') {
-        query = query.eq('component', filters.component);
+        query = query.eq('component', filters.component as any);
       }
 
       if (filters?.search) {
