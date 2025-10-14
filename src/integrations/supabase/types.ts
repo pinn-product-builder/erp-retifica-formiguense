@@ -175,6 +175,104 @@ export type Database = {
           },
         ]
       }
+      achievement_configs: {
+        Row: {
+          achievement_key: string
+          created_at: string | null
+          criteria: Json
+          description: string
+          icon: string
+          id: string
+          is_active: boolean | null
+          org_id: string
+          points: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          achievement_key: string
+          created_at?: string | null
+          criteria: Json
+          description: string
+          icon: string
+          id?: string
+          is_active?: boolean | null
+          org_id: string
+          points?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          achievement_key?: string
+          created_at?: string | null
+          criteria?: Json
+          description?: string
+          icon?: string
+          id?: string
+          is_active?: boolean | null
+          org_id?: string
+          points?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      alert_history: {
+        Row: {
+          action_taken: string | null
+          action_taken_at: string | null
+          alert_id: string
+          alert_type: string
+          created_at: string
+          dismissed_at: string | null
+          dismissed_by: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          org_id: string
+          severity: string
+          title: string
+        }
+        Insert: {
+          action_taken?: string | null
+          action_taken_at?: string | null
+          alert_id: string
+          alert_type: string
+          created_at?: string
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          org_id: string
+          severity: string
+          title: string
+        }
+        Update: {
+          action_taken?: string | null
+          action_taken_at?: string | null
+          alert_id?: string
+          alert_type?: string
+          created_at?: string
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          org_id?: string
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_history_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alerts: {
         Row: {
           action_label: string | null
@@ -1760,6 +1858,196 @@ export type Database = {
           },
         ]
       }
+      inventory_count_items: {
+        Row: {
+          count_id: string
+          counted_at: string | null
+          counted_by: string | null
+          counted_quantity: number | null
+          difference: number | null
+          expected_quantity: number
+          id: string
+          notes: string | null
+          part_id: string
+          unit_cost: number | null
+        }
+        Insert: {
+          count_id: string
+          counted_at?: string | null
+          counted_by?: string | null
+          counted_quantity?: number | null
+          difference?: number | null
+          expected_quantity: number
+          id?: string
+          notes?: string | null
+          part_id: string
+          unit_cost?: number | null
+        }
+        Update: {
+          count_id?: string
+          counted_at?: string | null
+          counted_by?: string | null
+          counted_quantity?: number | null
+          difference?: number | null
+          expected_quantity?: number
+          id?: string
+          notes?: string | null
+          part_id?: string
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_count_items_count_id_fkey"
+            columns: ["count_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_counts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_count_items_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts_inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_counts: {
+        Row: {
+          completed_at: string | null
+          count_date: string
+          count_number: string
+          counted_by: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          org_id: string
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          count_date: string
+          count_number: string
+          counted_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          org_id: string
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          count_date?: string
+          count_number?: string
+          counted_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          org_id?: string
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_counts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_movements: {
+        Row: {
+          budget_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          metadata: Json | null
+          movement_type: string
+          new_quantity: number
+          notes: string | null
+          order_id: string | null
+          org_id: string
+          part_id: string
+          previous_quantity: number
+          quantity: number
+          reason: string
+          unit_cost: number | null
+        }
+        Insert: {
+          budget_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          metadata?: Json | null
+          movement_type: string
+          new_quantity: number
+          notes?: string | null
+          order_id?: string | null
+          org_id: string
+          part_id: string
+          previous_quantity: number
+          quantity: number
+          reason: string
+          unit_cost?: number | null
+        }
+        Update: {
+          budget_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          metadata?: Json | null
+          movement_type?: string
+          new_quantity?: number
+          notes?: string | null
+          order_id?: string | null
+          org_id?: string
+          part_id?: string
+          previous_quantity?: number
+          quantity?: number
+          reason?: string
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "detailed_budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts_inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jurisdiction_config: {
         Row: {
           badge_color: string
@@ -1800,30 +2088,72 @@ export type Database = {
       }
       kpi_targets: {
         Row: {
+          assigned_to: string[] | null
+          auto_update_from_kpi: boolean | null
           created_at: string
+          description: string | null
+          goal_type: string | null
           id: string
-          kpi_id: string
+          kpi_id: string | null
+          milestones: Json | null
+          notifications_enabled: boolean | null
+          org_id: string | null
+          parent_goal_id: string | null
           period_type: string
+          priority: string | null
+          progress_current: number | null
+          progress_unit: string | null
+          status: string | null
+          target_period_end: string | null
+          target_period_start: string | null
           target_value: number
           updated_at: string
           valid_from: string
           valid_to: string | null
         }
         Insert: {
+          assigned_to?: string[] | null
+          auto_update_from_kpi?: boolean | null
           created_at?: string
+          description?: string | null
+          goal_type?: string | null
           id?: string
-          kpi_id: string
+          kpi_id?: string | null
+          milestones?: Json | null
+          notifications_enabled?: boolean | null
+          org_id?: string | null
+          parent_goal_id?: string | null
           period_type: string
+          priority?: string | null
+          progress_current?: number | null
+          progress_unit?: string | null
+          status?: string | null
+          target_period_end?: string | null
+          target_period_start?: string | null
           target_value: number
           updated_at?: string
           valid_from?: string
           valid_to?: string | null
         }
         Update: {
+          assigned_to?: string[] | null
+          auto_update_from_kpi?: boolean | null
           created_at?: string
+          description?: string | null
+          goal_type?: string | null
           id?: string
-          kpi_id?: string
+          kpi_id?: string | null
+          milestones?: Json | null
+          notifications_enabled?: boolean | null
+          org_id?: string | null
+          parent_goal_id?: string | null
           period_type?: string
+          priority?: string | null
+          progress_current?: number | null
+          progress_unit?: string | null
+          status?: string | null
+          target_period_end?: string | null
+          target_period_start?: string | null
           target_value?: number
           updated_at?: string
           valid_from?: string
@@ -1831,10 +2161,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_parent_goal"
+            columns: ["parent_goal_id"]
+            isOneToOne: false
+            referencedRelation: "kpi_targets"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "kpi_targets_kpi_id_fkey"
             columns: ["kpi_id"]
             isOneToOne: false
             referencedRelation: "kpis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kpi_targets_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -2590,6 +2934,62 @@ export type Database = {
           },
         ]
       }
+      organization_themes: {
+        Row: {
+          accent_color: string
+          created_at: string | null
+          error_color: string
+          id: string
+          info_color: string
+          is_active: boolean
+          org_id: string
+          primary_color: string
+          secondary_color: string
+          success_color: string
+          theme_name: string
+          updated_at: string | null
+          warning_color: string
+        }
+        Insert: {
+          accent_color?: string
+          created_at?: string | null
+          error_color?: string
+          id?: string
+          info_color?: string
+          is_active?: boolean
+          org_id: string
+          primary_color?: string
+          secondary_color?: string
+          success_color?: string
+          theme_name?: string
+          updated_at?: string | null
+          warning_color?: string
+        }
+        Update: {
+          accent_color?: string
+          created_at?: string | null
+          error_color?: string
+          id?: string
+          info_color?: string
+          is_active?: boolean
+          org_id?: string
+          primary_color?: string
+          secondary_color?: string
+          success_color?: string
+          theme_name?: string
+          updated_at?: string | null
+          warning_color?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_themes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_users: {
         Row: {
           created_at: string
@@ -2997,6 +3397,48 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_rankings: {
+        Row: {
+          created_at: string | null
+          id: string
+          metrics: Json | null
+          org_id: string
+          period_end: string
+          period_start: string
+          period_type: string
+          rank_position: number | null
+          total_points: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          metrics?: Json | null
+          org_id: string
+          period_end: string
+          period_start: string
+          period_type: string
+          rank_position?: number | null
+          total_points?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          metrics?: Json | null
+          org_id?: string
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          rank_position?: number | null
+          total_points?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       performance_reviews: {
         Row: {
           achievements: string | null
@@ -3389,6 +3831,7 @@ export type Database = {
           description: string | null
           id: string
           item_name: string
+          part_id: string | null
           po_id: string
           quantity: number
           received_quantity: number | null
@@ -3400,6 +3843,7 @@ export type Database = {
           description?: string | null
           id?: string
           item_name: string
+          part_id?: string | null
           po_id: string
           quantity?: number
           received_quantity?: number | null
@@ -3411,6 +3855,7 @@ export type Database = {
           description?: string | null
           id?: string
           item_name?: string
+          part_id?: string | null
           po_id?: string
           quantity?: number
           received_quantity?: number | null
@@ -3418,6 +3863,13 @@ export type Database = {
           unit_price?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts_inventory"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchase_order_items_po_id_fkey"
             columns: ["po_id"]
@@ -3499,6 +3951,142 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_receipt_items: {
+        Row: {
+          created_at: string
+          divergence_reason: string | null
+          has_divergence: boolean | null
+          id: string
+          ordered_quantity: number
+          part_id: string | null
+          purchase_order_item_id: string
+          quality_notes: string | null
+          quality_status: string | null
+          receipt_id: string
+          received_quantity: number
+          total_cost: number | null
+          unit_cost: number | null
+        }
+        Insert: {
+          created_at?: string
+          divergence_reason?: string | null
+          has_divergence?: boolean | null
+          id?: string
+          ordered_quantity: number
+          part_id?: string | null
+          purchase_order_item_id: string
+          quality_notes?: string | null
+          quality_status?: string | null
+          receipt_id: string
+          received_quantity: number
+          total_cost?: number | null
+          unit_cost?: number | null
+        }
+        Update: {
+          created_at?: string
+          divergence_reason?: string | null
+          has_divergence?: boolean | null
+          id?: string
+          ordered_quantity?: number
+          part_id?: string | null
+          purchase_order_item_id?: string
+          quality_notes?: string | null
+          quality_status?: string | null
+          receipt_id?: string
+          received_quantity?: number
+          total_cost?: number | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_receipt_items_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipt_items_purchase_order_item_id_fkey"
+            columns: ["purchase_order_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipt_items_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_receipts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_receipts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          has_divergence: boolean | null
+          id: string
+          invoice_date: string | null
+          invoice_number: string | null
+          notes: string | null
+          org_id: string
+          purchase_order_id: string
+          receipt_date: string
+          receipt_number: string
+          received_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          has_divergence?: boolean | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          notes?: string | null
+          org_id: string
+          purchase_order_id: string
+          receipt_date: string
+          receipt_number: string
+          received_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          has_divergence?: boolean | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          notes?: string | null
+          org_id?: string
+          purchase_order_id?: string
+          receipt_date?: string
+          receipt_number?: string
+          received_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_receipts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_receipts_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -5342,6 +5930,42 @@ export type Database = {
           },
         ]
       }
+      user_achievements: {
+        Row: {
+          achievement_data: Json | null
+          achievement_type: string
+          created_at: string | null
+          earned_at: string | null
+          id: string
+          org_id: string
+          points_earned: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          achievement_data?: Json | null
+          achievement_type: string
+          created_at?: string | null
+          earned_at?: string | null
+          id?: string
+          org_id: string
+          points_earned?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          achievement_data?: Json | null
+          achievement_type?: string
+          created_at?: string | null
+          earned_at?: string | null
+          id?: string
+          org_id?: string
+          points_earned?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_basic_info: {
         Row: {
           created_at: string
@@ -5461,6 +6085,78 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_score_history: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          org_id: string
+          points_after: number
+          points_before: number
+          points_earned: number
+          user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          org_id: string
+          points_after: number
+          points_before: number
+          points_earned: number
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          org_id?: string
+          points_after?: number
+          points_before?: number
+          points_earned?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_scores: {
+        Row: {
+          created_at: string | null
+          current_level: number | null
+          id: string
+          last_updated: string | null
+          level_progress: number | null
+          org_id: string
+          total_points: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_level?: number | null
+          id?: string
+          last_updated?: string | null
+          level_progress?: number | null
+          org_id: string
+          total_points?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_level?: number | null
+          id?: string
+          last_updated?: string | null
+          level_progress?: number | null
+          org_id?: string
+          total_points?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       user_sectors: {
         Row: {
@@ -6190,12 +6886,68 @@ export type Database = {
       }
     }
     Functions: {
+      add_user_points: {
+        Args: {
+          p_action_type: string
+          p_metadata?: Json
+          p_org_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      calculate_action_points: {
+        Args: {
+          p_action_type: string
+          p_metadata?: Json
+          p_org_id: string
+          p_user_id: string
+        }
+        Returns: number
+      }
+      calculate_kpi_trend: {
+        Args: {
+          comparison_period?: string
+          current_period?: string
+          kpi_code: string
+          organization_id: string
+        }
+        Returns: {
+          change_percentage: number
+          current_value: number
+          previous_value: number
+          trend_direction: string
+        }[]
+      }
+      calculate_kpi_value: {
+        Args: { kpi_code: string; organization_id: string; timeframe?: string }
+        Returns: number
+      }
       can_manage_organizations: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
       can_workflow_advance: {
         Args: { p_workflow_id: string }
+        Returns: Json
+      }
+      check_achievement_criteria: {
+        Args: {
+          p_achievement_key: string
+          p_action_type: string
+          p_criteria: Json
+          p_metadata?: Json
+          p_org_id: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
+      check_achievements: {
+        Args: {
+          p_action_type: string
+          p_metadata?: Json
+          p_org_id: string
+          p_user_id: string
+        }
         Returns: Json
       }
       create_notification: {
@@ -6219,12 +6971,20 @@ export type Database = {
         Args: { org_id: string }
         Returns: string
       }
+      generate_inventory_count_number: {
+        Args: { p_org_id: string }
+        Returns: string
+      }
       generate_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
       generate_po_number: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_receipt_number: {
+        Args: { p_org_id: string }
         Returns: string
       }
       generate_requisition_number: {
@@ -6282,6 +7042,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      initialize_org_scores: {
+        Args: { p_org_id: string }
+        Returns: undefined
+      }
+      insert_default_achievements: {
+        Args: { p_org_id: string }
+        Returns: undefined
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -6314,6 +7082,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      process_inventory_count_adjustments: {
+        Args: { p_count_id: string }
+        Returns: undefined
+      }
+      process_user_action: {
+        Args: {
+          p_action_type: string
+          p_metadata?: Json
+          p_org_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       promote_user_to_super_admin: {
         Args: { user_id: string }
         Returns: boolean
@@ -6321,6 +7102,10 @@ export type Database = {
       revoke_user_super_admin: {
         Args: { user_id: string }
         Returns: boolean
+      }
+      update_performance_ranking: {
+        Args: { p_org_id: string; p_period_type?: string }
+        Returns: undefined
       }
     }
     Enums: {
