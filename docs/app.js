@@ -2,18 +2,22 @@
 function handleHashRouting() {
   const hash = window.location.hash.slice(1); // Remove '#'
   
-  if (hash) {
-    // Converter hash para caminho de arquivo
-    let path = hash;
-    
-    // Se não termina com .md, adicionar
-    if (!path.endsWith('.md')) {
-      path = path + '.md';
-    }
-    
-    // Carregar conteúdo
-    loadMarkdownContent(path);
+  // Se não há hash, carregar quick-start por padrão
+  if (!hash) {
+    loadMarkdownContent('quick-start.md');
+    return;
   }
+  
+  // Converter hash para caminho de arquivo
+  let path = hash;
+  
+  // Se não termina com .md, adicionar
+  if (!path.endsWith('.md')) {
+    path = path + '.md';
+  }
+  
+  // Carregar conteúdo
+  loadMarkdownContent(path);
 }
 
 // Detectar se está acessando .md diretamente (redirecionar para hash)
@@ -231,14 +235,6 @@ async function loadMarkdownContent(path) {
       }
     }
     
-    // Hide sections grid and show dynamic content
-    const sectionsGrid = document.querySelector('.sections-grid');
-    const featuresSection = document.querySelector('.features-section');
-    const gettingStartedSection = document.querySelector('.getting-started-section');
-    
-    if (sectionsGrid) sectionsGrid.style.display = 'none';
-    if (featuresSection) featuresSection.style.display = 'none';
-    if (gettingStartedSection) gettingStartedSection.style.display = 'none';
     
     // Set content with back button
     contentArea.innerHTML = html;
@@ -390,22 +386,4 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Listener para mudanças de hash
   window.addEventListener('hashchange', handleHashRouting);
-  
-  // ===== Card Click Handlers =====
-  document.querySelectorAll('.section-card').forEach(card => {
-    card.style.cursor = 'pointer';
-    
-    card.addEventListener('click', (e) => {
-      e.preventDefault();
-      
-      const link = card.querySelector('.card-link');
-      if (link) {
-        const href = link.getAttribute('href');
-        
-        if (href && href.startsWith('#')) {
-          window.location.hash = href;
-        }
-      }
-    });
-  });
 });
