@@ -345,18 +345,6 @@ const observer = new MutationObserver((mutations) => {
 
 observer.observe(html, { attributes: true });
 
-// ===== Card Click Handlers =====
-document.querySelectorAll('.section-card').forEach(card => {
-  card.addEventListener('click', (e) => {
-    if (!e.target.classList.contains('card-link')) {
-      const link = card.querySelector('.card-link');
-      if (link) {
-        window.location.href = link.getAttribute('href');
-      }
-    }
-  });
-});
-
 // ===== Breadcrumb Navigation =====
 function updateBreadcrumb() {
   const path = window.location.pathname;
@@ -402,4 +390,22 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Listener para mudanças de hash
   window.addEventListener('hashchange', handleHashRouting);
+  
+  // ===== Card Click Handlers =====
+  document.querySelectorAll('.section-card').forEach(card => {
+    card.style.cursor = 'pointer';
+    
+    card.addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      const link = card.querySelector('.card-link');
+      if (link) {
+        const href = link.getAttribute('href');
+        
+        if (href && href.startsWith('#')) {
+          window.location.hash = href;
+        }
+      }
+    });
+  });
 });
