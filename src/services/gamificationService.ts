@@ -333,7 +333,7 @@ export class GamificationService {
 
     switch (criteriaType) {
       case 'total_orders': {
-        const { count } = await supabase.rpc('count_user_orders', {
+        const { count } = await (supabase.rpc as any)('count_user_orders', {
           p_org_id: orgId,
           p_user_id: userId
         });
@@ -342,7 +342,7 @@ export class GamificationService {
       }
 
       case 'completed_orders': {
-        const { count } = await supabase.rpc('count_completed_orders', {
+        const { count } = await (supabase.rpc as any)('count_completed_orders', {
           p_org_id: orgId,
           p_user_id: userId
         });
@@ -351,7 +351,7 @@ export class GamificationService {
       }
 
       case 'approved_budgets': {
-        const { count } = await supabase.rpc('count_approved_budgets', {
+        const { count } = await (supabase.rpc as any)('count_approved_budgets', {
           p_org_id: orgId,
           p_user_id: userId
         });

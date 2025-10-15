@@ -3,7 +3,7 @@ import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 
 export type AppRole = 'super_admin' | 'owner' | 'admin' | 'manager' | 'user' | 'viewer';
 export type PermissionLevel = 'none' | 'read' | 'write' | 'admin';
-export type ModuleName = 'fiscal' | 'financial' | 'production' | 'workflow' | 'orders' | 'purchasing' | 'inventory' | 'hr' | 'reports' | 'admin';
+export type ModuleName = 'fiscal' | 'financial' | 'production' | 'workflow' | 'orders' | 'purchasing' | 'inventory' | 'hr' | 'reports' | 'admin' | 'settings';
 
 // Matriz de permissões baseada na documentação do sistema
 const PERMISSION_MATRIX: Record<AppRole, Record<ModuleName, PermissionLevel>> = {
@@ -17,7 +17,8 @@ const PERMISSION_MATRIX: Record<AppRole, Record<ModuleName, PermissionLevel>> = 
     inventory: 'admin',
     hr: 'admin',
     reports: 'admin',
-    admin: 'admin'
+    admin: 'admin',
+    settings: 'admin'
   },
   owner: {
     fiscal: 'admin',
@@ -29,7 +30,8 @@ const PERMISSION_MATRIX: Record<AppRole, Record<ModuleName, PermissionLevel>> = 
     inventory: 'admin',
     hr: 'admin',
     reports: 'admin',
-    admin: 'admin'
+    admin: 'admin',
+    settings: 'admin'
   },
   admin: {
     fiscal: 'admin',
@@ -41,7 +43,8 @@ const PERMISSION_MATRIX: Record<AppRole, Record<ModuleName, PermissionLevel>> = 
     inventory: 'admin',
     hr: 'admin',
     reports: 'admin',
-    admin: 'write'
+    admin: 'write',
+    settings: 'admin'
   },
   manager: {
     fiscal: 'write',
@@ -53,7 +56,8 @@ const PERMISSION_MATRIX: Record<AppRole, Record<ModuleName, PermissionLevel>> = 
     inventory: 'write',
     hr: 'read',
     reports: 'write',
-    admin: 'none'
+    admin: 'none',
+    settings: 'read'
   },
   user: {
     fiscal: 'read',
@@ -65,7 +69,8 @@ const PERMISSION_MATRIX: Record<AppRole, Record<ModuleName, PermissionLevel>> = 
     inventory: 'read',
     hr: 'none',
     reports: 'read',
-    admin: 'none'
+    admin: 'none',
+    settings: 'none'
   },
   viewer: {
     fiscal: 'read',
@@ -77,7 +82,8 @@ const PERMISSION_MATRIX: Record<AppRole, Record<ModuleName, PermissionLevel>> = 
     inventory: 'read',
     hr: 'read',
     reports: 'read',
-    admin: 'none'
+    admin: 'none',
+    settings: 'none'
   }
 };
 

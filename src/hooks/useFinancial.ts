@@ -256,7 +256,7 @@ export const useFinancial = () => {
     
     try {
       setLoading(true);
-      const query = supabase
+      let query: any = supabase
         .from('cash_flow')
         .select('id, transaction_date, transaction_type, description, amount, category_id, account_id, reference_id, reference_type, created_at, org_id')
         .eq('org_id', currentOrganization.id)

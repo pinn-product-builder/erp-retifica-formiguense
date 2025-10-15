@@ -133,9 +133,10 @@ const Diagnosticos = () => {
   const diagnosticResponses = diagnosticResponsesData || [];
 
   const filteredResponses = diagnosticResponses.filter(response => {
-    const matchesSearch = response.order?.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         response.order?.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (response as any).checklist?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const responseWithOrder = response as any;
+    const matchesSearch = responseWithOrder.order?.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         responseWithOrder.order?.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         responseWithOrder.checklist?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "todos" || response.status === statusFilter;
     const matchesComponent = componentFilter === "todos" || response.component === componentFilter;
@@ -405,16 +406,18 @@ const Diagnosticos = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredResponses.map((response) => (
+                {filteredResponses.map((response) => {
+                  const responseWithOrder = response as any;
+                  return (
                   <TableRow key={response.id}>
                     <TableCell className="font-medium">
-                      {response.order?.order_number || 'N/A'}
+                      {responseWithOrder.order?.order_number || 'N/A'}
                     </TableCell>
-                    <TableCell>{response.order?.customer?.name || 'N/A'}</TableCell>
+                    <TableCell>{responseWithOrder.order?.customer?.name || 'N/A'}</TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <div className="font-medium">{response.order?.engine?.brand || 'N/A'}</div>
-                        <div className="text-muted-foreground">{response.order?.engine?.model || 'N/A'}</div>
+                        <div className="font-medium">{responseWithOrder.order?.engine?.brand || 'N/A'}</div>
+                        <div className="text-muted-foreground">{responseWithOrder.order?.engine?.model || 'N/A'}</div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -452,7 +455,8 @@ const Diagnosticos = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           )}
