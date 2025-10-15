@@ -1,3 +1,27 @@
+// ===== Hash-based Routing System =====
+function handleHashRouting() {
+  const hash = window.location.hash.slice(1); // Remove '#'
+  
+  if (hash) {
+    // Converter hash para caminho de arquivo
+    let path = hash;
+    
+    // Se não termina com .md, adicionar
+    if (!path.endsWith('.md')) {
+      path = path + '.md';
+    }
+    
+    // Carregar conteúdo
+    loadMarkdownContent(path);
+  }
+}
+
+// Detectar se está acessando .md diretamente (redirecionar para hash)
+if (window.location.pathname.endsWith('.md')) {
+  const mdPath = window.location.pathname.split('/').pop().replace('.md', '');
+  window.location.href = `index.html#${mdPath}`;
+}
+
 // ===== Theme Management =====
 const themeToggle = document.getElementById('theme-toggle');
 const html = document.documentElement;
@@ -171,6 +195,12 @@ window.addEventListener('load', updateActiveNavLink);
 // ===== Dynamic Content Loading =====
 async function loadMarkdownContent(path) {
   try {
+    // Atualizar hash na URL (sem recarregar página)
+    const hashPath = path.replace('.md', '');
+    if (window.location.hash.slice(1) !== hashPath) {
+      window.history.pushState(null, '', `#${hashPath}`);
+    }
+    
     // If path doesn't end with .md and isn't a directory, add .md
     let finalPath = path;
     if (!path.endsWith('.md') && !path.endsWith('/')) {
@@ -223,7 +253,11 @@ async function loadMarkdownContent(path) {
     const backButton = document.createElement('button');
     backButton.className = 'back-button';
     backButton.innerHTML = '← Voltar ao Início';
-    backButton.onclick = () => location.reload();
+    backButton.onclick = () => {
+      // Limpar hash e recarregar para mostrar home
+      window.location.hash = '';
+      location.reload();
+    };
     contentArea.insertBefore(backButton, contentArea.firstChild);
     
     // Wait for libraries to load
@@ -362,4 +396,10 @@ console.log('%cPara mais informações, visite: https://github.com/pinn-product-
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Documentation site loaded successfully');
   updateBreadcrumb();
+  
+  // Inicializar roteamento hash
+  handleHashRouting();
+  
+  // Listener para mudanças de hash
+  window.addEventListener('hashchange', handleHashRouting);
 });

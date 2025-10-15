@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="0;url=index.html">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecionando - Documentação GestãoPro</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+    }
+    
+    .container {
+      text-align: center;
+      max-width: 500px;
+    }
+    
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+    
+    p {
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+      opacity: 0.9;
+    }
+    
+    .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 2rem;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    a {
+      color: white;
+      text-decoration: underline;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    
+    a:hover {
+      opacity: 0.8;
+    }
+    
+    @media (max-width: 640px) {
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      p {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔄 Redirecionando...</h1>
+    <p>Você será redirecionado para a página inicial da documentação.</p>
+    <div class="spinner"></div>
+    <p style="font-size: 0.9rem;">
+      Se não for redirecionado automaticamente,<br>
+      <a href="index.html">clique aqui para ir à documentação</a>
+    </p>
+  </div>
+  
+  <script>
+    // Redirecionar imediatamente
+    setTimeout(() => {
+      window.location.href = 'index.html';
+    }, 100);
+  </script>
+</body>
+</html>
