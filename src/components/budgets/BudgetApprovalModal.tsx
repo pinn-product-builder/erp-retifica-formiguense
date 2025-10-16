@@ -38,13 +38,19 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 
 const approvalSchema = z.object({
   approval_type: z.enum(['total', 'partial', 'rejected'], {
-    required_error: "Tipo de aprovação é obrigatório"
+    required_error: "Tipo de aprovação é obrigatório",
+    invalid_type_error: "Selecione um tipo de aprovação válido"
   }),
   approval_method: z.enum(['signature', 'whatsapp', 'email', 'verbal'], {
-    required_error: "Método de aprovação é obrigatório"
+    required_error: "Método de aprovação é obrigatório",
+    invalid_type_error: "Selecione um método de aprovação válido"
   }),
-  approved_by_customer: z.string().min(1, "Nome do aprovador é obrigatório"),
-  approval_notes: z.string().optional(),
+  approved_by_customer: z.string()
+    .min(1, "Nome do aprovador é obrigatório")
+    .max(100, "Nome muito longo (máximo 100 caracteres)"),
+  approval_notes: z.string()
+    .max(500, "Observações muito longas (máximo 500 caracteres)")
+    .optional(),
   customer_signature: z.string().optional()
 });
 
@@ -52,7 +58,7 @@ interface BudgetApprovalModalProps {
   budget: DetailedBudget | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onApprovalCreated: (approval: any) => void;
+  onApprovalCreated: (approval: unknown) => void;
 }
 
 const BudgetApprovalModal = ({ 
@@ -77,6 +83,7 @@ const BudgetApprovalModal = ({
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [approvalDocument, setApprovalDocument] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string>('');
 
   // Preencher automaticamente o nome do cliente quando o orçamento for carregado
   useEffect(() => {
@@ -93,10 +100,34 @@ const BudgetApprovalModal = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+    setFileError('');
 
     try {
       // Validar formulário
       const validatedData = approvalSchema.parse(formData);
+      
+      // Validar upload de imagem obrigatório
+      if (!approvalDocument) {
+        setFileError("Upload de imagem é obrigatório para aprovação");
+        toast({
+          title: "Erro de validação",
+          description: "É necessário anexar uma imagem comprobatória da aprovação",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validar formato de arquivo (apenas JPEG, JPG, PNG)
+      const allowedFormats = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedFormats.includes(approvalDocument.type)) {
+        setFileError("Formato não aceito. Apenas JPEG, JPG e PNG são permitidos");
+        toast({
+          title: "Formato inválido",
+          description: "Por favor, envie apenas imagens nos formatos JPEG, JPG ou PNG",
+          variant: "destructive"
+        });
+        return;
+      }
       
       // Para aprovação parcial, validar seleções
       if (formData.approval_type === 'partial') {
@@ -128,7 +159,7 @@ const BudgetApprovalModal = ({
         ].reduce((sum, value) => sum + value, 0);
       }
 
-      // Upload do documento se houver
+      // Upload do documento (agora obrigatório)
       let documentData = null;
       if (approvalDocument && currentOrganization) {
         const fileExt = approvalDocument.name.split('.').pop();
@@ -141,12 +172,48 @@ const BudgetApprovalModal = ({
             upsert: false
           });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          
+          // Traduzir mensagens de erro do Supabase
+          const errorMessage = "Erro ao fazer upload da imagem. Tente novamente.";
+          let errorDescription = "Não foi possível fazer upload da imagem. Verifique o arquivo e tente novamente.";
+          
+          if (uploadError.message) {
+            const errorTranslations: Record<string, string> = {
+              'mime type': 'tipo de arquivo',
+              'not supported': 'não suportado',
+              'file size': 'tamanho do arquivo',
+              'too large': 'muito grande',
+              'invalid': 'inválido',
+              'unauthorized': 'não autorizado',
+              'forbidden': 'acesso negado'
+            };
+            
+            let translatedError = uploadError.message.toLowerCase();
+            Object.entries(errorTranslations).forEach(([english, portuguese]) => {
+              translatedError = translatedError.replace(english, portuguese);
+            });
+            
+            if (translatedError !== uploadError.message.toLowerCase()) {
+              errorDescription = `Erro: ${translatedError}`;
+            }
+          }
+          
+          setFileError(errorMessage);
+          toast({
+            title: "Erro no upload",
+            description: errorDescription,
+            variant: "destructive"
+          });
+          return;
+        }
         
         documentData = {
           file_path: uploadData.path,
           file_name: approvalDocument.name,
           file_size: approvalDocument.size,
+          file_type: approvalDocument.type,
           uploaded_at: new Date().toISOString()
         };
       }
@@ -174,10 +241,36 @@ const BudgetApprovalModal = ({
         const fieldErrors: Record<string, string> = {};
         error.errors.forEach((err) => {
           if (err.path) {
-            fieldErrors[err.path[0]] = err.message;
+            // Traduzir mensagens de erro que possam vir em inglês
+            let message = err.message;
+            
+            // Traduções de mensagens comuns do Zod
+            const translations: Record<string, string> = {
+              'Required': 'Obrigatório',
+              'Invalid': 'Inválido',
+              'String must contain at least 1 character(s)': 'Campo obrigatório',
+              'Invalid enum value': 'Valor inválido',
+              'Expected string, received undefined': 'Campo obrigatório'
+            };
+            
+            // Verificar se a mensagem precisa ser traduzida
+            Object.entries(translations).forEach(([english, portuguese]) => {
+              if (message.includes(english)) {
+                message = message.replace(english, portuguese);
+              }
+            });
+            
+            fieldErrors[err.path[0]] = message;
           }
         });
         setErrors(fieldErrors);
+      } else {
+        // Erro genérico
+        toast({
+          title: "Erro inesperado",
+          description: "Ocorreu um erro ao processar a aprovação. Tente novamente.",
+          variant: "destructive"
+        });
       }
     }
   };
@@ -194,6 +287,7 @@ const BudgetApprovalModal = ({
     });
     setErrors({});
     setApprovalDocument(null);
+    setFileError('');
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -310,7 +404,7 @@ const BudgetApprovalModal = ({
                     <CardTitle className="text-base">Serviços Aprovados</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    {budget.services.map((service: any, index: number) => (
+                    {budget.services.map((service: { name: string; total?: number }, index: number) => (
                       <div key={index} className="flex items-center space-x-2">
                         <Checkbox
                           checked={formData.approved_services.includes(index.toString())}
@@ -346,7 +440,7 @@ const BudgetApprovalModal = ({
                     <CardTitle className="text-base">Peças Aprovadas</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    {budget.parts.map((part: any, index: number) => (
+                    {budget.parts.map((part: { name: string; quantity: number; total?: number }, index: number) => (
                       <div key={index} className="flex items-center space-x-2">
                         <Checkbox
                           checked={formData.approved_parts.includes(index.toString())}
@@ -438,22 +532,47 @@ const BudgetApprovalModal = ({
 
           {/* Upload de Documento */}
           <div className="space-y-2">
-            <Label>Documento Comprobatório</Label>
+            <Label>Imagem Comprobatória *</Label>
             <div className="flex items-center gap-4">
               <Input
                 type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                onChange={(e) => setApprovalDocument(e.target.files?.[0] || null)}
-                className="flex-1"
+                accept=".jpg,.jpeg,.png"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setApprovalDocument(file);
+                  setFileError('');
+                  
+                  // Validar formato imediatamente
+                  if (file) {
+                    const allowedFormats = ['image/jpeg', 'image/jpg', 'image/png'];
+                    if (!allowedFormats.includes(file.type)) {
+                      setFileError("Formato não aceito. Apenas JPEG, JPG e PNG são permitidos");
+                      setApprovalDocument(null);
+                      e.target.value = '';
+                    }
+                  }
+                }}
+                className={`flex-1 ${fileError ? 'border-red-500' : ''}`}
               />
               <Button type="button" variant="outline" size="sm">
                 <Upload className="w-4 h-4 mr-2" />
                 Upload
               </Button>
             </div>
+            {fileError && (
+              <p className="text-sm text-red-500">{fileError}</p>
+            )}
             <p className="text-sm text-muted-foreground">
-              Anexe print do WhatsApp, e-mail, foto da assinatura ou outro comprovante
+              <strong>Obrigatório:</strong> Anexe print do WhatsApp, e-mail, foto da assinatura ou outro comprovante em formato JPEG, JPG ou PNG
             </p>
+            {approvalDocument && (
+              <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+                <span className="text-sm text-green-700">
+                  Arquivo selecionado: {approvalDocument.name}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Observações */}

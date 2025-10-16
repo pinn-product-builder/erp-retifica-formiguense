@@ -9,7 +9,7 @@ Sistema completo de orçamentação detalhada com aprovações documentadas e in
 ### Regras de Negócio Implementadas
 - **RN016**: Orçamento inclui serviços, peças, prazos e custos detalhados
 - **RN017**: Cliente pode aprovar total, parcial ou rejeitar orçamento  
-- **RN018**: Aprovações documentadas (assinatura, WhatsApp, email)
+- **RN018**: Aprovações documentadas com upload obrigatório de imagem (JPEG/JPG/PNG)
 - **RN019**: Sistema alerta sobre orçamentos pendentes de aprovação
 - **RN020**: Orçamentos aprovados geram automaticamente contas a receber
 
@@ -38,11 +38,11 @@ Sistema completo de orçamentação detalhada com aprovações documentadas e in
   - **Parcial**: Seleção específica de serviços/peças
   - **Rejeitado**: Rejeição com justificativa
 
-- **Métodos de Aprovação**:
-  - WhatsApp (com upload de print)
-  - E-mail (com upload de confirmação)
-  - Assinatura física (digitalizada)
-  - Confirmação verbal (registrada)
+- **Métodos de Aprovação** (todos requerem imagem obrigatória):
+  - WhatsApp (print da conversa)
+  - E-mail (screenshot da confirmação)
+  - Assinatura física (foto digitalizada)
+  - Confirmação verbal (foto/print do registro)
 
 ### 3. Detalhamento de Orçamentos
 - **Componente**: `BudgetDetails`
@@ -105,7 +105,8 @@ const approvalSchema = z.object({
 
 ### 3. Storage de Documentos
 - **Bucket**: `reports`
-- **Arquivos**: PDFs, imagens de aprovação
+- **Arquivos**: Imagens obrigatórias de aprovação (JPEG/JPG/PNG apenas)
+- **Validação**: Formato validado em tempo real
 - **Segurança**: RLS com acesso por organização
 
 ## Fluxo de Processo

@@ -242,10 +242,40 @@ stateDiagram-v2
 ## Documentação e Comprovantes
 
 ### Tipos de Documento Aceitos
+
+**⚠️ ATUALIZAÇÃO (Janeiro 2025)**: Upload de imagem agora é **OBRIGATÓRIO** para todas as aprovações.
+
+**Formatos Aceitos**:
+- ✅ **JPEG** (.jpg, .jpeg)
+- ✅ **PNG** (.png)
+- ❌ **Outros formatos não são aceitos**
+
+**Tipos de Comprovante**:
 1. **WhatsApp**: Print da conversa com aprovação
-2. **E-mail**: Forward ou screenshot do e-mail
-3. **Assinatura**: Digitalização do documento assinado
-4. **Verbal**: Registro manual da confirmação
+2. **E-mail**: Screenshot do e-mail de confirmação
+3. **Assinatura**: Foto digitalizada do documento assinado
+4. **Verbal**: Foto/print da confirmação registrada
+
+**Validações Implementadas**:
+- Upload é obrigatório - não é possível aprovar sem anexar imagem
+- Validação de formato em tempo real ao selecionar arquivo
+- Mensagem de erro clara se formato não for aceito
+- Feedback visual quando arquivo válido é selecionado
+
+**Mensagens de Erro**:
+- "Upload de imagem é obrigatório para aprovação"
+- "Formato não aceito. Apenas JPEG, JPG e PNG são permitidos"
+- "Erro ao fazer upload da imagem. Tente novamente."
+- "Nome muito longo (máximo 100 caracteres)"
+- "Observações muito longas (máximo 500 caracteres)"
+- "Tipo de aprovação é obrigatório"
+- "Método de aprovação é obrigatório"
+
+**Sistema de Tradução**:
+- Todas as mensagens de erro são exibidas em português
+- Mensagens do Zod são traduzidas automaticamente
+- Erros do Supabase são traduzidos quando possível
+- Tratamento robusto de erros inesperados
 
 ### Armazenamento Seguro
 - **Bucket**: `reports` (Supabase Storage)
@@ -259,11 +289,15 @@ stateDiagram-v2
   "file_path": "approvals/uuid/1705321800.jpg",
   "file_name": "aprovacao_whatsapp.jpg", 
   "file_size": 245760,
-  "content_type": "image/jpeg",
-  "uploaded_at": "2024-01-15T10:30:00Z",
-  "uploaded_by": "uuid_atendente"
+  "file_type": "image/jpeg",
+  "uploaded_at": "2025-01-15T10:30:00Z"
 }
 ```
+
+**Campos Atualizados**:
+- `file_type`: Tipo MIME do arquivo (validado)
+- `uploaded_at`: Timestamp ISO do upload
+- Remoção de `uploaded_by` (inferido do contexto de sessão)
 
 ## Notificações e Alertas
 
