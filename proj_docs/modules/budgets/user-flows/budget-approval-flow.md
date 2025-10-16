@@ -276,6 +276,8 @@ stateDiagram-v2
 - Mensagens do Zod são traduzidas automaticamente
 - Erros do Supabase são traduzidos quando possível
 - Tratamento robusto de erros inesperados
+- Badges de validação traduzidos (required → obrigatório, warning → aviso)
+- Interface de diagnósticos completamente em português
 
 ### Armazenamento Seguro
 - **Bucket**: `reports` (Supabase Storage)

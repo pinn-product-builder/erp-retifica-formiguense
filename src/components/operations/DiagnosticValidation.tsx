@@ -12,9 +12,17 @@ interface ValidationRule {
 }
 
 interface DiagnosticValidationProps {
-  responses: Record<string, any>;
-  checklist: any;
+  responses: Record<string, { value: unknown; photos: unknown[]; notes?: string }>;
+  checklist: { items?: ChecklistItem[] };
   onValidationChange?: (isValid: boolean, errors: string[], warnings: string[]) => void;
+}
+
+interface ChecklistItem {
+  id: string;
+  item_name: string;
+  item_type: 'checkbox' | 'measurement' | 'photo' | 'text' | 'select';
+  is_required: boolean;
+  expected_values?: { min: number; max: number };
 }
 
 const DiagnosticValidation = ({ 
@@ -28,7 +36,7 @@ const DiagnosticValidation = ({
     
     if (!checklist?.items) return rules;
 
-    checklist.items.forEach((item: any) => {
+    checklist.items.forEach((item: ChecklistItem) => {
       const response = responses[item.id];
       
       // Validação de itens obrigatórios
@@ -48,7 +56,7 @@ const DiagnosticValidation = ({
 
       // Validação de medições com valores esperados
       if (item.item_type === 'measurement' && item.expected_values && response?.value) {
-        const value = parseFloat(response.value);
+        const value = parseFloat(String(response.value));
         const { min, max } = item.expected_values;
         
         if (value < min || value > max) {
@@ -127,6 +135,19 @@ const DiagnosticValidation = ({
         return 'outline';
       default:
         return 'default';
+    }
+  };
+
+  const translateValidationType = (type: string) => {
+    switch (type) {
+      case 'required':
+        return 'obrigatório';
+      case 'warning':
+        return 'aviso';
+      case 'info':
+        return 'informação';
+      default:
+        return type;
     }
   };
 
@@ -259,7 +280,7 @@ const DiagnosticValidation = ({
                 {getIcon(rule.condition ? 'success' : rule.type)}
                 <span className="flex-1">{rule.message}</span>
                 <Badge variant={rule.condition ? 'default' : getBadgeVariant(rule.type)}>
-                  {rule.condition ? 'OK' : rule.type}
+                  {rule.condition ? 'OK' : translateValidationType(rule.type)}
                 </Badge>
               </div>
             ))}
