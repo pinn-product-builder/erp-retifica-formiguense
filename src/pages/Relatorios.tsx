@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { FileText, Download, Calendar, TrendingUp, Users, DollarSign } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileText, Download, Calendar, TrendingUp, Users, DollarSign, Package, BarChart3 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
+import InventoryPerformanceReports from "@/components/reports/InventoryPerformanceReports";
 
 const Relatorios = () => {
   const [tipoRelatorio, setTipoRelatorio] = useState('');
@@ -66,18 +68,32 @@ const Relatorios = () => {
         </div>
       </div>
 
-      {/* Estatísticas rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {estatisticasRapidas.map((stat, index) => (
-          <StatCard
-            key={index}
-            title={stat.titulo}
-            value={stat.valor}
-            icon={stat.icone}
-            subtitle="Período atual"
-          />
-        ))}
-      </div>
+      <Tabs defaultValue="performance" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="performance">Performance de Estoque</TabsTrigger>
+          <TabsTrigger value="operational">Relatórios Operacionais</TabsTrigger>
+          <TabsTrigger value="financial">Relatórios Financeiros</TabsTrigger>
+        </TabsList>
+
+        {/* Aba Performance de Estoque */}
+        <TabsContent value="performance">
+          <InventoryPerformanceReports />
+        </TabsContent>
+
+        {/* Aba Relatórios Operacionais */}
+        <TabsContent value="operational" className="space-y-6">
+          {/* Estatísticas rápidas */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {estatisticasRapidas.map((stat, index) => (
+              <StatCard
+                key={index}
+                title={stat.titulo}
+                value={stat.valor}
+                icon={stat.icone}
+                subtitle="Período atual"
+              />
+            ))}
+          </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Gerador de relatórios */}
@@ -213,6 +229,28 @@ const Relatorios = () => {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        {/* Aba Relatórios Financeiros */}
+        <TabsContent value="financial" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5" />
+                Relatórios Financeiros
+              </CardTitle>
+              <CardDescription>
+                Relatórios financeiros e de faturamento em desenvolvimento
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Esta seção será implementada nas próximas versões do sistema.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

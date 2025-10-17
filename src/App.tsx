@@ -23,7 +23,6 @@ const Coleta = lazy(() => import('@/pages/Coleta'));
 const Workflow = lazy(() => import('@/pages/Workflow'));
 const CheckIn = lazy(() => import('@/pages/CheckIn'));
 const Estoque = lazy(() => import('@/pages/Estoque'));
-const SeparacaoPecas = lazy(() => import('@/pages/SeparacaoPecas'));
 const Funcionarios = lazy(() => import('@/pages/Funcionarios'));
 const Orcamentos = lazy(() => import('@/pages/Orcamentos'));
 const Diagnosticos = lazy(() => import('@/pages/Diagnosticos'));
@@ -39,7 +38,6 @@ const DRE = lazy(() => import('@/pages/DRE'));
 const ModuloFiscal = lazy(() => import('@/pages/ModuloFiscal'));
 const PCP = lazy(() => import('@/pages/PCP'));
 const Compras = lazy(() => import('@/pages/Compras'));
-const Inventario = lazy(() => import('@/pages/Inventario'));
 const OrdensServico = lazy(() => import('@/pages/OrdensServico'));
 const GestaoFuncionarios = lazy(() => import('@/pages/GestaoFuncionarios'));
 const GestaoUsuarios = lazy(() => import('@/pages/GestaoUsuarios'));
@@ -72,8 +70,6 @@ function AppContent() {
             <Route path="/workflow" element={<ProfileProtectedRoute><Layout><Workflow /></Layout></ProfileProtectedRoute>} />
             <Route path="/checkin" element={<ProfileProtectedRoute><Layout><CheckIn /></Layout></ProfileProtectedRoute>} />
             <Route path="/estoque" element={<ProfileProtectedRoute><Layout><Estoque /></Layout></ProfileProtectedRoute>} />
-            <Route path="/inventario" element={<ProfileProtectedRoute><Layout><Inventario /></Layout></ProfileProtectedRoute>} />
-            <Route path="/separacao-pecas" element={<ProfileProtectedRoute><Layout><SeparacaoPecas /></Layout></ProfileProtectedRoute>} />
             <Route path="/pcp" element={<ProfileProtectedRoute><Layout><PCP /></Layout></ProfileProtectedRoute>} />
             <Route path="/ordens-servico" element={<ProfileProtectedRoute><Layout><OrdensServico /></Layout></ProfileProtectedRoute>} />
             <Route path="/compras" element={<ProfileProtectedRoute><Layout><Compras /></Layout></ProfileProtectedRoute>} />

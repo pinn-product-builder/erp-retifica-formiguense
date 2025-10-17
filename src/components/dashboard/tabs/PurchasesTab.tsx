@@ -1,5 +1,5 @@
 import React from 'react';
-import { PurchaseNeedsDashboard } from "@/components/dashboard/PurchaseNeedsDashboard";
+import InventoryPurchaseDashboard from "@/components/dashboard/InventoryPurchaseDashboard";
 import { motion } from "framer-motion";
 
 export function PurchasesTab() {
@@ -9,7 +9,7 @@ export function PurchasesTab() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.1 }}
     >
-      <PurchaseNeedsDashboard />
+      <InventoryPurchaseDashboard />
     </motion.div>
   );
 }

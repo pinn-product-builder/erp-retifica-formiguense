@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -37,12 +38,19 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Loader2
+  Loader2,
+  BookOpen,
+  Archive,
+  TrendingUp
 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { usePartsInventory, type PartInventory } from "@/hooks/usePartsInventory";
 import { PartForm } from "@/components/inventory/PartForm";
 import { PartDetails } from "@/components/inventory/PartDetails";
+import ReservationManager from "@/components/inventory/ReservationManager";
+import { MovementHistory } from "@/components/inventory/MovementHistory";
+import InventoryCountManager from "@/components/inventory/InventoryCountManager";
+import PartsSeparationManager from "@/components/inventory/PartsSeparationManager";
 
 const Estoque = () => {
   const { parts, loading, deletePart, fetchParts } = usePartsInventory();
@@ -131,9 +139,9 @@ const Estoque = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Estoque de Peças</h1>
+          <h1 className="text-3xl font-bold">Gestão de Estoque</h1>
           <p className="text-muted-foreground">
-            Gerencie o inventário de peças e componentes
+            Gerencie inventário, reservas e movimentações de peças
           </p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -197,146 +205,195 @@ const Estoque = () => {
         />
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-4">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome ou código..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os Status</SelectItem>
-              <SelectItem value="disponivel">Disponível</SelectItem>
-              <SelectItem value="reservado">Reservado</SelectItem>
-              <SelectItem value="usado">Usado</SelectItem>
-              <SelectItem value="pendente">Pendente</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Tabs de Navegação */}
+      <Tabs defaultValue="inventory" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="inventory" className="flex items-center gap-2">
+            <Package className="w-4 h-4" />
+            Inventário
+          </TabsTrigger>
+          <TabsTrigger value="reservations" className="flex items-center gap-2">
+            <BookOpen className="w-4 h-4" />
+            Reservas
+          </TabsTrigger>
+          <TabsTrigger value="movements" className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Movimentações
+          </TabsTrigger>
+          <TabsTrigger value="separation" className="flex items-center gap-2">
+            <Archive className="w-4 h-4" />
+            Separação
+          </TabsTrigger>
+          <TabsTrigger value="counts" className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4" />
+            Inventário Físico
+          </TabsTrigger>
+        </TabsList>
 
-          <Select value={componentFilter} onValueChange={setComponentFilter}>
-            <SelectTrigger className="w-48">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os Componentes</SelectItem>
-              <SelectItem value="bloco">Bloco</SelectItem>
-              <SelectItem value="cabecote">Cabeçote</SelectItem>
-              <SelectItem value="virabrequim">Virabrequim</SelectItem>
-              <SelectItem value="pistao">Pistão</SelectItem>
-              <SelectItem value="biela">Biela</SelectItem>
-              <SelectItem value="comando">Comando</SelectItem>
-              <SelectItem value="eixo">Eixo</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+        {/* Aba de Inventário */}
+        <TabsContent value="inventory" className="space-y-4">
+          {/* Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Filtros</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-4">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome ou código..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-48">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os Status</SelectItem>
+                  <SelectItem value="disponivel">Disponível</SelectItem>
+                  <SelectItem value="reservado">Reservado</SelectItem>
+                  <SelectItem value="usado">Usado</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                </SelectContent>
+              </Select>
 
-      {/* Parts Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Inventário</CardTitle>
-          <CardDescription>
-            {filteredParts.length} {filteredParts.length === 1 ? 'peça' : 'peças'} encontrada{filteredParts.length !== 1 ? 's' : ''}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead>Componente</TableHead>
-                <TableHead>Quantidade</TableHead>
-                <TableHead>Valor Unit.</TableHead>
-                <TableHead>Valor Total</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Fornecedor</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredParts.map((part) => (
-                <TableRow key={part.id}>
-                  <TableCell className="font-medium">
-                    {part.part_code || '-'}
-                  </TableCell>
-                  <TableCell>{part.part_name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">
-                      {getComponentLabel(part.component)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className={part.quantity < 5 ? 'text-red-600 font-bold' : ''}>
-                      {part.quantity}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    R$ {part.unit_cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    R$ {(part.unit_cost * part.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(part.status)}</TableCell>
-                  <TableCell>{part.supplier || '-'}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedPart(part);
-                          setIsDetailsDialogOpen(true);
-                        }}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedPart(part);
-                          setIsEditDialogOpen(true);
-                        }}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedPart(part);
-                          setIsDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {filteredParts.length === 0 && (
-            <p className="text-center text-muted-foreground py-8">Nenhuma peça encontrada.</p>
-          )}
-        </CardContent>
-      </Card>
+              <Select value={componentFilter} onValueChange={setComponentFilter}>
+                <SelectTrigger className="w-48">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos os Componentes</SelectItem>
+                  <SelectItem value="bloco">Bloco</SelectItem>
+                  <SelectItem value="cabecote">Cabeçote</SelectItem>
+                  <SelectItem value="virabrequim">Virabrequim</SelectItem>
+                  <SelectItem value="pistao">Pistão</SelectItem>
+                  <SelectItem value="biela">Biela</SelectItem>
+                  <SelectItem value="comando">Comando</SelectItem>
+                  <SelectItem value="eixo">Eixo</SelectItem>
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+
+          {/* Parts Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Inventário de Peças</CardTitle>
+              <CardDescription>
+                {filteredParts.length} {filteredParts.length === 1 ? 'peça' : 'peças'} encontrada{filteredParts.length !== 1 ? 's' : ''}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Componente</TableHead>
+                    <TableHead>Quantidade</TableHead>
+                    <TableHead>Valor Unit.</TableHead>
+                    <TableHead>Valor Total</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Fornecedor</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredParts.map((part) => (
+                    <TableRow key={part.id}>
+                      <TableCell className="font-medium">
+                        {part.part_code || '-'}
+                      </TableCell>
+                      <TableCell>{part.part_name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {getComponentLabel(part.component)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className={part.quantity < 5 ? 'text-red-600 font-bold' : ''}>
+                          {part.quantity}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        R$ {part.unit_cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        R$ {(part.unit_cost * part.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(part.status)}</TableCell>
+                      <TableCell>{part.supplier || '-'}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPart(part);
+                              setIsDetailsDialogOpen(true);
+                            }}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPart(part);
+                              setIsEditDialogOpen(true);
+                            }}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedPart(part);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {filteredParts.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">Nenhuma peça encontrada.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Aba de Reservas */}
+        <TabsContent value="reservations" className="space-y-4">
+          <ReservationManager />
+        </TabsContent>
+
+        {/* Aba de Movimentações */}
+        <TabsContent value="movements" className="space-y-4">
+          <MovementHistory />
+        </TabsContent>
+
+        {/* Aba de Separação de Peças */}
+        <TabsContent value="separation" className="space-y-4">
+          <PartsSeparationManager />
+        </TabsContent>
+
+        {/* Aba de Inventário Físico */}
+        <TabsContent value="counts" className="space-y-4">
+          <InventoryCountManager />
+        </TabsContent>
+      </Tabs>
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

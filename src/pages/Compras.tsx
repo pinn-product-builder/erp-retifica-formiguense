@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Users, FileText, Package, Plus, Star } from 'lucide-react';
+import { ShoppingCart, Users, FileText, Package, Plus, Star, TrendingUp, Award } from 'lucide-react';
 import { usePurchasing } from '@/hooks/usePurchasing';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
+import SupplierEvaluation from '@/components/purchasing/SupplierEvaluation';
+import QuotationManager from '@/components/purchasing/QuotationManager';
+import PurchaseNeedsManager from '@/components/purchasing/PurchaseNeedsManager';
 
 const STATUS_COLORS = {
   pending: 'bg-yellow-500/20 text-yellow-700',
@@ -20,6 +23,32 @@ const STATUS_COLORS = {
   cancelled: 'bg-gray-500/20 text-gray-700',
   sent: 'bg-blue-500/20 text-blue-700',
   confirmed: 'bg-green-600/20 text-green-800',
+};
+
+const translateStatus = (status: string) => {
+  const statusTranslations: Record<string, string> = {
+    pending: 'Pendente',
+    approved: 'Aprovada',
+    rejected: 'Rejeitada',
+    cancelled: 'Cancelada',
+    sent: 'Enviada',
+    confirmed: 'Confirmada',
+    completed: 'Concluída',
+    in_progress: 'Em Andamento',
+    draft: 'Rascunho',
+  };
+  return statusTranslations[status] || status;
+};
+
+const translatePriority = (priority: string) => {
+  const priorityTranslations: Record<string, string> = {
+    low: 'Baixa',
+    medium: 'Média',
+    high: 'Alta',
+    critical: 'Crítica',
+    urgent: 'Urgente',
+  };
+  return priorityTranslations[priority] || priority;
 };
 
 export default function Compras() {
@@ -46,6 +75,7 @@ export default function Compras() {
     delivery_days: 0,
   });
 
+  const [showRequisitionDialog, setShowRequisitionDialog] = useState(false);
   const [newRequisition, setNewRequisition] = useState({
     department: '',
     priority: 'medium',
@@ -127,6 +157,8 @@ export default function Compras() {
         justification: '',
         items: [{ item_name: '', description: '', quantity: 1, unit_price: 0 }],
       });
+      
+      setShowRequisitionDialog(false);
 
       toast({
         title: "Requisição criada",
@@ -149,7 +181,7 @@ export default function Compras() {
     });
   };
 
-  const updateRequisitionItem = (index: number, field: string, value: any) => {
+  const updateRequisitionItem = (index: number, field: string, value: string | number) => {
     const updatedItems = [...newRequisition.items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
     setNewRequisition({ ...newRequisition, items: updatedItems });
@@ -235,18 +267,28 @@ export default function Compras() {
 
       {/* Main Content */}
       <Tabs defaultValue="requisitions" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="needs">Necessidades</TabsTrigger>
           <TabsTrigger value="requisitions">Requisições</TabsTrigger>
           <TabsTrigger value="orders">Pedidos</TabsTrigger>
           <TabsTrigger value="suppliers">Fornecedores</TabsTrigger>
           <TabsTrigger value="quotations">Cotações</TabsTrigger>
+          <TabsTrigger value="evaluations" className="flex items-center gap-2">
+            <Award className="w-4 h-4" />
+            Avaliações
+          </TabsTrigger>
         </TabsList>
+
+        {/* Purchase Needs Tab */}
+        <TabsContent value="needs" className="space-y-4">
+          <PurchaseNeedsManager />
+        </TabsContent>
 
         {/* Requisitions Tab */}
         <TabsContent value="requisitions" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">Requisições de Compra</h2>
-            <Dialog>
+            <Dialog open={showRequisitionDialog} onOpenChange={setShowRequisitionDialog}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
@@ -393,10 +435,10 @@ export default function Compras() {
                         <div className="flex items-center gap-2">
                           <p className="font-medium">{requisition.requisition_number}</p>
                           <Badge className={STATUS_COLORS[requisition.status as keyof typeof STATUS_COLORS] || 'bg-gray-100'}>
-                            {requisition.status}
+                            {translateStatus(requisition.status)}
                           </Badge>
                           <Badge variant="outline">
-                            {requisition.priority}
+                            {translatePriority(requisition.priority)}
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">
@@ -593,7 +635,7 @@ export default function Compras() {
                         <div className="flex items-center gap-2">
                           <p className="font-medium">{order.po_number}</p>
                           <Badge className={STATUS_COLORS[order.status as keyof typeof STATUS_COLORS] || 'bg-gray-100'}>
-                            {order.status}
+                            {translateStatus(order.status)}
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">
@@ -621,12 +663,12 @@ export default function Compras() {
 
         {/* Quotations Tab */}
         <TabsContent value="quotations" className="space-y-4">
-          <h2 className="text-lg font-semibold">Cotações</h2>
-          <Card>
-            <CardContent className="p-8 text-center">
-              <p className="text-muted-foreground">Sistema de cotações em desenvolvimento</p>
-            </CardContent>
-          </Card>
+          <QuotationManager />
+        </TabsContent>
+
+        {/* Evaluations Tab */}
+        <TabsContent value="evaluations" className="space-y-4">
+          <SupplierEvaluation />
         </TabsContent>
       </Tabs>
     </div>

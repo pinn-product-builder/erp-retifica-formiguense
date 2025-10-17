@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
@@ -105,7 +105,7 @@ export function useQuotations() {
     } finally {
       setLoading(false);
     }
-  }, [currentOrganization?.id, toast]);
+  }, [currentOrganization?.id]);
 
   /**
    * Criar cotação
@@ -167,7 +167,21 @@ export function useQuotations() {
         description: 'Cotação criada com sucesso',
       });
 
-      await fetchQuotations(quotationData.requisition_id);
+      // Recarregar cotações após criação
+      const { data: updatedData } = await supabase
+        .from('quotations')
+        .select(`
+          *,
+          supplier:suppliers(*),
+          items:quotation_items(*)
+        `)
+        .eq('org_id', currentOrganization.id)
+        .eq('id', quotation.id);
+      
+      if (updatedData?.[0]) {
+        setQuotations(prev => [updatedData[0] as Quotation, ...prev]);
+      }
+      
       return quotation as Quotation;
     } catch (error) {
       console.error('Error creating quotation:', error);
@@ -180,7 +194,7 @@ export function useQuotations() {
     } finally {
       setLoading(false);
     }
-  }, [currentOrganization?.id, toast, fetchQuotations]);
+  }, [currentOrganization?.id]);
 
   /**
    * Atualizar status da cotação
@@ -202,7 +216,15 @@ export function useQuotations() {
         description: `Cotação ${status === 'approved' ? 'aprovada' : 'rejeitada'} com sucesso`,
       });
 
-      await fetchQuotations();
+      // Atualizar cotações após mudança de status
+      setQuotations(prev => 
+        prev.map(q => 
+          q.id === quotationId 
+            ? { ...q, status, updated_at: new Date().toISOString() }
+            : q
+        )
+      );
+      
       return true;
     } catch (error) {
       console.error('Error updating quotation status:', error);
@@ -213,7 +235,7 @@ export function useQuotations() {
       });
       return false;
     }
-  }, [toast, fetchQuotations]);
+  }, []);
 
   /**
    * Comparar cotações de uma requisição

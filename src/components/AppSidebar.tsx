@@ -11,7 +11,6 @@ import {
   UserCheck, 
   Users, 
   Package, 
-  PackageCheck,
   FileText, 
   Settings,
   Receipt,
@@ -26,8 +25,7 @@ import {
   Clock,
   Wrench,
   Shield,
-  ClipboardList,
-  ClipboardCheck as Inventory
+  ClipboardList
 } from "lucide-react";
 
 import {
@@ -139,16 +137,6 @@ const inventoryItems = [
     title: "Estoque/Peças",
     url: "/estoque",
     icon: Package,
-  },
-  {
-    title: "Inventário Físico",
-    url: "/inventario",
-    icon: Inventory,
-  },
-  {
-    title: "Separação de Peças",
-    url: "/separacao-pecas",
-    icon: PackageCheck,
   },
   {
     title: "Compras",

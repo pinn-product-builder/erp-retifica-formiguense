@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
@@ -107,7 +107,7 @@ export const usePurchasing = () => {
     }
   };
 
-  const fetchRequisitions = async () => {
+  const fetchRequisitions = useCallback(async () => {
     if (!currentOrganization?.id) return;
     
     setLoading(true);
@@ -125,7 +125,7 @@ export const usePurchasing = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentOrganization?.id]);
 
   const fetchPurchaseOrders = async () => {
     if (!currentOrganization?.id) return;

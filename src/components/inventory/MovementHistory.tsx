@@ -102,7 +102,9 @@ export function MovementHistory({ partId, orderId, showFilters = true }: Movemen
     
     if (partId) filterParams.part_id = partId;
     if (orderId) filterParams.order_id = orderId;
-    if (filters.movement_type) filterParams.movement_type = filters.movement_type as MovementType;
+    if (filters.movement_type && filters.movement_type !== 'all') {
+      filterParams.movement_type = filters.movement_type as MovementType;
+    }
     if (filters.start_date) filterParams.start_date = filters.start_date;
     if (filters.end_date) filterParams.end_date = filters.end_date;
 
@@ -173,7 +175,7 @@ export function MovementHistory({ partId, orderId, showFilters = true }: Movemen
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
                     {Object.entries(MOVEMENT_TYPE_CONFIG).map(([key, config]) => (
                       <SelectItem key={key} value={key}>
                         {config.label}
