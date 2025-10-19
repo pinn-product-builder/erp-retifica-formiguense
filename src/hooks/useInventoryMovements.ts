@@ -9,6 +9,11 @@ import { useToast } from '@/hooks/use-toast';
 export type MovementType = 'entrada' | 'saida' | 'ajuste' | 'transferencia' | 'reserva' | 'baixa';
 
 /**
+ * Status de aprovação de movimentações
+ */
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+
+/**
  * Interface para movimentação de inventário
  */
 export interface InventoryMovement {
@@ -24,6 +29,11 @@ export interface InventoryMovement {
   budget_id?: string;
   reason: string;
   notes?: string;
+  requires_approval: boolean;
+  approval_status?: ApprovalStatus;
+  approved_by?: string;
+  approved_at?: string;
+  rejection_reason?: string;
   created_by: string;
   created_at: string;
   metadata?: Record<string, any>;
@@ -32,8 +42,13 @@ export interface InventoryMovement {
   part?: {
     part_name: string;
     part_code: string;
+    quantity: number;
+    min_stock?: number;
   };
   created_by_user?: {
+    name: string;
+  };
+  approved_by_user?: {
     name: string;
   };
   order?: {
@@ -96,8 +111,10 @@ export function useInventoryMovements() {
         .from('inventory_movements')
         .select(`
           *,
-          part:parts_inventory(part_name, part_code),
-          order:orders(order_number)
+          part:parts_inventory(part_name, part_code, quantity, min_stock),
+          order:orders(order_number),
+          created_by_user:user_basic_info!created_by(name),
+          approved_by_user:user_basic_info!approved_by(name)
         `)
         .eq('org_id', currentOrganization.id)
         .order('created_at', { ascending: false });
@@ -362,6 +379,136 @@ export function useInventoryMovements() {
   }, [fetchMovements]);
 
   /**
+   * Buscar movimentações pendentes de aprovação
+   */
+  const fetchPendingApprovals = useCallback(async () => {
+    if (!currentOrganization?.id) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('inventory_movements')
+        .select(`
+          *,
+          part:parts_inventory(part_name, part_code, quantity),
+          created_by_user:user_basic_info!created_by(name)
+        `)
+        .eq('org_id', currentOrganization.id)
+        .eq('approval_status', 'pending')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      return data as InventoryMovement[];
+    } catch (error) {
+      console.error('Error fetching pending approvals:', error);
+      return [];
+    }
+  }, [currentOrganization?.id]);
+
+  /**
+   * Aprovar movimentação
+   */
+  const approveMovement = useCallback(async (movementId: string) => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+
+      const { error } = await supabase
+        .from('inventory_movements')
+        .update({
+          approval_status: 'approved',
+          approved_by: userData.user?.id,
+          approved_at: new Date().toISOString(),
+        })
+        .eq('id', movementId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso',
+        description: 'Movimentação aprovada com sucesso',
+      });
+
+      // Recarregar movimentações
+      await fetchMovements();
+
+      return true;
+    } catch (error) {
+      console.error('Error approving movement:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível aprovar a movimentação',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [toast, fetchMovements]);
+
+  /**
+   * Rejeitar movimentação
+   */
+  const rejectMovement = useCallback(async (movementId: string, rejectionReason: string) => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+
+      const { error } = await supabase
+        .from('inventory_movements')
+        .update({
+          approval_status: 'rejected',
+          approved_by: userData.user?.id,
+          approved_at: new Date().toISOString(),
+          rejection_reason: rejectionReason,
+        })
+        .eq('id', movementId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso',
+        description: 'Movimentação rejeitada',
+      });
+
+      // Recarregar movimentações
+      await fetchMovements();
+
+      return true;
+    } catch (error) {
+      console.error('Error rejecting movement:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível rejeitar a movimentação',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [toast, fetchMovements]);
+
+  /**
+   * Buscar alertas de estoque
+   */
+  const fetchStockAlerts = useCallback(async () => {
+    if (!currentOrganization?.id) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('stock_alerts')
+        .select(`
+          *,
+          part:parts_inventory(part_name, part_code)
+        `)
+        .eq('org_id', currentOrganization.id)
+        .eq('is_resolved', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching stock alerts:', error);
+      return [];
+    }
+  }, [currentOrganization?.id]);
+
+  /**
    * Buscar nome do usuário por ID (função auxiliar)
    */
   const getUserName = useCallback(async (userId: string | null | undefined): Promise<string> => {
@@ -391,6 +538,10 @@ export function useInventoryMovements() {
     registerWriteOff,
     fetchPartMovements,
     fetchOrderMovements,
+    fetchPendingApprovals,
+    approveMovement,
+    rejectMovement,
+    fetchStockAlerts,
     getUserName,
   };
 }

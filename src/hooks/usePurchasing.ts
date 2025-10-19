@@ -45,10 +45,27 @@ export interface PurchaseOrder {
   id: string;
   po_number: string;
   supplier_id: string;
+  requisition_id?: string;
   status: string;
   order_date: string;
   expected_delivery?: string;
+  actual_delivery?: string;
+  subtotal: number;
+  taxes: number;
+  freight: number;
+  discount: number;
   total_value: number;
+  terms?: string;
+  notes?: string;
+  delivery_address?: string;
+  requires_approval: boolean;
+  approved_by?: string;
+  approved_at?: string;
+  sent_at?: string;
+  confirmed_at?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
   supplier?: Supplier;
   items?: PurchaseOrderItem[];
 }
@@ -260,23 +277,55 @@ export const usePurchasing = () => {
     }
   };
 
+  const generatePONumber = async (): Promise<string | null> => {
+    if (!currentOrganization?.id) return null;
+
+    try {
+      const { data, error } = await supabase
+        .rpc('generate_po_number', { p_org_id: currentOrganization.id });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error generating PO number:', error);
+      return null;
+    }
+  };
+
   const createPurchaseOrder = async (
-    order: Omit<PurchaseOrder, 'id' | 'po_number' | 'supplier' | 'items'>,
+    order: Omit<PurchaseOrder, 'id' | 'po_number' | 'supplier' | 'items' | 'created_at' | 'updated_at'>,
     items: Omit<PurchaseOrderItem, 'id'>[]
   ) => {
     if (!currentOrganization?.id) return null;
 
     try {
+      // Generate PO number
+      const poNumber = await generatePONumber();
+      if (!poNumber) throw new Error('Failed to generate PO number');
+
+      // Get current user
+      const { data: userData } = await supabase.auth.getUser();
+
       const { data: orderData, error: orderError } = await supabase
         .from('purchase_orders')
         .insert({
+          po_number: poNumber,
           supplier_id: order.supplier_id,
-          status: order.status || 'pending',
+          requisition_id: order.requisition_id,
+          status: order.status || 'draft',
           order_date: order.order_date || new Date().toISOString().split('T')[0],
-          expected_delivery: order.expected_delivery || null,
+          expected_delivery: order.expected_delivery,
+          subtotal: order.subtotal || 0,
+          taxes: order.taxes || 0,
+          freight: order.freight || 0,
+          discount: order.discount || 0,
           total_value: order.total_value || 0,
+          terms: order.terms,
+          notes: order.notes,
+          delivery_address: order.delivery_address,
+          created_by: userData.user?.id,
           org_id: currentOrganization.id,
-        } as any)
+        })
         .select()
         .single();
 
@@ -298,7 +347,7 @@ export const usePurchasing = () => {
       await fetchPurchaseOrders();
       toast({
         title: 'Sucesso',
-        description: 'Pedido de compra criado com sucesso',
+        description: `Pedido de compra ${poNumber} criado com sucesso`,
       });
       
       return orderData;
@@ -310,6 +359,128 @@ export const usePurchasing = () => {
         variant: 'destructive',
       });
       return null;
+    }
+  };
+
+  const approvePurchaseOrder = async (orderId: string): Promise<boolean> => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+
+      const { error } = await supabase
+        .from('purchase_orders')
+        .update({
+          status: 'approved',
+          approved_by: userData.user?.id,
+          approved_at: new Date().toISOString(),
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      await fetchPurchaseOrders();
+      toast({
+        title: 'Sucesso',
+        description: 'Pedido de compra aprovado com sucesso',
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error approving purchase order:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao aprovar pedido de compra',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+  const sendPurchaseOrder = async (orderId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('purchase_orders')
+        .update({
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      await fetchPurchaseOrders();
+      toast({
+        title: 'Sucesso',
+        description: 'Pedido de compra enviado ao fornecedor',
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error sending purchase order:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao enviar pedido de compra',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+  const confirmPurchaseOrder = async (orderId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('purchase_orders')
+        .update({
+          status: 'confirmed',
+          confirmed_at: new Date().toISOString(),
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      await fetchPurchaseOrders();
+      toast({
+        title: 'Sucesso',
+        description: 'Pedido de compra confirmado pelo fornecedor',
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error confirming purchase order:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao confirmar pedido de compra',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+  const cancelPurchaseOrder = async (orderId: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('purchase_orders')
+        .update({
+          status: 'cancelled',
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      await fetchPurchaseOrders();
+      toast({
+        title: 'Sucesso',
+        description: 'Pedido de compra cancelado',
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error cancelling purchase order:', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao cancelar pedido de compra',
+        variant: 'destructive',
+      });
+      return false;
     }
   };
 
@@ -330,7 +501,12 @@ export const usePurchasing = () => {
     createSupplier,
     createRequisition,
     updateRequisitionStatus,
+    generatePONumber,
     createPurchaseOrder,
+    approvePurchaseOrder,
+    sendPurchaseOrder,
+    confirmPurchaseOrder,
+    cancelPurchaseOrder,
     fetchSuppliers,
     fetchRequisitions,
     fetchPurchaseOrders,

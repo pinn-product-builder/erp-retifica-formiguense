@@ -15,6 +15,8 @@ import { formatCurrency } from '@/lib/utils';
 import SupplierEvaluation from '@/components/purchasing/SupplierEvaluation';
 import QuotationManager from '@/components/purchasing/QuotationManager';
 import PurchaseNeedsManager from '@/components/purchasing/PurchaseNeedsManager';
+import PurchaseOrderManager from '@/components/purchasing/PurchaseOrderManager';
+import ReceiptManager from '@/components/purchasing/ReceiptManager';
 
 const STATUS_COLORS = {
   pending: 'bg-yellow-500/20 text-yellow-700',
@@ -267,10 +269,11 @@ export default function Compras() {
 
       {/* Main Content */}
       <Tabs defaultValue="requisitions" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="needs">Necessidades</TabsTrigger>
           <TabsTrigger value="requisitions">Requisições</TabsTrigger>
           <TabsTrigger value="orders">Pedidos</TabsTrigger>
+          <TabsTrigger value="receipts">Recebimentos</TabsTrigger>
           <TabsTrigger value="suppliers">Fornecedores</TabsTrigger>
           <TabsTrigger value="quotations">Cotações</TabsTrigger>
           <TabsTrigger value="evaluations" className="flex items-center gap-2">
@@ -618,47 +621,12 @@ export default function Compras() {
 
         {/* Purchase Orders Tab */}
         <TabsContent value="orders" className="space-y-4">
-          <h2 className="text-lg font-semibold">Pedidos de Compra</h2>
-          <div className="space-y-4">
-            {purchaseOrders.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">Nenhum pedido de compra encontrado</p>
-                </CardContent>
-              </Card>
-            ) : (
-              purchaseOrders.map((order) => (
-                <Card key={order.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{order.po_number}</p>
-                          <Badge className={STATUS_COLORS[order.status as keyof typeof STATUS_COLORS] || 'bg-gray-100'}>
-                            {translateStatus(order.status)}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Fornecedor: {order.supplier?.name}
-                        </p>
-                        <p className="text-sm">
-                          Valor Total: {formatCurrency(order.total_value)}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Data do Pedido: {new Date(order.order_date).toLocaleDateString()}
-                        </p>
-                        {order.expected_delivery && (
-                          <p className="text-sm text-muted-foreground">
-                            Entrega Prevista: {new Date(order.expected_delivery).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+          <PurchaseOrderManager />
+        </TabsContent>
+
+        {/* Receipts Tab */}
+        <TabsContent value="receipts" className="space-y-4">
+          <ReceiptManager />
         </TabsContent>
 
         {/* Quotations Tab */}

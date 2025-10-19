@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { FormField } from "@/components/ui/form-field";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -770,11 +771,12 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                 />
               </div>
               <div>
-                <Label htmlFor="contact-phone">Telefone</Label>
-                <Input
-                  id="contact-phone"
+                <FormField
+                  label="Telefone"
+                  name="contact-phone"
+                  mask="phone"
                   value={contactForm.phone}
-                  onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                  onChange={(value, rawValue) => setContactForm({ ...contactForm, phone: rawValue || '' })}
                   placeholder="(11) 99999-9999"
                 />
               </div>
@@ -833,11 +835,12 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                 />
               </div>
               <div>
-                <Label htmlFor="edit-cnpj">CNPJ</Label>
-                <Input
-                  id="edit-cnpj"
+                <FormField
+                  label="CNPJ"
+                  name="edit-cnpj"
+                  mask="cnpj"
                   value={editForm.cnpj || ''}
-                  onChange={(e) => setEditForm({ ...editForm, cnpj: e.target.value })}
+                  onChange={(value, rawValue) => setEditForm({ ...editForm, cnpj: rawValue || '' })}
                 />
               </div>
             </div>
@@ -853,11 +856,12 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                 />
               </div>
               <div>
-                <Label htmlFor="edit-phone">Telefone</Label>
-                <Input
-                  id="edit-phone"
+                <FormField
+                  label="Telefone"
+                  name="edit-phone"
+                  mask="phone"
                   value={editForm.phone || ''}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  onChange={(value, rawValue) => setEditForm({ ...editForm, phone: rawValue || '' })}
                 />
               </div>
             </div>
