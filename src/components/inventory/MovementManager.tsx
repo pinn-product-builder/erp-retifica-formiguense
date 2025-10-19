@@ -561,7 +561,7 @@ export default function MovementManager() {
                     <div className="flex items-center gap-3">
                       <MovementIcon className={`h-5 w-5 ${movementType?.color || 'text-gray-500'}`} />
                       <div>
-                        <p className="font-medium">{movement.part?.part_name}</p>
+                        <p className="font-medium">{movement.part_name}</p>
                         <p className="text-sm text-muted-foreground">
                           {translateMovementType(movement.movement_type)} - {movement.quantity} unidades
                         </p>

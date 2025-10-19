@@ -14,7 +14,7 @@ export interface PurchaseReceipt {
   invoice_url?: string;
   total_value: number;
   status: string;
-  has_divergence: boolean;
+  has_divergence: boolean; // Esta coluna não é gerada na tabela purchase_receipts
   notes?: string;
   received_by?: string;
   created_by?: string;
@@ -40,7 +40,7 @@ export interface PurchaseReceiptItem {
   received_quantity: number;
   approved_quantity: number;
   rejected_quantity: number;
-  has_divergence: boolean;
+  has_divergence?: boolean; // Coluna gerada automaticamente (received_quantity <> ordered_quantity)
   divergence_reason?: string;
   rejection_reason?: string;
   unit_cost?: number;
@@ -74,6 +74,7 @@ export interface CreateReceiptData {
     received_quantity: number;
     approved_quantity: number;
     rejected_quantity: number;
+    divergence_reason?: string;
     rejection_reason?: string;
     unit_cost?: number;
     quality_status: string;
@@ -169,20 +170,87 @@ export function usePurchaseReceipts() {
     if (!currentOrganization?.id) return [];
 
     try {
-      const { data, error } = await supabase
+      // Buscar POs pendentes
+      const { data: posData, error: posError } = await supabase
         .from('purchase_orders')
         .select(`
           *,
-          supplier:suppliers(name),
-          items:purchase_order_items(*)
+          supplier:suppliers(name)
         `)
         .eq('org_id', currentOrganization.id)
         .in('status', ['confirmed', 'in_transit'])
         .order('expected_delivery', { ascending: true });
 
-      if (error) throw error;
+      if (posError) throw posError;
 
-      return data || [];
+      if (!posData || posData.length === 0) return [];
+
+      // Buscar itens dos POs com quantidades recebidas
+      const poIds = posData.map(po => po.id);
+      
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('purchase_order_items')
+        .select(`
+          id,
+          po_id,
+          item_name,
+          description,
+          quantity
+        `)
+        .in('po_id', poIds);
+
+      if (itemsError) throw itemsError;
+
+      // Buscar quantidades recebidas por item
+      if (itemsData && itemsData.length > 0) {
+        const itemIds = itemsData.map(item => item.id);
+        
+        const { data: receivedData, error: receivedError } = await supabase
+          .from('purchase_receipt_items')
+          .select(`
+            purchase_order_item_id,
+            received_quantity
+          `)
+          .in('purchase_order_item_id', itemIds);
+
+        if (receivedError) throw receivedError;
+
+        // Calcular quantidades recebidas por item
+        const receivedQuantities = (receivedData || []).reduce((acc, item) => {
+          acc[item.purchase_order_item_id] = (acc[item.purchase_order_item_id] || 0) + item.received_quantity;
+          return acc;
+        }, {} as Record<string, number>);
+
+        // Agrupar itens por PO e adicionar quantidades recebidas
+        const itemsByPO = itemsData.reduce((acc, item) => {
+          if (!acc[item.po_id]) acc[item.po_id] = [];
+          acc[item.po_id].push({
+            ...item,
+            received_quantity: receivedQuantities[item.id] || 0
+          });
+          return acc;
+        }, {} as Record<string, Array<{
+          id: string;
+          po_id: string;
+          item_name: string;
+          description?: string;
+          quantity: number;
+          received_quantity: number;
+        }>>);
+
+        // Combinar POs com seus itens
+        return posData.map(po => ({
+          ...po,
+          items: itemsByPO[po.id] || []
+        }));
+      }
+
+      // Se não há itens, retornar POs sem itens
+      return posData.map(po => ({
+        ...po,
+        items: []
+      }));
+
     } catch (error) {
       console.error('Error fetching pending POs:', error);
       return [];
@@ -192,7 +260,7 @@ export function usePurchaseReceipts() {
   /**
    * Gerar número de recebimento
    */
-  const generateReceiptNumber = async (): Promise<string | null> => {
+  const generateReceiptNumber = useCallback(async (): Promise<string | null> => {
     if (!currentOrganization?.id) return null;
 
     try {
@@ -205,7 +273,7 @@ export function usePurchaseReceipts() {
       console.error('Error generating receipt number:', error);
       return null;
     }
-  };
+  }, [currentOrganization?.id]);
 
   /**
    * Criar recebimento
@@ -275,13 +343,11 @@ export function usePurchaseReceipts() {
           received_quantity: item.received_quantity,
           approved_quantity: item.approved_quantity,
           rejected_quantity: item.rejected_quantity,
-          has_divergence: item.received_quantity !== item.approved_quantity + item.rejected_quantity,
-          divergence_reason: item.received_quantity !== item.approved_quantity + item.rejected_quantity 
-            ? 'Quantidade recebida diferente da aprovada/rejeitada' 
-            : null,
+          // has_divergence é uma coluna gerada (received_quantity <> ordered_quantity), não deve ser inserida manualmente
+          divergence_reason: item.divergence_reason || null,
           rejection_reason: item.rejection_reason,
           unit_cost: item.unit_cost,
-          total_cost: (item.unit_cost || 0) * item.received_quantity,
+          // total_cost é uma coluna gerada ((received_quantity)::numeric * unit_cost), não deve ser inserida manualmente
           quality_status: item.quality_status,
           quality_notes: item.quality_notes,
           lot_number: item.lot_number,
@@ -303,18 +369,19 @@ export function usePurchaseReceipts() {
       });
 
       return receipt as PurchaseReceipt;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating receipt:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Não foi possível registrar o recebimento';
       toast({
         title: 'Erro',
-        description: error.message || 'Não foi possível registrar o recebimento',
+        description: errorMessage,
         variant: 'destructive',
       });
       return null;
     } finally {
       setLoading(false);
     }
-  }, [currentOrganization?.id, toast, fetchReceipts]);
+  }, [currentOrganization?.id, toast, fetchReceipts, generateReceiptNumber]);
 
   /**
    * Avaliar fornecedor após recebimento
@@ -323,15 +390,10 @@ export function usePurchaseReceipts() {
     try {
       const { data: userData } = await supabase.auth.getUser();
 
-      // Calcular rating geral (média ponderada)
-      const overallRating = (
-        evaluationData.delivery_rating * 0.3 +
-        evaluationData.quality_rating * 0.4 +
-        evaluationData.price_rating * 0.2 +
-        evaluationData.service_rating * 0.1
-      );
+      // overall_rating é uma coluna gerada automaticamente (média simples dos 4 ratings)
+      // Não deve ser inserida manualmente
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('supplier_evaluations')
         .insert({
           org_id: currentOrganization?.id,
@@ -341,7 +403,7 @@ export function usePurchaseReceipts() {
           quality_rating: evaluationData.quality_rating,
           price_rating: evaluationData.price_rating,
           service_rating: evaluationData.service_rating,
-          overall_rating: overallRating,
+          // overall_rating é calculado automaticamente como (delivery + quality + price + service) / 4
           delivered_on_time: evaluationData.delivered_on_time,
           had_quality_issues: evaluationData.had_quality_issues,
           comments: evaluationData.comments,

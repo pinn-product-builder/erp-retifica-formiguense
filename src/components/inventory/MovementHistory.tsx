@@ -261,7 +261,7 @@ export function MovementHistory({ partId, orderId, showFilters = true }: Movemen
                           </Badge>
                         </TableCell>
                         <TableCell className="font-medium">
-                          {movement.part?.part_code} - {movement.part?.part_name}
+                          {movement.part_code} - {movement.part_name}
                         </TableCell>
                         <TableCell className="text-right font-semibold">
                           {formatQuantityChange(movement.movement_type, movement.quantity)}
@@ -270,7 +270,7 @@ export function MovementHistory({ partId, orderId, showFilters = true }: Movemen
                         <TableCell className="text-right font-semibold">{movement.new_quantity}</TableCell>
                         <TableCell className="max-w-xs truncate">{movement.reason}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {movement.created_by_user?.name || 'Sistema'}
+                          {movement.created_by_name || 'Sistema'}
                         </TableCell>
                       </TableRow>
 

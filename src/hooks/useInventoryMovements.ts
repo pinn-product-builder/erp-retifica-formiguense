@@ -38,22 +38,13 @@ export interface InventoryMovement {
   created_at: string;
   metadata?: Record<string, any>;
   
-  // Relacionamentos (joined)
-  part?: {
-    part_name: string;
-    part_code: string;
-    quantity: number;
-    min_stock?: number;
-  };
-  created_by_user?: {
-    name: string;
-  };
-  approved_by_user?: {
-    name: string;
-  };
-  order?: {
-    order_number: string;
-  };
+  // Campos da view inventory_movements_with_users
+  created_by_name?: string;
+  approved_by_name?: string;
+  part_name?: string;
+  part_code?: string;
+  current_stock?: number;
+  order_number?: string;
 }
 
 /**
@@ -108,14 +99,8 @@ export function useInventoryMovements() {
       setLoading(true);
 
       let query = supabase
-        .from('inventory_movements')
-        .select(`
-          *,
-          part:parts_inventory(part_name, part_code, quantity, min_stock),
-          order:orders(order_number),
-          created_by_user:user_basic_info!created_by(name),
-          approved_by_user:user_basic_info!approved_by(name)
-        `)
+        .from('inventory_movements_with_users')
+        .select('*')
         .eq('org_id', currentOrganization.id)
         .order('created_at', { ascending: false });
 
@@ -389,8 +374,7 @@ export function useInventoryMovements() {
         .from('inventory_movements')
         .select(`
           *,
-          part:parts_inventory(part_name, part_code, quantity),
-          created_by_user:user_basic_info!created_by(name)
+          part:parts_inventory(part_name, part_code, quantity)
         `)
         .eq('org_id', currentOrganization.id)
         .eq('approval_status', 'pending')

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
@@ -350,7 +350,7 @@ export const useSupplierEvaluation = () => {
   };
 
   // Sugerir fornecedores para peça
-  const suggestSuppliersForPart = async (
+  const suggestSuppliersForPart = useCallback(async (
     partCode?: string,
     category?: string,
     limit: number = 3
@@ -385,7 +385,7 @@ export const useSupplierEvaluation = () => {
       });
       return [];
     }
-  };
+  }, [currentOrganization?.id, toast]);
 
   // Obter estatísticas de fornecedor
   const getSupplierStats = async (supplierId: string) => {

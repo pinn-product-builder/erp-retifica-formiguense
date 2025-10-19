@@ -107,7 +107,7 @@ export const usePurchasing = () => {
   const { currentOrganization } = useOrganization();
   const { toast } = useToast();
 
-  const fetchSuppliers = async () => {
+  const fetchSuppliers = useCallback(async () => {
     if (!currentOrganization?.id) return;
     
     try {
@@ -122,7 +122,7 @@ export const usePurchasing = () => {
     } catch (error) {
       console.error('Error fetching suppliers:', error);
     }
-  };
+  }, [currentOrganization?.id]);
 
   const fetchRequisitions = useCallback(async () => {
     if (!currentOrganization?.id) return;
@@ -144,7 +144,7 @@ export const usePurchasing = () => {
     }
   }, [currentOrganization?.id]);
 
-  const fetchPurchaseOrders = async () => {
+  const fetchPurchaseOrders = useCallback(async () => {
     if (!currentOrganization?.id) return;
     
     try {
@@ -162,7 +162,7 @@ export const usePurchasing = () => {
     } catch (error) {
       console.error('Error fetching purchase orders:', error);
     }
-  };
+  }, [currentOrganization?.id]);
 
   const createSupplier = async (supplier: Omit<Supplier, 'id'>) => {
     if (!currentOrganization?.id) return null;

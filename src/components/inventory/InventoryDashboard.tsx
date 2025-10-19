@@ -137,8 +137,8 @@ export function InventoryDashboard() {
         const partId = movement.part_id;
         if (!partCounts[partId]) {
           partCounts[partId] = {
-            name: movement.part?.part_name || 'N/A',
-            code: movement.part?.part_code || 'N/A',
+            name: movement.part_name || 'N/A',
+            code: movement.part_code || 'N/A',
             count: 0,
             lastMovement: movement.created_at,
           };

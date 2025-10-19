@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import {
 import { usePurchaseReceipts } from '@/hooks/usePurchaseReceipts';
 import { formatCurrency } from '@/lib/utils';
 import { ReceiveOrderModal } from './ReceiveOrderModal';
+import { PurchaseOrderDetailsModal } from './PurchaseOrderDetailsModal';
 
 interface PendingPO {
   id: string;
@@ -65,16 +66,18 @@ export default function ReceiptManager() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedPO, setSelectedPO] = useState<string | null>(null);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [selectedPOForDetails, setSelectedPOForDetails] = useState<string | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     const pos = await fetchPendingPOs();
     setPendingPOs(pos as PendingPO[]);
     await fetchReceipts();
-  };
+  }, [fetchPendingPOs, fetchReceipts]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const filteredPOs = pendingPOs.filter(po => {
     const matchesSearch = searchTerm === '' || 
@@ -106,6 +109,11 @@ export default function ReceiptManager() {
   const handleReceiveOrder = (poId: string) => {
     setSelectedPO(poId);
     setShowReceiveModal(true);
+  };
+
+  const handleViewDetails = (poId: string) => {
+    setSelectedPOForDetails(poId);
+    setShowDetailsModal(true);
   };
 
   const getDashboardStats = () => {
@@ -317,7 +325,11 @@ export default function ReceiptManager() {
                         </Button>
                       )}
 
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewDetails(po.id)}
+                      >
                         <FileText className="h-4 w-4 mr-1" />
                         Ver Detalhes
                       </Button>
@@ -372,6 +384,15 @@ export default function ReceiptManager() {
             loadData();
             setSelectedPO(null);
           }}
+        />
+      )}
+
+      {/* Purchase Order Details Modal */}
+      {selectedPOForDetails && (
+        <PurchaseOrderDetailsModal
+          open={showDetailsModal}
+          onOpenChange={setShowDetailsModal}
+          purchaseOrderId={selectedPOForDetails}
         />
       )}
     </div>

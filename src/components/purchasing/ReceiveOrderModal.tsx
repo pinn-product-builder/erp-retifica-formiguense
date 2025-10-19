@@ -121,27 +121,59 @@ export function ReceiveOrderModal({
 
       if (itemsError) throw itemsError;
 
-      setOrderItems((itemsData || []) as OrderItem[]);
+      // Fetch received quantities for each item and initialize receipt items
+      let itemsWithReceived: OrderItem[] = [];
       
-      // Initialize receipt items
-      const initialItems: Record<string, ReceiptItem> = {};
-      (itemsData || []).forEach((item: OrderItem) => {
-        const remaining = item.quantity - item.received_quantity;
-        initialItems[item.id] = {
-          purchase_order_item_id: item.id,
-          received_quantity: remaining,
-          approved_quantity: remaining,
-          rejected_quantity: 0,
-          rejection_reason: '',
-          unit_cost: item.unit_price,
-          quality_status: 'under_review',
-          quality_notes: '',
-          lot_number: '',
-          expiry_date: '',
-          warehouse_location: '',
-        };
-      });
-      setReceiptItems(initialItems);
+      if (itemsData && itemsData.length > 0) {
+        const itemIds = itemsData.map(item => item.id);
+        
+        const { data: receivedData, error: receivedError } = await supabase
+          .from('purchase_receipt_items')
+          .select(`
+            purchase_order_item_id,
+            received_quantity
+          `)
+          .in('purchase_order_item_id', itemIds);
+
+        if (receivedError) throw receivedError;
+
+        // Calculate total received quantities per item
+        const receivedQuantities = (receivedData || []).reduce((acc, item) => {
+          acc[item.purchase_order_item_id] = (acc[item.purchase_order_item_id] || 0) + item.received_quantity;
+          return acc;
+        }, {} as Record<string, number>);
+
+        // Add received quantities to items
+        itemsWithReceived = itemsData.map(item => ({
+          ...item,
+          received_quantity: receivedQuantities[item.id] || 0
+        })) as OrderItem[];
+
+        setOrderItems(itemsWithReceived);
+
+        // Initialize receipt items with remaining quantities
+        const initialItems: Record<string, ReceiptItem> = {};
+        itemsWithReceived.forEach((item) => {
+          const remaining = Math.max(0, item.quantity - item.received_quantity);
+          initialItems[item.id] = {
+            purchase_order_item_id: item.id,
+            received_quantity: remaining,
+            approved_quantity: remaining,
+            rejected_quantity: 0,
+            rejection_reason: '',
+            unit_cost: item.unit_price,
+            quality_status: 'under_review',
+            quality_notes: '',
+            lot_number: '',
+            expiry_date: '',
+            warehouse_location: '',
+          };
+        });
+        setReceiptItems(initialItems);
+      } else {
+        setOrderItems([]);
+        setReceiptItems({});
+      }
 
       // Check if delivery is on time
       if (poData.expected_delivery) {
@@ -423,6 +455,55 @@ export function ReceiveOrderModal({
             </Card>
           )}
 
+          {/* Progress Summary */}
+          {orderItems.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Resumo do Progresso</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const totalOrdered = orderItems.reduce((sum, item) => sum + item.quantity, 0);
+                  const totalReceived = orderItems.reduce((sum, item) => sum + item.received_quantity, 0);
+                  const totalRemaining = totalOrdered - totalReceived;
+                  const progressPercentage = totalOrdered > 0 ? (totalReceived / totalOrdered) * 100 : 0;
+                  
+                  return (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-gray-600">{totalOrdered}</div>
+                          <div className="text-muted-foreground">Total Pedido</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">{totalReceived}</div>
+                          <div className="text-muted-foreground">Já Recebido</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">{totalRemaining}</div>
+                          <div className="text-muted-foreground">Restante</div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Progresso Geral</span>
+                          <span className="font-medium">{Math.round(progressPercentage)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                          <div 
+                            className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500" 
+                            style={{ width: `${progressPercentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Receipt Data */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -507,11 +588,42 @@ export function ReceiveOrderModal({
                           {item.description && (
                             <p className="text-sm text-muted-foreground">{item.description}</p>
                           )}
-                          <div className="flex gap-4 text-sm mt-1">
-                            <span>Pedido: {item.quantity}</span>
-                            <span>Já recebido: {item.received_quantity}</span>
-                            <span className="font-semibold">Restante: {remaining}</span>
-                            <span>Preço: {formatCurrency(item.unit_price)}</span>
+                          <div className="space-y-2 mt-2">
+                            {/* Quantity Summary */}
+                            <div className="grid grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">Pedido:</span>
+                                <span className="ml-1 font-medium">{item.quantity}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Recebido:</span>
+                                <span className="ml-1 font-medium text-green-600">{item.received_quantity}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Restante:</span>
+                                <span className="ml-1 font-semibold text-blue-600">{remaining}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Preço:</span>
+                                <span className="ml-1 font-medium">{formatCurrency(item.unit_price)}</span>
+                              </div>
+                            </div>
+                            
+                            {/* Progress Bar */}
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>Progresso do Item</span>
+                                <span>{item.quantity > 0 ? Math.round((item.received_quantity / item.quantity) * 100) : 0}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                  style={{ 
+                                    width: `${item.quantity > 0 ? (item.received_quantity / item.quantity) * 100 : 0}%` 
+                                  }}
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
                         {hasDivergence && (
@@ -528,9 +640,16 @@ export function ReceiveOrderModal({
                           <Input
                             type="number"
                             min="0"
+                            max={remaining}
                             value={receiptItem?.received_quantity || 0}
                             onChange={(e) => updateReceiptItem(item.id, 'received_quantity', Number(e.target.value))}
+                            className={receiptItem?.received_quantity > remaining ? 'border-red-300' : ''}
                           />
+                          {receiptItem?.received_quantity > remaining && (
+                            <p className="text-xs text-red-600 mt-1">
+                              Quantidade não pode ser maior que o restante ({remaining})
+                            </p>
+                          )}
                         </div>
                         
                         <div>

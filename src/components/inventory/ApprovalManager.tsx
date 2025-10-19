@@ -115,8 +115,8 @@ export default function ApprovalManager() {
       if (movementValue > 500) {
         reasons.push(`Valor > R$ 500 (${formatCurrency(movementValue)})`);
       }
-      if (movement.part?.quantity && movement.part.quantity > 0) {
-        const percentage = (movement.quantity / movement.part.quantity) * 100;
+      if (movement.current_stock && movement.current_stock > 0) {
+        const percentage = (movement.quantity / movement.current_stock) * 100;
         if (percentage > 20) {
           reasons.push(`> 20% do estoque (${percentage.toFixed(1)}%)`);
         }
@@ -285,7 +285,7 @@ export default function ApprovalManager() {
                         <MovementIcon className={`h-6 w-6 ${movementColor}`} />
                         <div>
                           <h3 className="font-semibold text-lg">
-                            {translateMovementType(movement.movement_type)} - {movement.part?.part_name}
+                            {translateMovementType(movement.movement_type)} - {movement.part_name}
                           </h3>
                           <p className="text-sm text-muted-foreground">
                             {movement.quantity} unidades • {movement.reason}
@@ -304,9 +304,9 @@ export default function ApprovalManager() {
                     {/* Details Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                       <div className="space-y-2">
-                        <p><strong>Solicitante:</strong> {movement.created_by_user?.name || 'N/A'}</p>
+                        <p><strong>Solicitante:</strong> {movement.created_by_name || 'N/A'}</p>
                         <p><strong>Data:</strong> {new Date(movement.created_at).toLocaleDateString()}</p>
-                        <p><strong>Código da Peça:</strong> {movement.part?.part_code || 'N/A'}</p>
+                        <p><strong>Código da Peça:</strong> {movement.part_code || 'N/A'}</p>
                       </div>
                       
                       <div className="space-y-2">
