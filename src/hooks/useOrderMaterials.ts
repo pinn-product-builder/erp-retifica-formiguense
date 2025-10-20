@@ -143,7 +143,7 @@ export function useOrderMaterials(orderId: string) {
       // Primeiro buscar os dados da reserva
       const { data: reservation, error: fetchError } = await supabase
         .from('parts_reservations')
-        .select('quantity_reserved, part_code, part_name')
+        .select('quantity_reserved, part_code, part_name, part_id, order_id, org_id')
         .eq('id', reservationId)
         .single();
 
@@ -152,24 +152,51 @@ export function useOrderMaterials(orderId: string) {
       // Buscar a quantidade atual do estoque
       const { data: currentStock, error: stockFetchError } = await supabase
         .from('parts_inventory')
-        .select('quantity')
+        .select('quantity, id')
         .eq('part_code', reservation.part_code)
+        .eq('org_id', reservation.org_id)
         .single();
 
       if (stockFetchError) throw stockFetchError;
 
-      // Reduzir o estoque na tabela parts_inventory
-      const { error: stockError } = await supabase
-        .from('parts_inventory')
-        .update({
-          quantity: currentStock.quantity - reservation.quantity_reserved,
-          applied_at: new Date().toISOString(),
-        })
-        .eq('part_code', reservation.part_code);
+      // Validar se há estoque suficiente
+      if (currentStock.quantity < reservation.quantity_reserved) {
+        toast({
+          title: 'Estoque Insuficiente',
+          description: `Estoque disponível: ${currentStock.quantity}. Necessário: ${reservation.quantity_reserved}`,
+          variant: 'destructive',
+        });
+        return false;
+      }
 
-      if (stockError) throw stockError;
+      // Criar movimentação de saída (aplicação na OS)
+      const { error: movementError } = await supabase
+        .from('inventory_movements')
+        .insert({
+          org_id: reservation.org_id,
+          part_id: reservation.part_id || currentStock.id,
+          movement_type: 'saida',
+          quantity: reservation.quantity_reserved,
+          previous_quantity: currentStock.quantity,
+          new_quantity: currentStock.quantity - reservation.quantity_reserved,
+          order_id: reservation.order_id,
+          reason: `Aplicação na OS - Peça: ${reservation.part_name}`,
+          notes: `Peça aplicada na ordem de serviço. Reserva: ${reservationId}`,
+          created_by: userId,
+          requires_approval: false, // Aplicação não requer aprovação
+          approval_status: 'approved',
+          approved_by: userId,
+          approved_at: new Date().toISOString(),
+          metadata: {
+            reservation_id: reservationId,
+            part_code: reservation.part_code,
+            action_type: 'part_application'
+          }
+        });
 
-      // Depois fazer o update da reserva
+      if (movementError) throw movementError;
+
+      // Atualizar status da reserva
       const { error } = await supabase
         .from('parts_reservations')
         .update({
@@ -184,7 +211,7 @@ export function useOrderMaterials(orderId: string) {
 
       toast({
         title: 'Sucesso',
-        description: 'Peça marcada como aplicada',
+        description: 'Peça marcada como aplicada e movimentação registrada',
       });
 
       fetchMaterials(); // Refresh
