@@ -76,19 +76,9 @@ const operationsItems = [
     icon: ClipboardCheck,
   },
   {
-    title: "Workflow Kanban",
-    url: "/workflow",
-    icon: Kanban,
-  },
-  {
-    title: "PCP - Produção",
-    url: "/pcp",
-    icon: Calendar,
-  },
-  {
-    title: "Ordens de Serviço",
-    url: "/ordens-servico",
-    icon: Wrench,
+    title: "Diagnósticos",
+    url: "/diagnosticos",
+    icon: ClipboardList,
   },
   {
     title: "Orçamentos",
@@ -96,12 +86,22 @@ const operationsItems = [
     icon: DollarSign,
   },
   {
-    title: "Diagnósticos",
-    url: "/diagnosticos",
-    icon: ClipboardList,
+    title: "Workflow Kanban",
+    url: "/workflow",
+    icon: Kanban,
   },
   {
-    title: "Configurações Operações",
+    title: "Ordens de Serviço",
+    url: "/ordens-servico",
+    icon: Wrench,
+  },
+  {
+    title: "PCP - Produção",
+    url: "/pcp",
+    icon: Calendar,
+  },
+  {
+    title: "Configurações",
     url: "/configuracoes/operacoes",
     icon: Settings,
   },
