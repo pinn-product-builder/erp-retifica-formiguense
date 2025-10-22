@@ -5,6 +5,35 @@ Todas as mudanças notáveis do projeto ERP Retífica serão documentadas neste 
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.2.2] - 2025-01-14
+
+### 🐛 Corrigido
+
+#### 🔧 Módulo Operações e Serviços
+- **Modal de Confirmação para Exclusão de Status Workflow**: Implementado modal de confirmação adequado na página de configurações de status de workflow
+  - Substituído `confirm()` nativo do browser por modal personalizado do design system
+  - Adicionadas mensagens contextuais específicas para cada tipo de exclusão
+  - Melhorado tratamento de retorno após exclusão
+  - Implementado para exclusão de status e pré-requisitos
+  - Botões com variante `destructive` para ações de exclusão
+  - Prevenção de exclusões acidentais com avisos sobre consequências
+  - **Validação de Dependências**: Verificação automática se existem ordens de serviço utilizando o status antes de permitir exclusão
+  - **Bloqueio Inteligente**: Sistema impede exclusão quando há ordens de serviço ativas no status
+  - **Mensagens Específicas**: Feedback claro sobre por que a exclusão foi bloqueada e como proceder
+  - **Organização Visual Aprimorada**: Modal de confirmação com ícones contextuais e estrutura bem organizada
+  - **Informações Detalhadas**: Exibição de dados específicos (nome, chave, tipo de transição) no modal
+  - **Fluxo Explicativo**: Explicação clara do processo de verificação e consequências
+
+### 🔧 Melhorias Técnicas
+- **Consistência de UI/UX**: Padronização do sistema de confirmação em todo o módulo
+- **Reutilização de Componentes**: Aproveitamento do `useConfirmDialog` existente
+- **Tratamento de Erros**: Melhor feedback visual para operações de exclusão
+- **Validação de Integridade**: Verificação automática de dependências no banco de dados
+- **Tipagem Robusta**: Correção de tipos TypeScript e interfaces específicas
+- **Performance**: Otimização com `useCallback` para funções de fetch
+- **Sistema de Ícones**: Implementação de ícones contextuais no modal de confirmação
+- **Layout Responsivo**: Modal com largura máxima adequada para diferentes dispositivos
+
 ## [1.2.1] - 2024-01-15
 
 ### ✨ Adicionado

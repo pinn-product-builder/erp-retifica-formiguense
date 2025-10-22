@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { AlertTriangle, Trash2, Info, HelpCircle } from 'lucide-react';
 
 interface ConfirmDialogOptions {
   title?: string;
@@ -17,6 +18,8 @@ interface ConfirmDialogOptions {
   confirmText?: string;
   cancelText?: string;
   variant?: 'destructive' | 'default';
+  showIcon?: boolean;
+  iconType?: 'warning' | 'danger' | 'info' | 'question';
 }
 
 interface ConfirmDialogContextType {
@@ -32,7 +35,9 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
     description: '',
     confirmText: 'Confirmar',
     cancelText: 'Cancelar',
-    variant: 'default'
+    variant: 'default',
+    showIcon: false,
+    iconType: 'question'
   });
   const [resolver, setResolver] = useState<((value: boolean) => void) | null>(null);
 
@@ -43,7 +48,9 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
         description: confirmOptions.description,
         confirmText: confirmOptions.confirmText || 'Confirmar',
         cancelText: confirmOptions.cancelText || 'Cancelar',
-        variant: confirmOptions.variant || 'default'
+        variant: confirmOptions.variant || 'default',
+        showIcon: confirmOptions.showIcon || false,
+        iconType: confirmOptions.iconType || 'question'
       });
       setResolver(() => resolve);
       setIsOpen(true);
@@ -66,15 +73,38 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
     setResolver(null);
   };
 
+  const getIcon = () => {
+    if (!options.showIcon) return null;
+    
+    const iconClass = "w-6 h-6 mr-3 flex-shrink-0";
+    
+    switch (options.iconType) {
+      case 'warning':
+        return <AlertTriangle className={`${iconClass} text-amber-500`} />;
+      case 'danger':
+        return <Trash2 className={`${iconClass} text-red-500`} />;
+      case 'info':
+        return <Info className={`${iconClass} text-blue-500`} />;
+      case 'question':
+      default:
+        return <HelpCircle className={`${iconClass} text-gray-500`} />;
+    }
+  };
+
   return (
     <ConfirmDialogContext.Provider value={{ confirm }}>
       {children}
       <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>{options.title}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {options.description}
+            <AlertDialogTitle className="flex items-center">
+              {getIcon()}
+              <span>{options.title}</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="mt-4 space-y-3">
+              <div className="whitespace-pre-line text-sm leading-relaxed">
+                {options.description}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

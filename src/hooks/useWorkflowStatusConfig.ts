@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
+import { Json } from '@/integrations/supabase/types';
 
 export interface WorkflowStatusConfig {
   id: string;
@@ -15,10 +16,10 @@ export interface WorkflowStatusConfig {
   is_active: boolean;
   display_order: number;
   estimated_hours: number;
-  visual_config?: any;
-  notification_config?: any;
-  sla_config?: any;
-  automation_rules?: any[];
+  visual_config?: Json;
+  notification_config?: Json;
+  sla_config?: Json;
+  automation_rules?: Json;
 }
 
 export interface StatusPrerequisite {
@@ -38,7 +39,7 @@ export function useWorkflowStatusConfig() {
   const [prerequisites, setPrerequisites] = useState<StatusPrerequisite[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchWorkflowStatuses = async () => {
+  const fetchWorkflowStatuses = useCallback(async () => {
     console.log('fetchWorkflowStatuses called - currentOrganization:', currentOrganization);
     
     if (!currentOrganization) {
@@ -60,7 +61,7 @@ export function useWorkflowStatusConfig() {
       console.log('Fetch result:', { data, error });
 
       if (error) throw error;
-      setWorkflowStatuses((data as any) || []);
+      setWorkflowStatuses((data as WorkflowStatusConfig[]) || []);
       console.log('Workflow statuses set:', data?.length || 0, 'items');
     } catch (error) {
       console.error('Error fetching workflow statuses:', error);
@@ -72,9 +73,9 @@ export function useWorkflowStatusConfig() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentOrganization, toast]);
 
-  const fetchPrerequisites = async () => {
+  const fetchPrerequisites = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -96,7 +97,7 @@ export function useWorkflowStatusConfig() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   const createStatusConfig = async (statusData: Omit<WorkflowStatusConfig, 'id' | 'created_at' | 'updated_at'>) => {
     try {
@@ -170,6 +171,46 @@ export function useWorkflowStatusConfig() {
 
   const deleteStatusConfig = async (statusId: string) => {
     try {
+      // Primeiro, buscar o status que será excluído para obter a chave
+      const statusToDelete = workflowStatuses.find(status => status.id === statusId);
+      if (!statusToDelete) {
+        toast({
+          title: "Erro",
+          description: "Status não encontrado",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Verificar se existem ordens de serviço usando este status
+      const { data: ordersUsingStatus, error: checkError } = await supabase
+        .from('order_workflow')
+        .select('id, order_id, component, status')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .eq('status', statusToDelete.status_key as any)
+        .limit(1);
+
+      if (checkError) {
+        console.error('Error checking status usage:', checkError);
+        toast({
+          title: "Erro",
+          description: "Erro ao verificar uso do status",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Se existem ordens usando este status, não permitir exclusão
+      if (ordersUsingStatus && ordersUsingStatus.length > 0) {
+        toast({
+          title: "Não é possível excluir",
+          description: `O status "${statusToDelete.status_label}" não pode ser excluído pois existem ordens de serviço utilizando este status. Mova as ordens para outro status antes de excluir.`,
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Se não há ordens usando o status, proceder com a exclusão
       const { error } = await supabase
         .from('status_config')
         .delete()
@@ -253,6 +294,47 @@ export function useWorkflowStatusConfig() {
 
   const deletePrerequisite = async (prerequisiteId: string) => {
     try {
+      // Primeiro, buscar o pré-requisito que será excluído
+      const prerequisiteToDelete = prerequisites.find(prereq => prereq.id === prerequisiteId);
+      if (!prerequisiteToDelete) {
+        toast({
+          title: "Erro",
+          description: "Pré-requisito não encontrado",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Verificar se existem ordens de serviço que podem estar usando esta transição
+      // Verificamos se há ordens no status de origem que poderiam usar esta transição
+      const { data: ordersInFromStatus, error: checkError } = await supabase
+        .from('order_workflow')
+        .select('id, order_id, component, status')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .eq('status', prerequisiteToDelete.from_status_key as any)
+        .limit(1);
+
+      if (checkError) {
+        console.error('Error checking prerequisite usage:', checkError);
+        toast({
+          title: "Erro",
+          description: "Erro ao verificar uso do pré-requisito",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Se existem ordens no status de origem, avisar sobre possível impacto
+      if (ordersInFromStatus && ordersInFromStatus.length > 0) {
+        toast({
+          title: "Atenção",
+          description: `Existem ordens de serviço no status "${prerequisiteToDelete.from_status_key}" que podem ser afetadas pela remoção desta transição. Certifique-se de que não há dependências ativas.`,
+          variant: "destructive",
+        });
+        // Não bloqueamos a exclusão, apenas avisamos
+      }
+
+      // Proceder com a exclusão do pré-requisito
       const { error } = await supabase
         .from('status_prerequisites')
         .delete()
@@ -304,9 +386,10 @@ export function useWorkflowStatusConfig() {
     
     workflowStatuses.forEach(status => {
       if (status.visual_config && typeof status.visual_config === 'object') {
+        const visualConfig = status.visual_config as { bgColor?: string; textColor?: string };
         colors[status.status_key] = {
-          bgColor: status.visual_config.bgColor || '#f3f4f6',
-          textColor: status.visual_config.textColor || '#374151'
+          bgColor: visualConfig.bgColor || '#f3f4f6',
+          textColor: visualConfig.textColor || '#374151'
         };
       } else {
         // Cores padrão baseadas no status
@@ -332,7 +415,7 @@ export function useWorkflowStatusConfig() {
       fetchWorkflowStatuses();
       fetchPrerequisites();
     }
-  }, [currentOrganization]);
+  }, [currentOrganization, fetchWorkflowStatuses, fetchPrerequisites]);
 
   return {
     workflowStatuses,

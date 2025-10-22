@@ -14,6 +14,21 @@ import { useWorkflowStatusConfig, WorkflowStatusConfig, StatusPrerequisite } fro
 import { useWorkflowHistory } from '@/hooks/useWorkflowHistory';
 import { useToast } from '@/hooks/use-toast';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+
+// Interfaces para tipagem específica
+interface SLAConfig {
+  max_hours: number;
+  warning_threshold: number;
+  alerts_enabled: boolean;
+  auto_escalation: boolean;
+  business_hours_only: boolean;
+}
+
+interface VisualConfig {
+  bgColor: string;
+  textColor: string;
+}
 
 export const WorkflowStatusConfigAdmin = () => {
   const {
@@ -31,6 +46,7 @@ export const WorkflowStatusConfigAdmin = () => {
   } = useWorkflowStatusConfig();
   const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
   const { toast } = useToast();
+  const { confirm } = useConfirmDialog();
   
   const [editingStatus, setEditingStatus] = useState<WorkflowStatusConfig | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -144,19 +160,19 @@ export const WorkflowStatusConfigAdmin = () => {
       display_order: status.display_order || 0,
       estimated_hours: status.estimated_hours || 0,
       is_active: status.is_active,
-      visual_config: status.visual_config || {
+      visual_config: (status.visual_config as unknown as VisualConfig) || {
         bgColor: '#f3f4f6',
         textColor: '#374151'
       },
       notification_config: status.notification_config || {},
-      sla_config: status.sla_config || {
+      sla_config: (status.sla_config as unknown as SLAConfig) || {
         max_hours: 0,
         warning_threshold: 80,
         alerts_enabled: false,
         auto_escalation: false,
         business_hours_only: false
       },
-      automation_rules: status.automation_rules || []
+      automation_rules: (status.automation_rules as unknown[]) || []
     });
     setIsDialogOpen(true);
   };
@@ -224,8 +240,43 @@ export const WorkflowStatusConfigAdmin = () => {
   };
 
   const handleDelete = async (statusId: string) => {
-    if (confirm('Tem certeza que deseja excluir este status?')) {
-      await deleteStatusConfig(statusId);
+    const statusToDelete = workflowStatuses.find(status => status.id === statusId);
+    const statusName = statusToDelete?.status_label || 'este status';
+    const statusKey = statusToDelete?.status_key || '';
+    
+    const confirmed = await confirm({
+      title: 'Excluir Status de Workflow',
+      description: `Status: "${statusName}" (${statusKey})
+
+⚠️ ATENÇÃO: Esta ação é irreversível!
+
+O que será verificado:
+• Se existem ordens de serviço utilizando este status
+• Se há dependências ativas no sistema
+
+Se houver ordens de serviço:
+• A exclusão será bloqueada automaticamente
+• Você precisará mover as ordens para outro status primeiro
+• Uma mensagem específica será exibida
+
+Se não houver dependências:
+• O status será excluído permanentemente
+• Todas as configurações relacionadas serão removidas
+
+Tem certeza que deseja continuar?`,
+      confirmText: 'Verificar e Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      showIcon: true,
+      iconType: 'danger'
+    });
+
+    if (confirmed) {
+      const success = await deleteStatusConfig(statusId);
+      if (success) {
+        // A função deleteStatusConfig já chama fetchWorkflowStatuses() internamente
+        // e exibe o toast de sucesso, então não precisamos fazer nada adicional aqui
+      }
     }
   };
 
@@ -338,8 +389,47 @@ export const WorkflowStatusConfigAdmin = () => {
   };
 
   const handleDeletePrerequisite = async (prerequisiteId: string) => {
-    if (confirm('Tem certeza que deseja excluir este pré-requisito?')) {
-      await deletePrerequisite(prerequisiteId);
+    const prerequisiteToDelete = prerequisites.find(prereq => prereq.id === prerequisiteId);
+    const fromStatus = prerequisiteToDelete?.from_status_key || '';
+    const toStatus = prerequisiteToDelete?.to_status_key || '';
+    const component = prerequisiteToDelete?.component || 'Todos os componentes';
+    const transitionType = prerequisiteToDelete?.transition_type || 'manual';
+    
+    const confirmed = await confirm({
+      title: 'Excluir Pré-requisito de Transição',
+      description: `Transição: ${fromStatus} → ${toStatus}
+Componente: ${component}
+Tipo: ${transitionType}
+
+⚠️ ATENÇÃO: Esta ação é irreversível!
+
+O que será verificado:
+• Se existem ordens de serviço no status de origem
+• Se há dependências ativas que usam esta transição
+
+Se houver ordens no status de origem:
+• Você receberá um aviso sobre o possível impacto
+• A transição será removida mesmo assim (apenas aviso)
+• Ordens podem ficar "presas" sem transições válidas
+
+Se não houver dependências:
+• O pré-requisito será excluído permanentemente
+• A transição não estará mais disponível no sistema
+
+Tem certeza que deseja continuar?`,
+      confirmText: 'Verificar e Excluir',
+      cancelText: 'Cancelar',
+      variant: 'destructive',
+      showIcon: true,
+      iconType: 'warning'
+    });
+
+    if (confirmed) {
+      const success = await deletePrerequisite(prerequisiteId);
+      if (success) {
+        // A função deletePrerequisite já chama fetchPrerequisites() internamente
+        // e exibe o toast de sucesso, então não precisamos fazer nada adicional aqui
+      }
     }
   };
 
@@ -409,12 +499,12 @@ export const WorkflowStatusConfigAdmin = () => {
                                 <Badge variant="outline" className="text-xs">
                                   {status.estimated_hours}h estimado
                                 </Badge>
-                                {status.sla_config?.max_hours && (
+                                {((status.sla_config as unknown as SLAConfig)?.max_hours) && (
                                   <Badge variant="secondary" className="text-xs">
-                                    SLA: {status.sla_config.max_hours}h
+                                    SLA: {(status.sla_config as unknown as SLAConfig).max_hours}h
                                   </Badge>
                                 )}
-                                {status.sla_config?.alerts_enabled && (
+                                {((status.sla_config as unknown as SLAConfig)?.alerts_enabled) && (
                                   <Badge variant="default" className="text-xs bg-orange-100 text-orange-800">
                                     Alertas
                                   </Badge>
@@ -423,7 +513,7 @@ export const WorkflowStatusConfigAdmin = () => {
                               <p className="text-xs sm:text-sm text-muted-foreground break-words">
                                 Chave: {status.status_key} • Ordem: {status.display_order}
                                 {status.icon && ` • Ícone: ${status.icon}`}
-                                {status.sla_config?.warning_threshold && ` • Alerta: ${status.sla_config.warning_threshold}%`}
+                                {((status.sla_config as unknown as SLAConfig)?.warning_threshold) && ` • Alerta: ${(status.sla_config as unknown as SLAConfig).warning_threshold}%`}
                               </p>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
