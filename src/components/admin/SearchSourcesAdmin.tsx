@@ -120,9 +120,10 @@ export const SearchSourcesAdmin = () => {
       fetchSources();
     } catch (error: unknown) {
       console.error('Error saving search source:', error);
+      const errorMessage = error instanceof Error ? error.message : "Erro ao salvar fonte de busca";
       toast({
         title: "Erro",
-        description: error.message || "Erro ao salvar fonte de busca",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -360,7 +361,7 @@ export const SearchSourcesAdmin = () => {
                     Tabela: {source.table_name} • Peso: {source.weight}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Campos: {source.search_fields?.length || 0} • Exibição: {source.display_fields?.length || 0}
+                    Campos: {Array.isArray(source.search_fields) ? source.search_fields.length : 0} • Exibição: {Array.isArray(source.display_fields) ? source.display_fields.length : 0}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

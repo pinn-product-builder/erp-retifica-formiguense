@@ -106,9 +106,10 @@ export const StatusConfigAdmin = () => {
       fetchConfigs();
     } catch (error: unknown) {
       console.error('Error saving status config:', error);
+      const errorMessage = error instanceof Error ? error.message : "Erro ao salvar configuração de status";
       toast({
         title: "Erro",
-        description: error.message || "Erro ao salvar configuração de status",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -326,7 +327,7 @@ export const StatusConfigAdmin = () => {
                     <Badge variant={config.is_active ? "default" : "secondary"}>
                       {config.is_active ? "Ativo" : "Inativo"}
                     </Badge>
-                    <Badge variant={config.badge_variant as unknown}>
+                    <Badge variant={config.badge_variant as "default" | "destructive" | "outline" | "secondary"}>
                       {config.badge_variant}
                     </Badge>
                     {!config.org_id && <Badge variant="secondary">Global</Badge>}

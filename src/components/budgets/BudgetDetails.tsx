@@ -272,27 +272,29 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {budget.services && Array.isArray(budget.services) ? budget.services.map((service: unknown, index: number) => (
+              {budget.services && Array.isArray(budget.services) ? budget.services.map((service, index: number) => {
+                const typedService = service as { name?: string; description?: string; labor_hours?: number; labor_rate?: number; total?: number; labor_total?: number };
+                return (
                 <div key={index} className="flex justify-between items-start p-4 border rounded-lg">
                   <div className="flex-1">
-                    <h4 className="font-medium">{service.name}</h4>
-                    {service.description && (
+                    <h4 className="font-medium">{typedService.name}</h4>
+                    {typedService.description && (
                       <p className="text-sm text-muted-foreground mt-1">
-                        {service.description}
+                        {typedService.description}
                       </p>
                     )}
                     <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                      <span>{service.labor_hours || 0}h</span>
-                      <span>R$ {(service.labor_rate || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/h</span>
+                      <span>{typedService.labor_hours || 0}h</span>
+                      <span>R$ {(typedService.labor_rate || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/h</span>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">
-                      R$ {(service.total || service.labor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {(typedService.total || typedService.labor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
-              )) : <p className="text-muted-foreground">Nenhum serviço cadastrado</p>}
+              )}): <p className="text-muted-foreground">Nenhum serviço cadastrado</p>}
             </div>
           </CardContent>
         </Card>
@@ -309,27 +311,30 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {budget.parts && Array.isArray(budget.parts) ? budget.parts.map((part: unknown, index: number) => (
+              {/* @ts-expect-error - Budget parts type is Record<string, unknown>[] */}
+              {budget.parts && Array.isArray(budget.parts) ? budget.parts.map((part, index: number) => {
+                const typedPart = part as { name?: string; description?: string; quantity?: number; unit_price?: number; total?: number };
+                return (
                 <div key={index} className="flex justify-between items-start p-4 border rounded-lg">
                   <div className="flex-1">
-                    <h4 className="font-medium">{part.name}</h4>
-                    {part.description && (
+                    <h4 className="font-medium">{typedPart.name}</h4>
+                    {typedPart.description && (
                       <p className="text-sm text-muted-foreground mt-1">
-                        {part.description}
+                        {typedPart.description}
                       </p>
                     )}
                     <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                      <span>Qtd: {part.quantity || 1}</span>
-                      <span>R$ {(part.unit_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} cada</span>
+                      <span>Qtd: {typedPart.quantity || 1}</span>
+                      <span>R$ {(typedPart.unit_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} cada</span>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">
-                      R$ {(part.total || (part.quantity * part.unit_price) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {(typedPart.total || ((typedPart.quantity || 0) * (typedPart.unit_price || 0)) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
-              )) : <p className="text-muted-foreground">Nenhuma peça cadastrada</p>}
+              )}): <p className="text-muted-foreground">Nenhuma peça cadastrada</p>}
             </div>
           </CardContent>
         </Card>

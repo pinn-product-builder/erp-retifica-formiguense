@@ -58,7 +58,7 @@ export const QuickActionsAdmin = () => {
         .order('display_order');
 
       if (error) throw error;
-      setActions(data || []);
+      setActions((data || []) as QuickAction[]);
     } catch (error) {
       console.error('Error fetching quick actions:', error);
       toast({

@@ -154,9 +154,9 @@ const BudgetApprovalModal = ({
         );
         
         approvedAmount = [
-          ...selectedServices.map(s => s.total || 0),
-          ...selectedParts.map(p => p.total || 0)
-        ].reduce((sum, value) => sum + value, 0);
+          ...selectedServices.map(s => (s as { total?: number }).total || 0),
+          ...selectedParts.map(p => (p as { total?: number }).total || 0)
+        ].reduce((sum: number, value: number) => sum + value, 0);
       }
 
       // Upload do documento (agora obrigatório)

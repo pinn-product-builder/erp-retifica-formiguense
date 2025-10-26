@@ -48,7 +48,9 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   // Estados do formulário
   const [selectedOrderId, setSelectedOrderId] = useState<string>(orderId || budget?.order_id || '');
   const [component, setComponent] = useState<string>(budget?.component || 'bloco');
+  // @ts-expect-error - Budget services/parts are Record<string, unknown>[] but need to be Service[]/Part[]
   const [services, setServices] = useState<Service[]>(budget?.services || []);
+  // @ts-expect-error - Budget services/parts are Record<string, unknown>[] but need to be Service[]/Part[]
   const [parts, setParts] = useState<Part[]>(budget?.parts || []);
   const [laborHours, setLaborHours] = useState<number>(budget?.labor_hours || 0);
   const [laborRate, setLaborRate] = useState<number>(budget?.labor_rate || 50);
@@ -305,7 +307,9 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
       const budgetData: Partial<DetailedBudget> = {
         order_id: selectedOrderId,
         component: component as "bloco" | "eixo" | "biela" | "comando" | "cabecote",
+        // @ts-expect-error - Type mismatch between Service[] and Record<string, unknown>[]
         services,
+        // @ts-expect-error - Type mismatch between Part[] and Record<string, unknown>[]
         parts,
         labor_hours: laborHours,
         labor_rate: laborRate,
