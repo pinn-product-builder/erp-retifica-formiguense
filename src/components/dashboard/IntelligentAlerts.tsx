@@ -130,10 +130,12 @@ export function IntelligentAlerts() {
       if (error) throw error;
 
       if (data) {
-        const typedAlerts: Alert[] = data.map((alert: unknown) => ({
-          ...alert,
-          severity: alert.severity as 'info' | 'warning' | 'error' | 'success'
-        }));
+        const typedAlerts: Alert[] = data.map((alert: Record<string, unknown> | Alert) => {
+          return {
+            ...alert,
+            severity: alert.severity as 'error' | 'success' | 'info' | 'warning'
+          } as Alert
+        });
         setAlerts(typedAlerts);
       }
     } catch (error) {

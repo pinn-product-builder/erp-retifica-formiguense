@@ -246,19 +246,19 @@ export function PerformanceInsights() {
       const mappedTargets = targets.map((target: unknown) => {
         // Mapear unidades
         let unit = '';
-        if (target.progress_unit === 'currency') unit = 'R$';
-        else if (target.progress_unit === 'percentage') unit = '%';
-        else unit = target.progress_unit || '';
+        if ((target as Record<string, unknown>).progress_unit === 'currency') unit = 'R$';
+        else if ((target as Record<string, unknown>).progress_unit === 'percentage') unit = '%';
+        else unit = (target as Record<string, unknown>).progress_unit as string || '';
 
         return {
-          id: target.id,
-          title: target.description || 'Meta sem título',
-          description: target.description || '',
-          current: target.progress_current || 0,
-          target: target.target_value || 0,
+          id: (target as Record<string, unknown>).id as string,
+          title: (target as Record<string, unknown>).description as string || 'Meta sem título',
+          description: (target as Record<string, unknown>).description as string || '',
+          current: (target as Record<string, unknown>).progress_current as number || 0,
+          target: (target as Record<string, unknown>).target_value as number || 0,
           unit: unit,
-          deadline: target.target_period_end || new Date().toISOString(),
-          status: target.status || 'pending'
+          deadline: (target as Record<string, unknown>).target_period_end as string || new Date().toISOString(),
+          status: (target as Record<string, unknown>).status as string || 'pending'
         };
       });
 
@@ -276,7 +276,7 @@ export function PerformanceInsights() {
         });
       }
 
-      return mappedTargets;
+      return mappedTargets as GoalProgress[];
     } catch (error) {
       console.error('Erro ao buscar metas:', error);
       return [];
@@ -380,7 +380,7 @@ export function PerformanceInsights() {
               <TrendingUp className="w-5 h-5" />
               Insights de Performance
             </CardTitle>
-            <Tabs value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as unknown)}>
+            <Tabs value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as 'week' | 'month' | 'quarter')}>
               <TabsList>
                 <TabsTrigger value="week">Semana</TabsTrigger>
                 <TabsTrigger value="month">Mês</TabsTrigger>

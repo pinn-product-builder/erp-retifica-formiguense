@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -101,7 +101,7 @@ export const EnhancedStatCard: React.FC<EnhancedStatCardProps> = ({
             {kpi.name}
           </CardTitle>
           <div className="text-2xl">
-            {getIconComponent(kpi.icon)}
+            {getIconComponent(kpi.icon) as ReactNode} 
           </div>
         </CardHeader>
         <CardContent>
