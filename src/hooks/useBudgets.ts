@@ -73,7 +73,7 @@ export function useBudgets() {
     }
   };
 
-  const createBudget = async (budget: unknown) => {
+  const createBudget = async (budget: Record<string, unknown>) => {
     if (!orgId) {
       handleError(null, 'Organização não encontrada.');
       return null;
@@ -81,7 +81,7 @@ export function useBudgets() {
 
     // Validar se já existe orçamento para este componente
     if (budget.order_id && budget.component) {
-      const existingBudget = await checkBudgetExists(budget.order_id, budget.component);
+      const existingBudget = await checkBudgetExists(budget.order_id as string, budget.component as string);
       
       if (existingBudget) {
         handleError(null, `Já existe um orçamento para o componente "${budget.component}" nesta ordem de serviço. (Status: ${existingBudget.status})`);
@@ -93,7 +93,7 @@ export function useBudgets() {
       setLoading(true);
       const { data, error } = await supabase
         .from('budgets')
-        .insert({ ...budget })
+        .insert({ ...budget as Database['public']['Tables']['budgets']['Row']})
         .select()
         .single();
 
@@ -256,9 +256,9 @@ export function useBudgets() {
 
       // Calculate services
       for (const service of services) {
-        const servicePrice = await getServicePrice(service.name);
-        const laborHours = service.labor_hours || 1;
-        const laborRate = (servicePrice as unknown)?.base_price || service.labor_rate || 50;
+        const servicePrice = await getServicePrice(service.name as string);
+        const laborHours = service.labor_hours  as number|| 1;
+        const laborRate = (servicePrice as Record<string, unknown>)?.base_price as number || service.labor_rate as number || 50;
         const serviceTotal = laborHours * laborRate;
 
         calculatedServices.push({
@@ -274,9 +274,9 @@ export function useBudgets() {
 
       // Calculate parts
       for (const part of parts) {
-        const partPrice = await getPartPrice(part.name);
-        const quantity = part.quantity || 1;
-        const unitPrice = (partPrice as unknown)?.unit_price || part.unit_price || 0;
+        const partPrice = await getPartPrice(part.name as string);
+        const quantity = part.quantity as number || 1;
+        const unitPrice = (partPrice as Record<string, unknown>)?.unit_price as number || part.unit_price as number || 0;
         const partTotal = quantity * unitPrice;
 
         calculatedParts.push({

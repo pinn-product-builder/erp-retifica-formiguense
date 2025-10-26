@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { toast } from 'sonner';
+import { Json } from '@/integrations/supabase/types';
 
 export interface TaxType {
   id?: string;
@@ -465,7 +466,7 @@ export const useFiscal = () => {
 
       toast.success('Obrigação criada com sucesso');
       return data;
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error creating obligation:', error);
       toast.error('Erro ao criar obrigação: ' + error.message);
       return null;
@@ -771,13 +772,13 @@ export const useFiscal = () => {
 
       calculations.forEach(calc => {
         if (calc.result && typeof calc.result === 'object' && 'taxes' in calc.result && Array.isArray(calc.result.taxes)) {
-          calc.result.taxes.forEach((tax: unknown) => {
-            summary.totalTaxes += tax.amount || 0;
-            if (!summary.taxBreakdown[tax.tax_type]) {
-              summary.taxBreakdown[tax.tax_type] = { total: 0, operations: 0 };
+          calc.result.taxes.forEach((tax: Json) => {
+            summary.totalTaxes += (tax as Record<string, unknown>).amount as number|| 0;
+            if (!summary.taxBreakdown[(tax as Record<string, unknown>).tax_type as string]) {
+              summary.taxBreakdown[(tax as Record<string, unknown>).tax_type as string] = { total: 0, operations: 0 };
             }
-            summary.taxBreakdown[tax.tax_type].total += tax.amount || 0;
-            summary.taxBreakdown[tax.tax_type].operations += 1;
+            summary.taxBreakdown[(tax as Record<string, unknown>).tax_type as string].total += (tax as Record<string, unknown>).amount as number|| 0;
+            summary.taxBreakdown[(tax as Record<string, unknown>).tax_type as string].operations += 1;
           });
         }
       });
@@ -921,12 +922,12 @@ export const useFiscal = () => {
   // Export functionality
   const exportTaxCalculationsCSV = (calculations: Array<Record<string, unknown>>) => {
     const csvHeaders = ['Data', 'Operação', 'Valor Base', 'Total Impostos', 'Detalhes'];
-    const csvRows = calculations.map(calc => [
-      new Date(calc.calculated_at).toLocaleDateString('pt-BR'),
+    const csvRows = calculations.map((calc :Record<string, unknown>) => [
+      new Date(calc.calculated_at as string).toLocaleDateString('pt-BR'),
       calc.operation,
-      calc.amount?.toFixed(2) || '0.00',
-      calc.result?.total_taxes?.toFixed(2) || '0.00',
-      calc.result?.taxes?.map((t: unknown) => `${t.tax_type}: ${t.amount?.toFixed(2)}`).join('; ') || ''
+      (calc.amount as number)?.toFixed(2)  || '0.00',
+      ((calc.result as Record<string, unknown>)?.total_taxes as number)?.toFixed(2) || '0.00',
+      ((calc.result as Record<string, unknown>)?.taxes as unknown[])?.map((t: Record<string, unknown>) => `${t.tax_type}: ${(t.amount as number)?.toFixed(2)}`).join('; ') || ''
     ]);
 
     const csvContent = [csvHeaders, ...csvRows]
