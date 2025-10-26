@@ -89,7 +89,7 @@ const ObligationManagement = () => {
     if (!selectedObligation) return;
 
     const result = await generateObligationFile({
-      obligationId: selectedObligation.id,
+      obligationId: (selectedObligation as { id: string }).id,
       fileType: fileGeneration.fileType,
       format: fileGeneration.format
     });
@@ -97,28 +97,30 @@ const ObligationManagement = () => {
     if (result) {
       setIsFileDialogOpen(false);
       // Reload files for this obligation
-      const files = await getObligationFiles(selectedObligation.id);
+      const files = await getObligationFiles((selectedObligation as { id: string }).id);
       setObligationFiles(prev => ({
         ...prev,
-        [selectedObligation.id]: files
+        [(selectedObligation as { id: string }).id]: files
       }));
     }
   };
 
   const handleDownloadFile = async (file: unknown) => {
-    await downloadObligationFile(file.file_path, file.file_name);
+    const f = file as { file_path: string; file_name: string };
+    await downloadObligationFile(f.file_path, f.file_name);
   };
 
   const handleDeleteFile = async (file: unknown) => {
     const confirmed = window.confirm('Tem certeza que deseja excluir este arquivo?');
     if (confirmed) {
-      const success = await deleteObligationFile(file.id, file.file_path);
+      const f = file as { id: string; file_path: string };
+      const success = await deleteObligationFile(f.id, f.file_path);
       if (success && selectedObligation) {
         // Reload files for this obligation
-        const files = await getObligationFiles(selectedObligation.id);
+        const files = await getObligationFiles((selectedObligation as { id: string }).id);
         setObligationFiles(prev => ({
           ...prev,
-          [selectedObligation.id]: files
+          [(selectedObligation as { id: string }).id]: files
         }));
       }
     }
@@ -174,11 +176,13 @@ const ObligationManagement = () => {
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {obligationKinds.map((kind) => (
-                      <SelectItem key={kind.id} value={kind.id}>
-                        {kind.name} ({kind.code})
+                    {obligationKinds.map((kind) => {
+                      const k = kind as { id: string; name: string; code: string };
+                      return (
+                      <SelectItem key={k.id} value={k.id}>
+                        {k.name} ({k.code})
                       </SelectItem>
-                    ))}
+                    )})}
                   </SelectContent>
                 </Select>
               </div>
@@ -257,28 +261,30 @@ const ObligationManagement = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {obligations.map((obligation) => (
-                <TableRow key={obligation.id}>
+              {obligations.map((obligation) => {
+                const o = obligation as { id: string; obligation_kinds?: { name: string; code: string }; period_month: number; period_year: number; status: string; created_at: string };
+                return (
+                <TableRow key={o.id}>
                   <TableCell>
                     <div>
-                      <div className="font-medium">{obligation.obligation_kinds?.name}</div>
-                      <div className="text-sm text-muted-foreground">{obligation.obligation_kinds?.code}</div>
+                      <div className="font-medium">{o.obligation_kinds?.name}</div>
+                      <div className="text-sm text-muted-foreground">{o.obligation_kinds?.code}</div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    {obligation.period_month}/{obligation.period_year}
+                    {o.period_month}/{o.period_year}
                   </TableCell>
                   <TableCell>
-                    {getStatusBadge(obligation.status)}
+                    {getStatusBadge(o.status)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4" />
-                      <span>{obligationFiles[obligation.id]?.length || 0} arquivo(s)</span>
+                      <span>{obligationFiles[o.id]?.length || 0} arquivo(s)</span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    {new Date(obligation.created_at).toLocaleDateString('pt-BR')}
+                    {new Date(o.created_at).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
@@ -286,7 +292,7 @@ const ObligationManagement = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => {
-                          setSelectedObligation(obligation);
+                          setSelectedObligation(o);
                           setIsFileDialogOpen(true);
                         }}
                       >
@@ -296,7 +302,7 @@ const ObligationManagement = () => {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              )})}
             </TableBody>
           </Table>
         </CardContent>
@@ -304,17 +310,18 @@ const ObligationManagement = () => {
 
       {/* Files for each obligation */}
       {obligations.map((obligation) => {
-        const files = obligationFiles[obligation.id] || [];
+        const o = obligation as { id: string; obligation_kinds?: { name: string }; period_month: number; period_year: number };
+        const files = obligationFiles[o.id] || [];
         if (files.length === 0) return null;
         
         return (
-          <Card key={obligation.id}>
+          <Card key={o.id}>
             <CardHeader>
               <CardTitle className="text-lg">
-                Arquivos - {obligation.obligation_kinds?.name}
+                Arquivos - {o.obligation_kinds?.name}
               </CardTitle>
               <CardDescription>
-                Período: {obligation.period_month}/{obligation.period_year}
+                Período: {o.period_month}/{o.period_year}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -330,23 +337,25 @@ const ObligationManagement = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {files.map((file) => (
-                    <TableRow key={file.id}>
+                  {files.map((file) => {
+                    const f = file as { id: string; file_name: string; mime_type: string; file_size: number; file_type: string; size_bytes?: number; generated_at: string; created_at: string; status: string };
+                    return (
+                    <TableRow key={f.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {getFileIcon(file.mime_type)}
-                          <span className="font-medium">{file.file_name}</span>
+                          {getFileIcon(f.mime_type)}
+                          <span className="font-medium">{f.file_name}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{file.file_type}</TableCell>
+                      <TableCell>{f.file_type}</TableCell>
                       <TableCell>
-                        {file.size_bytes ? `${(file.size_bytes / 1024).toFixed(1)} KB` : 'N/A'}
+                        {f.size_bytes ? `${(f.size_bytes / 1024).toFixed(1)} KB` : 'N/A'}
                       </TableCell>
                       <TableCell>
-                        {new Date(file.generated_at).toLocaleDateString('pt-BR')}
+                        {new Date(f.generated_at || f.created_at).toLocaleDateString('pt-BR')}
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(file.status)}
+                        {getStatusBadge(f.status)}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
@@ -367,7 +376,7 @@ const ObligationManagement = () => {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )})}
                 </TableBody>
               </Table>
             </CardContent>
@@ -381,8 +390,8 @@ const ObligationManagement = () => {
           <DialogHeader>
             <DialogTitle>Gerar Arquivo</DialogTitle>
             <DialogDescription>
-              Gerar arquivo para: {selectedObligation?.obligation_kinds?.name} - 
-              {selectedObligation?.period_month}/{selectedObligation?.period_year}
+              Gerar arquivo para: {(selectedObligation as { obligation_kinds?: { name: string }; period_month: number; period_year: number })?.obligation_kinds?.name} - 
+              {(selectedObligation as { period_month: number; period_year: number })?.period_month}/{(selectedObligation as { period_month: number; period_year: number })?.period_year}
             </DialogDescription>
           </DialogHeader>
           

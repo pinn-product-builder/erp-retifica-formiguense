@@ -243,22 +243,23 @@ export function PerformanceInsights() {
       }
 
       // Mapear targets para GoalProgress
-      const mappedTargets = targets.map((target: unknown) => {
+      const mappedTargets = targets.map((target) => {
+        const t = target as Record<string, unknown>;
         // Mapear unidades
         let unit = '';
-        if ((target as Record<string, unknown>).progress_unit === 'currency') unit = 'R$';
-        else if ((target as Record<string, unknown>).progress_unit === 'percentage') unit = '%';
-        else unit = (target as Record<string, unknown>).progress_unit as string || '';
+        if (t.progress_unit === 'currency') unit = 'R$';
+        else if (t.progress_unit === 'percentage') unit = '%';
+        else unit = (t.progress_unit as string) || '';
 
         return {
-          id: (target as Record<string, unknown>).id as string,
-          title: (target as Record<string, unknown>).description as string || 'Meta sem título',
-          description: (target as Record<string, unknown>).description as string || '',
-          current: (target as Record<string, unknown>).progress_current as number || 0,
-          target: (target as Record<string, unknown>).target_value as number || 0,
+          id: t.id as string,
+          title: (t.description as string) || 'Meta sem título',
+          description: (t.description as string) || '',
+          current: (t.progress_current as number) || 0,
+          target: (t.target_value as number) || 0,
           unit: unit,
-          deadline: (target as Record<string, unknown>).target_period_end as string || new Date().toISOString(),
-          status: (target as Record<string, unknown>).status as string || 'pending'
+          deadline: (t.target_period_end as string) || new Date().toISOString(),
+          status: (t.status as string) || 'pending'
         };
       });
 
@@ -380,7 +381,11 @@ export function PerformanceInsights() {
               <TrendingUp className="w-5 h-5" />
               Insights de Performance
             </CardTitle>
-            <Tabs value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as 'week' | 'month' | 'quarter')}>
+            <Tabs value={selectedPeriod} onValueChange={(v) => {
+              if (v === 'week' || v === 'month' || v === 'quarter') {
+                setSelectedPeriod(v);
+              }
+            }}>
               <TabsList>
                 <TabsTrigger value="week">Semana</TabsTrigger>
                 <TabsTrigger value="month">Mês</TabsTrigger>

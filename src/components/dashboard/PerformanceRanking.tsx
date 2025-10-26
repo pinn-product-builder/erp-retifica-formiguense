@@ -164,14 +164,14 @@ export function PerformanceRanking() {
                         {formatPoints(userPosition.total_points)} pontos
                       </span>
                       <span className="flex items-center gap-1">
-                        {getLevelInfo(userPosition.metrics.current_level).icon}
-                        Nível {userPosition.metrics.current_level}
+                        {getLevelInfo(Number(userPosition.metrics.current_level)).icon}
+                        Nível {Number(userPosition.metrics.current_level)}
                       </span>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-primary">
-                      {formatPoints(userPosition.total_points)}
+                      {formatPoints(Number(userPosition.total_points))}
                     </div>
                     <div className="text-xs text-muted-foreground">pontos</div>
                   </div>
@@ -198,7 +198,7 @@ export function PerformanceRanking() {
                   <AnimatePresence>
                     {ranking.map((user, index) => {
                       const positionInfo = getRankingPosition(user.rank_position);
-                      const levelInfo = getLevelInfo(user.metrics.current_level);
+                      const levelInfo = getLevelInfo(Number(user.metrics.current_level));
                       
                       return (
                         <motion.div
@@ -227,18 +227,18 @@ export function PerformanceRanking() {
                             <div className="flex items-center gap-4 text-sm text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Star className="h-3 w-3" />
-                                Nível {user.metrics.current_level}
+                                Nível {Number(user.metrics.current_level)}
                               </span>
                               <span className="flex items-center gap-1">
                                 <TrendingUp className="h-3 w-3" />
-                                {user.metrics.level_progress}% do nível
+                                {Number(user.metrics.level_progress)}% do nível
                               </span>
                             </div>
                           </div>
                           
                           <div className="text-right">
                             <div className="text-xl font-bold">
-                              {formatPoints(user.total_points)}
+                              {formatPoints(Number(user.total_points))}
                             </div>
                             <div className="text-xs text-muted-foreground">pontos</div>
                           </div>

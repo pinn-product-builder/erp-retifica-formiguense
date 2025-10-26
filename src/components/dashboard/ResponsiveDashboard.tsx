@@ -293,8 +293,9 @@ export function useMobileOptimizations() {
 
     // Detectar velocidade da conexão
     if ('connection' in navigator) {
-      const connection = (navigator as unknown).connection;
-      setConnectionSpeed(connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g' ? 'slow' : 'fast');
+      const connection = (navigator as { connection?: { effectiveType?: string } }).connection;
+      const effectiveType = connection?.effectiveType;
+      setConnectionSpeed(effectiveType === 'slow-2g' || effectiveType === '2g' ? 'slow' : 'fast');
     }
 
     return () => {

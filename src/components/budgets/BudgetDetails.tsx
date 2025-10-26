@@ -311,7 +311,6 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* @ts-expect-error - Budget parts type is Record<string, unknown>[] */}
               {budget.parts && Array.isArray(budget.parts) ? budget.parts.map((part, index: number) => {
                 const typedPart = part as { name?: string; description?: string; quantity?: number; unit_price?: number; total?: number };
                 return (

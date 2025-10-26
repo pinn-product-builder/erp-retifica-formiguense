@@ -130,7 +130,7 @@ export function DynamicQuickActions() {
                           ? 'bg-white/20' 
                           : 'bg-primary/10 group-hover:bg-primary/20'
                       }`}>
-                        <Icon className={`${isMobile ? 'w-3 h-3' : 'w-3.5 h-3.5'}`} />
+                        {React.createElement(Icon as React.ComponentType<{ className?: string }>, { className: `${isMobile ? 'w-3 h-3' : 'w-3.5 h-3.5'}` })}
                       </div>
                       <div className="text-left">
                         <span className={`font-medium block ${isMobile ? 'text-xs' : 'text-sm'}`}>

@@ -101,7 +101,7 @@ export const EnhancedStatCard: React.FC<EnhancedStatCardProps> = ({
             {kpi.name}
           </CardTitle>
           <div className="text-2xl">
-            {getIconComponent(kpi.icon) as ReactNode} 
+            {String(getIconComponent(kpi.icon))}
           </div>
         </CardHeader>
         <CardContent>

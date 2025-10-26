@@ -212,11 +212,13 @@ export function CompanyFiscalSettings() {
                     <SelectValue placeholder="Selecione o regime tributário" />
                   </SelectTrigger>
                   <SelectContent>
-                    {taxRegimes.map((regime) => (
-                      <SelectItem key={regime.id} value={regime.id}>
-                        {regime.code} - {regime.name}
+                    {taxRegimes.map((regime) => {
+                      const r = regime as { id: string; code: string; name: string };
+                      return (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.code} - {r.name}
                       </SelectItem>
-                    ))}
+                    )})}
                   </SelectContent>
                 </Select>
               </div>

@@ -135,7 +135,7 @@ export function ApuracaoFiscal() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total de Operações</p>
-                  <p className="text-2xl font-bold">{summary.totalOperations}</p>
+                  <p className="text-2xl font-bold">{(summary as { totalOperations: number }).totalOperations}</p>
                 </div>
                 <Calculator className="h-8 w-8 text-muted-foreground" />
               </div>
@@ -147,7 +147,7 @@ export function ApuracaoFiscal() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Valor Base Total</p>
-                  <p className="text-2xl font-bold">{formatCurrency(summary.totalAmount)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency((summary as { totalAmount: number }).totalAmount)}</p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-muted-foreground" />
               </div>
@@ -159,7 +159,7 @@ export function ApuracaoFiscal() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total de Impostos</p>
-                  <p className="text-2xl font-bold">{formatCurrency(summary.totalTaxes)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency((summary as { totalTaxes: number }).totalTaxes)}</p>
                 </div>
                 <Calculator className="h-8 w-8 text-muted-foreground" />
               </div>
@@ -172,7 +172,7 @@ export function ApuracaoFiscal() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Carga Tributária</p>
                   <p className="text-2xl font-bold">
-                    {summary.totalAmount > 0 ? ((summary.totalTaxes / summary.totalAmount) * 100).toFixed(1) : '0.0'}%
+                    {((summary as { totalAmount: number }).totalAmount > 0 ? (((summary as { totalTaxes: number }).totalTaxes / (summary as { totalAmount: number }).totalAmount) * 100).toFixed(1) : '0.0')}%
                   </p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-muted-foreground" />
@@ -183,7 +183,7 @@ export function ApuracaoFiscal() {
       )}
 
       {/* Tax Breakdown */}
-      {summary?.taxBreakdown && Object.keys(summary.taxBreakdown).length > 0 && (
+      {summary && (summary as { taxBreakdown?: Record<string, unknown> }).taxBreakdown && Object.keys((summary as { taxBreakdown: Record<string, unknown> }).taxBreakdown).length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Detalhamento por Tipo de Imposto</CardTitle>
@@ -199,7 +199,7 @@ export function ApuracaoFiscal() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Object.entries(summary.taxBreakdown).map(([taxType, data]: [string, Record<string, unknown>]) => (
+                {Object.entries((summary as { taxBreakdown: Record<string, { operations: number; total: number }> }).taxBreakdown).map(([taxType, data]) => (
                   <TableRow key={taxType}>
                     <TableCell className="font-medium">{taxType}</TableCell>
                     <TableCell className="text-right">{data.operations}</TableCell>
@@ -269,27 +269,29 @@ export function ApuracaoFiscal() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ledgers.map((ledger) => (
-                  <TableRow key={ledger.id}>
-                    <TableCell className="font-medium">{ledger.tax_types?.name}</TableCell>
-                    <TableCell>{ledger.tax_regimes?.name}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(ledger.total_debits)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(ledger.total_credits)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(ledger.balance_due)}</TableCell>
+                {ledgers.map((ledger) => {
+                  const l = ledger as { id: string; tax_types?: { name: string }; tax_regimes?: { name: string }; total_debits: number; total_credits: number; balance_due: number; status: string };
+                  return (
+                  <TableRow key={l.id}>
+                    <TableCell className="font-medium">{l.tax_types?.name}</TableCell>
+                    <TableCell>{l.tax_regimes?.name}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(l.total_debits)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(l.total_credits)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(l.balance_due)}</TableCell>
                     <TableCell>
-                      <Badge variant={ledger.status === 'fechado' ? 'destructive' : 'default'}>
-                        {ledger.status}
+                      <Badge variant={l.status === 'fechado' ? 'destructive' : 'default'}>
+                        {l.status}
                       </Badge>
                     </TableCell>
                   </TableRow>
-                ))}
+                )})}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       )}
 
-      {summary && summary.totalOperations === 0 && (
+      {summary && (summary as { totalOperations: number }).totalOperations === 0 && (
         <Alert>
           <Calendar className="h-4 w-4" />
           <AlertDescription>
