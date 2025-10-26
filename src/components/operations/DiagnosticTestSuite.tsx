@@ -25,7 +25,7 @@ interface TestResult {
   name: string;
   status: 'pending' | 'running' | 'passed' | 'failed';
   message: string;
-  details?: any;
+  details?: unknown;
 }
 
 const DiagnosticTestSuite = () => {

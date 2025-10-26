@@ -70,7 +70,7 @@ export function SuperAdminPanel() {
       setNewOrgDescription('');
       setCreateDialogOpen(false);
       loadOrganizations();
-    } catch (error: any) {
+    } catch (error) {
       toast.error('Erro ao criar organização: ' + error.message);
     }
   };

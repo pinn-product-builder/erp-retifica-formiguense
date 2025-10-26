@@ -15,7 +15,7 @@ export interface UserAchievement {
   org_id: string;
   user_id: string;
   achievement_type: string;
-  achievement_data: Record<string, any>;
+  achievement_data: Record<string, unknown>;
   earned_at: string;
   points_earned: number;
   title?: string;
@@ -31,7 +31,7 @@ export interface AchievementConfig {
   description: string;
   icon: string;
   points: number;
-  criteria: Record<string, any>;
+  criteria: Record<string, unknown>;
   is_active: boolean;
 }
 
@@ -44,7 +44,7 @@ export interface PerformanceRanking {
   period_end: string;
   total_points: number;
   rank_position: number;
-  metrics: Record<string, any>;
+  metrics: Record<string, unknown>;
   user_name?: string;
   user_email?: string;
 }
@@ -57,7 +57,7 @@ export interface ScoreHistory {
   points_earned: number;
   points_before: number;
   points_after: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   created_at: string;
 }
 
@@ -90,7 +90,7 @@ export class GamificationService {
     orgId: string,
     userId: string,
     actionType: string,
-    metadata: Record<string, any> = {}
+    metadata: Record<string, unknown> = {}
   ): Promise<GamificationResult> {
     const { data, error } = await supabase.rpc('process_user_action', {
       p_org_id: orgId,
@@ -159,7 +159,7 @@ export class GamificationService {
       const config = configs?.find(c => c.achievement_key === achievement.achievement_type);
       return {
         ...achievement,
-        achievement_data: achievement.achievement_data as Record<string, any>,
+        achievement_data: achievement.achievement_data as Record<string, unknown>,
         title: config?.title || 'Conquista',
         description: config?.description || 'Conquista conquistada',
         icon: config?.icon || '🏆'
@@ -190,7 +190,7 @@ export class GamificationService {
 
     return (data || []).map(item => ({
       ...item,
-      criteria: item.criteria as Record<string, any>
+      criteria: item.criteria as Record<string, unknown>
     })) as AchievementConfig[];
   }
 
@@ -231,7 +231,7 @@ export class GamificationService {
       return {
         ...ranking,
         period_type: ranking.period_type as 'daily' | 'weekly' | 'monthly',
-        metrics: ranking.metrics as Record<string, any>,
+        metrics: ranking.metrics as Record<string, unknown>,
         user_name: userInfo?.name || 'Usuário',
         user_email: userInfo?.email || ''
       } as PerformanceRanking;
@@ -273,7 +273,7 @@ export class GamificationService {
     return {
       ...data,
       period_type: data.period_type as 'daily' | 'weekly' | 'monthly',
-      metrics: data.metrics as Record<string, any>,
+      metrics: data.metrics as Record<string, unknown>,
       user_name: userInfo?.name || 'Usuário',
       user_email: userInfo?.email || ''
     } as PerformanceRanking;
@@ -302,7 +302,7 @@ export class GamificationService {
 
     return (data || []).map(item => ({
       ...item,
-      metadata: item.metadata as Record<string, any>
+      metadata: item.metadata as Record<string, unknown>
     })) as ScoreHistory[];
   }
 
@@ -325,7 +325,7 @@ export class GamificationService {
       return null;
     }
 
-    const criteria = config.criteria as Record<string, any>;
+    const criteria = config.criteria as Record<string, unknown>;
     const criteriaType = criteria?.type;
     const targetValue = criteria?.value || 0;
 
@@ -333,7 +333,7 @@ export class GamificationService {
 
     switch (criteriaType) {
       case 'total_orders': {
-        const { count } = await (supabase.rpc as any)('count_user_orders', {
+        const { count } = await (supabase.rpc as unknown)('count_user_orders', {
           p_org_id: orgId,
           p_user_id: userId
         });
@@ -342,7 +342,7 @@ export class GamificationService {
       }
 
       case 'completed_orders': {
-        const { count } = await (supabase.rpc as any)('count_completed_orders', {
+        const { count } = await (supabase.rpc as unknown)('count_completed_orders', {
           p_org_id: orgId,
           p_user_id: userId
         });
@@ -351,7 +351,7 @@ export class GamificationService {
       }
 
       case 'approved_budgets': {
-        const { count } = await (supabase.rpc as any)('count_approved_budgets', {
+        const { count } = await (supabase.rpc as unknown)('count_approved_budgets', {
           p_org_id: orgId,
           p_user_id: userId
         });

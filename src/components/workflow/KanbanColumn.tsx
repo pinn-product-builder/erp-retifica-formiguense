@@ -26,7 +26,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 interface KanbanColumnProps {
   status: string;
-  workflows: any[];
+  workflows: Array<Record<string, unknown>>;
   componentColor: string;
   statusColors?: Record<string, { bgColor: string; textColor: string }>;
   onUpdate?: () => void;

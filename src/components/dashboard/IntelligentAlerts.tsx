@@ -31,7 +31,7 @@ interface Alert {
   target_users: string[];
   action_label: string | null;
   action_url: string | null;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   expires_at: string | null;
@@ -49,7 +49,7 @@ interface AlertHistoryItem {
   dismissed_at: string | null;
   action_taken: string | null;
   action_taken_at: string | null;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   created_at: string;
 }
 
@@ -130,7 +130,7 @@ export function IntelligentAlerts() {
       if (error) throw error;
 
       if (data) {
-        const typedAlerts: Alert[] = data.map((alert: any) => ({
+        const typedAlerts: Alert[] = data.map((alert: unknown) => ({
           ...alert,
           severity: alert.severity as 'info' | 'warning' | 'error' | 'success'
         }));

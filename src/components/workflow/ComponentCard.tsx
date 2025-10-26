@@ -9,7 +9,7 @@ import { ptBR } from 'date-fns/locale';
 import { WorkflowModal } from './WorkflowModal';
 
 interface ComponentCardProps {
-  workflow: any;
+  workflow: unknown;
   componentColor: string;
   onUpdate?: () => void;
 }

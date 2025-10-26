@@ -23,7 +23,7 @@ export function NotificationsPanel() {
   const [open, setOpen] = React.useState(false);
   const navigate = useNavigate();
 
-  const handleNotificationClick = async (notification: any) => {
+  const handleNotificationClick = async (notification: unknown) => {
     // Marcar como lida
     if (!notification.is_read) {
       await markAsRead(notification.id);

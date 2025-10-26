@@ -35,14 +35,14 @@ export function TaxReports() {
       getObligations()
     ]);
 
-    const totalTaxes = calculations.reduce((sum: number, calc: any) => {
+    const totalTaxes = calculations.reduce((sum: number, calc: unknown) => {
       if (calc.result?.total_taxes) {
         return sum + calc.result.total_taxes;
       }
       return sum;
     }, 0);
 
-    const pendingObligations = obligations.filter((obl: any) => 
+    const pendingObligations = obligations.filter((obl: unknown) => 
       obl.status === 'rascunho' || obl.status === 'processando'
     ).length;
 

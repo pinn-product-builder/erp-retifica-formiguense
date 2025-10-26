@@ -124,13 +124,13 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
         is_active: engineType.is_active,
         display_order: engineType.display_order,
         special_requirements: {
-          ambiente: (engineType.special_requirements as any)?.ambiente || '',
-          equipamentos: (engineType.special_requirements as any)?.equipamentos || [],
-          certificacao_required: (engineType.special_requirements as any)?.certificacao_required || false,
-          temperatura_controlada: (engineType.special_requirements as any)?.temperatura_controlada || false,
-          umidade_controlada: (engineType.special_requirements as any)?.umidade_controlada || false,
-          limpeza_especial: (engineType.special_requirements as any)?.limpeza_especial || false,
-          rastreabilidade_completa: (engineType.special_requirements as any)?.rastreabilidade_completa || false,
+          ambiente: (engineType.special_requirements as unknown)?.ambiente || '',
+          equipamentos: (engineType.special_requirements as unknown)?.equipamentos || [],
+          certificacao_required: (engineType.special_requirements as unknown)?.certificacao_required || false,
+          temperatura_controlada: (engineType.special_requirements as unknown)?.temperatura_controlada || false,
+          umidade_controlada: (engineType.special_requirements as unknown)?.umidade_controlada || false,
+          limpeza_especial: (engineType.special_requirements as unknown)?.limpeza_especial || false,
+          rastreabilidade_completa: (engineType.special_requirements as unknown)?.rastreabilidade_completa || false,
         },
       });
     }
@@ -147,8 +147,8 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
           display_order: data.display_order,
           default_warranty_months: data.default_warranty_months,
           required_components: data.required_components as ("bloco" | "eixo" | "biela" | "comando" | "cabecote")[],
-          technical_standards: data.technical_standards as any,
-          special_requirements: data.special_requirements as any,
+          technical_standards: data.technical_standards as unknown,
+          special_requirements: data.special_requirements as unknown,
         });
       } else if (engineType) {
         await updateEngineType(engineType.id, {
@@ -158,9 +158,9 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
           is_active: data.is_active,
           display_order: data.display_order,
           default_warranty_months: data.default_warranty_months,
-          required_components: data.required_components as any,
-          technical_standards: data.technical_standards as any,
-          special_requirements: data.special_requirements as any,
+          required_components: data.required_components as unknown,
+          technical_standards: data.technical_standards as unknown,
+          special_requirements: data.special_requirements as unknown,
         });
       }
       onSuccess();

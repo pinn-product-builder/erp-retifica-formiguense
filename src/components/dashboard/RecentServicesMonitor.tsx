@@ -158,7 +158,7 @@ export function RecentServicesMonitor() {
                           {service.client}
                         </span>
                         <Badge 
-                          variant={getStatusBadge('order', service.status) as any}
+                          variant={getStatusBadge('order', service.status) as unknown}
                           className="text-xs"
                         >
                           {getStatusLabel('order', service.status)}
@@ -177,7 +177,7 @@ export function RecentServicesMonitor() {
                     {/* Prioridade */}
                     <div className="flex-shrink-0">
                       <Badge 
-                        variant={getPriorityColor(service.priority) as any}
+                        variant={getPriorityColor(service.priority) as unknown}
                         className="text-xs"
                       >
                         {service.priority}

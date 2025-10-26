@@ -133,7 +133,7 @@ export function InventoryDashboard() {
         { name: string; code: string; count: number; lastMovement: string }
       > = {};
 
-      data?.forEach((movement: any) => {
+      data?.forEach((movement: unknown) => {
         const partId = movement.part_id;
         if (!partCounts[partId]) {
           partCounts[partId] = {

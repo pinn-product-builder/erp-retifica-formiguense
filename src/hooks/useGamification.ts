@@ -13,7 +13,7 @@ export interface GamificationState {
 }
 
 export interface GamificationActions {
-  processAction: (actionType: string, metadata?: Record<string, any>) => Promise<GamificationResult | null>;
+  processAction: (actionType: string, metadata?: Record<string, unknown>) => Promise<GamificationResult | null>;
   refreshData: () => Promise<void>;
   getAchievementProgress: (achievementKey: string) => Promise<{ current: number; target: number; progress: number } | null>;
 }
@@ -66,7 +66,7 @@ export const useGamification = (): GamificationState & GamificationActions => {
 
   const processAction = useCallback(async (
     actionType: string,
-    metadata: Record<string, any> = {}
+    metadata: Record<string, unknown> = {}
   ): Promise<GamificationResult | null> => {
     if (!currentOrganization || !user) {
       return null;

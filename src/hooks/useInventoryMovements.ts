@@ -36,7 +36,7 @@ export interface InventoryMovement {
   rejection_reason?: string;
   created_by: string;
   created_at: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   
   // Campos da view inventory_movements_with_users
   created_by_name?: string;
@@ -59,7 +59,7 @@ export interface CreateMovementData {
   budget_id?: string;
   reason: string;
   notes?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -99,7 +99,7 @@ export function useInventoryMovements() {
       setLoading(true);
 
       let query = supabase
-        .from('inventory_movements_with_users' as any)
+        .from('inventory_movements_with_users' as unknown)
         .select('*')
         .eq('org_id', currentOrganization.id)
         .order('created_at', { ascending: false });
@@ -241,7 +241,7 @@ export function useInventoryMovements() {
       await fetchMovements();
 
       return movement as InventoryMovement;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating movement:', error);
       
       // Mensagens de erro específicas
@@ -372,7 +372,7 @@ export function useInventoryMovements() {
 
     try {
       const { data, error } = await supabase
-        .from('inventory_movements' as any)
+        .from('inventory_movements' as unknown)
         .select(`
           *,
           part:parts_inventory(part_name, part_code, quantity)
@@ -398,7 +398,7 @@ export function useInventoryMovements() {
       const { data: userData } = await supabase.auth.getUser();
 
       const { error } = await supabase
-        .from('inventory_movements' as any)
+        .from('inventory_movements' as unknown)
         .update({
           approval_status: 'approved',
           approved_by: userData.user?.id,
@@ -436,7 +436,7 @@ export function useInventoryMovements() {
       const { data: userData } = await supabase.auth.getUser();
 
       const { error } = await supabase
-        .from('inventory_movements' as any)
+        .from('inventory_movements' as unknown)
         .update({
           approval_status: 'rejected',
           approved_by: userData.user?.id,

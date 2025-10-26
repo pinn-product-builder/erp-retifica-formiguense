@@ -17,7 +17,7 @@ export default function DRE() {
   const [dreData, setDreData] = useState<any[]>([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [monthlyData, setMonthlyData] = useState<any>(null);
+  const [monthlyData, setMonthlyData] = useState<unknown>(null);
 
   useEffect(() => {
     loadDREData();
@@ -39,11 +39,11 @@ export default function DRE() {
     
     const cashFlowData = await getCashFlow(startDate, endDate);
     
-    const income = cashFlowData.filter((t: any) => t.transaction_type === 'income')
-      .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+    const income = cashFlowData.filter((t: unknown) => t.transaction_type === 'income')
+      .reduce((sum: number, t: unknown) => sum + Number(t.amount), 0);
     
-    const expenses = cashFlowData.filter((t: any) => t.transaction_type === 'expense')
-      .reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+    const expenses = cashFlowData.filter((t: unknown) => t.transaction_type === 'expense')
+      .reduce((sum: number, t: unknown) => sum + Number(t.amount), 0);
 
     // Simular divisão das despesas (em um sistema real, isso viria categorizado)
     const directCosts = expenses * 0.4; // 40% custos diretos

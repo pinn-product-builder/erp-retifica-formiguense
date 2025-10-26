@@ -241,8 +241,8 @@ export default function InventoryPerformanceReports() {
   };
 
   const calculateABCAnalysis = (
-    inventory: any[],
-    movements: any[],
+    inventory: Array<Record<string, unknown>>,
+    movements: Array<Record<string, unknown>>,
     periodDays: number
   ): ABCAnalysisItem[] => {
     const annualFactor = 365 / periodDays;
@@ -299,8 +299,8 @@ export default function InventoryPerformanceReports() {
   };
 
   const calculateTurnoverAnalysis = (
-    inventory: any[],
-    movements: any[],
+    inventory: Array<Record<string, unknown>>,
+    movements: Array<Record<string, unknown>>,
     periodDays: number
   ): TurnoverAnalysisItem[] => {
     const annualFactor = 365 / periodDays;
@@ -347,8 +347,8 @@ export default function InventoryPerformanceReports() {
   };
 
   const calculateAccuracyAnalysis = (
-    inventory: any[],
-    countItems: any[]
+    inventory: Array<Record<string, unknown>>,
+    countItems: Array<Record<string, unknown>>
   ): AccuracyAnalysisItem[] => {
     return inventory.map(item => {
       // Buscar último count para este item
@@ -524,7 +524,7 @@ export default function InventoryPerformanceReports() {
     return `${value.toFixed(1)}%`;
   };
 
-  const exportToCSV = (data: any[], filename: string) => {
+  const exportToCSV = (data: Array<Record<string, unknown>>, filename: string) => {
     const headers = Object.keys(data[0] || {});
     const csvContent = [
       headers.join(','),

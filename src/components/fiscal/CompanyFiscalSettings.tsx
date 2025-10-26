@@ -23,7 +23,7 @@ interface CompanyFiscalSetting {
 
 export function CompanyFiscalSettings() {
   const [settings, setSettings] = useState<CompanyFiscalSetting[]>([]);
-  const [taxRegimes, setTaxRegimes] = useState<any[]>([]);
+  const [taxRegimes, setTaxRegimes] = useState<Array<Record<string, unknown>>>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [currentSetting, setCurrentSetting] = useState<Partial<CompanyFiscalSetting>>({
     org_name: '',

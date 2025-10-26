@@ -8,7 +8,7 @@ export interface TimelineEvent {
   event_type: 'order_status' | 'workflow_status' | 'diagnostic' | 'budget' | 'reservation' | 'material' | 'report' | 'warranty';
   title: string;
   description?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   user_id?: string;
   icon_type: 'status' | 'workflow' | 'diagnostic' | 'budget' | 'package' | 'file' | 'shield';
   color: string;
@@ -57,7 +57,7 @@ export function useOrderTimeline(orderId: string) {
         .eq('order_workflow.order_id', orderId)
         .order('changed_at', { ascending: false });
 
-      workflowHistory?.forEach((history: any) => {
+      workflowHistory?.forEach((history: unknown) => {
         allEvents.push({
           id: `workflow-${history.id}`,
           timestamp: history.changed_at,
@@ -106,7 +106,7 @@ export function useOrderTimeline(orderId: string) {
         .eq('detailed_budgets.order_id', orderId)
         .order('approved_at', { ascending: false });
 
-      budgetApprovals?.forEach((approval: any) => {
+      budgetApprovals?.forEach((approval: unknown) => {
         allEvents.push({
           id: `budget-${approval.id}`,
           timestamp: approval.approved_at,

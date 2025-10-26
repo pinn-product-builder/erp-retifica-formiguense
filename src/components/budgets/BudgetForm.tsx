@@ -58,8 +58,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   const [estimatedDeliveryDays, setEstimatedDeliveryDays] = useState<number>(budget?.estimated_delivery_days || 15);
 
   // Estados auxiliares
-  const [orders, setOrders] = useState<any[]>([]);
-  const [partsInventory, setPartsInventory] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Array<Record<string, unknown>>>([]);
+  const [partsInventory, setPartsInventory] = useState<Array<Record<string, unknown>>>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingParts, setLoadingParts] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -241,7 +241,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   };
 
   // Adicionar peça
-  const addPart = (partInventory: any) => {
+  const addPart = (partInventory: { part_code: string; part_name: string; unit_cost: number; quantity: number }) => {
     const existingPart = parts.find(p => p.part_code === partInventory.part_code);
     if (existingPart) {
       toast({
@@ -304,7 +304,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     try {
       const budgetData: Partial<DetailedBudget> = {
         order_id: selectedOrderId,
-        component: component as any,
+        component: component as "bloco" | "eixo" | "biela" | "comando" | "cabecote",
         services,
         parts,
         labor_hours: laborHours,
@@ -329,8 +329,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   };
 
   const filteredParts = partsInventory.filter(p =>
-    p.part_code.toLowerCase().includes(searchPartTerm.toLowerCase()) ||
-    p.part_name.toLowerCase().includes(searchPartTerm.toLowerCase())
+    (p as { part_code: string; part_name: string }).part_code.toLowerCase().includes(searchPartTerm.toLowerCase()) ||
+    (p as { part_code: string; part_name: string }).part_name.toLowerCase().includes(searchPartTerm.toLowerCase())
   );
 
   return (
@@ -355,8 +355,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                     <SelectItem value="empty" disabled>Nenhuma OS disponível</SelectItem>
                   ) : (
                     orders.map(order => (
-                      <SelectItem key={order.id} value={order.id}>
-                        {order.order_number} - {order.customers?.name || 'Cliente não informado'}
+                      <SelectItem key={order.id as string} value={order.id as string}>
+                        {order.order_number as string} - {(order.customers as { name: string } | undefined)?.name || 'Cliente não informado'}
                       </SelectItem>
                     ))
                   )}
@@ -517,14 +517,14 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
             <div className="border rounded-lg max-h-48 overflow-y-auto">
               {filteredParts.map(part => (
                 <div
-                  key={part.id}
+                  key={part.id as string}
                   className="p-3 hover:bg-accent cursor-pointer flex justify-between items-center"
-                  onClick={() => addPart(part)}
+                  onClick={() => addPart(part as { part_code: string; part_name: string; unit_cost: number; quantity: number })}
                 >
                   <div>
-                    <p className="font-medium">{part.part_code} - {part.part_name}</p>
+                    <p className="font-medium">{(part as { part_code: string; part_name: string }).part_code} - {(part as { part_code: string; part_name: string }).part_name}</p>
                     <p className="text-sm text-muted-foreground">
-                      Estoque: {part.quantity} | R$ {part.unit_cost?.toFixed(2)}
+                      Estoque: {(part as { quantity: number }).quantity} | R$ {(part as { unit_cost: number }).unit_cost?.toFixed(2)}
                     </p>
                   </div>
                   <Plus className="h-4 w-4" />

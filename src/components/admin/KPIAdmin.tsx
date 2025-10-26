@@ -42,12 +42,6 @@ export const KPIAdmin = () => {
   const [loading, setLoading] = useState(false);
   const [editingKPI, setEditingKPI] = useState<KPI | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  // Se não tem permissão, não renderizar nada
-  if (!hasPermission) {
-    return null;
-  }
-
   const [formData, setFormData] = useState({
     code: '',
     name: '',
@@ -121,11 +115,12 @@ export const KPIAdmin = () => {
       setIsDialogOpen(false);
       resetForm();
       fetchKPIs();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving KPI:', error);
+      const errorMessage = error instanceof Error ? error.message : "Erro ao salvar KPI";
       toast({
         title: "Erro",
-        description: error.message || "Erro ao salvar KPI",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -203,8 +198,16 @@ export const KPIAdmin = () => {
   };
 
   useEffect(() => {
-    fetchKPIs();
-  }, [currentOrganization]);
+    if (hasPermission) {
+      fetchKPIs();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentOrganization, hasPermission]);
+
+  // Se não tem permissão, não renderizar nada
+  if (!hasPermission) {
+    return null;
+  }
 
   return (
     <Card>

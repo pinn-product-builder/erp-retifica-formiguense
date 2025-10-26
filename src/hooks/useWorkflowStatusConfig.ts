@@ -30,6 +30,8 @@ export interface StatusPrerequisite {
   component?: string;
   transition_type: 'automatic' | 'manual' | 'approval_required' | 'conditional';
   is_active: boolean;
+  org_id?: string | null;
+  created_at?: string;
 }
 
 export function useWorkflowStatusConfig() {
@@ -76,13 +78,18 @@ export function useWorkflowStatusConfig() {
   }, [currentOrganization, toast]);
 
   const fetchPrerequisites = useCallback(async () => {
+    if (!currentOrganization) {
+      console.log('No current organization, skipping fetch prerequisites');
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('status_prerequisites')
         .select('*')
         .eq('entity_type', 'workflow')
-        .eq('is_active', true)
+        .or(`org_id.is.null,org_id.eq.${currentOrganization.id}`)
         .order('from_status_key');
 
       if (error) throw error;
@@ -97,7 +104,7 @@ export function useWorkflowStatusConfig() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [currentOrganization, toast]);
 
   const createStatusConfig = async (statusData: Omit<WorkflowStatusConfig, 'id' | 'created_at' | 'updated_at'>) => {
     try {
@@ -238,14 +245,25 @@ export function useWorkflowStatusConfig() {
 
   const createPrerequisite = async (prerequisiteData: Omit<StatusPrerequisite, 'id'>) => {
     try {
+      console.log('Creating prerequisite with data:', prerequisiteData);
+      console.log('Current organization:', currentOrganization);
+      
+      const insertData = {
+        ...prerequisiteData,
+        entity_type: 'workflow',
+        org_id: currentOrganization?.id || null
+      };
+      
+      console.log('Insert data:', insertData);
+
       const { error } = await supabase
         .from('status_prerequisites')
-        .insert({
-          ...prerequisiteData,
-          entity_type: 'workflow'
-        });
+        .insert(insertData);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       toast({
         title: "Sucesso",
@@ -258,7 +276,7 @@ export function useWorkflowStatusConfig() {
       console.error('Error creating prerequisite:', error);
       toast({
         title: "Erro",
-        description: "Erro ao criar pré-requisito",
+        description: `Erro ao criar pré-requisito: ${(error as Error).message || error}`,
         variant: "destructive",
       });
       return false;

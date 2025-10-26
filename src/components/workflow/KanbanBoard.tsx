@@ -20,7 +20,7 @@ const COMPONENTS = [
 // STATUS_ORDER será obtido dinamicamente das configurações
 
 interface KanbanBoardProps {
-  orders: any[];
+  orders: Array<Record<string, unknown>>;
   onOrderUpdate: () => void;
 }
 
@@ -46,7 +46,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
 
   // Organizar workflows por status para o componente selecionado
   const organizeWorkflowsByStatus = () => {
-    const workflowsByStatus: Record<string, any[]> = {};
+    const workflowsByStatus: Record<string, Array<Record<string, unknown>>> = {};
     
     statusOrder.forEach(status => {
       workflowsByStatus[status] = [];
@@ -56,7 +56,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
       if (order.order_workflow) {
         if (selectedComponent === 'todos') {
           // Mostrar todos os componentes com suas respectivas cores
-          order.order_workflow.forEach((workflow: any) => {
+          order.order_workflow.forEach((workflow: unknown) => {
             const workflowItem = {
               ...workflow,
               order: order,
@@ -72,7 +72,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
         } else {
           // Mostrar apenas o componente selecionado
           const componentWorkflow = order.order_workflow.find(
-            (wf: any) => wf.component === selectedComponent
+            (wf: unknown) => wf.component === selectedComponent
           );
           
           if (componentWorkflow) {
@@ -95,7 +95,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
     return workflowsByStatus;
   };
 
-  const handleDragEnd = async (result: any) => {
+  const handleDragEnd = async (result: unknown) => {
     if (!result.destination) return;
 
     const { source, destination, draggableId } = result;

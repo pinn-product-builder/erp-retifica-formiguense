@@ -92,7 +92,7 @@ export function WorkflowStepsManager({ engineType, onClose }: WorkflowStepsManag
     await deleteWorkflowStep(stepId, engineType.id);
   };
 
-  const handleDragEnd = async (result: any) => {
+  const handleDragEnd = async (result: unknown) => {
     if (!result.destination) return;
 
     const { source, destination } = result;

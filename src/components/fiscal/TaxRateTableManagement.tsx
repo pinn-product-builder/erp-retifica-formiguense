@@ -19,14 +19,14 @@ interface TaxRateTable {
   base_reduction?: number;
   valid_from: string;
   valid_to?: string;
-  tax_types?: any;
-  fiscal_classifications?: any;
+  tax_types?: unknown;
+  fiscal_classifications?: unknown;
 }
 
 export function TaxRateTableManagement() {
   const [rateTable, setRateTable] = useState<TaxRateTable[]>([]);
-  const [taxTypes, setTaxTypes] = useState<any[]>([]);
-  const [classifications, setClassifications] = useState<any[]>([]);
+  const [taxTypes, setTaxTypes] = useState<Array<Record<string, unknown>>>([]);
+  const [classifications, setClassifications] = useState<Array<Record<string, unknown>>>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRate, setEditingRate] = useState<TaxRateTable | null>(null);
   const [formData, setFormData] = useState<Partial<TaxRateTable>>({

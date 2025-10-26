@@ -68,9 +68,9 @@ interface PartItem {
 }
 
 interface BudgetFromDiagnosticProps {
-  diagnosticResponse: any;
+  diagnosticResponse: unknown;
   orderId: string;
-  onBudgetCreated?: (budget: any) => void;
+  onBudgetCreated?: (budget: unknown) => void;
 }
 
 const BudgetFromDiagnostic = ({ 
@@ -111,7 +111,7 @@ const BudgetFromDiagnostic = ({
     setIsCalculating(true);
     try {
       // Converter serviços gerados pelo diagnóstico em itens de orçamento
-      const serviceItems: ServiceItem[] = diagnosticResponse.generated_services.map((service: any, index: number) => ({
+      const serviceItems: ServiceItem[] = diagnosticResponse.generated_services.map((service: unknown, index: number) => ({
         id: `service_${index}`,
         name: service.name || service,
         description: service.description || '',
@@ -157,7 +157,7 @@ const BudgetFromDiagnostic = ({
     ));
   };
 
-  const handleServiceUpdate = (serviceId: string, field: keyof ServiceItem, value: any) => {
+  const handleServiceUpdate = (serviceId: string, field: keyof ServiceItem, value: unknown) => {
     setServices(prev => prev.map(service => {
       if (service.id === serviceId) {
         const updated = { ...service, [field]: value };
@@ -182,7 +182,7 @@ const BudgetFromDiagnostic = ({
     ));
   };
 
-  const handlePartUpdate = (partId: string, field: keyof PartItem, value: any) => {
+  const handlePartUpdate = (partId: string, field: keyof PartItem, value: unknown) => {
     setParts(prev => prev.map(part => {
       if (part.id === partId) {
         const updated = { ...part, [field]: value };

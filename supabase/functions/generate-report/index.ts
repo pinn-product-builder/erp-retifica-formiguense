@@ -34,12 +34,12 @@ async function generateCSV(data: any[], headers: string[]): Promise<string> {
   return csv;
 }
 
-async function executeReport(reportCode: string, parameters: any, orgId: string) {
+async function executeReport(reportCode: string, parameters: unknown, orgId: string) {
   console.log(`Executing report: ${reportCode} for org: ${orgId}`);
   
   let data: any[] = [];
   let headers: string[] = [];
-  let filename = `${reportCode}_${new Date().toISOString().split('T')[0]}.csv`;
+  const filename = `${reportCode}_${new Date().toISOString().split('T')[0]}.csv`;
 
   switch (reportCode) {
     case 'vendas_geral':

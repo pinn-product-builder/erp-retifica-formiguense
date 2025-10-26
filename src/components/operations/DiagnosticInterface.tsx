@@ -45,13 +45,13 @@ import DiagnosticValidation from './DiagnosticValidation';
 
 interface DiagnosticInterfaceProps {
   orderId?: string;
-  onComplete?: (response: any) => void;
+  onComplete?: (response: unknown) => void;
 }
 
 interface ChecklistResponse {
   [itemId: string]: {
-    value: any;
-    photos: any[];
+    value: unknown;
+    photos: Array<Record<string, unknown>>;
     notes?: string;
   };
 }
@@ -60,11 +60,11 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
   const { toast } = useToast();
   const [selectedEngineType, setSelectedEngineType] = useState<string>('');
   const [selectedComponent, setSelectedComponent] = useState<string>('');
-  const [selectedChecklist, setSelectedChecklist] = useState<any>(null);
+  const [selectedChecklist, setSelectedChecklist] = useState<unknown>(null);
   const [responses, setResponses] = useState<ChecklistResponse>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [diagnosticResponse, setDiagnosticResponse] = useState<any>(null);
+  const [diagnosticResponse, setDiagnosticResponse] = useState<unknown>(null);
   const [isValid, setIsValid] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
@@ -90,11 +90,11 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
     select: List
   };
 
-  const handleChecklistSelect = (checklist: any) => {
+  const handleChecklistSelect = (checklist: unknown) => {
     setSelectedChecklist(checklist);
     // Initialize responses for all items
     const initialResponses: ChecklistResponse = {};
-    checklist.items?.forEach((item: any) => {
+    checklist.items?.forEach((item: unknown) => {
       initialResponses[item.id] = {
         value: item.item_type === 'checkbox' ? false : '',
         photos: [],
@@ -104,7 +104,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
     setResponses(initialResponses);
   };
 
-  const handleResponseChange = (itemId: string, value: any) => {
+  const handleResponseChange = (itemId: string, value: unknown) => {
     setResponses(prev => ({
       ...prev,
       [itemId]: {
@@ -160,12 +160,12 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
   const generateServices = () => {
     if (!selectedChecklist) return [];
 
-    const services: any[] = [];
+    const services: Array<Record<string, unknown>> = [];
     
-    selectedChecklist.items?.forEach((item: any) => {
+    selectedChecklist.items?.forEach((item: unknown) => {
       const response = responses[item.id];
       if (response?.value && item.triggers_service) {
-        item.triggers_service.forEach((service: any) => {
+        item.triggers_service.forEach((service: unknown) => {
           services.push({
             ...service,
             triggered_by: item.item_name,
@@ -243,7 +243,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
     }
   };
 
-  const renderItem = (item: any) => {
+  const renderItem = (item: unknown) => {
     const response = responses[item.id] || { value: '', photos: [], notes: '' };
     const IconComponent = itemTypeIcons[item.item_type as keyof typeof itemTypeIcons] || CheckCircle;
 
@@ -335,7 +335,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
                   <SelectValue placeholder="Selecione uma opção" />
                 </SelectTrigger>
                 <SelectContent>
-                  {item.item_options?.map((option: any, index: number) => (
+                  {item.item_options?.map((option: unknown, index: number) => (
                     <SelectItem key={index} value={option.value || option}>
                       {option.label || option}
                     </SelectItem>
@@ -637,8 +637,8 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
           {/* Checklist Items */}
           <div className="space-y-4">
             {selectedChecklist.items
-              ?.sort((a: any, b: any) => a.display_order - b.display_order)
-              .map((item: any) => renderItem(item))}
+              ?.sort((a: unknown, b: unknown) => a.display_order - b.display_order)
+              .map((item: unknown) => renderItem(item))}
           </div>
         </div>
       )}
@@ -658,7 +658,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
             <div>
               <h3 className="font-medium mb-3">Respostas</h3>
               <div className="space-y-2">
-                {selectedChecklist?.items?.map((item: any) => {
+                {selectedChecklist?.items?.map((item: unknown) => {
                   const response = responses[item.id];
                   return (
                     <div key={item.id} className="flex justify-between items-center p-2 bg-muted/50 rounded">

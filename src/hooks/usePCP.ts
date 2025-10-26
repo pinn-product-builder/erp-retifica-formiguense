@@ -159,7 +159,7 @@ export const usePCP = () => {
 
   const updateSchedule = async (id: string, updates: Partial<ProductionSchedule>) => {
     try {
-      const updateData: any = {};
+      const updateData: unknown = {};
       if (updates.status) updateData.status = updates.status;
       if (updates.actual_start_date) updateData.actual_start_date = updates.actual_start_date;
       if (updates.actual_end_date) updateData.actual_end_date = updates.actual_end_date;

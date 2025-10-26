@@ -61,8 +61,8 @@ export default function QuotationForm({ onSuccess }: QuotationFormProps) {
     },
   ]);
 
-  const [selectedRequisition, setSelectedRequisition] = useState<any>(null);
-  const [suggestedSuppliers, setSuggestedSuppliers] = useState<any[]>([]);
+  const [selectedRequisition, setSelectedRequisition] = useState<unknown>(null);
+  const [suggestedSuppliers, setSuggestedSuppliers] = useState<Array<Record<string, unknown>>>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -78,7 +78,7 @@ export default function QuotationForm({ onSuccess }: QuotationFormProps) {
       
       // Pré-preencher itens baseado na requisição
       if (requisition?.items && requisition.items.length > 0) {
-        const newItems = requisition.items.map((item: any) => ({
+        const newItems = requisition.items.map((item: unknown) => ({
           item_name: item.item_name || '',
           description: item.description || '',
           quantity: item.quantity || 1,

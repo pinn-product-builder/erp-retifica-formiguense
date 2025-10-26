@@ -22,7 +22,7 @@ export default function ContasReceber() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingReceivable, setEditingReceivable] = useState<any>(null);
+  const [editingReceivable, setEditingReceivable] = useState<unknown>(null);
   const [formData, setFormData] = useState<Partial<AccountsReceivable>>({
     customer_id: '',
     amount: 0,
@@ -105,7 +105,7 @@ export default function ContasReceber() {
     }
   };
 
-  const handleEdit = (receivable: any) => {
+  const handleEdit = (receivable: unknown) => {
     setEditingReceivable(receivable);
     setFormData({
       customer_id: receivable.customer_id,
@@ -121,7 +121,7 @@ export default function ContasReceber() {
     setIsDialogOpen(true);
   };
 
-  const markAsPaid = async (receivable: any) => {
+  const markAsPaid = async (receivable: unknown) => {
     await updateAccountsReceivable(receivable.id, {
       status: 'paid',
       payment_date: new Date().toISOString().split('T')[0]
@@ -266,7 +266,7 @@ export default function ContasReceber() {
                 <Label htmlFor="status">Status</Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(value: any) => setFormData({ ...formData, status: value })}
+                  onValueChange={(value: unknown) => setFormData({ ...formData, status: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />

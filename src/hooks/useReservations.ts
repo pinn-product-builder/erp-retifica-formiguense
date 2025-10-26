@@ -30,7 +30,7 @@ export interface PartReservation {
   notes?: string;
   created_at?: string;
   updated_at?: string;
-  metadata?: any;
+  metadata?: unknown;
   
   // Relacionamentos
   part?: {
@@ -227,7 +227,7 @@ export const useReservations = () => {
         return false;
       }
 
-      const result = data as { success: boolean; consumed: any[]; errors: any[] };
+      const result = data as { success: boolean; consumed: Array<Record<string, unknown>>; errors: Array<Record<string, unknown>> };
       
       if (result.success) {
         const successCount = result.consumed.length;

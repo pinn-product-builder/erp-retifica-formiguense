@@ -7,7 +7,7 @@ export interface Organization {
   name: string;
   slug: string;
   description?: string;
-  settings: any;
+  settings: unknown;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -232,7 +232,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         .insert([{
           organization_id: currentOrganization.id,
           user_id: email, // This should be the actual user ID after they accept the invitation
-          role: role as any,
+          role: role as unknown,
           is_active: false // Will be activated when they accept
         }]);
 
@@ -244,7 +244,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     const { error } = await supabase
       .from('organization_users')
-      .update({ role: role as any })
+      .update({ role: role as unknown })
       .eq('organization_id', currentOrganization.id)
       .eq('user_id', userId);
 

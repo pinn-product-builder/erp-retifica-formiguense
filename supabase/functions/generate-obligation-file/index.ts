@@ -200,7 +200,7 @@ serve(async (req) => {
   }
 })
 
-function generateTaxSummaryCSV(calculations: any[], ledgers: any[], obligation: any): string {
+function generateTaxSummaryCSV(calculations: any[], ledgers: any[], obligation: unknown): string {
   const lines = [
     'Resumo Fiscal - ' + (obligation.obligation_kinds?.name || 'Obrigação'),
     `Período: ${obligation.period_month}/${obligation.period_year}`,
@@ -220,7 +220,7 @@ function generateTaxSummaryCSV(calculations: any[], ledgers: any[], obligation: 
   calculations.forEach(calc => {
     const date = new Date(calc.calculated_at).toLocaleDateString('pt-BR')
     const taxes = calc.result?.taxes || []
-    const taxDetails = taxes.map((t: any) => `${t.tax_type}: ${t.amount?.toFixed(2) || '0.00'}`).join('; ')
+    const taxDetails = taxes.map((t: unknown) => `${t.tax_type}: ${t.amount?.toFixed(2) || '0.00'}`).join('; ')
     
     lines.push(`${date},${calc.operation},${calc.amount?.toFixed(2) || '0.00'},${calc.result?.total_tax?.toFixed(2) || '0.00'},"${taxDetails}"`)
   })
@@ -257,7 +257,7 @@ function generateTaxCalculationsCSV(calculations: any[]): string {
   return lines.join('\n')
 }
 
-function generateGenericCSV(obligation: any, calculations: any[], ledgers: any[]): string {
+function generateGenericCSV(obligation: unknown, calculations: any[], ledgers: any[]): string {
   const lines = [
     'DADOS FISCAIS - EXPORTAÇÃO COMPLETA',
     `Obrigação: ${obligation.obligation_kinds?.name || 'N/A'}`,

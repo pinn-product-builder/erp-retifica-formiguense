@@ -25,10 +25,10 @@ export interface DiagnosticChecklistItem {
   item_name: string;
   item_description?: string;
   item_type: 'checkbox' | 'measurement' | 'photo' | 'text' | 'select';
-  item_options?: any[];
+  item_options?: Array<Record<string, unknown>>;
   is_required: boolean;
-  triggers_service?: any[];
-  expected_values?: any;
+  triggers_service?: Array<Record<string, unknown>>;
+  expected_values?: unknown;
   display_order: number;
   help_text?: string;
 }
@@ -38,9 +38,9 @@ export interface DiagnosticChecklistResponse {
   order_id: string;
   checklist_id: string;
   component: 'bloco' | 'eixo' | 'biela' | 'comando' | 'cabecote';
-  responses: Record<string, any>;
-  photos: any[];
-  generated_services: any[];
+  responses: Record<string, unknown>;
+  photos: Array<Record<string, unknown>>;
+  generated_services: Array<Record<string, unknown>>;
   diagnosed_by: string;
   diagnosed_at: string;
   status: 'pending' | 'completed' | 'approved';
@@ -93,7 +93,7 @@ export function useDiagnosticChecklists() {
       }
 
       if (component) {
-        query = query.eq('component', component as any);
+        query = query.eq('component', component as unknown);
       }
 
       const { data, error } = await query;

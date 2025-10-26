@@ -10,7 +10,7 @@ export function useBudgets() {
   const { currentOrganization } = useOrganization();
   const orgId = currentOrganization?.id;
 
-  const handleError = (error: any, message: string) => {
+  const handleError = (error: unknown, message: string) => {
     console.error(message, error);
     toast({
       title: "Erro",
@@ -73,7 +73,7 @@ export function useBudgets() {
     }
   };
 
-  const createBudget = async (budget: any) => {
+  const createBudget = async (budget: unknown) => {
     if (!orgId) {
       handleError(null, 'Organização não encontrada.');
       return null;
@@ -108,7 +108,7 @@ export function useBudgets() {
     }
   };
 
-  const updateBudget = async (id: string, updates: any) => {
+  const updateBudget = async (id: string, updates: unknown) => {
     if (!orgId) {
       handleError(null, 'Organização não encontrada.');
       return null;
@@ -247,7 +247,7 @@ export function useBudgets() {
   };
 
   // --- Budget Calculation ---
-  const calculateBudgetFromServices = async (services: any[], parts: any[] = []) => {
+  const calculateBudgetFromServices = async (services: Array<Record<string, unknown>>, parts: Array<Record<string, unknown>> = []) => {
     try {
       let laborTotal = 0;
       let partsTotal = 0;
@@ -258,7 +258,7 @@ export function useBudgets() {
       for (const service of services) {
         const servicePrice = await getServicePrice(service.name);
         const laborHours = service.labor_hours || 1;
-        const laborRate = (servicePrice as any)?.base_price || service.labor_rate || 50;
+        const laborRate = (servicePrice as unknown)?.base_price || service.labor_rate || 50;
         const serviceTotal = laborHours * laborRate;
 
         calculatedServices.push({
@@ -276,7 +276,7 @@ export function useBudgets() {
       for (const part of parts) {
         const partPrice = await getPartPrice(part.name);
         const quantity = part.quantity || 1;
-        const unitPrice = (partPrice as any)?.unit_price || part.unit_price || 0;
+        const unitPrice = (partPrice as unknown)?.unit_price || part.unit_price || 0;
         const partTotal = quantity * unitPrice;
 
         calculatedParts.push({

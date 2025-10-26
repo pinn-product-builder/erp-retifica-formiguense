@@ -32,7 +32,7 @@ export default function ContasPagar() {
   const [selectedTab, setSelectedTab] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [editingPayable, setEditingPayable] = useState<any>(null);
+  const [editingPayable, setEditingPayable] = useState<unknown>(null);
 
   const [formData, setFormData] = useState<Partial<AccountsPayable>>({
     supplier_name: '',
@@ -153,7 +153,7 @@ export default function ContasPagar() {
     }
   };
 
-  const handleEdit = (payable: any) => {
+  const handleEdit = (payable: unknown) => {
     setEditingPayable(payable);
     setFormData({
       supplier_name: payable.supplier_name,
@@ -170,7 +170,7 @@ export default function ContasPagar() {
     setIsModalOpen(true);
   };
 
-  const handleMarkAsPaid = async (payable: any) => {
+  const handleMarkAsPaid = async (payable: unknown) => {
     await updateAccountsPayable(payable.id, {
       status: 'paid',
       payment_date: new Date().toISOString().split('T')[0]
@@ -311,7 +311,7 @@ export default function ContasPagar() {
                   <Label htmlFor="payment_method">Forma de Pagamento</Label>
                   <Select 
                     value={formData.payment_method} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value as any }))}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value as unknown }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />

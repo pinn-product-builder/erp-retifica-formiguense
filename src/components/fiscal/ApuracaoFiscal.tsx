@@ -25,8 +25,8 @@ export function ApuracaoFiscal() {
     year: new Date().getFullYear()
   });
   
-  const [summary, setSummary] = useState<any>(null);
-  const [ledgers, setLedgers] = useState<any[]>([]);
+  const [summary, setSummary] = useState<unknown>(null);
+  const [ledgers, setLedgers] = useState<Array<Record<string, unknown>>>([]);
 
   const loadPeriodData = async () => {
     const [summaryData, ledgersData] = await Promise.all([
@@ -199,7 +199,7 @@ export function ApuracaoFiscal() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Object.entries(summary.taxBreakdown).map(([taxType, data]: [string, any]) => (
+                {Object.entries(summary.taxBreakdown).map(([taxType, data]: [string, Record<string, unknown>]) => (
                   <TableRow key={taxType}>
                     <TableCell className="font-medium">{taxType}</TableCell>
                     <TableCell className="text-right">{data.operations}</TableCell>

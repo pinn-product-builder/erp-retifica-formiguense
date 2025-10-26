@@ -36,7 +36,7 @@ const COMPONENTS = [
 
 export function OrderPhotosTab({ orderId }: OrderPhotosTabProps) {
   const { photos, loading, uploadPhoto, deletePhoto } = useOrderPhotos(orderId);
-  const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<unknown>(null);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [uploadData, setUploadData] = useState({
     file: null as File | null,

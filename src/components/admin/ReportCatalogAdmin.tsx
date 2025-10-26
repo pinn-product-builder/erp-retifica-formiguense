@@ -23,8 +23,8 @@ interface ReportCatalogItem {
   description?: string;
   category: string;
   template_type: string;
-  parameters_schema: any;
-  permissions?: any;
+  parameters_schema: Record<string, unknown>;
+  permissions?: Record<string, unknown>;
   is_active: boolean;
   display_order: number;
   org_id?: string;
@@ -42,12 +42,6 @@ export const ReportCatalogAdmin = () => {
   const [loading, setLoading] = useState(false);
   const [editingItem, setEditingItem] = useState<ReportCatalogItem | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  // Se não tem permissão, não renderizar nada
-  if (!hasPermission) {
-    return null;
-  }
-
   const [formData, setFormData] = useState({
     code: '',
     name: '',
@@ -70,7 +64,7 @@ export const ReportCatalogAdmin = () => {
         .order('display_order');
 
       if (error) throw error;
-      setItems(data || []);
+      setItems((data as unknown as ReportCatalogItem[]) || []);
     } catch (error) {
       console.error('Error fetching report catalog:', error);
       toast({
@@ -128,11 +122,12 @@ export const ReportCatalogAdmin = () => {
       setIsDialogOpen(false);
       resetForm();
       fetchItems();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving report catalog item:', error);
+      const errorMessage = error instanceof Error ? error.message : "Erro ao salvar relatório";
       toast({
         title: "Erro",
-        description: error.message || "Erro ao salvar relatório",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -208,8 +203,16 @@ export const ReportCatalogAdmin = () => {
   };
 
   useEffect(() => {
-    fetchItems();
-  }, [currentOrganization]);
+    if (hasPermission) {
+      fetchItems();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentOrganization, hasPermission]);
+
+  // Se não tem permissão, não renderizar nada
+  if (!hasPermission) {
+    return null;
+  }
 
   return (
     <Card>

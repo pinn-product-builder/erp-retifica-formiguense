@@ -90,7 +90,7 @@ const ReservationManager: React.FC<ReservationManagerProps> = ({
   const [cancelReason, setCancelReason] = useState("");
   const [extensionDays, setExtensionDays] = useState(7);
   const [expiringReservations, setExpiringReservations] = useState<PartReservation[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<unknown>(null);
 
   // Filtrar reservas
   const filteredReservations = reservations.filter(reservation => {

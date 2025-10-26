@@ -49,7 +49,7 @@ export const useGlobalSearch = () => {
         search_fields: Array.isArray(source.search_fields) ? source.search_fields as string[] : [],
         display_fields: Array.isArray(source.display_fields) ? source.display_fields as string[] : [],
       })));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching search sources:', error);
     }
   };
@@ -72,7 +72,7 @@ export const useGlobalSearch = () => {
 
         try {
           // Build search query for each source
-          let supabaseQuery = supabase.from(source.table_name as any).select('*');
+          let supabaseQuery = supabase.from(source.table_name as unknown).select('*');
 
           // Add search conditions for each search field
           if (source.search_fields.length > 0) {
@@ -90,10 +90,10 @@ export const useGlobalSearch = () => {
           }
 
           // Format results according to source configuration
-          return (data || []).map((item: any) => {
+          return (data || []).map((item: unknown) => {
             let title = item.name || item.title || item.order_number || 'Item';
             let subtitle = '';
-            let url = `/${source.source_name}/${item.id}`;
+            const url = `/${source.source_name}/${item.id}`;
 
             // Use display fields to build title and subtitle
             if (source.display_fields.length > 0) {
@@ -142,7 +142,7 @@ export const useGlobalSearch = () => {
         .slice(0, 20);
 
       setResults(sortedResults);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setError(error.message);
       console.error('Error performing search:', error);
     } finally {

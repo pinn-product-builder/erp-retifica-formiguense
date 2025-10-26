@@ -42,7 +42,7 @@ export default function PurchaseNeedForm({ onSuccess }: PurchaseNeedFormProps) {
     notes: '',
   });
 
-  const [selectedPart, setSelectedPart] = useState<any>(null);
+  const [selectedPart, setSelectedPart] = useState<unknown>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {

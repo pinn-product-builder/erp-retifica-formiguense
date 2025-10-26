@@ -47,7 +47,7 @@ export function DynamicQuickActions() {
 
   // Mapear ícones por string
   const getIconComponent = (iconName: string) => {
-    const iconMap: Record<string, any> = {
+    const iconMap: Record<string, unknown> = {
       Plus, Wrench, Clock, Package, DollarSign, Search, FileText, 
       CreditCard, Settings, Calculator
     };
@@ -120,7 +120,7 @@ export function DynamicQuickActions() {
                       ? 'bg-gradient-primary hover:opacity-90 text-primary-foreground shadow-primary'
                       : 'hover:bg-primary/10 border-primary/20'
                   }`}
-                  variant={action.is_featured ? "default" : action.variant as any}
+                  variant={action.is_featured ? "default" : (action.variant as "outline" | "secondary" | "ghost")}
                   size="sm"
                 >
                   <Link to={action.href}>

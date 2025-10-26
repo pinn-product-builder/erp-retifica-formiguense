@@ -393,7 +393,7 @@ export function usePurchaseReceipts() {
       // overall_rating é uma coluna gerada automaticamente (média simples dos 4 ratings)
       // Não deve ser inserida manualmente
 
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown)
         .from('supplier_evaluations')
         .insert({
           org_id: currentOrganization?.id,

@@ -272,7 +272,7 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {budget.services && Array.isArray(budget.services) ? budget.services.map((service: any, index: number) => (
+              {budget.services && Array.isArray(budget.services) ? budget.services.map((service: unknown, index: number) => (
                 <div key={index} className="flex justify-between items-start p-4 border rounded-lg">
                   <div className="flex-1">
                     <h4 className="font-medium">{service.name}</h4>
@@ -309,7 +309,7 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {budget.parts && Array.isArray(budget.parts) ? budget.parts.map((part: any, index: number) => (
+              {budget.parts && Array.isArray(budget.parts) ? budget.parts.map((part: unknown, index: number) => (
                 <div key={index} className="flex justify-between items-start p-4 border rounded-lg">
                   <div className="flex-1">
                     <h4 className="font-medium">{part.name}</h4>

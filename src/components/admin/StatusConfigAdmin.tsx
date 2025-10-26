@@ -104,7 +104,7 @@ export const StatusConfigAdmin = () => {
       setIsDialogOpen(false);
       resetForm();
       fetchConfigs();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving status config:', error);
       toast({
         title: "Erro",
@@ -326,7 +326,7 @@ export const StatusConfigAdmin = () => {
                     <Badge variant={config.is_active ? "default" : "secondary"}>
                       {config.is_active ? "Ativo" : "Inativo"}
                     </Badge>
-                    <Badge variant={config.badge_variant as any}>
+                    <Badge variant={config.badge_variant as unknown}>
                       {config.badge_variant}
                     </Badge>
                     {!config.org_id && <Badge variant="secondary">Global</Badge>}

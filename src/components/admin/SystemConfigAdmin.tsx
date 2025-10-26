@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 interface ConfigItem {
   id?: string;
   key: string;
-  value: any;
+  value: unknown;
   category: string;
   description: string;
   data_type: 'string' | 'number' | 'boolean' | 'json';
@@ -57,7 +57,7 @@ function SystemConfigAdmin() {
     setEditingItem(null);
   };
 
-  const openEditDialog = (item: any) => {
+  const openEditDialog = (item: ConfigItem) => {
     setEditingItem(item);
     setFormData({
       id: item.id,
@@ -106,13 +106,13 @@ function SystemConfigAdmin() {
     return configs.filter(config => config.category === category);
   };
 
-  const formatValue = (value: any, dataType: string) => {
+    const formatValue = (value: unknown, dataType: string) => {
     switch (dataType) {
       case 'boolean':
         return value ? 'Sim' : 'Não';
       case 'json':
         try {
-          return JSON.stringify(JSON.parse(value), null, 2);
+          return JSON.stringify(JSON.parse(value as string), null, 2);
         } catch {
           return value;
         }
@@ -175,7 +175,7 @@ function SystemConfigAdmin() {
               </div>
               <div>
                 <Label htmlFor="data_type">Tipo de Dados</Label>
-                <Select value={formData.data_type} onValueChange={(value: any) => setFormData({ ...formData, data_type: value })}>
+                <Select value={formData.data_type} onValueChange={(value: 'string' | 'number' | 'boolean' | 'json') => setFormData({ ...formData, data_type: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -199,7 +199,7 @@ function SystemConfigAdmin() {
                   </div>
                 ) : formData.data_type === 'json' ? (
                   <Textarea
-                    value={formData.value}
+                    value={formData.value as string}
                     onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                     placeholder='{"key": "value"}'
                     rows={3}
@@ -207,7 +207,7 @@ function SystemConfigAdmin() {
                 ) : (
                   <Input
                     type={formData.data_type === 'number' ? 'number' : 'text'}
-                    value={formData.value}
+                    value={formData.value as string}
                     onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                   />
                 )}
@@ -282,7 +282,7 @@ function SystemConfigAdmin() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => openEditDialog(config)}
+                            onClick={() => openEditDialog(config as ConfigItem)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -292,7 +292,7 @@ function SystemConfigAdmin() {
                     <CardContent>
                       <div className="bg-muted/50 p-3 rounded-md">
                         <pre className="text-sm whitespace-pre-wrap">
-                          {formatValue(config.value, config.data_type)}
+                          {formatValue(config.value, config.data_type as string)}
                         </pre>
                       </div>
                     </CardContent>

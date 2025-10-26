@@ -231,7 +231,7 @@ export function ReceiveOrderModal({
     onSuccess?.();
   };
 
-  const updateReceiptItem = (itemId: string, field: keyof ReceiptItem, value: any) => {
+  const updateReceiptItem = (itemId: string, field: keyof ReceiptItem, value: unknown) => {
     setReceiptItems(prev => ({
       ...prev,
       [itemId]: {

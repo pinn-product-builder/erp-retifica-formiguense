@@ -72,7 +72,7 @@ export const EnhancedStatCard: React.FC<EnhancedStatCardProps> = ({
 
   const getIconComponent = (iconName: string) => {
     // Mapear ícones - implementar conforme necessário
-    const iconMap: Record<string, any> = {
+    const iconMap: Record<string, unknown> = {
       Calendar: '📅',
       Wrench: '🔧',
       Users: '👥',

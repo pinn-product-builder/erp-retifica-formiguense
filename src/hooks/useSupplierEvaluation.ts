@@ -119,7 +119,7 @@ export const useSupplierEvaluation = () => {
       setLoading(true);
       
       let query = supabase
-        .from('supplier_evaluations' as any)
+        .from('supplier_evaluations' as unknown)
         .select(`
           *,
           supplier:suppliers(id, name, rating),
@@ -167,7 +167,7 @@ export const useSupplierEvaluation = () => {
       setLoading(true);
       
       const { data, error } = await supabase
-        .from('suppliers' as any)
+        .from('suppliers' as unknown)
         .select(`
           *,
           contacts:supplier_contacts(*),
@@ -214,7 +214,7 @@ export const useSupplierEvaluation = () => {
       setLoading(true);
       
       const { error } = await supabase
-        .from('supplier_evaluations' as any)
+        .from('supplier_evaluations' as unknown)
         .insert({
           org_id: currentOrganization.id,
           supplier_id: supplierId,
@@ -264,7 +264,7 @@ export const useSupplierEvaluation = () => {
       setLoading(true);
       
       const { error } = await supabase
-        .from('supplier_contacts' as any)
+        .from('supplier_contacts' as unknown)
         .insert({
           org_id: currentOrganization.id,
           supplier_id: supplierId,
@@ -358,7 +358,7 @@ export const useSupplierEvaluation = () => {
     if (!currentOrganization?.id) return [];
 
     try {
-      const { data, error } = await supabase.rpc('suggest_suppliers_for_part' as any, {
+      const { data, error } = await supabase.rpc('suggest_suppliers_for_part' as unknown, {
         p_org_id: currentOrganization.id,
         p_part_code: partCode,
         p_category: category,
@@ -393,7 +393,7 @@ export const useSupplierEvaluation = () => {
 
     try {
       const { data: evaluations, error } = await supabase
-        .from('supplier_evaluations' as any)
+        .from('supplier_evaluations' as unknown)
         .select('*')
         .eq('supplier_id', supplierId)
         .eq('org_id', currentOrganization.id);
@@ -403,7 +403,7 @@ export const useSupplierEvaluation = () => {
         return null;
       }
 
-      const typedEvaluations = (evaluations || []) as any[];
+      const typedEvaluations = (evaluations || []) as unknown[];
 
       const stats = {
         totalEvaluations: typedEvaluations.length,
@@ -463,7 +463,7 @@ export const useSupplierEvaluation = () => {
     try {
       const { error } = await supabase
         .from('suppliers')
-        .update({ is_preferred: isPreferred } as any)
+        .update({ is_preferred: isPreferred } as unknown)
         .eq('id', supplierId)
         .eq('org_id', currentOrganization.id);
 

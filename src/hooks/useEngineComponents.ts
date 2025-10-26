@@ -54,7 +54,7 @@ export function useEngineComponents() {
       // Extrair todos os componentes únicos dos tipos de motor
       const allComponents = new Set<EngineComponent>();
       
-      (data || []).forEach((item: any) => {
+      (data || []).forEach((item: unknown) => {
         if (item.required_components && Array.isArray(item.required_components)) {
           item.required_components.forEach((component: EngineComponent) => {
             allComponents.add(component);

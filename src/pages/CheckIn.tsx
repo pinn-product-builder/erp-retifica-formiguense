@@ -43,7 +43,7 @@ export default function CheckIn() {
     etiqueta: null as File | null
   });
 
-  const [coletaData, setColetaData] = useState<any>(null);
+  const [coletaData, setColetaData] = useState<unknown>(null);
   const [hasColetaData, setHasColetaData] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();

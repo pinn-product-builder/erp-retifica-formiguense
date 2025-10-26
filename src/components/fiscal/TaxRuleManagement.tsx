@@ -11,7 +11,7 @@ import { Plus, Edit } from 'lucide-react';
 import { useFiscal, TaxRule, TaxRegime, TaxType, FiscalClassification } from '@/hooks/useFiscal';
 
 export function TaxRuleManagement() {
-  const [rules, setRules] = useState<any[]>([]);
+  const [rules, setRules] = useState<Array<Record<string, unknown>>>([]);
   const [regimes, setRegimes] = useState<TaxRegime[]>([]);
   const [taxTypes, setTaxTypes] = useState<TaxType[]>([]);
   const [classifications, setClassifications] = useState<FiscalClassification[]>([]);
@@ -23,7 +23,7 @@ export function TaxRuleManagement() {
     origin_uf: '',
     destination_uf: '',
     classification_id: '',
-    calc_method: 'percentual' as any,
+    calc_method: 'percentual' as unknown,
     rate: '',
     base_reduction: '',
     is_active: true,
@@ -146,7 +146,7 @@ export function TaxRuleManagement() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label>Operação</Label>
-                  <Select value={formData.operation} onValueChange={(value) => setFormData({ ...formData, operation: value as any })}>
+                  <Select value={formData.operation} onValueChange={(value) => setFormData({ ...formData, operation: value as unknown })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -190,7 +190,7 @@ export function TaxRuleManagement() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label>Método de Cálculo</Label>
-                  <Select value={formData.calc_method} onValueChange={(value) => setFormData({ ...formData, calc_method: value as any })}>
+                  <Select value={formData.calc_method} onValueChange={(value) => setFormData({ ...formData, calc_method: value as unknown })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

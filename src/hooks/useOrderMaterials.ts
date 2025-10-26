@@ -62,7 +62,7 @@ export function useOrderMaterials(orderId: string) {
           quantity: reservation.quantity_reserved,
           unit_cost: Number(reservation.unit_cost || 0),
           total_cost: Number(reservation.total_reserved_cost || 0),
-          status: reservation.reservation_status as any || 'reserved',
+          status: reservation.reservation_status as unknown || 'reserved',
           source: 'reservation',
           reserved_at: reservation.reserved_at || undefined,
           separated_at: reservation.separated_at || undefined,

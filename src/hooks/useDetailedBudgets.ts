@@ -10,8 +10,8 @@ export interface DetailedBudget {
   component: 'bloco' | 'eixo' | 'biela' | 'comando' | 'cabecote';
   diagnostic_response_id?: string;
   budget_number?: string;
-  services: any[];
-  parts: any[];
+  services: Array<Record<string, unknown>>;
+  parts: Array<Record<string, unknown>>;
   labor_hours: number;
   labor_rate: number;
   labor_total: number;
@@ -42,11 +42,11 @@ export interface BudgetApproval {
   id: string;
   budget_id: string;
   approval_type: 'total' | 'partial' | 'rejected';
-  approved_services: any[];
-  approved_parts: any[];
+  approved_services: Array<Record<string, unknown>>;
+  approved_parts: Array<Record<string, unknown>>;
   approved_amount?: number;
   approval_method: 'signature' | 'whatsapp' | 'email' | 'verbal';
-  approval_document?: any;
+  approval_document?: unknown;
   customer_signature?: string;
   approval_notes?: string;
   approved_by_customer?: string;
@@ -60,7 +60,7 @@ export function useDetailedBudgets() {
   const { currentOrganization } = useOrganization();
   const orgId = currentOrganization?.id;
 
-  const handleError = (error: any, message: string) => {
+  const handleError = (error: unknown, message: string) => {
     console.error(message, error);
     toast({
       title: "Erro",
@@ -111,7 +111,7 @@ export function useDetailedBudgets() {
         query = query.eq('order_id', filters.orderId);
       }
       if (filters?.component && filters.component !== 'todos') {
-        query = query.eq('component', filters.component as any);
+        query = query.eq('component', filters.component as unknown);
       }
       if (filters?.dateFrom) {
         query = query.gte('created_at', filters.dateFrom);
@@ -124,7 +124,7 @@ export function useDetailedBudgets() {
       if (error) throw error;
 
       // Mapear o resultado do Supabase para o tipo correto
-      const mappedData = (data || []).map((budget: any) => ({
+      const mappedData = (data || []).map((budget: unknown) => ({
         ...budget,
         order: budget.orders ? {
           order_number: budget.orders.order_number,
@@ -190,7 +190,7 @@ export function useDetailedBudgets() {
       const { created_by, ...insertData } = budgetData;
       const { data, error } = await supabase
         .from('detailed_budgets')
-        .insert(insertData as any)
+        .insert(insertData as unknown)
         .select(`
           *,
           orders(
@@ -250,7 +250,7 @@ export function useDetailedBudgets() {
       // Criar registro de aprovação
       const { data: approval, error: approvalError } = await supabase
         .from('budget_approvals')
-        .insert(approvalData as any)
+        .insert(approvalData as unknown)
         .select()
         .single();
 

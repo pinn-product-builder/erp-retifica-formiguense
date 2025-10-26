@@ -7,8 +7,8 @@ interface AuditLog {
   table_name: string;
   operation: 'INSERT' | 'UPDATE' | 'DELETE' | 'SELECT';
   record_id?: string;
-  old_values?: any;
-  new_values?: any;
+  old_values?: unknown;
+  new_values?: unknown;
   user_agent?: string;
   ip_address?: string;
 }
@@ -41,7 +41,7 @@ export function useAudit() {
     }
   };
 
-  const logAuthAction = async (action: string, metadata?: any) => {
+  const logAuthAction = async (action: string, metadata?: unknown) => {
     if (!user) return;
 
     try {

@@ -62,7 +62,7 @@ export interface Organization {
   name: string;
   slug: string;
   description?: string;
-  settings?: any;
+  settings?: unknown;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -175,7 +175,7 @@ export const useSuperAdminActions = () => {
       // Filtrar organizações por status se necessário
       const filteredOrganizations = includeInactive 
         ? organizations 
-        : organizations?.filter(org => (org as any).is_active === true) || [];
+        : organizations?.filter(org => (org as unknown).is_active === true) || [];
 
       // Buscar todos os usuários das organizações de uma vez (OTIMIZAÇÃO)
       const orgIds = filteredOrganizations?.map(org => org.id) || [];

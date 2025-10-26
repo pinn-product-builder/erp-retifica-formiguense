@@ -87,7 +87,7 @@ export function FiscalClassificationManagement() {
                   <Label htmlFor="type">Tipo</Label>
                   <Select
                     value={formData.type}
-                    onValueChange={(value) => setFormData({ ...formData, type: value as any })}
+                    onValueChange={(value) => setFormData({ ...formData, type: value as unknown })}
                   >
                     <SelectTrigger>
                       <SelectValue />

@@ -6,7 +6,7 @@ const corsHeaders = {
 }
 
 // Helper function to check if user is admin
-async function isAdmin(supabase: any, userId: string): Promise<boolean> {
+async function isAdmin(supabase: unknown, userId: string): Promise<boolean> {
   try {
     const { data, error } = await supabase
       .from('profiles')

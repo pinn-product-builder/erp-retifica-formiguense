@@ -16,8 +16,8 @@ interface AuditLogEntry {
   table_name: string;
   record_id: string;
   operation: 'INSERT' | 'UPDATE' | 'DELETE';
-  old_values: any;
-  new_values: any;
+  old_values: unknown;
+  new_values: unknown;
   user_id: string;
   timestamp: string;
   ip_address: string;

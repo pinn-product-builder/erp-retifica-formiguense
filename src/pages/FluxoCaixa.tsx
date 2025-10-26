@@ -189,7 +189,7 @@ export default function FluxoCaixa() {
                   <Label htmlFor="transaction_type">Tipo de Movimentação *</Label>
                   <Select 
                     value={formData.transaction_type} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, transaction_type: value as any }))}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, transaction_type: value as unknown }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -241,7 +241,7 @@ export default function FluxoCaixa() {
                   <Label htmlFor="payment_method">Forma de Pagamento</Label>
                   <Select 
                     value={formData.payment_method} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value as any }))}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value as unknown }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />

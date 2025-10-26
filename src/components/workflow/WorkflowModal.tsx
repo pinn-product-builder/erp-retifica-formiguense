@@ -13,7 +13,7 @@ import { ptBR } from 'date-fns/locale';
 import { useWorkflowUpdate } from '@/hooks/useWorkflowUpdate';
 
 interface WorkflowModalProps {
-  workflow: any;
+  workflow: unknown;
   open: boolean;
   onClose: () => void;
   onUpdate?: () => void;

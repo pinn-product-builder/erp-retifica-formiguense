@@ -336,7 +336,7 @@ export function useBudgetPDF() {
                 </tr>
               </thead>
               <tbody>
-                ${budget.parts && Array.isArray(budget.parts) ? budget.parts.map((part: any) => `
+                ${budget.parts && Array.isArray(budget.parts) ? budget.parts.map((part: unknown) => `
                 <tr>
                   <td>
                     <div style="font-weight: 500;">${part.name || part.part_name || 'N/A'}</div>

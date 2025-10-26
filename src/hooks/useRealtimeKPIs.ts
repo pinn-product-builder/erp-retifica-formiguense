@@ -47,7 +47,7 @@ export const useRealtimeKPIs = () => {
   });
 
   // Calcular valores dos KPIs
-  const calculateKPIValues = useCallback(async (configs: any[]): Promise<KPIValue[]> => {
+  const calculateKPIValues = useCallback(async (configs: Array<Record<string, unknown>>): Promise<KPIValue[]> => {
     if (!currentOrganization || !configs.length) return [];
 
     const kpiValues = await Promise.all(
@@ -64,7 +64,7 @@ export const useRealtimeKPIs = () => {
 
           if (trendError) throw trendError;
 
-          const trendRaw = trendData?.[0] as any;
+          const trendRaw = trendData?.[0] as unknown;
           const trend: KPITrend = trendRaw ? {
             currentValue: trendRaw.current_value || 0,
             previousValue: trendRaw.previous_value || 0,

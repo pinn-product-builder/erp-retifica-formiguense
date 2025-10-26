@@ -212,7 +212,7 @@ export function GoalsManager() {
     try {
       const { error } = await supabase
         .from('kpi_targets')
-        .update({ progress_current: newProgress } as any)
+        .update({ progress_current: newProgress } as Record<string, unknown>)
         .eq('id', goalId);
 
       if (error) throw error;

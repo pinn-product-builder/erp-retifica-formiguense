@@ -389,7 +389,7 @@ export function useInventoryCounts() {
 
       await fetchCounts();
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error processing count:', error);
       toast({
         title: 'Erro',

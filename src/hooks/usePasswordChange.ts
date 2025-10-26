@@ -27,7 +27,7 @@ export const usePasswordChange = () => {
     checkPasswordChangeNeeded();
   }, [user]);
 
-  const updatePassword = async (newPassword: string): Promise<{ error: any }> => {
+  const updatePassword = async (newPassword: string): Promise<{ error: unknown }> => {
     try {
       const { error } = await supabase.auth.updateUser({
         password: newPassword,

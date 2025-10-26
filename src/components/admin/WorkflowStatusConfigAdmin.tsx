@@ -15,6 +15,8 @@ import { useWorkflowHistory } from '@/hooks/useWorkflowHistory';
 import { useToast } from '@/hooks/use-toast';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useOrganization } from '@/hooks/useOrganization';
+import { supabase } from '@/integrations/supabase/client';
 
 // Interfaces para tipagem específica
 interface SLAConfig {
@@ -47,6 +49,7 @@ export const WorkflowStatusConfigAdmin = () => {
   const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
   const { toast } = useToast();
   const { confirm } = useConfirmDialog();
+  const { currentOrganization } = useOrganization();
   
   const [editingStatus, setEditingStatus] = useState<WorkflowStatusConfig | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -57,6 +60,12 @@ export const WorkflowStatusConfigAdmin = () => {
   const [showPrerequisiteDialog, setShowPrerequisiteDialog] = useState(false);
   const [editingPrerequisite, setEditingPrerequisite] = useState<StatusPrerequisite | null>(null);
   const [isCreatingPrerequisite, setIsCreatingPrerequisite] = useState(false);
+  
+  // Estados para configurações de auditoria
+  const [auditEnabled, setAuditEnabled] = useState(true);
+  const [requireReason, setRequireReason] = useState(false);
+  const [notificationChanges, setNotificationChanges] = useState(true);
+  const [loadingAuditConfig, setLoadingAuditConfig] = useState(false);
   
   const { history, fetchHistory } = useWorkflowHistory(selectedWorkflowId);
 
@@ -290,7 +299,6 @@ Tem certeza que deseja continuar?`,
       is_active: true
     });
     setEditingPrerequisite(null);
-    setIsCreatingPrerequisite(false);
   };
 
   const openCreatePrerequisiteDialog = () => {
@@ -365,6 +373,7 @@ Tem certeza que deseja continuar?`,
         });
         setShowPrerequisiteDialog(false);
         resetPrerequisiteForm();
+        setIsCreatingPrerequisite(false);
       }
     } else if (editingPrerequisite) {
       console.log('Updating prerequisite with formData:', prerequisiteFormData);
@@ -384,6 +393,7 @@ Tem certeza que deseja continuar?`,
         });
         setShowPrerequisiteDialog(false);
         resetPrerequisiteForm();
+        setIsCreatingPrerequisite(false);
       }
     }
   };
@@ -431,6 +441,163 @@ Tem certeza que deseja continuar?`,
         // e exibe o toast de sucesso, então não precisamos fazer nada adicional aqui
       }
     }
+  };
+
+  // Funções para configurações de auditoria
+  const loadAuditConfig = async () => {
+    if (!currentOrganization) {
+      console.log('No organization found, skipping audit config load');
+      return;
+    }
+    
+    setLoadingAuditConfig(true);
+    try {
+      console.log('Loading audit config for org:', currentOrganization.id);
+      
+      const { data, error } = await supabase
+        .from('system_config')
+        .select('key, value')
+        .eq('org_id', currentOrganization.id)
+        .eq('category', 'audit')
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('Error fetching audit config:', error);
+        throw error;
+      }
+
+      console.log('Loaded audit configs:', data);
+
+      if (data && data.length > 0) {
+        data.forEach((config) => {
+          const value = config.value === 'true';
+          console.log(`Setting ${config.key} to ${value}`);
+          switch (config.key) {
+            case 'audit_enabled':
+              setAuditEnabled(value);
+              break;
+            case 'require_reason':
+              setRequireReason(value);
+              break;
+            case 'notification_changes':
+              setNotificationChanges(value);
+              break;
+          }
+        });
+      } else {
+        console.log('No audit configs found, using defaults');
+      }
+    } catch (error) {
+      console.error('Error loading audit config:', error);
+      // Não exibir toast para erro de carregamento inicial
+      // para não ser intrusivo se ainda não existem configurações
+    } finally {
+      setLoadingAuditConfig(false);
+    }
+  };
+
+  const saveAuditConfig = async (key: string, value: boolean) => {
+    if (!currentOrganization) {
+      toast({
+        title: "Erro",
+        description: "Organização não encontrada",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const configValue = value.toString();
+      
+      // Verificar se a configuração já existe
+      const { data: existing } = await supabase
+        .from('system_config')
+        .select('id')
+        .eq('org_id', currentOrganization.id)
+        .eq('key', key)
+        .single();
+
+      if (existing) {
+        // Atualizar configuração existente
+        const { error } = await supabase
+          .from('system_config')
+          .update({ 
+            value: configValue,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        // Criar nova configuração
+        const { error } = await supabase
+          .from('system_config')
+          .insert({
+            org_id: currentOrganization.id,
+            key: key,
+            value: configValue,
+            category: 'audit',
+            description: getAuditConfigDescription(key),
+            data_type: 'boolean',
+            is_active: true
+          });
+
+        if (error) throw error;
+      }
+      
+      // Salvar sem mostrar toast para não ser intrusivo
+      console.log('Audit configuration saved:', key, value);
+    } catch (error) {
+      console.error('Error saving audit config:', error);
+      toast({
+        title: "Erro",
+        description: `Erro ao salvar configuração de auditoria: ${(error as Error).message || error}`,
+        variant: "destructive",
+      });
+      // Reverter a mudança em caso de erro
+      switch (key) {
+        case 'audit_enabled':
+          setAuditEnabled(!value);
+          break;
+        case 'require_reason':
+          setRequireReason(!value);
+          break;
+        case 'notification_changes':
+          setNotificationChanges(!value);
+          break;
+      }
+    }
+  };
+
+  const getAuditConfigDescription = (key: string): string => {
+    const descriptions: Record<string, string> = {
+      audit_enabled: 'Habilitar auditoria de mudanças de status',
+      require_reason: 'Exigir motivo para mudanças de status',
+      notification_changes: 'Notificar mudanças de status'
+    };
+    return descriptions[key] || '';
+  };
+
+  useEffect(() => {
+    if (currentOrganization) {
+      loadAuditConfig();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentOrganization]);
+
+  const handleAuditChange = (key: string, value: boolean) => {
+    switch (key) {
+      case 'audit_enabled':
+        setAuditEnabled(value);
+        break;
+      case 'require_reason':
+        setRequireReason(value);
+        break;
+      case 'notification_changes':
+        setNotificationChanges(value);
+        break;
+    }
+    saveAuditConfig(key, value);
   };
 
   return (
@@ -639,17 +806,32 @@ Tem certeza que deseja continuar?`,
                 
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
-                    <Switch id="audit-enabled" defaultChecked />
+                    <Switch 
+                      id="audit-enabled" 
+                      checked={auditEnabled}
+                      onCheckedChange={(checked) => handleAuditChange('audit_enabled', checked)}
+                      disabled={loadingAuditConfig}
+                    />
                     <Label htmlFor="audit-enabled">Habilitar auditoria de mudanças</Label>
                   </div>
                   
                   <div className="flex items-center space-x-2">
-                    <Switch id="require-reason" />
+                    <Switch 
+                      id="require-reason" 
+                      checked={requireReason}
+                      onCheckedChange={(checked) => handleAuditChange('require_reason', checked)}
+                      disabled={loadingAuditConfig}
+                    />
                     <Label htmlFor="require-reason">Exigir motivo para mudanças</Label>
                   </div>
                   
                   <div className="flex items-center space-x-2">
-                    <Switch id="notification-changes" defaultChecked />
+                    <Switch 
+                      id="notification-changes" 
+                      checked={notificationChanges}
+                      onCheckedChange={(checked) => handleAuditChange('notification_changes', checked)}
+                      disabled={loadingAuditConfig}
+                    />
                     <Label htmlFor="notification-changes">Notificar mudanças de status</Label>
                   </div>
                 </div>
@@ -932,6 +1114,7 @@ Tem certeza que deseja continuar?`,
           // Só resetar quando fechar o dialog
           setShowPrerequisiteDialog(false);
           resetPrerequisiteForm();
+          setIsCreatingPrerequisite(false);
         }
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

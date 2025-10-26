@@ -24,10 +24,10 @@ const ObligationManagement = () => {
     deleteObligationFile
   } = useFiscal();
 
-  const [obligations, setObligations] = useState<any[]>([]);
-  const [obligationKinds, setObligationKinds] = useState<any[]>([]);
-  const [obligationFiles, setObligationFiles] = useState<Record<string, any[]>>({});
-  const [selectedObligation, setSelectedObligation] = useState<any>(null);
+  const [obligations, setObligations] = useState<Array<Record<string, unknown>>>([]);
+  const [obligationKinds, setObligationKinds] = useState<Array<Record<string, unknown>>>([]);
+  const [obligationFiles, setObligationFiles] = useState<Record<string, Array<Record<string, unknown>>>>({});
+  const [selectedObligation, setSelectedObligation] = useState<unknown>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isFileDialogOpen, setIsFileDialogOpen] = useState(false);
   const [newObligation, setNewObligation] = useState({
@@ -49,7 +49,7 @@ const ObligationManagement = () => {
     setObligationKinds(kindsData);
 
     // Load files for each obligation
-    const filesData: Record<string, any[]> = {};
+    const filesData: Record<string, Array<Record<string, unknown>>> = {};
     for (const obligation of obligationsData) {
       filesData[obligation.id] = await getObligationFiles(obligation.id);
     }
@@ -105,11 +105,11 @@ const ObligationManagement = () => {
     }
   };
 
-  const handleDownloadFile = async (file: any) => {
+  const handleDownloadFile = async (file: unknown) => {
     await downloadObligationFile(file.file_path, file.file_name);
   };
 
-  const handleDeleteFile = async (file: any) => {
+  const handleDeleteFile = async (file: unknown) => {
     const confirmed = window.confirm('Tem certeza que deseja excluir este arquivo?');
     if (confirmed) {
       const success = await deleteObligationFile(file.id, file.file_path);

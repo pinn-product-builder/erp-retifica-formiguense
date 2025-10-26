@@ -135,7 +135,7 @@ export default function DiagnosticChecklistsConfig() {
         version: validatedData.version,
         is_active: validatedData.is_active,
         org_id: currentOrganization?.id || ''
-      } as any);
+      } as unknown);
 
       if (success) {
         toast({
@@ -198,7 +198,7 @@ export default function DiagnosticChecklistsConfig() {
         help_text: validatedData.help_text,
         display_order: validatedData.display_order,
         item_options: validatedData.item_options
-      } as any);
+      } as unknown);
 
       if (success) {
         toast({
@@ -450,7 +450,7 @@ export default function DiagnosticChecklistsConfig() {
                 <Label htmlFor="component">Componente *</Label>
                 <Select 
                   value={checklistForm.component} 
-                  onValueChange={(value) => setChecklistForm(prev => ({ ...prev, component: value as any }))}
+                  onValueChange={(value) => setChecklistForm(prev => ({ ...prev, component: value as unknown }))}
                 >
                   <SelectTrigger className={validationErrors.component ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Selecionar componente" />
@@ -551,7 +551,7 @@ export default function DiagnosticChecklistsConfig() {
                 <Label htmlFor="item_type">Tipo *</Label>
                 <Select 
                   value={itemForm.item_type} 
-                  onValueChange={(value) => setItemForm(prev => ({ ...prev, item_type: value as any }))}
+                  onValueChange={(value) => setItemForm(prev => ({ ...prev, item_type: value as unknown }))}
                 >
                   <SelectTrigger className={validationErrors.item_type ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Selecionar tipo" />

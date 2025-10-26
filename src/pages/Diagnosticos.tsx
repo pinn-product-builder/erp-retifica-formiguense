@@ -133,7 +133,7 @@ const Diagnosticos = () => {
   const diagnosticResponses = diagnosticResponsesData || [];
 
   const filteredResponses = diagnosticResponses.filter(response => {
-    const responseWithOrder = response as any;
+    const responseWithOrder = response as unknown;
     const matchesSearch = responseWithOrder.order?.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          responseWithOrder.order?.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          responseWithOrder.checklist?.name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -407,7 +407,7 @@ const Diagnosticos = () => {
               </TableHeader>
               <TableBody>
                 {filteredResponses.map((response) => {
-                  const responseWithOrder = response as any;
+                  const responseWithOrder = response as unknown;
                   return (
                   <TableRow key={response.id}>
                     <TableCell className="font-medium">
@@ -426,7 +426,7 @@ const Diagnosticos = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-xs truncate">
-                      {(response as any).checklist?.name || 'N/A'}
+                      {(response as unknown).checklist?.name || 'N/A'}
                     </TableCell>
                     <TableCell>{getStatusBadge(response.status)}</TableCell>
                     <TableCell>{response.diagnosed_by_name || response.diagnosed_by || 'N/A'}</TableCell>

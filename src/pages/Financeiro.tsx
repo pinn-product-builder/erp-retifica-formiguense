@@ -15,7 +15,7 @@ import { ptBR } from 'date-fns/locale';
 
 export default function Financeiro() {
   const { getFinancialKPIs, getAccountsReceivable, getAccountsPayable, getCashFlow, loading } = useFinancial();
-  const [kpis, setKPIs] = useState<any>(null);
+  const [kpis, setKPIs] = useState<unknown>(null);
   const [receivables, setReceivables] = useState<any[]>([]);
   const [payables, setPayables] = useState<any[]>([]);
   const [cashFlow, setCashFlow] = useState<any[]>([]);

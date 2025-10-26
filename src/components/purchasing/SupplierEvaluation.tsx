@@ -85,8 +85,8 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
   const [isEvaluationDialogOpen, setIsEvaluationDialogOpen] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [supplierStats, setSupplierStats] = useState<any>(null);
-  const [purchaseHistory, setPurchaseHistory] = useState<any[]>([]);
+  const [supplierStats, setSupplierStats] = useState<unknown>(null);
+  const [purchaseHistory, setPurchaseHistory] = useState<Array<Record<string, unknown>>>([]);
 
   // Form states
   const [evaluationForm, setEvaluationForm] = useState<EvaluationFormData>({

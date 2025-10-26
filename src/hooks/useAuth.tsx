@@ -7,10 +7,10 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, name?: string, utmData?: any) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: unknown }>;
+  signUp: (email: string, password: string, name?: string, utmData?: unknown) => Promise<{ error: unknown }>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ error: any }>;
+  resetPassword: (email: string) => Promise<{ error: unknown }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user_id: user.id,
         user_agent: userAgent,
         timestamp: new Date().toISOString()
-      }] as unknown as any);
+      }] as unknown as unknown);
     } catch (error) {
       // Silently handle logging errors
     }

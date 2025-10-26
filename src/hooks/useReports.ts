@@ -10,8 +10,8 @@ export interface ReportCatalog {
   description?: string;
   category: string;
   template_type: string;
-  parameters_schema: any;
-  permissions?: any;
+  parameters_schema: unknown;
+  permissions?: unknown;
   is_active: boolean;
   display_order: number;
 }
@@ -19,7 +19,7 @@ export interface ReportCatalog {
 export interface Report {
   id: string;
   report_code: string;
-  parameters: any;
+  parameters: unknown;
   period_start?: string;
   period_end?: string;
   status: string;
@@ -113,7 +113,7 @@ export const useReports = () => {
     }
   };
 
-  const generateReport = async (reportCode: string, parameters: any) => {
+  const generateReport = async (reportCode: string, parameters: unknown) => {
     if (!currentOrganization) return null;
 
     setLoading(true);

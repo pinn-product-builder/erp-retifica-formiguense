@@ -81,14 +81,21 @@ export interface CreateSectorData {
 }
 
 // Interface para contornar limitações do TypeScript com tabelas não tipadas
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface ExtendedSupabaseClient {
   from: (table: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     select: (columns: string) => any;
-    insert: (data: any) => any;
-    update: (data: any) => any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    insert: (data: unknown) => any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    update: (data: unknown) => any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete: () => any;
-    eq: (column: string, value: any) => any;
-    in: (column: string, values: any[]) => any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    eq: (column: string, value: unknown) => any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    in: (column: string, values: Array<unknown>) => any;
   };
 }
 
@@ -621,7 +628,7 @@ export const useUserProfiles = () => {
     setCreateLoading(true);
     try {
       // Atualizar o perfil
-      const updateData: any = {};
+      const updateData: unknown = {};
       if (profileData.name) updateData.name = profileData.name.trim();
       if (profileData.description !== undefined) updateData.description = profileData.description?.trim() || null;
       if (profileData.sector_id) updateData.sector_id = profileData.sector_id;
@@ -835,7 +842,7 @@ export const useUserProfiles = () => {
 
     setCreateLoading(true);
     try {
-      const updateData: any = {};
+      const updateData: unknown = {};
       if (sectorData.name) updateData.name = sectorData.name.trim();
       if (sectorData.description !== undefined) updateData.description = sectorData.description?.trim() || null;
       if (sectorData.color) updateData.color = sectorData.color;

@@ -94,7 +94,7 @@ export interface TaxCalculation {
   amount: number;
   origin_uf?: string;
   destination_uf?: string;
-  result: any;
+  result: unknown;
   notes?: string;
 }
 
@@ -128,7 +128,7 @@ export const useFiscal = () => {
   const { currentOrganization } = useOrganization();
   const [loading, setLoading] = useState(false);
 
-  const handleError = (error: any, message: string) => {
+  const handleError = (error: unknown, message: string) => {
     console.error(message, error);
     toast.error(message);
     setLoading(false);
@@ -465,7 +465,7 @@ export const useFiscal = () => {
 
       toast.success('Obrigação criada com sucesso');
       return data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating obligation:', error);
       toast.error('Erro ao criar obrigação: ' + error.message);
       return null;
@@ -771,7 +771,7 @@ export const useFiscal = () => {
 
       calculations.forEach(calc => {
         if (calc.result && typeof calc.result === 'object' && 'taxes' in calc.result && Array.isArray(calc.result.taxes)) {
-          calc.result.taxes.forEach((tax: any) => {
+          calc.result.taxes.forEach((tax: unknown) => {
             summary.totalTaxes += tax.amount || 0;
             if (!summary.taxBreakdown[tax.tax_type]) {
               summary.taxBreakdown[tax.tax_type] = { total: 0, operations: 0 };
@@ -810,7 +810,7 @@ export const useFiscal = () => {
     }
   };
 
-  const updateTaxLedger = async (id: string, updates: any) => {
+  const updateTaxLedger = async (id: string, updates: unknown) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -919,14 +919,14 @@ export const useFiscal = () => {
   };
 
   // Export functionality
-  const exportTaxCalculationsCSV = (calculations: any[]) => {
+  const exportTaxCalculationsCSV = (calculations: Array<Record<string, unknown>>) => {
     const csvHeaders = ['Data', 'Operação', 'Valor Base', 'Total Impostos', 'Detalhes'];
     const csvRows = calculations.map(calc => [
       new Date(calc.calculated_at).toLocaleDateString('pt-BR'),
       calc.operation,
       calc.amount?.toFixed(2) || '0.00',
       calc.result?.total_taxes?.toFixed(2) || '0.00',
-      calc.result?.taxes?.map((t: any) => `${t.tax_type}: ${t.amount?.toFixed(2)}`).join('; ') || ''
+      calc.result?.taxes?.map((t: unknown) => `${t.tax_type}: ${t.amount?.toFixed(2)}`).join('; ') || ''
     ]);
 
     const csvContent = [csvHeaders, ...csvRows]

@@ -13,7 +13,7 @@ import { formatCurrency } from '@/lib/utils';
 export function TaxCalculationPage() {
   const [taxRegimes, setTaxRegimes] = useState<TaxRegime[]>([]);
   const [classifications, setClassifications] = useState<FiscalClassification[]>([]);
-  const [calculationResult, setCalculationResult] = useState<any>(null);
+  const [calculationResult, setCalculationResult] = useState<unknown>(null);
   const [formData, setFormData] = useState({
     regime_id: '',
     operation: 'venda' as 'venda' | 'compra' | 'prestacao_servico',
@@ -100,7 +100,7 @@ export function TaxCalculationPage() {
                 <Label htmlFor="operation">Tipo de Operação</Label>
                 <Select
                   value={formData.operation}
-                  onValueChange={(value) => setFormData({ ...formData, operation: value as any })}
+                  onValueChange={(value) => setFormData({ ...formData, operation: value as unknown })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -247,7 +247,7 @@ export function TaxCalculationPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {calculationResult.taxes.map((tax: any, index: number) => (
+                  {calculationResult.taxes.map((tax: unknown, index: number) => (
                     <TableRow key={index}>
                       <TableCell className="font-medium">{tax.tax_type}</TableCell>
                       <TableCell>{formatCurrency(tax.base)}</TableCell>
@@ -290,7 +290,7 @@ export function TaxCalculationPage() {
                   formData.operation,
                   formData.amount,
                   calc.total_taxes?.toFixed(2) || '0.00',
-                  calc.taxes?.map((t: any) => `${t.tax_type}: ${t.amount?.toFixed(2)}`).join('; ') || ''
+                  calc.taxes?.map((t: unknown) => `${t.tax_type}: ${t.amount?.toFixed(2)}`).join('; ') || ''
                 ]);
 
                 const csvContent = [csvHeaders, ...csvRows]

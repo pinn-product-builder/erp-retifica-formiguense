@@ -62,7 +62,7 @@ export function usePartsInventory() {
       }
 
       if (filters?.component && filters.component !== 'todos') {
-        query = query.eq('component', filters.component as any);
+        query = query.eq('component', filters.component as unknown);
       }
 
       if (filters?.search) {
@@ -237,7 +237,7 @@ export function usePartsInventory() {
         .order('part_name');
 
       if (component) {
-        query = query.eq('component', component as any);
+        query = query.eq('component', component as unknown);
       }
 
       const { data, error } = await query;

@@ -108,7 +108,7 @@ export default function MovementManager() {
   const { parts, fetchParts } = usePartsInventory();
   
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [stockAlerts, setStockAlerts] = useState<any[]>([]);
+  const [stockAlerts, setStockAlerts] = useState<Array<Record<string, unknown>>>([]);
   const [formData, setFormData] = useState<MovementFormData>({
     part_id: '',
     movement_type: 'entrada',
@@ -136,7 +136,7 @@ export default function MovementManager() {
     setStockAlerts(alerts);
   };
 
-  const handleInputChange = (field: keyof MovementFormData, value: any) => {
+  const handleInputChange = (field: keyof MovementFormData, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

@@ -114,7 +114,7 @@ export function TaxTypeManagement() {
                   <Label htmlFor="jurisdiction">Jurisdição</Label>
                   <Select
                     value={formData.jurisdiction}
-                    onValueChange={(value) => setFormData({ ...formData, jurisdiction: value as any })}
+                    onValueChange={(value) => setFormData({ ...formData, jurisdiction: value as unknown })}
                   >
                     <SelectTrigger>
                       <SelectValue />

@@ -24,7 +24,7 @@ interface QuickAction {
   is_featured: boolean;
   is_active: boolean;
   display_order: number;
-  permissions?: any;
+  permissions?: Record<string, unknown>;
   org_id?: string;
 }
 
@@ -108,11 +108,12 @@ export const QuickActionsAdmin = () => {
       setIsDialogOpen(false);
       resetForm();
       fetchActions();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving quick action:', error);
+      const errorMessage = error instanceof Error ? error.message : "Erro ao salvar ação rápida";
       toast({
         title: "Erro",
-        description: error.message || "Erro ao salvar ação rápida",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -189,6 +190,7 @@ export const QuickActionsAdmin = () => {
 
   useEffect(() => {
     fetchActions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentOrganization]);
 
   return (

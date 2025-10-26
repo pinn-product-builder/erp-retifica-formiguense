@@ -98,8 +98,8 @@ export function useOrderPhotos(orderId?: string) {
         .from('order_photos')
         .insert({
           order_id: orderId,
-          component: (component || null) as any,
-          workflow_step: (workflowStep || null) as any,
+          component: (component || null) as unknown,
+          workflow_step: (workflowStep || null) as unknown,
           photo_type: photoType,
           file_path: uploadData.path,
           file_name: file.name,

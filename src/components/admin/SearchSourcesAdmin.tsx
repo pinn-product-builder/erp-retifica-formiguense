@@ -19,12 +19,12 @@ interface SearchSource {
   source_name: string;
   source_type: string;
   table_name?: string;
-  search_fields: any;
-  display_fields: any;
+  search_fields: unknown;
+  display_fields: unknown;
   result_template?: string;
   is_active: boolean;
   weight: number;
-  permissions?: any;
+  permissions?: unknown;
   org_id?: string;
 }
 
@@ -118,7 +118,7 @@ export const SearchSourcesAdmin = () => {
       setIsDialogOpen(false);
       resetForm();
       fetchSources();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving search source:', error);
       toast({
         title: "Erro",

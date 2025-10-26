@@ -243,7 +243,7 @@ export function PerformanceInsights() {
       }
 
       // Mapear targets para GoalProgress
-      const mappedTargets = targets.map((target: any) => {
+      const mappedTargets = targets.map((target: unknown) => {
         // Mapear unidades
         let unit = '';
         if (target.progress_unit === 'currency') unit = 'R$';
@@ -380,7 +380,7 @@ export function PerformanceInsights() {
               <TrendingUp className="w-5 h-5" />
               Insights de Performance
             </CardTitle>
-            <Tabs value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as any)}>
+            <Tabs value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as unknown)}>
               <TabsList>
                 <TabsTrigger value="week">Semana</TabsTrigger>
                 <TabsTrigger value="month">Mês</TabsTrigger>

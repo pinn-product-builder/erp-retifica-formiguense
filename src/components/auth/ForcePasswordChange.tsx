@@ -93,7 +93,7 @@ export const ForcePasswordChange: React.FC<ForcePasswordChangeProps> = ({ open }
       setNewPassword('');
       setConfirmPassword('');
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating password:', error);
       setErrors([error.message || 'Erro ao atualizar senha']);
     } finally {

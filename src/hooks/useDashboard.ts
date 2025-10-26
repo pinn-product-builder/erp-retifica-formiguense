@@ -383,7 +383,7 @@ export const useDashboard = () => {
       // Fetch recent services
       await fetchRecentServices();
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       setError(error.message);
       console.error('Error fetching dashboard data:', error);
     } finally {

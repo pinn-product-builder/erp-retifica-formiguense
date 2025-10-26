@@ -5,7 +5,7 @@ import { useOrganization } from '@/contexts/OrganizationContext';
 interface SystemConfig {
   id: string;
   key: string;
-  value: any;
+  value: unknown;
   category: string;
   description?: string;
   data_type: 'string' | 'number' | 'boolean' | 'json';
@@ -61,7 +61,7 @@ export function useSystemConfig() {
     fetchConfigs();
   }, [currentOrganization]);
 
-  const getConfig = (key: string, defaultValue?: any) => {
+  const getConfig = (key: string, defaultValue?: unknown) => {
     const config = configs.find(c => c.key === key);
     if (!config) return defaultValue;
 
@@ -82,7 +82,7 @@ export function useSystemConfig() {
     }
   };
 
-  const setConfig = async (key: string, value: any, category: string, dataType: SystemConfig['data_type'] = 'string') => {
+  const setConfig = async (key: string, value: unknown, category: string, dataType: SystemConfig['data_type'] = 'string') => {
     if (!currentOrganization) return;
 
     try {

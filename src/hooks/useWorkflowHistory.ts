@@ -34,7 +34,7 @@ export function useWorkflowHistory(workflowId?: string) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setHistory((data as any) || []);
+      setHistory((data as unknown) || []);
     } catch (error) {
       console.error('Error fetching workflow history:', error);
       toast({
