@@ -4,8 +4,8 @@ import { Package, ArrowRightLeft, CheckCircle2, BarChart3, AlertTriangle } from 
 import MovementManager from '@/components/inventory/MovementManager';
 import ApprovalManager from '@/components/inventory/ApprovalManager';
 import InventoryCountManager from '@/components/inventory/InventoryCountManager';
-import InventoryDashboard from '@/components/inventory/InventoryDashboard';
-import MovementHistory from '@/components/inventory/MovementHistory';
+import { InventoryDashboard } from '@/components/inventory/InventoryDashboard';
+import { MovementHistory } from '@/components/inventory/MovementHistory';
 
 export default function Inventario() {
   return (

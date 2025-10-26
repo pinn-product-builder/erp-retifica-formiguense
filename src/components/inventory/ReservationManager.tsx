@@ -118,7 +118,7 @@ const ReservationManager: React.FC<ReservationManagerProps> = ({
         getReservationStats()
       ]);
       
-      setExpiringReservations(expiring);
+      setExpiringReservations(expiring as PartReservation[]);
       setStats(statistics);
     };
     
@@ -165,7 +165,7 @@ const ReservationManager: React.FC<ReservationManagerProps> = ({
         getReservationStats()
       ]);
       
-      setExpiringReservations(expiring);
+      setExpiringReservations(expiring as PartReservation[]);
       setStats(statistics);
     }
   };
@@ -198,7 +198,7 @@ const ReservationManager: React.FC<ReservationManagerProps> = ({
       
       // Recarregar reservas expirando
       const expiring = await getExpiringReservations(7);
-      setExpiringReservations(expiring);
+      setExpiringReservations(expiring as PartReservation[]);
     }
   };
 

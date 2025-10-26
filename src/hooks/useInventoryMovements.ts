@@ -131,8 +131,9 @@ export function useInventoryMovements() {
 
       if (error) throw error;
 
-      setMovements((data || []) as InventoryMovement[]);
-      return data as InventoryMovement[];
+      const typedData = (data || []) as unknown as InventoryMovement[];
+      setMovements(typedData);
+      return typedData;
     } catch (error) {
       console.error('Error fetching movements:', error);
       toast({
@@ -473,6 +474,7 @@ export function useInventoryMovements() {
     if (!currentOrganization?.id) return [];
 
     try {
+      // @ts-expect-error - Supabase type inference issue with deep instantiation
       const { data, error } = await supabase
         .from('stock_alerts')
         .select(`

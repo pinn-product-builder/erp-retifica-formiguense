@@ -119,7 +119,7 @@ export const useSupplierEvaluation = () => {
       setLoading(true);
       
       let query = supabase
-        .from('supplier_evaluations')
+        .from('supplier_evaluations' as any)
         .select(`
           *,
           supplier:suppliers(id, name, rating),
@@ -144,8 +144,8 @@ export const useSupplierEvaluation = () => {
         return [];
       }
 
-      setEvaluations(data || []);
-      return data || [];
+      setEvaluations((data || []) as unknown as SupplierEvaluation[]);
+      return (data || []) as unknown as SupplierEvaluation[];
     } catch (error) {
       console.error('Erro ao buscar avaliações:', error);
       toast({
@@ -167,7 +167,7 @@ export const useSupplierEvaluation = () => {
       setLoading(true);
       
       const { data, error } = await supabase
-        .from('suppliers')
+        .from('suppliers' as any)
         .select(`
           *,
           contacts:supplier_contacts(*),
@@ -187,8 +187,8 @@ export const useSupplierEvaluation = () => {
         return [];
       }
 
-      setSuppliers(data || []);
-      return data || [];
+      setSuppliers((data || []) as unknown as EnhancedSupplier[]);
+      return (data || []) as unknown as EnhancedSupplier[];
     } catch (error) {
       console.error('Erro ao buscar fornecedores:', error);
       toast({
@@ -214,7 +214,7 @@ export const useSupplierEvaluation = () => {
       setLoading(true);
       
       const { error } = await supabase
-        .from('supplier_evaluations')
+        .from('supplier_evaluations' as any)
         .insert({
           org_id: currentOrganization.id,
           supplier_id: supplierId,
@@ -264,7 +264,7 @@ export const useSupplierEvaluation = () => {
       setLoading(true);
       
       const { error } = await supabase
-        .from('supplier_contacts')
+        .from('supplier_contacts' as any)
         .insert({
           org_id: currentOrganization.id,
           supplier_id: supplierId,
@@ -358,7 +358,7 @@ export const useSupplierEvaluation = () => {
     if (!currentOrganization?.id) return [];
 
     try {
-      const { data, error } = await supabase.rpc('suggest_suppliers_for_part', {
+      const { data, error } = await supabase.rpc('suggest_suppliers_for_part' as any, {
         p_org_id: currentOrganization.id,
         p_part_code: partCode,
         p_category: category,
@@ -393,7 +393,7 @@ export const useSupplierEvaluation = () => {
 
     try {
       const { data: evaluations, error } = await supabase
-        .from('supplier_evaluations')
+        .from('supplier_evaluations' as any)
         .select('*')
         .eq('supplier_id', supplierId)
         .eq('org_id', currentOrganization.id);
@@ -403,19 +403,21 @@ export const useSupplierEvaluation = () => {
         return null;
       }
 
+      const typedEvaluations = (evaluations || []) as any[];
+
       const stats = {
-        totalEvaluations: evaluations.length,
-        averageRating: evaluations.length > 0 
-          ? evaluations.reduce((sum, e) => sum + e.overall_rating, 0) / evaluations.length 
+        totalEvaluations: typedEvaluations.length,
+        averageRating: typedEvaluations.length > 0 
+          ? typedEvaluations.reduce((sum, e) => sum + (e.overall_rating || 0), 0) / typedEvaluations.length 
           : 0,
-        onTimeDeliveryRate: evaluations.length > 0
-          ? (evaluations.filter(e => e.delivered_on_time).length / evaluations.length) * 100
+        onTimeDeliveryRate: typedEvaluations.length > 0
+          ? (typedEvaluations.filter(e => e.delivered_on_time).length / typedEvaluations.length) * 100
           : 0,
-        qualityIssuesRate: evaluations.length > 0
-          ? (evaluations.filter(e => e.had_quality_issues).length / evaluations.length) * 100
+        qualityIssuesRate: typedEvaluations.length > 0
+          ? (typedEvaluations.filter(e => e.had_quality_issues).length / typedEvaluations.length) * 100
           : 0,
-        lastEvaluationDate: evaluations.length > 0
-          ? evaluations.sort((a, b) => new Date(b.evaluated_at).getTime() - new Date(a.evaluated_at).getTime())[0].evaluated_at
+        lastEvaluationDate: typedEvaluations.length > 0
+          ? typedEvaluations.sort((a, b) => new Date(b.evaluated_at).getTime() - new Date(a.evaluated_at).getTime())[0].evaluated_at
           : null
       };
 
@@ -461,7 +463,7 @@ export const useSupplierEvaluation = () => {
     try {
       const { error } = await supabase
         .from('suppliers')
-        .update({ is_preferred: isPreferred })
+        .update({ is_preferred: isPreferred } as any)
         .eq('id', supplierId)
         .eq('org_id', currentOrganization.id);
 

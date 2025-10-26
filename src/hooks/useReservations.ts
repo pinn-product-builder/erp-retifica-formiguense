@@ -129,8 +129,8 @@ export const useReservations = () => {
         return [];
       }
 
-      setReservations(data || []);
-      return data || [];
+      setReservations((data || []) as PartReservation[]);
+      return (data || []) as PartReservation[];
     } catch (error) {
       console.error('Erro ao buscar reservas:', error);
       toast({
@@ -151,6 +151,7 @@ export const useReservations = () => {
     try {
       setLoading(true);
       
+      // @ts-expect-error - RPC function not in generated types
       const { data, error } = await supabase.rpc('reserve_parts_from_budget', {
         p_budget_id: budgetId
       });
@@ -165,7 +166,7 @@ export const useReservations = () => {
         return null;
       }
 
-      const result = data as ReservationResult;
+      const result = data as unknown as ReservationResult;
       
       // Mostrar resultado
       if (result.success) {
@@ -210,6 +211,7 @@ export const useReservations = () => {
     try {
       setLoading(true);
       
+      // @ts-expect-error - RPC function not in generated types
       const { data, error } = await supabase.rpc('consume_reserved_parts', {
         p_order_id: orderId,
         p_parts: parts
@@ -268,6 +270,7 @@ export const useReservations = () => {
     try {
       setLoading(true);
       
+      // @ts-expect-error - RPC function not in generated types
       const { data, error } = await supabase.rpc('cancel_reservation', {
         p_reservation_id: reservationId,
         p_reason: reason || null
@@ -325,6 +328,7 @@ export const useReservations = () => {
     try {
       setLoading(true);
       
+      // @ts-expect-error - RPC function not in generated types
       const { data, error } = await supabase.rpc('extend_reservation', {
         p_reservation_id: reservationId,
         p_additional_days: additionalDays
@@ -384,6 +388,7 @@ export const useReservations = () => {
     try {
       setLoading(true);
       
+      // @ts-expect-error - RPC function not in generated types
       const { data, error } = await supabase.rpc('separate_reserved_parts', {
         p_reservation_id: reservationId,
         p_quantity_to_separate: quantityToSeparate
@@ -457,7 +462,7 @@ export const useReservations = () => {
         return [];
       }
 
-      return data || [];
+      return (data || []) as PartReservation[];
     } catch (error) {
       console.error('Erro ao buscar reservas expirando:', error);
       return [];
