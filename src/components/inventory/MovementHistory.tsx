@@ -27,7 +27,7 @@ import {
   ArrowUpDown,
   Filter
 } from 'lucide-react';
-import { useInventoryMovements, MovementType } from '@/hooks/useInventoryMovements';
+import { useInventoryMovements, MovementType, type MovementFilters } from '@/hooks/useInventoryMovements';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -98,7 +98,7 @@ export function MovementHistory({ partId, orderId, showFilters = true }: Movemen
   }, [partId, orderId]);
 
   const handleFilter = () => {
-    const filterParams: any = {};
+    const filterParams: MovementFilters = {};
     
     if (partId) filterParams.part_id = partId;
     if (orderId) filterParams.order_id = orderId;
@@ -285,10 +285,10 @@ export function MovementHistory({ partId, orderId, showFilters = true }: Movemen
                                   <p className="text-sm text-muted-foreground">{movement.notes}</p>
                                 </div>
                               )}
-                              {movement.order && (
+                              {movement.order_number && (
                                 <div>
                                   <strong className="text-sm">Ordem de Serviço:</strong>
-                                  <p className="text-sm text-muted-foreground">{movement.order.order_number}</p>
+                                  <p className="text-sm text-muted-foreground">{movement.order_number}</p>
                                 </div>
                               )}
                               {movement.unit_cost && (

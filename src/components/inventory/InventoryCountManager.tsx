@@ -173,8 +173,7 @@ export default function InventoryCountManager() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchCounts().catch((err) => {
-      console.error('Error loading counts:', err);
+    fetchCounts().catch(() => {
       setError('Erro ao carregar contagens. Verifique se as tabelas foram criadas no banco de dados.');
     });
   }, [fetchCounts]);
@@ -182,6 +181,7 @@ export default function InventoryCountManager() {
   const handleCreateCount = async () => {
     const count = await createCount({
       ...newCountData,
+      count_type: 'total',
       include_all_parts: true,
     });
 

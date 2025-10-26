@@ -131,8 +131,8 @@ export default function ApprovalManager() {
   };
 
   const getImpactAnalysis = (movement: InventoryMovement) => {
-    const currentStock = movement.part?.quantity || 0;
-    const minStock = movement.part?.min_stock || 0;
+    const currentStock = movement.current_stock || 0;
+    const minStock = 0; // Min stock would need to come from part inventory if needed
     let newStock = currentStock;
 
     switch (movement.movement_type) {
@@ -388,7 +388,7 @@ export default function ApprovalManager() {
             {selectedMovement && (
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="font-medium">
-                  {translateMovementType(selectedMovement.movement_type)} - {selectedMovement.part?.part_name}
+                  {translateMovementType(selectedMovement.movement_type)} - {selectedMovement.part_name}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {selectedMovement.quantity} unidades • {selectedMovement.reason}

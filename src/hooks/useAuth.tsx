@@ -21,14 +21,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   // Simple audit logging without organization dependency
-  const logAuthAction = async (action: string, metadata?: any) => {
+  const logAuthAction = async (action: string, metadata?: Record<string, unknown>) => {
     if (!user) return;
     
     try {
       const userAgent = navigator.userAgent;
       
-      await supabase.from('fiscal_audit_log').insert({
-        org_id: null, // Will be null during auth flow
+      await supabase.from('fiscal_audit_log').insert([{
         table_name: 'auth_actions',
         operation: 'INSERT',
         record_id: crypto.randomUUID(),
@@ -39,11 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         user_id: user.id,
         user_agent: userAgent,
-        ip_address: null,
         timestamp: new Date().toISOString()
-      });
+      }] as unknown as any);
     } catch (error) {
-      console.error('Error logging auth action:', error);
+      // Silently handle logging errors
     }
   };
 
@@ -88,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, name?: string, utmData?: any) => {
+  const signUp = async (email: string, password: string, name?: string, utmData?: Record<string, string>) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({

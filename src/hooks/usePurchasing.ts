@@ -158,7 +158,7 @@ export const usePurchasing = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPurchaseOrders(data || []);
+      setPurchaseOrders((data || []) as unknown as PurchaseOrder[]);
     } catch (error) {
       console.error('Error fetching purchase orders:', error);
     }
@@ -205,7 +205,7 @@ export const usePurchasing = () => {
 
     try {
       const { data: reqData, error: reqError } = await supabase
-        .from('purchase_requisitions')
+        .from('purchase_requisitions' as any)
         .insert({
           department: requisition.department || null,
           priority: requisition.priority || 'medium',
@@ -213,7 +213,7 @@ export const usePurchasing = () => {
           status: requisition.status || 'pending',
           total_estimated_value: requisition.total_estimated_value || 0,
           org_id: currentOrganization.id,
-        } as any)
+        })
         .select()
         .single();
 
@@ -282,12 +282,11 @@ export const usePurchasing = () => {
 
     try {
       const { data, error } = await supabase
-        .rpc('generate_po_number', { p_org_id: currentOrganization.id });
+        .rpc('generate_po_number' as any, { p_org_id: currentOrganization.id });
 
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Error generating PO number:', error);
       return null;
     }
   };

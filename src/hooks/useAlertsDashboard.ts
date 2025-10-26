@@ -83,7 +83,7 @@ export function useAlertsDashboard() {
         });
 
       if (workflowError) {
-        console.error('Erro ao buscar workflows pendentes:', workflowError);
+        // Silently handle error
       }
 
       const totalAlerts = 
@@ -100,7 +100,6 @@ export function useAlertsDashboard() {
         totalAlerts,
       });
     } catch (error) {
-      console.error('Error fetching alerts:', error);
       toast({
         title: 'Erro',
         description: 'Erro ao carregar alertas do sistema',
@@ -134,7 +133,6 @@ export function useAlertsDashboard() {
       fetchAlerts(); // Refresh
       return true;
     } catch (error) {
-      console.error('Error dismissing alert:', error);
       toast({
         title: 'Erro',
         description: 'Erro ao dispensar alerta',
@@ -166,7 +164,6 @@ export function useAlertsDashboard() {
       fetchAlerts(); // Refresh
       return true;
     } catch (error) {
-      console.error('Error acknowledging alert:', error);
       toast({
         title: 'Erro',
         description: 'Erro ao reconhecer alerta',

@@ -55,7 +55,6 @@ export function useSupabase() {
   const { user } = useAuth();
 
   const handleError = (error: unknown, message: string) => {
-    console.error(message, error);
     toast({
       title: "Erro",
       description: message,

@@ -63,6 +63,8 @@ interface ReservationManagerProps {
   partId?: string;
 }
 
+type ReservationStatus = 'reserved' | 'partial' | 'separated' | 'applied' | 'expired' | 'cancelled';
+
 const ReservationManager: React.FC<ReservationManagerProps> = ({
   orderId,
   budgetId,

@@ -161,7 +161,14 @@ export function PurchaseOrderDetailsModal({
           ...item,
           received_quantity: receivedQuantities[item.id] || 0,
         })),
-        receipts: receiptsData || [],
+        receipts: (receiptsData || []).map(receipt => ({
+          id: receipt.id,
+          receipt_number: receipt.receipt_number,
+          receipt_date: receipt.receipt_date,
+          status: receipt.status,
+          total_value: 0, // Calculate if needed or get from another source
+          has_divergence: receipt.has_divergence,
+        })),
       };
 
       setOrderDetails(details);

@@ -224,7 +224,10 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
   const handleAddContact = async () => {
     if (!selectedSupplier) return;
     
-    const success = await addSupplierContact(selectedSupplier.id, contactForm);
+    const success = await addSupplierContact(selectedSupplier.id, {
+      ...contactForm,
+      is_active: true
+    });
     
     if (success) {
       setIsContactDialogOpen(false);

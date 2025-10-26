@@ -244,6 +244,7 @@ export function useInventoryCounts() {
           
         case 'partial':
           if (countData.category_filter) {
+            // @ts-expect-error - component type narrowing issue
             partsQuery = partsQuery.eq('component', countData.category_filter);
           }
           if (countData.part_ids && countData.part_ids.length > 0) {

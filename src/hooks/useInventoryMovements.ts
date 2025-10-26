@@ -99,7 +99,7 @@ export function useInventoryMovements() {
       setLoading(true);
 
       let query = supabase
-        .from('inventory_movements_with_users')
+        .from('inventory_movements_with_users' as any)
         .select('*')
         .eq('org_id', currentOrganization.id)
         .order('created_at', { ascending: false });
@@ -371,7 +371,7 @@ export function useInventoryMovements() {
 
     try {
       const { data, error } = await supabase
-        .from('inventory_movements')
+        .from('inventory_movements' as any)
         .select(`
           *,
           part:parts_inventory(part_name, part_code, quantity)
@@ -382,7 +382,7 @@ export function useInventoryMovements() {
 
       if (error) throw error;
 
-      return data as InventoryMovement[];
+      return data as unknown as InventoryMovement[];
     } catch (error) {
       console.error('Error fetching pending approvals:', error);
       return [];
@@ -397,7 +397,7 @@ export function useInventoryMovements() {
       const { data: userData } = await supabase.auth.getUser();
 
       const { error } = await supabase
-        .from('inventory_movements')
+        .from('inventory_movements' as any)
         .update({
           approval_status: 'approved',
           approved_by: userData.user?.id,
@@ -435,7 +435,7 @@ export function useInventoryMovements() {
       const { data: userData } = await supabase.auth.getUser();
 
       const { error } = await supabase
-        .from('inventory_movements')
+        .from('inventory_movements' as any)
         .update({
           approval_status: 'rejected',
           approved_by: userData.user?.id,

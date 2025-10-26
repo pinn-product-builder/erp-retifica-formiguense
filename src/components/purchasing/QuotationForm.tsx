@@ -210,7 +210,7 @@ export default function QuotationForm({ onSuccess }: QuotationFormProps) {
                 <SelectContent>
                   {requisitions.map((req) => (
                     <SelectItem key={req.id} value={req.id}>
-                      {req.requisition_number} - {req.description}
+                      {req.requisition_number} - {req.justification || 'Requisição'}
                     </SelectItem>
                   ))}
                 </SelectContent>
