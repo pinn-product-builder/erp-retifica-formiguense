@@ -106,7 +106,7 @@ function SystemConfigAdmin() {
     return configs.filter(config => config.category === category);
   };
 
-    const formatValue = (value: unknown, dataType: string) => {
+    const formatValue = (value: string, dataType: string) => {
     switch (dataType) {
       case 'boolean':
         return value ? 'Sim' : 'Não';
@@ -292,7 +292,7 @@ function SystemConfigAdmin() {
                     <CardContent>
                       <div className="bg-muted/50 p-3 rounded-md">
                         <pre className="text-sm whitespace-pre-wrap">
-                          {formatValue(config.value, config.data_type as string)}
+                          {formatValue(config.value as string, config.data_type as string)}
                         </pre>
                       </div>
                     </CardContent>
