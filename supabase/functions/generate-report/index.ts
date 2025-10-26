@@ -16,12 +16,12 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-async function generateCSV(data: any[], headers: string[]): Promise<string> {
+async function generateCSV(data: unknown[], headers: string[]): Promise<string> {
   let csv = headers.join(',') + '\n';
   
   for (const row of data) {
     const values = headers.map(header => {
-      const value = row[header] || '';
+      const value = (row as Record<string, unknown>)[header] || '';
       // Escape quotes and wrap in quotes if contains comma
       if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
         return `"${value.replace(/"/g, '""')}"`;
@@ -37,12 +37,12 @@ async function generateCSV(data: any[], headers: string[]): Promise<string> {
 async function executeReport(reportCode: string, parameters: unknown, orgId: string) {
   console.log(`Executing report: ${reportCode} for org: ${orgId}`);
   
-  let data: any[] = [];
+  let data: unknown[] = [];
   let headers: string[] = [];
   const filename = `${reportCode}_${new Date().toISOString().split('T')[0]}.csv`;
 
   switch (reportCode) {
-    case 'vendas_geral':
+    case 'vendas_geral':{
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select(`
@@ -68,8 +68,9 @@ async function executeReport(reportCode: string, parameters: unknown, orgId: str
       
       headers = ['numero_pedido', 'data_coleta', 'cliente', 'consultor', 'valor_total', 'status'];
       break;
+    }
 
-    case 'produtividade':
+    case 'produtividade':{
       const { data: prodData, error: prodError } = await supabase
         .from('consultants')
         .select(`
@@ -89,8 +90,8 @@ async function executeReport(reportCode: string, parameters: unknown, orgId: str
       
       headers = ['consultor', 'comissao', 'total_pedidos'];
       break;
-
-    case 'clientes':
+    }
+    case 'clientes':{
       const { data: clientsData, error: clientsError } = await supabase
         .from('customers')
         .select('*')
@@ -109,17 +110,17 @@ async function executeReport(reportCode: string, parameters: unknown, orgId: str
       
       headers = ['nome', 'documento', 'telefone', 'email', 'tipo', 'endereco'];
       break;
-
-    case 'estoque':
+    }
+    case 'estoque':{
       const { data: stockData, error: stockError } = await supabase
-        .from('parts_inventory')
+      .from('parts_inventory')
         .select('*')
         .eq('org_id', orgId);
 
       if (stockError) throw stockError;
       
       data = stockData?.map(part => ({
-        peca: part.part_name,
+        peca: part.part_name, 
         codigo: part.part_code,
         quantidade: part.quantity,
         custo_unitario: part.unit_cost,
@@ -130,7 +131,7 @@ async function executeReport(reportCode: string, parameters: unknown, orgId: str
       
       headers = ['peca', 'codigo', 'quantidade', 'custo_unitario', 'fornecedor', 'status', 'componente'];
       break;
-
+    }
     default:
       throw new Error(`Report type ${reportCode} not implemented`);
   }

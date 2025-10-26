@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-
+import { Json } from '@/integrations/supabase/types';
 export interface Organization {
   id: string;
   name: string;
   slug: string;
   description?: string;
-  settings: unknown;
+  settings: Json;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -97,7 +97,6 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (orgUsersError) throw orgUsersError;
 
-      // @ts-ignore - Supabase retorna organizations como objeto, não array
       const organizations = orgUsers?.map(ou => ou.organizations).filter(Boolean) as Organization[];
       setUserOrganizations(organizations);
 

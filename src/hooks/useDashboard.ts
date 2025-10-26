@@ -253,6 +253,7 @@ export const useDashboard = () => {
         try {
           switch (action.href) {
             case '/coleta':
+              {
               // Contar pedidos pendentes
               const { count: pendingOrders } = await supabase
                 .from('orders')
@@ -261,8 +262,8 @@ export const useDashboard = () => {
                 .eq('status', 'pendente');
               count = pendingOrders || 0;
               break;
-
-            case '/workflow':
+            }
+            case '/workflow':{
               // Contar pedidos em andamento
               const { count: inProgressOrders } = await supabase
                 .from('orders')
@@ -271,8 +272,8 @@ export const useDashboard = () => {
                 .in('status', ['ativa', 'em_andamento']);
               count = inProgressOrders || 0;
               break;
-
-            case '/dre':
+            }
+            case '/dre':{
               // Contar DREs do mês atual que ainda não foram finalizados
               const currentMonth = new Date().getMonth() + 1;
               const currentYear = new Date().getFullYear();
@@ -285,8 +286,9 @@ export const useDashboard = () => {
               // Se não existe DRE para o mês atual, contar como 1 pendente
               count = pendingDRE === 0 ? 1 : 0;
               break;
-
+            }
             case '/contas-receber':
+            {
               // Contar contas a receber vencidas ou a vencer nos próximos 7 dias
               const today = new Date().toISOString().split('T')[0];
               const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -298,7 +300,7 @@ export const useDashboard = () => {
                 .lte('due_date', nextWeek);
               count = receivables || 0;
               break;
-
+            }
             default:
               count = 0;
           }
@@ -384,7 +386,7 @@ export const useDashboard = () => {
       await fetchRecentServices();
 
     } catch (error: unknown) {
-      setError(error.message);
+      setError(error instanceof Error ? error.message : 'Erro desconhecido');
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);

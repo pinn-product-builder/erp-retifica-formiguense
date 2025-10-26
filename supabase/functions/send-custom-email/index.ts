@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     }
 
     const wh = new Webhook(hookSecret);
-    const { user, email_data }: { user: User; email_data: EmailData } = wh.verify(payload, headers) as any;
+    const { user, email_data }: { user: User; email_data: EmailData } = wh.verify(payload, headers) as { user: User; email_data: EmailData };
 
     // Template personalizado para reset de senha
     const resetPasswordTemplate = `

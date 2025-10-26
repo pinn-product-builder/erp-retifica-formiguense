@@ -27,12 +27,12 @@ export default function ContasPagar() {
     loading 
   } = useFinancial();
   
-  const [payables, setPayables] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [payables, setPayables] = useState<Record<string, unknown>[]>([]);
+  const [categories, setCategories] = useState<Record<string, unknown>[]>([]);
   const [selectedTab, setSelectedTab] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [editingPayable, setEditingPayable] = useState<unknown>(null);
+  const [editingPayable, setEditingPayable] = useState<Record<string, unknown> | null>(null);
 
   const [formData, setFormData] = useState<Partial<AccountsPayable>>({
     supplier_name: '',
@@ -86,13 +86,13 @@ export default function ContasPagar() {
   };
 
   const filteredPayables = payables.filter(payable => {
-    const matchesSearch = payable.supplier_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         payable.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = ((payable as Record<string, unknown>).supplier_name as string).toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         ((payable as Record<string, unknown>).description as string).toLowerCase().includes(searchTerm.toLowerCase());
     
     if (selectedTab === 'all') return matchesSearch;
-    if (selectedTab === 'pending') return matchesSearch && payable.status === 'pending';
-    if (selectedTab === 'overdue') return matchesSearch && payable.status === 'overdue';
-    if (selectedTab === 'paid') return matchesSearch && payable.status === 'paid';
+    if (selectedTab === 'pending') return matchesSearch && (payable as Record<string, unknown>).status as string === 'pending';
+    if (selectedTab === 'overdue') return matchesSearch && (payable as Record<string, unknown>).status as string === 'overdue';
+    if (selectedTab === 'paid') return matchesSearch && (payable as Record<string, unknown>).status as string === 'paid';
     
     return matchesSearch;
   });
@@ -128,7 +128,7 @@ export default function ContasPagar() {
 
     try {
       if (editingPayable) {
-        await updateAccountsPayable(editingPayable.id, formData);
+        await updateAccountsPayable(editingPayable.id as string, formData as AccountsPayable);
         toast.success('Conta a pagar atualizada com sucesso');
       } else {
         await createAccountsPayable(formData as AccountsPayable);
@@ -153,25 +153,25 @@ export default function ContasPagar() {
     }
   };
 
-  const handleEdit = (payable: unknown) => {
+  const handleEdit = (payable: Record<string, unknown>) => {
     setEditingPayable(payable);
     setFormData({
-      supplier_name: payable.supplier_name,
-      supplier_document: payable.supplier_document || '',
-      expense_category_id: payable.expense_category_id,
-      description: payable.description,
-      amount: payable.amount,
-      due_date: payable.due_date,
-      status: payable.status,
-      payment_method: payable.payment_method,
-      invoice_number: payable.invoice_number || '',
-      notes: payable.notes || ''
+      supplier_name: payable.supplier_name as string,
+      supplier_document: payable.supplier_document as string || '',
+      expense_category_id: payable.expense_category_id as string,
+      description: payable.description as string,
+      amount: payable.amount as number,
+      due_date: payable.due_date as string,
+      status: payable.status as 'pending' | 'paid' | 'overdue' | 'cancelled',
+      payment_method: payable.payment_method as 'cash' | 'pix' | 'credit_card' | 'debit_card' | 'bank_transfer' | 'check' | undefined,
+      invoice_number: payable.invoice_number as string || '',
+      notes: payable.notes as string || ''
     });
     setIsModalOpen(true);
   };
 
-  const handleMarkAsPaid = async (payable: unknown) => {
-    await updateAccountsPayable(payable.id, {
+  const handleMarkAsPaid = async (payable: Record<string, unknown>) => {
+    await updateAccountsPayable(payable.id as string, {
       status: 'paid',
       payment_date: new Date().toISOString().split('T')[0]
     });
@@ -299,8 +299,8 @@ export default function ContasPagar() {
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
+                        <SelectItem key={category.id as string} value={category.id as string}>
+                          {category.name as string}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -311,7 +311,7 @@ export default function ContasPagar() {
                   <Label htmlFor="payment_method">Forma de Pagamento</Label>
                   <Select 
                     value={formData.payment_method} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value as unknown }))}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value as 'cash' | 'pix' | 'credit_card' | 'debit_card' | 'bank_transfer' | 'check' }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
@@ -426,24 +426,24 @@ export default function ContasPagar() {
                   <div key={index} className="flex items-center justify-between p-4 border-b last:border-b-0">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-medium">{payable.supplier_name}</h3>
-                        <Badge className={getStatusColor(payable.status)}>
-                          {getStatusText(payable.status)}
+                        <h3 className="font-medium">{(payable as Record<string, unknown>).supplier_name as string}</h3>
+                        <Badge className={getStatusColor((payable as Record<string, unknown>).status as string)}>
+                          {getStatusText((payable as Record<string, unknown>).status as string)}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mb-1">
-                        {payable.description}
+                        {(payable as Record<string, unknown>).description as string}
                       </p>
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          Venc: {format(new Date(payable.due_date), 'dd/MM/yyyy', { locale: ptBR })}
+                          Venc: {format(new Date((payable as Record<string, unknown>).due_date as string), 'dd/MM/yyyy', { locale: ptBR })}
                         </span>
-                        {payable.invoice_number && (
-                          <span>NF: {payable.invoice_number}</span>
+                        {(payable as Record<string, unknown>).invoice_number && (
+                          <span>NF: {(payable as Record<string, unknown>).invoice_number as string}</span>
                         )}
-                        {payable.expense_categories?.name && (
-                          <span>{payable.expense_categories.name}</span>
+                        {((payable as Record<string, unknown>).expense_categories as Record<string, unknown>)?.name as string && (
+                          <span>{((payable as Record<string, unknown>).expense_categories as Record<string, unknown>).name as string}</span>
                         )}
                       </div>
                     </div>
@@ -451,11 +451,11 @@ export default function ContasPagar() {
                     <div className="flex items-center gap-3">
                       <div className="text-right">
                         <div className="font-bold text-lg">
-                          {formatCurrency(payable.amount)}
+                          {formatCurrency((payable as Record<string, unknown>).amount as number)}
                         </div>
                         {payable.payment_date && (
                           <div className="text-xs text-muted-foreground">
-                            Pago em {format(new Date(payable.payment_date), 'dd/MM/yyyy', { locale: ptBR })}
+                            Pago em {format(new Date((payable as Record<string, unknown>).payment_date as string), 'dd/MM/yyyy', { locale: ptBR })}
                           </div>
                         )}
                       </div>

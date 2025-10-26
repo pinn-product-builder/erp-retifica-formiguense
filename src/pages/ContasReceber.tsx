@@ -16,13 +16,13 @@ import { toast } from 'sonner';
 
 export default function ContasReceber() {
   const { getAccountsReceivable, updateAccountsReceivable, createAccountsReceivable, getPaymentMethods, getCustomers, loading } = useFinancial();
-  const [receivables, setReceivables] = useState<any[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [receivables, setReceivables] = useState<Record<string, unknown>[]>([]);
+  const [customers, setCustomers] = useState<Record<string, unknown>[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<Record<string, unknown>[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingReceivable, setEditingReceivable] = useState<unknown>(null);
+  const [editingReceivable, setEditingReceivable] = useState<Record<string, unknown> | null>(null);
   const [formData, setFormData] = useState<Partial<AccountsReceivable>>({
     customer_id: '',
     amount: 0,
@@ -49,8 +49,8 @@ export default function ContasReceber() {
   };
 
   const filteredReceivables = receivables.filter(receivable => {
-    const matchesSearch = receivable.customers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         receivable.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (((receivable as Record<string, unknown>).customers as Record<string, unknown>).name as string).toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         ((receivable as Record<string, unknown>).invoice_number as string).toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || receivable.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -84,7 +84,7 @@ export default function ContasReceber() {
 
     try {
       if (editingReceivable) {
-        await updateAccountsReceivable(editingReceivable.id, formData);
+        await updateAccountsReceivable(editingReceivable.id as string, formData as AccountsReceivable);
       } else {
         await createAccountsReceivable(formData as AccountsReceivable);
       }
@@ -105,24 +105,24 @@ export default function ContasReceber() {
     }
   };
 
-  const handleEdit = (receivable: unknown) => {
+  const handleEdit = (receivable: Record<string, unknown>) => {
     setEditingReceivable(receivable);
     setFormData({
-      customer_id: receivable.customer_id,
-      amount: receivable.amount,
-      due_date: receivable.due_date,
-      installment_number: receivable.installment_number,
-      total_installments: receivable.total_installments,
-      status: receivable.status,
-      payment_method: receivable.payment_method,
-      invoice_number: receivable.invoice_number,
-      notes: receivable.notes
+      customer_id: receivable.customer_id as string || '',
+      amount: receivable.amount as number,
+      due_date: receivable.due_date as string,
+      installment_number: receivable.installment_number as number,
+      total_installments: receivable.total_installments as number,
+      status: receivable.status as 'pending' | 'paid' | 'overdue' | 'cancelled',
+      payment_method: receivable.payment_method as 'cash' | 'pix' | 'credit_card' | 'debit_card' | 'bank_transfer' | 'check' | undefined,
+      invoice_number: receivable.invoice_number as string,
+      notes: receivable.notes as string,
     });
     setIsDialogOpen(true);
   };
 
-  const markAsPaid = async (receivable: unknown) => {
-    await updateAccountsReceivable(receivable.id, {
+  const markAsPaid = async (receivable: Record<string, unknown>) => {
+    await updateAccountsReceivable(receivable.id as string, {
       status: 'paid',
       payment_date: new Date().toISOString().split('T')[0]
     });
@@ -201,8 +201,8 @@ export default function ContasReceber() {
                   </SelectTrigger>
                   <SelectContent>
                     {customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id}>
-                        {customer.name}
+                      <SelectItem key={customer.id as string} value={customer.id as string}>
+                        {customer.name as string}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -266,7 +266,7 @@ export default function ContasReceber() {
                 <Label htmlFor="status">Status</Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(value: unknown) => setFormData({ ...formData, status: value })}
+                  onValueChange={(value: 'pending' | 'paid' | 'overdue' | 'cancelled') => setFormData({ ...formData, status: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -343,40 +343,40 @@ export default function ContasReceber() {
             </TableHeader>
             <TableBody>
               {filteredReceivables.map((receivable) => (
-                <TableRow key={receivable.id}>
+                <TableRow key={receivable.id as string}>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4" />
                       <div>
-                        <p className="font-medium">{receivable.customers?.name}</p>
+                        <p className="font-medium">{((receivable as Record<string, unknown>).customers as Record<string, unknown>).name as string}</p>
                         {receivable.invoice_number && (
                           <p className="text-sm text-muted-foreground">
-                            {receivable.invoice_number}
+                            {receivable.invoice_number as string}
                           </p>
                         )}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="font-bold">{formatCurrency(receivable.amount)}</span>
+                    <span className="font-bold">{formatCurrency(receivable.amount as number)}</span>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
                       <span>
-                        {format(new Date(receivable.due_date), 'dd/MM/yyyy', { locale: ptBR })}
+                        {format(new Date(receivable.due_date as string), 'dd/MM/yyyy', { locale: ptBR })}
                       </span>
-                      {isOverdue(receivable.due_date, receivable.status) && (
+                      {isOverdue(receivable.due_date as string, receivable.status as string) && (
                         <AlertTriangle className="h-4 w-4 text-destructive" />
                       )}
                     </div>
                   </TableCell>
                   <TableCell>
-                    {receivable.installment_number}/{receivable.total_installments}
+                    {receivable.installment_number as number}/{receivable.total_installments as number}
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(receivable.status)}>
-                      {getStatusText(receivable.status)}
+                    <Badge className={getStatusColor(receivable.status as string)}>
+                      {getStatusText(receivable.status as string)}
                     </Badge>
                   </TableCell>
                   <TableCell>

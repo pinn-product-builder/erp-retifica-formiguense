@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { Json } from '../integrations/supabase/types';
 
 export interface UserScore {
   id: string;
@@ -96,7 +97,7 @@ export class GamificationService {
       p_org_id: orgId,
       p_user_id: userId,
       p_action_type: actionType,
-      p_metadata: metadata
+      p_metadata: metadata as Json
     });
 
     if (error) {
@@ -327,13 +328,13 @@ export class GamificationService {
 
     const criteria = config.criteria as Record<string, unknown>;
     const criteriaType = criteria?.type;
-    const targetValue = criteria?.value || 0;
+    const targetValue = criteria?.value as number || 0;
 
     let currentValue = 0;
 
     switch (criteriaType) {
       case 'total_orders': {
-        const { count } = await (supabase.rpc as unknown)('count_user_orders', {
+        const { count } = await (supabase.rpc as unknown as (name: string, args: Record<string, unknown>) => Promise<{ count: number }>)('count_user_orders', {
           p_org_id: orgId,
           p_user_id: userId
         });
@@ -342,7 +343,7 @@ export class GamificationService {
       }
 
       case 'completed_orders': {
-        const { count } = await (supabase.rpc as unknown)('count_completed_orders', {
+        const { count } = await (supabase.rpc as unknown as (name: string, args: Record<string, unknown>) => Promise<{ count: number }>)('count_completed_orders', {
           p_org_id: orgId,
           p_user_id: userId
         });
@@ -351,7 +352,7 @@ export class GamificationService {
       }
 
       case 'approved_budgets': {
-        const { count } = await (supabase.rpc as unknown)('count_approved_budgets', {
+        const { count } = await (supabase.rpc as unknown as (name: string, args: Record<string, unknown>) => Promise<{ count: number }>)('count_approved_budgets', {
           p_org_id: orgId,
           p_user_id: userId
         });
@@ -359,7 +360,7 @@ export class GamificationService {
         break;
       }
 
-      case 'total_points':
+      case 'total_points':{
         const { data: score } = await supabase
           .from('user_scores')
           .select('total_points')
@@ -368,26 +369,26 @@ export class GamificationService {
           .single();
         currentValue = score?.total_points || 0;
         break;
-
-      case 'level_reached':
+      }
+      case 'level_reached':{
         const { data: levelScore } = await supabase
           .from('user_scores')
-          .select('current_level')
+          .select('current_level') 
           .eq('org_id', orgId)
           .eq('user_id', userId)
-          .single();
+          .single(); 
         currentValue = levelScore?.current_level || 1;
         break;
-
+      }
       default:
         return null;
     }
 
-    const progress = Math.min((currentValue / targetValue) * 100, 100);
+    const progress = Math.min((currentValue / (targetValue as number)) * 100, 100);
 
     return {
       current: currentValue,
-      target: targetValue,
+      target: targetValue as number,
       progress
     };
   }

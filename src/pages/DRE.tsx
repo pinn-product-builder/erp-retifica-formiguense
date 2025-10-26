@@ -14,7 +14,7 @@ import { ptBR } from 'date-fns/locale';
 export default function DRE() {
   const { getMonthlyDRE, getCashFlow, loading } = useFinancial();
   
-  const [dreData, setDreData] = useState<any[]>([]);
+  const [dreData, setDreData] = useState<Record<string, unknown>[]>([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [monthlyData, setMonthlyData] = useState<unknown>(null);
@@ -29,7 +29,7 @@ export default function DRE() {
 
   const loadDREData = async () => {
     const data = await getMonthlyDRE(selectedYear);
-    setDreData(data);
+    setDreData(data as unknown as Record<string, unknown>[]);
   };
 
   const loadMonthlyData = async () => {
@@ -39,11 +39,11 @@ export default function DRE() {
     
     const cashFlowData = await getCashFlow(startDate, endDate);
     
-    const income = cashFlowData.filter((t: unknown) => t.transaction_type === 'income')
-      .reduce((sum: number, t: unknown) => sum + Number(t.amount), 0);
+    const income = cashFlowData.filter((t: unknown) => (t as Record<string, unknown>).transaction_type as string === 'income')
+      .reduce((sum: number, t: unknown) => sum + Number((t as Record<string, unknown>).amount as number), 0);
     
-    const expenses = cashFlowData.filter((t: unknown) => t.transaction_type === 'expense')
-      .reduce((sum: number, t: unknown) => sum + Number(t.amount), 0);
+    const expenses = cashFlowData.filter((t: unknown) => (t as Record<string, unknown>).transaction_type as string === 'expense')
+      .reduce((sum: number, t: unknown) => sum + Number((t as Record<string, unknown>).amount as number), 0);
 
     // Simular divisão das despesas (em um sistema real, isso viria categorizado)
     const directCosts = expenses * 0.4; // 40% custos diretos
@@ -87,15 +87,15 @@ export default function DRE() {
   const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
   const monthOptions = Array.from({ length: 12 }, (_, i) => i + 1);
 
-  const yearlyTotals = dreData.reduce((acc, month) => ({
-    revenue: acc.revenue + Number(month.total_revenue || 0),
-    directCosts: acc.directCosts + Number(month.direct_costs || 0),
-    operationalExpenses: acc.operationalExpenses + Number(month.operational_expenses || 0),
-    grossProfit: acc.grossProfit + Number(month.gross_profit || 0),
-    netProfit: acc.netProfit + Number(month.net_profit || 0)
+  const yearlyTotals = dreData.reduce((acc: Record<string, unknown>, month: Record<string, unknown>) => ({
+    revenue: acc.revenue as number + Number((month.total_revenue as number) || 0),
+    directCosts: acc.directCosts as number + Number((month.direct_costs as number) || 0),
+    operationalExpenses: acc.operationalExpenses as number + Number((month.operational_expenses as number) || 0),
+    grossProfit: acc.grossProfit as number + Number((month.gross_profit as number) || 0),
+    netProfit: acc.netProfit as number + Number((month.net_profit as number) || 0)
   }), { revenue: 0, directCosts: 0, operationalExpenses: 0, grossProfit: 0, netProfit: 0 });
 
-  const yearlyProfitMargin = yearlyTotals.revenue > 0 ? (yearlyTotals.netProfit / yearlyTotals.revenue) * 100 : 0;
+  const yearlyProfitMargin = yearlyTotals.revenue as number > 0 ? ((yearlyTotals.netProfit as number / (yearlyTotals.revenue as number)) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -157,7 +157,7 @@ export default function DRE() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-success">
-              {formatCurrency(yearlyTotals.revenue)}
+              {formatCurrency(yearlyTotals.revenue as number)}
             </div>
           </CardContent>
         </Card>
@@ -169,7 +169,7 @@ export default function DRE() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">
-              {formatCurrency(yearlyTotals.directCosts + yearlyTotals.operationalExpenses)}
+              {formatCurrency(yearlyTotals.directCosts as number + (yearlyTotals.operationalExpenses as number))}
             </div>
           </CardContent>
         </Card>
@@ -180,8 +180,8 @@ export default function DRE() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${yearlyTotals.netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
-              {formatCurrency(yearlyTotals.netProfit)}
+            <div className={`text-2xl font-bold ${yearlyTotals.netProfit as number >= 0 ? 'text-success' : 'text-destructive'}`}>
+              {formatCurrency(yearlyTotals.netProfit as number)}
             </div>
           </CardContent>
         </Card>
@@ -215,7 +215,7 @@ export default function DRE() {
                   <div className="flex justify-between items-center p-3 bg-success/10 rounded-lg">
                     <span className="font-medium">Receita Bruta</span>
                     <span className="font-bold text-success">
-                      {formatCurrency(monthlyData.total_revenue)}
+                      {formatCurrency((monthlyData as Record<string, unknown>).total_revenue as number)}
                     </span>
                   </div>
                   
@@ -223,15 +223,15 @@ export default function DRE() {
                     <div className="flex justify-between items-center text-sm">
                       <span>(-) Custos Diretos</span>
                       <span className="text-destructive">
-                        {formatCurrency(monthlyData.direct_costs)}
+                        {formatCurrency((monthlyData as Record<string, unknown>).direct_costs as number)}
                       </span>
                     </div>
                   </div>
                   
                   <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
                     <span className="font-medium">= Lucro Bruto</span>
-                    <span className={`font-bold ${monthlyData.gross_profit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {formatCurrency(monthlyData.gross_profit)}
+                    <span className={`font-bold ${((monthlyData as Record<string, unknown>).gross_profit as number) >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      {formatCurrency((monthlyData as Record<string, unknown>).gross_profit as number)}
                     </span>
                   </div>
                   
@@ -239,22 +239,22 @@ export default function DRE() {
                     <div className="flex justify-between items-center text-sm">
                       <span>(-) Despesas Operacionais</span>
                       <span className="text-destructive">
-                        {formatCurrency(monthlyData.operational_expenses)}
+                        {formatCurrency((monthlyData as Record<string, unknown>).operational_expenses as number)}
                       </span>
                     </div>
                   </div>
                   
                   <div className="flex justify-between items-center p-3 bg-primary/10 rounded-lg">
                     <span className="font-medium">= Lucro Líquido</span>
-                    <span className={`font-bold ${monthlyData.net_profit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {formatCurrency(monthlyData.net_profit)}
+                    <span className={`font-bold ${((monthlyData as Record<string, unknown>).net_profit as number) >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      {formatCurrency((monthlyData as Record<string, unknown>).net_profit as number)}
                     </span>
                   </div>
                   
                   <div className="flex justify-between items-center p-2 border-t">
                     <span className="text-sm font-medium">Margem Líquida</span>
-                    <span className={`text-sm font-bold ${monthlyData.profit_margin >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {formatPercentage(monthlyData.profit_margin)}
+                    <span className={`text-sm font-bold ${((monthlyData as Record<string, unknown>).profit_margin as number) >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      {formatPercentage((monthlyData as Record<string, unknown>).profit_margin as number)}
                     </span>
                   </div>
                 </div>
@@ -276,17 +276,17 @@ export default function DRE() {
               {dreData.length > 0 ? dreData.map((month, index) => (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
-                    <p className="font-medium">{getMonthName(month.month)}</p>
+                    <p className="font-medium">{getMonthName((month as Record<string, unknown>).month as number)}</p>
                     <p className="text-sm text-muted-foreground">
-                      Receita: {formatCurrency(month.total_revenue || 0)}
+                      Receita: {formatCurrency((month as Record<string, unknown>).total_revenue as number || 0)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className={`font-bold ${Number(month.net_profit || 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {formatCurrency(month.net_profit || 0)}
+                    <div className={`font-bold ${Number((month as Record<string, unknown>).net_profit as number || 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      {formatCurrency((month as Record<string, unknown>).net_profit as number || 0)}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {formatPercentage(month.profit_margin || 0)}
+                      {formatPercentage((month as Record<string, unknown>).profit_margin as number || 0)}
                     </div>
                   </div>
                 </div>

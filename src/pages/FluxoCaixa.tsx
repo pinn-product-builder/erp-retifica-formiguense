@@ -27,9 +27,9 @@ export default function FluxoCaixa() {
     loading 
   } = useFinancial();
   
-  const [cashFlow, setCashFlow] = useState<any[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [cashFlow, setCashFlow] = useState<Record<string, unknown>[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<Record<string, unknown>[]>([]);
+  const [categories, setCategories] = useState<Record<string, unknown>[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState({
@@ -59,7 +59,7 @@ export default function FluxoCaixa() {
       getBankAccounts(),
       getExpenseCategories()
     ]);
-    setCashFlow(cashFlowData);
+    setCashFlow(cashFlowData as unknown as Record<string, unknown>[]);
     setBankAccounts(bankAccountsData);
     setCategories(categoriesData);
   };
@@ -189,7 +189,7 @@ export default function FluxoCaixa() {
                   <Label htmlFor="transaction_type">Tipo de Movimentação *</Label>
                   <Select 
                     value={formData.transaction_type} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, transaction_type: value as unknown }))}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, transaction_type: value as 'income' | 'expense' }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -241,7 +241,7 @@ export default function FluxoCaixa() {
                   <Label htmlFor="payment_method">Forma de Pagamento</Label>
                   <Select 
                     value={formData.payment_method} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value as unknown }))}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value as 'cash' | 'pix' | 'credit_card' | 'debit_card' | 'bank_transfer' | 'check' }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
@@ -270,8 +270,8 @@ export default function FluxoCaixa() {
                     </SelectTrigger>
                     <SelectContent>
                       {bankAccounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          {account.bank_name} - {account.account_number}
+                        <SelectItem key={account.id as string} value={account.id as string}>
+                          {account.bank_name as string} - {account.account_number as string}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -290,8 +290,8 @@ export default function FluxoCaixa() {
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
+                          <SelectItem key={category.id as string} value={category.id as string}>
+                            {category.name as string}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -447,17 +447,17 @@ export default function FluxoCaixa() {
                     <TrendingDown className="h-4 w-4 text-destructive" />
                   )}
                   <div>
-                    <p className="font-medium">{transaction.description}</p>
+                    <p className="font-medium">{transaction.description as string}</p>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {format(new Date(transaction.transaction_date), 'dd/MM/yyyy', { locale: ptBR })}
+                        {format(new Date(transaction.transaction_date as string), 'dd/MM/yyyy', { locale: ptBR })}
                       </span>
                       {transaction.payment_method && (
-                        <span>• {transaction.payment_method}</span>
+                        <span>• {transaction.payment_method as string}</span>
                       )}
-                      {transaction.bank_accounts?.bank_name && (
-                        <span>• {transaction.bank_accounts.bank_name}</span>
+                      {(transaction.bank_accounts as Record<string, unknown>)?.bank_name as string && (
+                        <span>• {(transaction.bank_accounts as Record<string, unknown>).bank_name as string}</span>
                       )}
                     </div>
                   </div>
@@ -473,7 +473,7 @@ export default function FluxoCaixa() {
                     transaction.transaction_type === 'income' ? 'text-success' : 'text-destructive'
                   }`}>
                     {transaction.transaction_type === 'income' ? '+' : '-'}
-                    {formatCurrency(transaction.amount)}
+                    {formatCurrency(transaction.amount as number)}
                   </div>
                 </div>
               </div>

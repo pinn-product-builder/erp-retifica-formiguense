@@ -15,10 +15,10 @@ import { ptBR } from 'date-fns/locale';
 
 export default function Financeiro() {
   const { getFinancialKPIs, getAccountsReceivable, getAccountsPayable, getCashFlow, loading } = useFinancial();
-  const [kpis, setKPIs] = useState<unknown>(null);
-  const [receivables, setReceivables] = useState<any[]>([]);
-  const [payables, setPayables] = useState<any[]>([]);
-  const [cashFlow, setCashFlow] = useState<any[]>([]);
+  const [kpis, setKPIs] = useState<Record<string, unknown> | null>(null);
+  const [receivables, setReceivables] = useState<Record<string, unknown>[]>([]);
+  const [payables, setPayables] = useState<Record<string, unknown>[]>([]);
+  const [cashFlow, setCashFlow] = useState<Record<string, unknown>[]>([]);
 
   useEffect(() => {
     loadFinancialData();
@@ -35,7 +35,7 @@ export default function Financeiro() {
     setKPIs(kpisData);
     setReceivables(receivablesData);
     setPayables(payablesData);
-    setCashFlow(cashFlowData.slice(0, 10)); // Últimas 10 movimentações
+    setCashFlow(cashFlowData.slice(0, 10)) as unknown as Record<string, unknown>[]; // Últimas 10 movimentações
   };
 
   const formatCurrency = (value: number) => {
@@ -97,7 +97,7 @@ export default function Financeiro() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-success">
-                {formatCurrency(kpis.monthlyRevenue)}
+                {formatCurrency(kpis.monthlyRevenue as number)}
               </div>
               <p className="text-xs text-muted-foreground">Receita do mês atual</p>
             </CardContent>
@@ -110,7 +110,7 @@ export default function Financeiro() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">
-                {formatCurrency(kpis.monthlyExpenses)}
+                {formatCurrency(kpis.monthlyExpenses as number)}
               </div>
               <p className="text-xs text-muted-foreground">Gastos do mês atual</p>
             </CardContent>
@@ -122,8 +122,8 @@ export default function Financeiro() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${kpis.netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {formatCurrency(kpis.netProfit)}
+              <div className={`text-2xl font-bold ${kpis.netProfit as number >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {formatCurrency(kpis.netProfit as number)}
               </div>
               <p className="text-xs text-muted-foreground">Receita - Despesas</p>
             </CardContent>
@@ -135,8 +135,8 @@ export default function Financeiro() {
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${kpis.overdueCount > 0 ? 'text-destructive' : 'text-success'}`}>
-                {kpis.overdueCount}
+              <div className={`text-2xl font-bold ${kpis.overdueCount as number > 0 ? 'text-destructive' : 'text-success'}`}>
+                {kpis.overdueCount as number}
               </div>
               <p className="text-xs text-muted-foreground">Recebimentos em atraso</p>
             </CardContent>
@@ -169,17 +169,17 @@ export default function Financeiro() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Total a Receber</span>
                       <span className="font-bold text-success">
-                        {formatCurrency(kpis.totalReceivable)}
+                        {formatCurrency(kpis.totalReceivable as number)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Contas Vencidas</span>
                       <span className="font-bold text-destructive">
-                        {kpis.overdueCount}
+                        {kpis.overdueCount as number}
                       </span>
                     </div>
                     <Progress 
-                      value={kpis.overdueCount > 0 ? (kpis.overdueCount / receivables.length) * 100 : 0} 
+                      value={kpis.overdueCount as number > 0 ? (kpis.overdueCount as number / receivables.length) * 100 : 0} 
                       className="w-full"
                     />
                   </div>
@@ -201,17 +201,17 @@ export default function Financeiro() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Total a Pagar</span>
                       <span className="font-bold text-destructive">
-                        {formatCurrency(kpis.totalPayable)}
+                        {formatCurrency(kpis.totalPayable as number)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Saldo Disponível</span>
-                      <span className={`font-bold ${kpis.cashBalance >= 0 ? 'text-success' : 'text-destructive'}`}>
-                        {formatCurrency(kpis.cashBalance)}
+                      <span className={`font-bold ${kpis.cashBalance as number >= 0 ? 'text-success' : 'text-destructive'}`}>
+                        {formatCurrency(kpis.cashBalance as number)}
                       </span>
                     </div>
                     <Progress 
-                      value={kpis.totalPayable > 0 ? Math.min((kpis.cashBalance / kpis.totalPayable) * 100, 100) : 100}
+                      value={kpis.totalPayable as number > 0 ? Math.min((kpis.cashBalance as number / kpis.totalPayable as number) * 100, 100) : 100}
                       className="w-full"
                     />
                   </div>
@@ -230,7 +230,7 @@ export default function Financeiro() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {cashFlow.map((transaction, index) => (
+                {cashFlow.map((transaction: Record<string, unknown>, index: number) => (
                   <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
                       {transaction.transaction_type === 'income' ? (
@@ -239,9 +239,9 @@ export default function Financeiro() {
                         <TrendingDown className="h-4 w-4 text-destructive" />
                       )}
                       <div>
-                        <p className="font-medium">{transaction.description}</p>
+                        <p className="font-medium">{transaction.description as string}</p>
                         <p className="text-sm text-muted-foreground">
-                          {format(new Date(transaction.transaction_date), 'dd/MM/yyyy', { locale: ptBR })}
+                          {format(new Date(transaction.transaction_date as string), 'dd/MM/yyyy', { locale: ptBR })}
                         </p>
                       </div>
                     </div>
@@ -249,7 +249,7 @@ export default function Financeiro() {
                       transaction.transaction_type === 'income' ? 'text-success' : 'text-destructive'
                     }`}>
                       {transaction.transaction_type === 'income' ? '+' : '-'}
-                      {formatCurrency(transaction.amount)}
+                      {formatCurrency(transaction.amount as number)}
                     </div>
                   </div>
                 ))}
@@ -269,17 +269,17 @@ export default function Financeiro() {
                   <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div>
-                        <p className="font-medium">{receivable.customers?.name}</p>
+                        <p className="font-medium">{receivable.customers?.name as string}</p>
                         <p className="text-sm text-muted-foreground">
-                          Venc: {format(new Date(receivable.due_date), 'dd/MM/yyyy', { locale: ptBR })}
+                          Venc: {format(new Date(receivable.due_date as string), 'dd/MM/yyyy', { locale: ptBR })}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge className={getStatusColor(receivable.status)}>
-                        {getStatusText(receivable.status)}
+                      <Badge className={getStatusColor(receivable.status as string)}>
+                        {getStatusText(receivable.status as string)}
                       </Badge>
-                      <span className="font-bold">{formatCurrency(receivable.amount)}</span>
+                      <span className="font-bold">{formatCurrency(receivable.amount as number)}</span>
                     </div>
                   </div>
                 ))}
@@ -299,17 +299,17 @@ export default function Financeiro() {
                   <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div>
-                        <p className="font-medium">{payable.supplier_name}</p>
+                        <p className="font-medium">{payable.supplier_name as string}</p>
                         <p className="text-sm text-muted-foreground">
-                          {payable.description} - Venc: {format(new Date(payable.due_date), 'dd/MM/yyyy', { locale: ptBR })}
+                          {payable.description as string} - Venc: {format(new Date(payable.due_date as string), 'dd/MM/yyyy', { locale: ptBR })}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge className={getStatusColor(payable.status)}>
-                        {getStatusText(payable.status)}
+                      <Badge className={getStatusColor(payable.status as string)}>
+                        {getStatusText(payable.status as string)}
                       </Badge>
-                      <span className="font-bold">{formatCurrency(payable.amount)}</span>
+                      <span className="font-bold">{formatCurrency(payable.amount as number)}</span>
                     </div>
                   </div>
                 ))}
@@ -334,9 +334,9 @@ export default function Financeiro() {
                         <TrendingDown className="h-4 w-4 text-destructive" />
                       )}
                       <div>
-                        <p className="font-medium">{transaction.description}</p>
+                        <p className="font-medium">{transaction.description as string}</p>
                         <p className="text-sm text-muted-foreground">
-                          {format(new Date(transaction.transaction_date), 'dd/MM/yyyy', { locale: ptBR })}
+                          {format(new Date(transaction.transaction_date as string), 'dd/MM/yyyy', { locale: ptBR })}
                           {transaction.payment_method && ` • ${transaction.payment_method}`}
                         </p>
                       </div>
@@ -349,7 +349,7 @@ export default function Financeiro() {
                         transaction.transaction_type === 'income' ? 'text-success' : 'text-destructive'
                       }`}>
                         {transaction.transaction_type === 'income' ? '+' : '-'}
-                        {formatCurrency(transaction.amount)}
+                        {formatCurrency(transaction.amount as number)}
                       </span>
                     </div>
                   </div>
