@@ -1,0 +1,346 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#3b82f6','primaryTextColor':'#fff','primaryBorderColor':'#2563eb','lineColor':'#64748b','secondaryColor':'#10b981','tertiaryColor':'#f59e0b'}}}%%
+
+erDiagram
+    %% MÓDULO DE DIAGNÓSTICO E METROLOGIA
+    
+    ORGANIZATIONS ||--o{ DIAGNOSTIC_RESPONSES : "pertence a"
+    ORDERS ||--o{ DIAGNOSTIC_RESPONSES : "tem"
+    PROFILES ||--o{ DIAGNOSTIC_RESPONSES : "realiza (metrologista)"
+    
+    DIAGNOSTIC_RESPONSES ||--o{ DIAGNOSTIC_COMPONENTS : "contém"
+    DIAGNOSTIC_RESPONSES ||--o{ DIAGNOSTIC_RESPONSE_ITEMS : "possui"
+    DIAGNOSTIC_RESPONSES ||--o{ QUALITY_TESTS : "inclui"
+    DIAGNOSTIC_RESPONSES ||--o{ ASSEMBLY_RESULTS : "pode ter"
+    DIAGNOSTIC_RESPONSES ||--o| BUDGETS : "gera"
+    DIAGNOSTIC_RESPONSES ||--o| MOTOR_DNA : "atualiza"
+    
+    ENGINE_COMPONENTS ||--o{ DIAGNOSTIC_COMPONENTS : "referencia"
+    ENGINE_COMPONENTS ||--o{ DIAGNOSTIC_CHECKLISTS : "define"
+    
+    DIAGNOSTIC_CHECKLISTS ||--o{ DIAGNOSTIC_CHECKLIST_ITEMS : "contém"
+    DIAGNOSTIC_CHECKLIST_ITEMS ||--o{ DIAGNOSTIC_RESPONSE_ITEMS : "responde a"
+    DIAGNOSTIC_CHECKLIST_ITEMS ||--o{ DIAGNOSTIC_MEASUREMENTS : "registra"
+    
+    DIAGNOSTIC_RESPONSE_ITEMS ||--o{ SERVICE_SUGGESTIONS : "gera"
+    DIAGNOSTIC_MEASUREMENTS ||--o{ SERVICE_SUGGESTIONS : "sugere baseado em"
+    
+    METROLOGY_SERVICES ||--o{ SERVICE_SUGGESTIONS : "referencia"
+    METROLOGY_SERVICES ||--o{ BUDGET_ITEMS : "incluso em"
+    
+    METROLOGY_PARTS ||--o{ BUDGET_ITEMS : "incluso em"
+    
+    BUDGETS ||--o{ BUDGET_ITEMS : "contém"
+    
+    QUALITY_TESTS ||--o{ SERVICE_SUGGESTIONS : "recomenda"
+    
+    ASSEMBLY_CHECKLIST_ITEMS ||--o{ ASSEMBLY_RESULTS : "verifica"
+
+    %% ======================================
+    %% TABELA: ORGANIZATIONS
+    %% ======================================
+    ORGANIZATIONS {
+        uuid id PK
+        string name
+        jsonb settings
+        timestamp created_at
+    }
+
+    %% ======================================
+    %% TABELA: PROFILES
+    %% ======================================
+    PROFILES {
+        uuid id PK
+        uuid user_id FK
+        uuid org_id FK
+        string full_name
+        string role
+        jsonb qualifications
+    }
+
+    %% ======================================
+    %% TABELA: ORDERS
+    %% ======================================
+    ORDERS {
+        uuid id PK
+        string order_number UK
+        uuid org_id FK
+        uuid customer_id FK
+        jsonb vehicle_data
+        string status
+        timestamp created_at
+    }
+
+    %% ======================================
+    %% TABELA: ENGINE_COMPONENTS
+    %% ======================================
+    ENGINE_COMPONENTS {
+        uuid id PK
+        string component_code UK "bloco, virabrequim, cabeçote, volante..."
+        string component_name
+        string description
+        jsonb default_tolerances
+        boolean is_active
+    }
+
+    %% ======================================
+    %% TABELA: DIAGNOSTIC_CHECKLISTS
+    %% ======================================
+    DIAGNOSTIC_CHECKLISTS {
+        uuid id PK
+        string checklist_name
+        string component_type FK "bloco, virabrequim..."
+        string motor_type "diesel, otto"
+        string checklist_type "visual, measurement, functional"
+        int version
+        boolean is_active
+        timestamp created_at
+    }
+
+    %% ======================================
+    %% TABELA: DIAGNOSTIC_CHECKLIST_ITEMS
+    %% ======================================
+    DIAGNOSTIC_CHECKLIST_ITEMS {
+        uuid id PK
+        uuid checklist_id FK
+        string item_name "Altura do Bloco, Planicidade..."
+        string item_type "checkbox, measurement, photo, text, select"
+        string item_description
+        boolean is_required
+        int display_order
+        jsonb expected_values "min, max, unit, tolerância"
+        jsonb item_options "opções para select/radio"
+        string help_text
+        jsonb triggers_service "serviço sugerido se condição atendida"
+    }
+
+    %% ======================================
+    %% TABELA: DIAGNOSTIC_RESPONSES
+    %% ======================================
+    DIAGNOSTIC_RESPONSES {
+        uuid id PK
+        string diagnostic_number UK "D-2025-001"
+        uuid order_id FK
+        uuid org_id FK
+        uuid diagnosed_by FK "metrologista"
+        string motor_number
+        string motor_type "diesel, otto"
+        string motor_situation "completo, parcial, avulso"
+        string assembly_status "montado, desmontado, parcial"
+        jsonb vehicle_data
+        string status "in_progress, concluded, cancelled"
+        timestamp started_at
+        timestamp concluded_at
+        int progress_percentage
+        string pdf_report_url
+        jsonb summary "resumo executivo"
+        decimal estimated_cost
+        int estimated_days
+        text final_observations
+        string signed_by
+        timestamp signed_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% ======================================
+    %% TABELA: DIAGNOSTIC_COMPONENTS
+    %% ======================================
+    DIAGNOSTIC_COMPONENTS {
+        uuid id PK
+        uuid diagnostic_response_id FK
+        string component FK "engine_components.code"
+        int quantity
+        string general_condition "bom, regular, ruim, péssimo"
+        text notes
+    }
+
+    %% ======================================
+    %% TABELA: DIAGNOSTIC_RESPONSE_ITEMS
+    %% ======================================
+    DIAGNOSTIC_RESPONSE_ITEMS {
+        uuid id PK
+        uuid diagnostic_response_id FK
+        uuid checklist_item_id FK
+        string component "bloco, virabrequim..."
+        jsonb value "resposta: boolean, string, number, array"
+        text notes
+        jsonb photos "array de URLs"
+        string status "pending, completed, skipped"
+        timestamp completed_at
+    }
+
+    %% ======================================
+    %% TABELA: DIAGNOSTIC_MEASUREMENTS
+    %% ======================================
+    DIAGNOSTIC_MEASUREMENTS {
+        uuid id PK
+        uuid diagnostic_response_id FK
+        uuid response_item_id FK
+        string component
+        string measurement_name "Altura Bloco, Diâmetro Cilindro 1..."
+        decimal measured_value
+        string unit "mm, HRC, bar..."
+        decimal min_tolerance
+        decimal max_tolerance
+        string status "OK, ATTENTION, OUT_OF_SPEC"
+        decimal deviation_percentage
+        jsonb calculated_values "ovalização, conicidade..."
+        text technician_notes
+        timestamp measured_at
+    }
+
+    %% ======================================
+    %% TABELA: QUALITY_TESTS (NOVO)
+    %% ======================================
+    QUALITY_TESTS {
+        uuid id PK
+        uuid diagnostic_response_id FK
+        string component
+        string test_type "crack_test, hydrostatic_test, balancing"
+        string test_method "líquido_penetrante, magnético, ultrassom"
+        string result "approved, failed"
+        jsonb test_data "pressão, duração, desbalanceamento..."
+        text failure_location
+        text recommended_action "recuperar, substituir, descartar"
+        jsonb photos "evidências fotográficas"
+        string report_pdf_url "laudo externo"
+        uuid tested_by FK
+        timestamp tested_at
+    }
+
+    %% ======================================
+    %% TABELA: ASSEMBLY_CHECKLIST_ITEMS (NOVO)
+    %% ======================================
+    ASSEMBLY_CHECKLIST_ITEMS {
+        uuid id PK
+        string item_name "Bronzinas instaladas, Torque parafusos..."
+        string item_category "preparation, installation, torque, test"
+        string motor_type "diesel, otto, universal"
+        int display_order
+        boolean is_required
+        jsonb acceptance_criteria "valores esperados"
+        string help_text
+    }
+
+    %% ======================================
+    %% TABELA: ASSEMBLY_RESULTS (NOVO)
+    %% ======================================
+    ASSEMBLY_RESULTS {
+        uuid id PK
+        uuid diagnostic_response_id FK
+        jsonb checklist_results "array de {item_id, checked, value, notes}"
+        string overall_status "approved, requires_adjustment, requires_disassembly"
+        jsonb photos "motor montado"
+        text final_notes
+        uuid assembled_by FK "mecânico"
+        timestamp assembled_at
+    }
+
+    %% ======================================
+    %% TABELA: SERVICE_SUGGESTIONS
+    %% ======================================
+    SERVICE_SUGGESTIONS {
+        uuid id PK
+        uuid diagnostic_response_id FK
+        uuid measurement_id FK
+        uuid service_id FK "metrology_services"
+        string priority "CRITICAL, RECOMMENDED, OPTIONAL"
+        text reason "Cilindro 1 com ovalização 0.08mm..."
+        decimal estimated_cost
+        boolean included_in_budget
+        timestamp suggested_at
+    }
+
+    %% ======================================
+    %% TABELA: METROLOGY_SERVICES (NOVO)
+    %% ======================================
+    METROLOGY_SERVICES {
+        uuid id PK
+        string service_code UK "SERV-BLO-001"
+        string service_name "Retificar Cilindros 0.50mm"
+        string service_category "retífica, usinagem, teste, montagem..."
+        string component_type "bloco, virabrequim, cabeçote, volante..."
+        text description
+        decimal base_price
+        decimal estimated_time_hours
+        boolean requires_specialized_equipment
+        jsonb trigger_conditions "quando sugerir automaticamente"
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% ======================================
+    %% TABELA: METROLOGY_PARTS (NOVO)
+    %% ======================================
+    METROLOGY_PARTS {
+        uuid id PK
+        string part_code UK "PECA-PISTAO-050"
+        string part_name "Pistão STD +0.50mm"
+        string part_category "vedação, válvulas, bronzinas, diesel..."
+        string component_type "bloco, cabeçote, comando..."
+        boolean is_consumable
+        boolean oem_compatible
+        string typical_usage "após retífica 0.50mm"
+        string unit_measure "UN, KG, JOGO..."
+        jsonb related_services "array de service_ids"
+        boolean is_active
+    }
+
+    %% ======================================
+    %% TABELA: MOTOR_DNA
+    %% ======================================
+    MOTOR_DNA {
+        uuid id PK
+        string motor_number UK
+        uuid org_id FK
+        jsonb vehicle_data "marca, modelo, ano, placa"
+        jsonb manufacturing_data "fabricante, ano fabricação"
+        jsonb history "array de eventos cronológicos"
+        int total_diagnostics
+        timestamp last_diagnostic_date
+        decimal total_invested
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% ======================================
+    %% TABELA: BUDGETS
+    %% ======================================
+    BUDGETS {
+        uuid id PK
+        string budget_number UK "ORC-2025-089"
+        uuid order_id FK
+        uuid diagnostic_response_id FK
+        uuid org_id FK
+        string status "draft, pending_approval, approved, rejected"
+        decimal subtotal_services
+        decimal subtotal_parts
+        decimal discount_amount
+        decimal total_amount
+        int warranty_months_services
+        int warranty_months_parts
+        uuid created_by FK
+        timestamp valid_until
+        timestamp approved_at
+        uuid approved_by FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% ======================================
+    %% TABELA: BUDGET_ITEMS
+    %% ======================================
+    BUDGET_ITEMS {
+        uuid id PK
+        uuid budget_id FK
+        string item_type "service, part"
+        uuid service_id FK "metrology_services"
+        uuid part_id FK "metrology_parts"
+        string description
+        decimal quantity
+        decimal unit_price
+        decimal total_price
+        text notes
+        int display_order
+    }

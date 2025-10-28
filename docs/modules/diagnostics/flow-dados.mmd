@@ -1,0 +1,291 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#3b82f6','primaryTextColor':'#fff','primaryBorderColor':'#2563eb','lineColor':'#64748b','secondaryColor':'#10b981','tertiaryColor':'#f59e0b'}}}%%
+
+sequenceDiagram
+    autonumber
+    
+    actor Metrologista
+    participant Frontend
+    participant API
+    participant DB as Database
+    participant Storage as Supabase Storage
+    participant Engine as Business Logic
+    
+    %% ETAPA 1: Identificação
+    rect rgb(59, 130, 246, 0.1)
+    Note over Metrologista,Engine: ETAPA 1: Identificação do Motor
+    
+    Metrologista->>Frontend: Acessa "Novo Diagnóstico"
+    Frontend->>API: GET /orders?status=pending
+    API->>DB: SELECT * FROM orders WHERE...
+    DB-->>API: Lista de OS pendentes
+    API-->>Frontend: JSON com OS disponíveis
+    
+    Metrologista->>Frontend: Seleciona OS-2025-123
+    Frontend->>API: GET /orders/123/details
+    API->>DB: SELECT order + vehicle + motor_dna
+    DB-->>API: Dados completos da OS
+    API-->>Frontend: Preenche formulário automaticamente
+    
+    Metrologista->>Frontend: Preenche tipo motor, situação, montagem
+    Metrologista->>Frontend: Clica "Próximo"
+    Frontend->>API: POST /diagnostic_responses
+    API->>DB: INSERT INTO diagnostic_responses
+    DB-->>API: diagnostic_response_id
+    API->>DB: INSERT/UPDATE motor_dna (histórico)
+    API-->>Frontend: Sucesso + redirect Etapa 2
+    end
+    
+    %% ETAPA 2: Seleção de Componentes
+    rect rgb(16, 185, 129, 0.1)
+    Note over Metrologista,Engine: ETAPA 2: Seleção de Componentes
+    
+    Frontend->>API: GET /engine_components
+    API->>DB: SELECT * FROM engine_components WHERE active=true
+    DB-->>API: Lista de componentes disponíveis
+    API-->>Frontend: [bloco, cabeçote, virabrequim, ...]
+    
+    Metrologista->>Frontend: Marca checkboxes (Bloco, Virabrequim, Cabeçote, Volante)
+    Metrologista->>Frontend: Define quantidades
+    Metrologista->>Frontend: Clica "Próximo"
+    
+    loop Para cada componente selecionado
+        Frontend->>API: POST /diagnostic_components
+        API->>DB: INSERT INTO diagnostic_components
+    end
+    
+    API-->>Frontend: Sucesso + redirect Etapa 3
+    end
+    
+    %% ETAPA 3: Análise Visual
+    rect rgb(245, 158, 11, 0.1)
+    Note over Metrologista,Engine: ETAPA 3: Análise Visual
+    
+    Frontend->>API: GET /diagnostic_checklists?component=bloco&type=visual
+    API->>DB: SELECT checklist + items WHERE...
+    DB-->>API: Checklist de inspeção visual
+    API-->>Frontend: Formulário dinâmico
+    
+    Metrologista->>Frontend: Preenche inspeção (Regular)
+    Metrologista->>Frontend: Marca "Possui trincas"
+    Frontend->>Frontend: Exibe campos condicionais (localização)
+    Metrologista->>Frontend: Informa "Mancal Central"
+    
+    Metrologista->>Frontend: Arrasta 3 fotos
+    Frontend->>Frontend: Comprime imagens (client-side)
+    
+    loop Para cada foto
+        Frontend->>Storage: Upload to bucket/diagnostic-photos/{id}/
+        Storage-->>Frontend: URL da foto
+    end
+    
+    Metrologista->>Frontend: Adiciona observações
+    Metrologista->>Frontend: Clica "Próximo"
+    
+    Frontend->>API: POST /diagnostic_response_items (visual)
+    API->>DB: INSERT INTO diagnostic_response_items
+    API->>DB: UPDATE diagnostic_responses SET progress=50%
+    API-->>Frontend: Sucesso
+    
+    Note over Frontend: Repete para cada componente (tabs)
+    end
+    
+    %% ETAPA 4: Medições
+    rect rgb(139, 92, 246, 0.1)
+    Note over Metrologista,Engine: ETAPA 4: Medições Dimensionais
+    
+    Frontend->>API: GET /diagnostic_checklists?component=bloco&type=measurement
+    API->>DB: SELECT items WHERE item_type='measurement'
+    DB-->>API: Lista de medições + tolerâncias
+    API-->>Frontend: Formulário com validações
+    
+    Metrologista->>Frontend: Insere "Altura Bloco: 218.95mm"
+    Frontend->>Engine: validateMeasurement(218.95, tolerance)
+    Engine-->>Frontend: {status: 'OK', icon: '🟢'}
+    
+    Metrologista->>Frontend: Insere "Planicidade: 0.08mm"
+    Frontend->>Engine: validateMeasurement(0.08, maxLimit=0.05)
+    Engine-->>Frontend: {status: 'OUT_OF_SPEC', icon: '🔴'}
+    
+    Engine->>API: GET /service_suggestions?condition=planicidade_alta
+    API->>DB: SELECT services WHERE triggers @> condition
+    DB-->>API: "Plainar Bloco - R$ 280"
+    API-->>Frontend: Exibe card de serviço sugerido
+    
+    Metrologista->>Frontend: Insere medições cilindro 1 (topo, meio, base)
+    Frontend->>Engine: calculateOvalização(70.08, 70.06, 70.04)
+    Engine-->>Frontend: ovalização=0.08mm (🔴 FORA)
+    Frontend->>Engine: calculateConicidade(70.08, 70.04)
+    Engine-->>Frontend: conicidade=0.04mm (🔴 FORA)
+    
+    Engine->>API: GET /service_suggestions?ovalização>0.03
+    API->>DB: SELECT services + parts WHERE...
+    DB-->>API: ["Retificar 0.50mm", "Pistões +0.50", "Anéis 0.50"]
+    API-->>Frontend: Exibe 3 cards de sugestões
+    
+    loop Para cada medição
+        Frontend->>API: POST /diagnostic_measurements
+        API->>DB: INSERT INTO diagnostic_measurements
+    end
+    
+    Note over Frontend: Repete para virabrequim, cabeçote, bielas, comando, volante
+    end
+    
+    %% ETAPA 4B: Testes de Qualidade
+    rect rgb(239, 68, 68, 0.1)
+    Note over Metrologista,Engine: ETAPA 4B: Testes de Qualidade
+    
+    Frontend->>API: GET /quality_tests_required?components=[bloco,virabrequim]
+    API->>Engine: determineRequiredTests(components)
+    Engine-->>API: [teste_trinca, teste_hidrostático, balanceamento]
+    API-->>Frontend: Exibe formulários de testes
+    
+    Metrologista->>Frontend: Teste Trinca - Método: Magnaflux
+    Metrologista->>Frontend: Resultado: Reprovado
+    Frontend->>Frontend: Exibe campos condicionais
+    Metrologista->>Frontend: Localização: "Mancal central"
+    Metrologista->>Frontend: Upload foto evidência
+    
+    Frontend->>Storage: Upload foto trinca
+    Storage-->>Frontend: URL foto
+    
+    Metrologista->>Frontend: Ação: Recuperar (solda)
+    Frontend->>API: GET /service_suggestions?action=recuperar_trinca_bloco
+    API->>DB: SELECT services WHERE code='SOLDA_BLOCO'
+    DB-->>API: "Solda Bloco + Usinagem - R$ 850"
+    API-->>Frontend: Adiciona à lista de serviços
+    
+    Metrologista->>Frontend: Teste Hidrostático - 6.5 bar, 15 min
+    Metrologista->>Frontend: Resultado: Aprovado
+    
+    Note over Metrologista: Balanceamento feito externamente
+    Metrologista->>Frontend: Upload laudo PDF
+    Frontend->>Storage: Upload PDF to /diagnostics/{id}/reports/
+    Storage-->>Frontend: URL PDF
+    
+    Frontend->>API: POST /quality_tests
+    API->>DB: INSERT INTO quality_tests
+    DB-->>API: Sucesso
+    end
+    
+    %% ETAPA 5: Montagem Final (Opcional)
+    rect rgb(34, 197, 94, 0.1)
+    Note over Metrologista,Engine: ETAPA 5: Checklist Montagem Final
+    
+    alt Montagem Completa Solicitada
+        Frontend->>API: GET /assembly_checklists?motor_type=otto
+        API->>DB: SELECT * FROM assembly_checklist_items
+        DB-->>API: 30+ itens de verificação
+        API-->>Frontend: Renderiza checklist
+        
+        Metrologista->>Frontend: Marca checkboxes conforme montagem
+        Metrologista->>Frontend: Preenche valores (torques, folgas)
+        Metrologista->>Frontend: Upload foto motor montado
+        
+        Frontend->>Storage: Upload fotos montagem
+        Storage-->>Frontend: URLs
+        
+        Metrologista->>Frontend: Status: Aprovado para Entrega
+        Frontend->>API: POST /assembly_results
+        API->>DB: INSERT INTO assembly_results
+    else Montagem Não Solicitada
+        Note over Frontend: Pula para Etapa 6
+    end
+    end
+    
+    %% ETAPA 6: Parecer Técnico
+    rect rgb(59, 130, 246, 0.1)
+    Note over Metrologista,Engine: ETAPA 6: Parecer Técnico
+    
+    Metrologista->>Frontend: Clica "Gerar Parecer"
+    
+    Frontend->>API: GET /diagnostic_summary/{diagnostic_id}
+    
+    API->>DB: SELECT diagnostic_responses + items + measurements
+    DB-->>API: Dados completos do diagnóstico
+    
+    API->>Engine: generateTechnicalReport(data)
+    
+    Engine->>Engine: Agrupa não conformidades
+    Engine->>Engine: Calcula totais de serviços
+    Engine->>Engine: Calcula totais de peças
+    Engine->>Engine: Gera resumo executivo
+    Engine->>Engine: Formata em JSON estruturado
+    
+    Engine-->>API: technical_report_data
+    
+    API->>Engine: generatePDF(technical_report_data)
+    Engine->>Engine: Renderiza template PDF
+    Engine->>Engine: Adiciona logo empresa
+    Engine->>Engine: Gera QR Code (link DNA motor)
+    Engine->>Engine: Adiciona assinatura digital
+    
+    Engine->>Storage: Upload PDF to /diagnostics/{id}/reports/
+    Storage-->>Engine: URL do PDF
+    
+    Engine-->>API: pdf_url
+    
+    API->>DB: UPDATE diagnostic_responses SET status='concluded', pdf_url=...
+    API->>DB: UPDATE motor_dna ADD event 'DIAGNOSTIC_CONCLUDED'
+    
+    API-->>Frontend: {summary, pdf_url, services, parts, total}
+    
+    Frontend-->>Metrologista: Exibe parecer + Download PDF
+    end
+    
+    %% ETAPA 7: Geração de Orçamento
+    rect rgb(16, 185, 129, 0.1)
+    Note over Metrologista,Engine: ETAPA 7: Geração de Orçamento
+    
+    Metrologista->>Frontend: Clica "Gerar Orçamento"
+    
+    Frontend->>API: POST /budgets/create_from_diagnostic
+    API->>DB: BEGIN TRANSACTION
+    
+    API->>DB: INSERT INTO budgets (order_id, diagnostic_response_id, status='draft')
+    DB-->>API: budget_id
+    
+    loop Para cada serviço sugerido
+        API->>DB: INSERT INTO budget_items (type='service', ...)
+    end
+    
+    loop Para cada peça sugerida
+        API->>DB: INSERT INTO budget_items (type='part', ...)
+    end
+    
+    API->>DB: UPDATE budgets SET total_amount=calculated_total
+    API->>DB: COMMIT TRANSACTION
+    
+    API-->>Frontend: {budget_id, redirect_url}
+    
+    Frontend-->>Metrologista: Redireciona para /budgets/{id}/edit
+    
+    Note over Metrologista: Metrologista pode editar antes de enviar ao cliente
+    end
+    
+    %% DNA do Motor
+    rect rgb(124, 58, 237, 0.1)
+    Note over DB,Engine: Atualização Automática do DNA
+    
+    Note over DB: Trigger on diagnostic_responses UPDATE
+    DB->>DB: EXECUTE FUNCTION update_motor_dna()
+    
+    DB->>DB: INSERT INTO motor_dna.history
+    Note over DB: Evento: DIAGNOSTIC_COMPLETED
+    Note over DB: Dados: non_conformities, services, photos, pdf_url
+    
+    DB->>DB: UPDATE motor_dna.last_diagnostic_date
+    DB->>DB: UPDATE motor_dna.total_diagnostics += 1
+    end
+    
+    %% KPIs e Dashboard
+    rect rgb(249, 115, 22, 0.1)
+    Note over Frontend,DB: Atualização de KPIs em Background
+    
+    par Atualização Assíncrona
+        DB->>DB: REFRESH MATERIALIZED VIEW v_diagnostic_kpis
+        DB->>DB: REFRESH MATERIALIZED VIEW v_service_frequency
+        DB->>DB: REFRESH MATERIALIZED VIEW v_metrology_performance
+    end
+    
+    Note over DB: Views atualizadas a cada 5 minutos
+    end
