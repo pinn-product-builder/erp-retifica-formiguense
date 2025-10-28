@@ -1,0 +1,71 @@
+%% Diagrama: Workflow de Metrologia - 5 Etapas
+%% Descrição: Visualização do fluxo completo das 5 etapas da metrologia
+
+graph TB
+    Start[🎬 Início: OS no Stage 8] --> Check{Inspeção<br/>existe?}
+    Check -->|Não| Create[Criar Inspeção<br/>Status: em_andamento<br/>Gerar número MET-YYYY-XXXX]
+    Check -->|Sim| Resume[Continuar Inspeção<br/>na etapa atual]
+    
+    Create --> Step1
+    Resume --> CurrentStep{Qual<br/>etapa?}
+    CurrentStep -->|1| Step1
+    CurrentStep -->|2| Step2
+    CurrentStep -->|3| Step3
+    CurrentStep -->|4| Step4
+    CurrentStep -->|5| Step5
+    
+    Step1[📝 ETAPA 1<br/>Identificação do Motor<br/>━━━━━━━━━━<br/>✓ Tipo de motor<br/>✓ Marca/Modelo/Ano<br/>✓ Número do motor<br/>✓ Data e hora de entrada<br/>✓ Fotos do motor<br/>━━━━━━━━━━<br/>Progresso: 20%] --> Valid1{Validação<br/>OK?}
+    
+    Valid1 -->|Não| Error1[❌ Campos obrigatórios<br/>não preenchidos]
+    Error1 --> Step1
+    Valid1 -->|Sim| Save1[💾 Salvar em<br/>motor_identification JSONB<br/>UPDATE current_step = 2]
+    Save1 --> Step2
+    
+    Step2[📦 ETAPA 2<br/>Componentes Recebidos<br/>━━━━━━━━━━<br/>☑️ Bloco do motor<br/>☑️ Virabrequim<br/>☑️ Bielas<br/>☑️ Cabeçote<br/>☑️ Comando<br/>☐ Outros<br/>━━━━━━━━━━<br/>Progresso: 40%] --> Valid2{Ao menos<br/>1 componente?}
+    
+    Valid2 -->|Não| Error2[❌ Selecione pelo menos<br/>1 componente]
+    Error2 --> Step2
+    Valid2 -->|Sim| Save2[💾 Salvar em<br/>components_received JSONB<br/>UPDATE current_step = 3]
+    Save2 --> Step3
+    
+    Step3[🔍 ETAPA 3<br/>Análise Visual<br/>━━━━━━━━━━<br/>Para cada componente:<br/>✓ Checklist visual<br/>  • Trincas<br/>  • Desgaste<br/>  • Oxidação<br/>✓ Observações<br/>✓ Fotos detalhadas<br/>━━━━━━━━━━<br/>Progresso: 60%] --> Valid3{Todos componentes<br/>analisados?}
+    
+    Valid3 -->|Não| Error3[❌ Complete análise de<br/>todos os componentes]
+    Error3 --> Step3
+    Valid3 -->|Sim| Save3[💾 INSERT INTO motor_dna<br/>1 registro por componente<br/>UPDATE current_step = 4<br/>SET visual_analysis_completed = true]
+    Save3 --> Step4
+    
+    Step4[📏 ETAPA 4<br/>Medições Dimensionais<br/>━━━━━━━━━━<br/>Para cada ponto:<br/>✓ Valor nominal<br/>✓ Tolerâncias min/max<br/>✓ Valor medido<br/>✓ Status calculado<br/>  🟢 OK<br/>  🟡 Atenção<br/>  🔴 Fora<br/>━━━━━━━━━━<br/>Progresso: 80%] --> Valid4{Medições<br/>registradas?}
+    
+    Valid4 -->|Não| Error4[❌ Registre as medições<br/>dimensionais]
+    Error4 --> Step4
+    Valid4 -->|Sim| Save4[💾 INSERT INTO<br/>dimensional_measurements<br/>1 registro por medição<br/>UPDATE current_step = 5<br/>SET measurements_completed = true]
+    Save4 --> Step5
+    
+    Step5[📄 ETAPA 5<br/>Parecer Técnico<br/>━━━━━━━━━━<br/>✓ Diagnóstico auto-gerado<br/>✓ Causas prováveis<br/>✓ Recomendações<br/>✓ Serviços sugeridos<br/>━━━━━━━━━━<br/>Progresso: 100%] --> EditReport[✏️ Revisar e editar<br/>diagnóstico]
+    
+    EditReport --> GeneratePDF[🔄 Gerar PDF<br/>Edge Function]
+    GeneratePDF --> PDFCreated[📄 PDF Gerado<br/>━━━━━━━━━━<br/>INSERT INTO technical_reports<br/>Upload para Storage<br/>UPDATE inspection_status = 'concluido']
+    
+    PDFCreated --> Choice{Próxima<br/>ação?}
+    
+    Choice -->|Download| Download[📥 Baixar PDF]
+    Choice -->|Ver DNA| DNA[🧬 Visualizar DNA do Motor<br/>Histórico completo]
+    Choice -->|Criar Orçamento| Budget[💰 Transição para Orçamento<br/>━━━━━━━━━━<br/>1. Criar budget<br/>2. Pré-preencher serviços<br/>3. Anexar PDF<br/>4. UPDATE orders<br/>   SET current_stage = 'budgeting'<br/>5. UPDATE inspection_status = 'approved']
+    
+    Download --> End1[✅ Concluído]
+    DNA --> End2[✅ Concluído]
+    Budget --> End3[✅ Orçamento Criado<br/>Stage 9: Budgeting]
+    
+    %% Estilos
+    classDef startStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000
+    classDef stepStyle fill:#fff3e0,stroke:#ff9800,stroke-width:2px,color:#000
+    classDef errorStyle fill:#ffcdd2,stroke:#f44336,stroke-width:2px,color:#000
+    classDef successStyle fill:#c8e6c9,stroke:#4caf50,stroke-width:2px,color:#000
+    classDef decisionStyle fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px,color:#000
+    
+    class Start,Create startStyle
+    class Step1,Step2,Step3,Step4,Step5 stepStyle
+    class Error1,Error2,Error3,Error4 errorStyle
+    class PDFCreated,End1,End2,End3 successStyle
+    class Check,CurrentStep,Valid1,Valid2,Valid3,Valid4,Choice decisionStyle

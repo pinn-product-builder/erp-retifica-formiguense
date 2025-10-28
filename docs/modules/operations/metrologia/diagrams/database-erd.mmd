@@ -1,0 +1,119 @@
+%% Diagrama ER: Banco de Dados do Módulo de Metrologia
+%% Descrição: Relacionamentos entre tabelas
+
+erDiagram
+    ORGANIZATIONS ||--o{ METROLOGY_INSPECTIONS : "tem"
+    ORDERS ||--o{ METROLOGY_INSPECTIONS : "possui"
+    PROFILES ||--o{ METROLOGY_INSPECTIONS : "realiza"
+    
+    METROLOGY_INSPECTIONS ||--o{ MOTOR_DNA : "contém"
+    METROLOGY_INSPECTIONS ||--o{ DIMENSIONAL_MEASUREMENTS : "registra"
+    METROLOGY_INSPECTIONS ||--o| TECHNICAL_REPORTS : "gera"
+    
+    ORGANIZATIONS ||--o{ MOTOR_DNA : "possui"
+    ORGANIZATIONS ||--o{ DIMENSIONAL_MEASUREMENTS : "possui"
+    ORGANIZATIONS ||--o{ TECHNICAL_REPORTS : "possui"
+    
+    ORDERS ||--o{ DETAILED_BUDGETS : "tem"
+    METROLOGY_INSPECTIONS ||--o{ DETAILED_BUDGETS : "alimenta"
+    
+    METROLOGY_INSPECTIONS {
+        uuid id PK
+        uuid org_id FK
+        uuid order_id FK
+        text inspection_number UK "MET-YYYY-0001"
+        text inspection_status "em_andamento | concluido | approved"
+        integer current_step "1 a 5"
+        jsonb motor_identification "Etapa 1"
+        jsonb components_received "Etapa 2"
+        boolean visual_analysis_completed "Etapa 3"
+        boolean measurements_completed "Etapa 4"
+        uuid technical_report_id FK "Etapa 5"
+        uuid inspected_by FK
+        timestamptz inspected_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    
+    MOTOR_DNA {
+        uuid id PK
+        uuid org_id FK
+        uuid inspection_id FK
+        text component "bloco | eixo | biela | comando | cabecote"
+        text component_code
+        jsonb visual_analysis "Checklist + observações"
+        jsonb photos "Array de URLs"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    
+    DIMENSIONAL_MEASUREMENTS {
+        uuid id PK
+        uuid org_id FK
+        uuid inspection_id FK
+        text component
+        text measurement_point "Cilindro 1, Colo móvel 2, etc"
+        numeric nominal_value "Valor nominal (mm)"
+        numeric min_tolerance "Tolerância mínima"
+        numeric max_tolerance "Tolerância máxima"
+        numeric measured_value "Valor medido"
+        text tolerance_status "ok | warning | out_of_tolerance"
+        text unit "mm"
+        text measurement_method "Micrômetro, Calibre, etc"
+        text notes
+        uuid measured_by FK
+        timestamptz measured_at
+        timestamptz created_at
+    }
+    
+    TECHNICAL_REPORTS {
+        uuid id PK
+        uuid org_id FK
+        uuid inspection_id FK "UNIQUE"
+        text diagnosis "Diagnóstico geral"
+        text probable_causes "Causas prováveis"
+        text recommendations "Recomendações"
+        jsonb suggested_services "Array: [{code, name, priority}]"
+        text pdf_url "URL no Storage"
+        integer pdf_pages
+        integer pdf_size_kb
+        uuid generated_by FK
+        timestamptz generated_at
+        integer regenerated_count "Contador de regenerações"
+        timestamptz created_at
+    }
+    
+    ORDERS {
+        uuid id PK
+        uuid org_id FK
+        text order_number
+        text current_stage "metrology | budgeting | etc"
+        uuid metrology_inspection_id FK "Novo"
+        text metrology_status "Novo"
+        boolean has_metrology_report "Novo"
+        text motor_dna_id "engine_serial_number"
+    }
+    
+    DETAILED_BUDGETS {
+        uuid id PK
+        uuid org_id FK
+        uuid order_id FK
+        uuid metrology_inspection_id FK "Novo"
+        text source "manual | metrology | diagnostic"
+        text metrology_pdf_url "Novo"
+        text status "draft | approved | etc"
+    }
+    
+    ORGANIZATIONS {
+        uuid id PK
+        text name
+        timestamptz created_at
+    }
+    
+    PROFILES {
+        uuid id PK
+        uuid user_id FK
+        uuid org_id FK
+        text role "metrologista | gerente_producao | admin | etc"
+        text name
+    }
