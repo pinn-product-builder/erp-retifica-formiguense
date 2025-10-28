@@ -1,0 +1,138 @@
+```mermaid
+erDiagram
+    ORGANIZATIONS ||--o{ PAYABLE_ACCOUNTS : "tem"
+    ORGANIZATIONS ||--o{ SUPPLIERS : "tem"
+    ORGANIZATIONS ||--o{ EXPENSE_CATEGORIES : "tem"
+    ORGANIZATIONS ||--o{ FINANCIAL_HISTORY : "tem"
+    
+    SUPPLIERS ||--o{ PAYABLE_ACCOUNTS : "recebe de"
+    EXPENSE_CATEGORIES ||--o{ PAYABLE_ACCOUNTS : "classifica"
+    ORDERS ||--o| PAYABLE_ACCOUNTS : "pode gerar"
+    
+    PAYABLE_ACCOUNTS ||--o{ PAYMENT_HISTORY : "registra"
+    PAYABLE_ACCOUNTS ||--o| FINANCIAL_HISTORY : "gera entrada"
+    
+    AUTH_USERS ||--o{ PAYABLE_ACCOUNTS : "cria"
+    AUTH_USERS ||--o{ PAYMENT_HISTORY : "registra"
+    
+    ORGANIZATIONS {
+        uuid id PK
+        string name
+        string cnpj
+        timestamptz created_at
+    }
+    
+    SUPPLIERS {
+        uuid id PK
+        uuid org_id FK
+        string name
+        string cnpj_cpf UK
+        string phone
+        string email
+        boolean is_active
+        timestamptz created_at
+    }
+    
+    EXPENSE_CATEGORIES {
+        uuid id PK
+        uuid org_id FK
+        string name UK
+        string code
+        string description
+        string color
+        boolean is_active
+        timestamptz created_at
+    }
+    
+    PAYABLE_ACCOUNTS {
+        uuid id PK
+        uuid org_id FK
+        uuid supplier_id FK
+        uuid category_id FK
+        uuid order_id FK "nullable"
+        decimal amount
+        date due_date
+        text description
+        text notes
+        string invoice_number
+        string invoice_file_url
+        enum status "pending|paid|cancelled"
+        date paid_at "nullable"
+        decimal paid_amount "nullable"
+        enum payment_method "nullable"
+        uuid created_by FK
+        uuid paid_by FK "nullable"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+    
+    PAYMENT_HISTORY {
+        uuid id PK
+        uuid payable_account_id FK
+        decimal amount_paid
+        date paid_at
+        enum payment_method
+        text notes
+        uuid registered_by FK
+        timestamptz created_at
+    }
+    
+    FINANCIAL_HISTORY {
+        uuid id PK
+        uuid org_id FK
+        enum transaction_type "expense"
+        decimal amount
+        date transaction_date
+        uuid reference_id FK
+        string reference_type "payable_account"
+        uuid category_id FK
+        text description
+        uuid created_by FK
+        timestamptz created_at
+    }
+    
+    ORDERS {
+        uuid id PK
+        uuid org_id FK
+        string order_number UK
+        timestamptz created_at
+    }
+    
+    AUTH_USERS {
+        uuid id PK
+        string email UK
+        timestamptz created_at
+    }
+```
+
+## 📋 Notas do Diagrama
+
+### Relacionamentos Principais
+1. **ORGANIZATIONS → PAYABLE_ACCOUNTS**: Uma organização tem muitas contas a pagar
+2. **SUPPLIERS → PAYABLE_ACCOUNTS**: Um fornecedor pode estar em várias contas
+3. **EXPENSE_CATEGORIES → PAYABLE_ACCOUNTS**: Uma categoria classifica várias contas
+4. **ORDERS → PAYABLE_ACCOUNTS**: Uma OS pode gerar uma conta (opcional)
+5. **PAYABLE_ACCOUNTS → PAYMENT_HISTORY**: Uma conta pode ter vários registros de pagamento
+
+### Constraints Importantes
+- `payable_accounts.org_id` → Isolamento por organização
+- `payable_accounts.supplier_id` → NOT NULL (fornecedor obrigatório)
+- `payable_accounts.category_id` → NOT NULL (categoria obrigatória)
+- `payable_accounts.amount` → CHECK (amount > 0)
+- `payable_accounts.status` → CHECK (status IN ('pending', 'paid', 'cancelled'))
+- `payable_accounts.due_date` → NOT NULL
+
+### Índices Recomendados
+- `idx_payable_accounts_org_status` (org_id, status)
+- `idx_payable_accounts_due_date` (due_date) WHERE status = 'pending'
+- `idx_payable_accounts_supplier` (supplier_id)
+- `idx_payable_accounts_category` (category_id)
+- `idx_payable_accounts_order` (order_id) WHERE order_id IS NOT NULL
+- `idx_payment_history_account` (payable_account_id)
+- `idx_financial_history_reference` (reference_type, reference_id)
+
+### RLS Policies
+- SELECT: Usuários veem apenas contas da sua org
+- INSERT: Usuários podem criar contas na sua org
+- UPDATE: Apenas status e campos de pagamento após criação
+- DELETE: Apenas admin pode excluir (soft delete preferível)

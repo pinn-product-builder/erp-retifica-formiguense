@@ -1,0 +1,63 @@
+```mermaid
+journey
+    title Jornada: Cadastro e Pagamento de Conta a Pagar
+    
+    section Acesso
+      Navegar para Financeiro: 5: Usuário
+      Visualizar dashboard: 5: Sistema
+      Ver alertas de vencimento: 4: Sistema
+    
+    section Cadastro
+      Clicar em "Nova Conta": 5: Usuário
+      Abrir modal de cadastro: 5: Sistema
+      Selecionar fornecedor: 4: Usuário
+      Selecionar categoria: 4: Usuário
+      Preencher valor: 5: Usuário
+      Selecionar vencimento: 4: Usuário
+      Digitar descrição: 4: Usuário
+      Fazer upload NF-e: 3: Usuário
+      Sistema valida arquivo: 4: Sistema
+      Clicar em "Salvar": 5: Usuário
+      
+    section Validação
+      Validar campos obrigatórios: 5: Sistema
+      Validar formato de valor: 5: Sistema
+      Validar data vencimento: 5: Sistema
+      Verificar duplicatas: 4: Sistema
+    
+    section Confirmação
+      Salvar no banco: 5: Sistema
+      Upload arquivo storage: 4: Sistema
+      Exibir toast sucesso: 5: Sistema
+      Atualizar lista: 5: Sistema
+      Enviar notificação: 4: Sistema
+    
+    section Gestão Diária
+      Visualizar lista: 5: Usuário
+      Aplicar filtros: 4: Usuário
+      Ver contas vencidas: 3: Usuário
+      Receber alerta: 4: Sistema
+    
+    section Pagamento
+      Selecionar conta: 5: Usuário
+      Clicar em "Pagar": 5: Usuário
+      Abrir modal pagamento: 5: Sistema
+      Informar data: 5: Usuário
+      Informar valor pago: 5: Usuário
+      Selecionar forma: 5: Usuário
+      Adicionar observações: 4: Usuário
+      Confirmar pagamento: 5: Usuário
+      
+    section Registro
+      Validar dados: 5: Sistema
+      Atualizar status: 5: Sistema
+      Registrar histórico: 5: Sistema
+      Exibir confirmação: 5: Sistema
+      Atualizar dashboard: 5: Sistema
+    
+    section Consulta
+      Visualizar histórico: 5: Usuário
+      Filtrar por período: 4: Usuário
+      Exportar relatório: 4: Usuário
+      Sistema gera PDF: 4: Sistema
+```

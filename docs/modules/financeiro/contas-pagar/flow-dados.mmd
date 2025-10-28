@@ -1,0 +1,116 @@
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant F as Frontend
+    participant V as Validador Zod
+    participant A as API Supabase
+    participant DB as Database
+    participant S as Storage
+    participant N as Sistema Notificações
+    
+    Note over U,N: FASE 1: Cadastro de Conta
+    
+    U->>F: Clica "Nova Conta"
+    F->>U: Exibe modal formulário
+    U->>F: Preenche dados
+    U->>F: Seleciona arquivo NF-e
+    F->>V: Valida dados (Zod)
+    
+    alt Validação Falha
+        V-->>F: Erros de validação
+        F-->>U: Exibe mensagens erro
+    else Validação OK
+        V-->>F: Dados válidos
+        F->>A: POST /payable_accounts
+        
+        Note over A,DB: Transaction Start
+        
+        A->>DB: INSERT INTO payable_accounts
+        DB-->>A: account_id
+        
+        alt Tem arquivo NF-e
+            A->>S: Upload arquivo
+            S-->>A: file_url
+            A->>DB: UPDATE file_url
+        end
+        
+        A->>DB: INSERT INTO financial_history
+        DB-->>A: OK
+        
+        Note over A,DB: Transaction Commit
+        
+        A-->>F: 201 Created + account_data
+        F->>N: Agendar alerta vencimento
+        F-->>U: Toast "Conta cadastrada"
+        F->>F: Atualiza lista
+    end
+    
+    Note over U,N: FASE 2: Listagem e Filtros
+    
+    U->>F: Navega para contas a pagar
+    F->>A: GET /payable_accounts?status=pending
+    A->>DB: SELECT com JOINs
+    DB-->>A: Lista de contas
+    A-->>F: 200 OK + accounts[]
+    F-->>U: Renderiza lista
+    
+    U->>F: Aplica filtros
+    F->>A: GET /payable_accounts?filters={...}
+    A->>DB: SELECT filtrado
+    DB-->>A: Contas filtradas
+    A-->>F: 200 OK + filtered_accounts[]
+    F-->>U: Atualiza lista
+    
+    Note over U,N: FASE 3: Pagamento
+    
+    U->>F: Clica "Pagar" conta
+    F->>U: Exibe modal pagamento
+    U->>F: Preenche dados pagamento
+    F->>V: Valida pagamento
+    
+    alt Validação Pagamento Falha
+        V-->>F: Erros
+        F-->>U: Mensagens erro
+    else Validação OK
+        V-->>F: OK
+        F->>A: PATCH /payable_accounts/{id}/pay
+        
+        Note over A,DB: Transaction Start
+        
+        A->>DB: UPDATE status='paid'
+        A->>DB: UPDATE paid_at, paid_amount
+        DB-->>A: OK
+        
+        A->>DB: INSERT INTO payments_history
+        DB-->>A: OK
+        
+        A->>DB: UPDATE financial_summary
+        DB-->>A: OK
+        
+        Note over A,DB: Transaction Commit
+        
+        A-->>F: 200 OK
+        F-->>U: Toast "Pagamento registrado"
+        F->>F: Atualiza lista
+        F->>F: Atualiza dashboard
+    end
+    
+    Note over U,N: FASE 4: Alertas Automáticos
+    
+    loop Verificação Diária
+        N->>DB: SELECT contas vencendo
+        DB-->>N: contas[]
+        N->>DB: INSERT INTO notifications
+        N->>U: Push/Email alerta
+    end
+    
+    Note over U,N: FASE 5: Relatórios
+    
+    U->>F: Solicita relatório
+    F->>A: GET /reports/payables?period={...}
+    A->>DB: SELECT agregado
+    DB-->>A: Dados relatório
+    A-->>F: 200 OK + report_data
+    F->>F: Gera PDF
+    F-->>U: Download relatório
+```
