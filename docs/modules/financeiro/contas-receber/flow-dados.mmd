@@ -1,0 +1,78 @@
+```mermaid
+sequenceDiagram
+    participant U as Usuário
+    participant F as Frontend
+    participant V as Validador
+    participant A as API
+    participant DB as Database
+    participant N as Notificações
+    
+    Note over U,N: FASE 1: Cadastro de Conta
+    
+    U->>F: Clica "Nova Conta"
+    F->>U: Exibe modal
+    U->>F: Preenche dados
+    F->>V: Valida (Zod)
+    
+    alt Validação Falha
+        V-->>F: Erros
+        F-->>U: Mensagens erro
+    else Validação OK
+        V-->>F: OK
+        F->>A: POST /accounts_receivable
+        
+        Note over A,DB: Transaction Start
+        
+        A->>DB: INSERT INTO accounts_receivable
+        DB-->>A: account_id
+        
+        alt Parcelamento
+            loop Para cada parcela
+                A->>DB: INSERT parcela
+            end
+        end
+        
+        A->>DB: INSERT INTO financial_history
+        
+        Note over A,DB: Transaction Commit
+        
+        A-->>F: 201 Created
+        F->>N: Agendar alerta vencimento
+        F-->>U: Toast sucesso
+    end
+    
+    Note over U,N: FASE 2: Recebimento
+    
+    U->>F: Clica "Receber"
+    F->>U: Exibe modal
+    F->>A: GET /calculate_late_fee
+    A->>DB: SELECT conta
+    DB-->>A: dados
+    A-->>F: juros calculados
+    F-->>U: Exibe valores
+    
+    U->>F: Confirma recebimento
+    F->>V: Valida dados
+    V-->>F: OK
+    F->>A: POST /register_receipt
+    
+    Note over A,DB: Function register_receipt
+    
+    A->>DB: INSERT INTO receipt_history
+    A->>DB: UPDATE accounts_receivable
+    A->>DB: UPDATE customer_credit_limits
+    DB-->>A: OK
+    
+    A-->>F: 200 OK + recibo
+    F-->>U: Toast "Recebimento registrado"
+    F->>F: Atualizar lista
+    
+    Note over U,N: FASE 3: Alertas Automáticos
+    
+    loop Verificação Diária
+        N->>DB: SELECT contas vencendo
+        DB-->>N: contas[]
+        N->>DB: INSERT INTO notifications
+        N->>U: Push/Email alerta
+    end
+```

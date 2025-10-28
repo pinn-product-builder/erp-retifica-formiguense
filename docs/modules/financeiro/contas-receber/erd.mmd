@@ -1,0 +1,84 @@
+```mermaid
+erDiagram
+    ORGANIZATIONS ||--o{ ACCOUNTS_RECEIVABLE : "possui"
+    CUSTOMERS ||--o{ ACCOUNTS_RECEIVABLE : "deve"
+    ORDERS ||--o| ACCOUNTS_RECEIVABLE : "gera"
+    BUDGETS ||--o| ACCOUNTS_RECEIVABLE : "gera"
+    ACCOUNTS_RECEIVABLE ||--o{ RECEIPT_HISTORY : "tem"
+    CUSTOMERS ||--o| CUSTOMER_CREDIT_LIMITS : "tem"
+    ORGANIZATIONS ||--o{ CUSTOMER_CREDIT_LIMITS : "gerencia"
+    
+    ACCOUNTS_RECEIVABLE {
+        uuid id PK
+        uuid org_id FK
+        uuid customer_id FK
+        uuid order_id FK "nullable"
+        uuid budget_id FK "nullable"
+        decimal amount
+        date due_date
+        date payment_date "nullable"
+        int installment_number
+        int total_installments
+        string invoice_number
+        string payment_method
+        decimal late_fee
+        decimal discount
+        text notes
+        enum status "pending,paid,overdue"
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    RECEIPT_HISTORY {
+        uuid id PK
+        uuid receivable_account_id FK
+        decimal amount_received
+        date received_at
+        string payment_method
+        decimal late_fee_charged
+        decimal discount_applied
+        text notes
+        uuid registered_by FK
+        timestamp created_at
+    }
+    
+    CUSTOMER_CREDIT_LIMITS {
+        uuid id PK
+        uuid org_id FK
+        uuid customer_id FK
+        decimal credit_limit
+        decimal current_balance
+        boolean is_blocked
+        text blocked_reason
+        timestamp blocked_at
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    CUSTOMERS {
+        uuid id PK
+        uuid org_id FK
+        string name
+        string document
+        string phone
+        string email
+    }
+    
+    ORDERS {
+        uuid id PK
+        uuid org_id FK
+        uuid customer_id FK
+        string order_number
+    }
+    
+    BUDGETS {
+        uuid id PK
+        uuid order_id FK
+        string status
+    }
+    
+    ORGANIZATIONS {
+        uuid id PK
+        string name
+    }
+```

@@ -1,0 +1,41 @@
+```mermaid
+journey
+    title Jornada: Registrar e Receber Conta
+
+    section Cadastro
+      Navegar para Contas a Receber: 5: Usuário
+      Clicar em "Nova Conta": 5: Usuário
+      Selecionar cliente: 4: Usuário
+      Vincular OS/Orçamento: 4: Usuário
+      Definir valor: 5: Usuário
+      Configurar parcelamento: 4: Usuário
+      Selecionar vencimento: 4: Usuário
+      Sistema valida dados: 5: Sistema
+      Salvar conta: 5: Usuário
+      Confirmação de sucesso: 5: Sistema
+      
+    section Gestão Diária
+      Visualizar dashboard: 5: Usuário
+      Ver contas vencendo: 4: Usuário
+      Aplicar filtros: 4: Usuário
+      Receber alerta vencimento: 4: Sistema
+      
+    section Recebimento
+      Selecionar conta: 5: Usuário
+      Clicar em "Receber": 5: Usuário
+      Abrir modal recebimento: 5: Sistema
+      Informar data: 5: Usuário
+      Sistema calcula juros: 5: Sistema
+      Aplicar desconto opcional: 4: Usuário
+      Informar valor: 5: Usuário
+      Selecionar forma pagamento: 5: Usuário
+      Confirmar recebimento: 5: Usuário
+      
+    section Finalização
+      Validar dados: 5: Sistema
+      Atualizar status: 5: Sistema
+      Registrar no histórico: 5: Sistema
+      Gerar recibo: 4: Sistema
+      Atualizar dashboard: 5: Sistema
+      Notificar sucesso: 5: Sistema
+```
