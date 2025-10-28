@@ -1,0 +1,97 @@
+```mermaid
+sequenceDiagram
+    participant U as Atendente
+    participant F as Frontend (React)
+    participant V as Validador Zod
+    participant A as API Supabase
+    participant DB as PostgreSQL
+    participant CEP as ViaCEP API
+    
+    Note over U,DB: FASE 1: Iniciar Formulário
+    U->>F: Acessa /clientes/novo
+    F->>F: Renderiza ClienteForm
+    F->>U: Exibe formulário vazio
+    
+    Note over U,DB: FASE 2: Validar CPF
+    U->>F: Digita CPF
+    F->>F: Aplica máscara 999.999.999-99
+    F->>V: validateCPF(cpf)
+    
+    alt CPF Inválido
+        V-->>F: Erro: "CPF inválido"
+        F->>U: Exibe mensagem de erro
+    else CPF Válido
+        V-->>F: CPF válido
+        F->>A: GET /customers?cpf=eq.{cpf}
+        A->>DB: SELECT * FROM customers WHERE cpf = ?
+        
+        alt CPF Duplicado
+            DB-->>A: Retorna cliente existente
+            A-->>F: Status 200 + dados
+            F->>U: Aviso: "CPF já cadastrado"
+        else CPF Único
+            DB-->>A: Retorna vazio
+            A-->>F: Status 200 + []
+            F->>U: Exibe "✓ CPF válido"
+        end
+    end
+    
+    Note over U,DB: FASE 3: Preencher Dados
+    U->>F: Preenche nome, telefone, email
+    F->>V: Valida cada campo (Zod)
+    V-->>F: Validação OK
+    
+    Note over U,DB: FASE 4: Buscar Endereço (Opcional)
+    U->>F: Digita CEP
+    F->>CEP: GET https://viacep.com.br/ws/{cep}/json/
+    
+    alt CEP Encontrado
+        CEP-->>F: Retorna endereço
+        F->>F: Auto-preenche logradouro, bairro, cidade, UF
+        F->>U: Exibe campos preenchidos
+    else CEP Não Encontrado
+        CEP-->>F: Erro 404
+        F->>U: Permite preenchimento manual
+    end
+    
+    Note over U,DB: FASE 5: Salvar Cliente
+    U->>F: Clica "Salvar Cliente"
+    F->>V: Valida formulário completo (customerPFSchema)
+    
+    alt Validação Falha
+        V-->>F: Erros de validação
+        F->>U: Destaca campos com erro
+    else Validação OK
+        V-->>F: Dados válidos
+        F->>A: POST /customers
+        Note right of F: Payload:<br/>{<br/>  type: "direto",<br/>  cpf: "12345678909",<br/>  name: "João Silva",<br/>  phone: "11999999999",<br/>  email: "joao@example.com",<br/>  address: {...},<br/>  org_id: "uuid"<br/>}
+        
+        A->>DB: INSERT INTO customers (...)
+        DB->>DB: Valida constraint UNIQUE(org_id, cpf)
+        DB->>DB: Executa trigger set_updated_at()
+        
+        alt Insert Sucesso
+            DB-->>A: Retorna customer_id
+            A-->>F: Status 201 + dados completos
+            F->>U: Toast: "Cliente cadastrado!"
+            F->>F: Navega para /clientes
+            F->>A: GET /customers (refresh lista)
+            A->>DB: SELECT * FROM customers
+            DB-->>A: Retorna todos os clientes
+            A-->>F: Lista atualizada
+            F->>U: Exibe lista com novo cliente
+        else Insert Falha (Duplicado)
+            DB-->>A: Erro: duplicate key
+            A-->>F: Status 409 Conflict
+            F->>U: Erro: "CPF já cadastrado"
+        else Insert Falha (Outro)
+            DB-->>A: Erro genérico
+            A-->>F: Status 500
+            F->>U: Erro: "Falha ao salvar"
+        end
+    end
+    
+    Note over U,DB: FASE 6: Confirmação
+    U->>U: Visualiza cliente na lista
+    U->>U: Confirma cadastro bem-sucedido
+```

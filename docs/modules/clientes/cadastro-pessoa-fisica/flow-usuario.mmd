@@ -1,0 +1,44 @@
+```mermaid
+journey
+    title Jornada do Usuário: Cadastrar Cliente Pessoa Física
+    
+    section Iniciar Cadastro
+      Acessar página de Clientes: 5: Atendente
+      Clicar em "+ Novo Cliente": 5: Atendente
+      Selecionar "Pessoa Física": 5: Atendente
+      Visualizar formulário: 5: Sistema
+    
+    section Preencher CPF
+      Digitar CPF: 3: Atendente
+      Aplicar máscara automática: 5: Sistema
+      Validar formato CPF: 4: Sistema
+      Verificar CPF duplicado: 4: Sistema
+      Exibir "✓ CPF válido": 5: Sistema
+    
+    section Preencher Dados Pessoais
+      Informar nome completo: 3: Atendente
+      Validar tamanho do nome: 5: Sistema
+      Informar telefone: 3: Atendente
+      Aplicar máscara de telefone: 5: Sistema
+      Informar email (opcional): 3: Atendente
+      Validar formato email: 4: Sistema
+    
+    section Preencher Endereço (Opcional)
+      Expandir seção de endereço: 4: Atendente
+      Digitar CEP: 3: Atendente
+      Buscar endereço via ViaCEP: 4: Sistema
+      Auto-preencher logradouro: 5: Sistema
+      Complementar número e complemento: 3: Atendente
+    
+    section Salvar Cliente
+      Clicar em "Salvar Cliente": 5: Atendente
+      Validar todos os campos: 4: Sistema
+      Enviar dados ao backend: 4: Sistema
+      Inserir no banco de dados: 4: Sistema
+      Exibir toast de sucesso: 5: Sistema
+      Redirecionar para lista: 5: Sistema
+    
+    section Confirmar Cadastro
+      Visualizar cliente na lista: 5: Atendente
+      Ver badge "Novo": 5: Sistema
+```

@@ -1,0 +1,157 @@
+```mermaid
+erDiagram
+    ORGANIZATIONS ||--o{ CUSTOMERS : "tem"
+    CUSTOMERS ||--o{ ORDERS : "faz"
+    CUSTOMERS ||--o{ BUDGETS : "recebe"
+    CUSTOMERS ||--o{ COLLECTIONS : "solicita"
+    AUTH_USERS ||--o{ CUSTOMERS : "cria"
+    
+    ORGANIZATIONS {
+        uuid id PK
+        string name
+        string cnpj
+        boolean active
+        timestamptz created_at
+    }
+    
+    CUSTOMERS {
+        uuid id PK
+        uuid org_id FK
+        string type "direto|oficina"
+        string cpf UK "11 dígitos"
+        string name "NOT NULL"
+        string phone "NOT NULL"
+        string email "opcional"
+        string address_cep
+        string address_street
+        string address_number
+        string address_complement
+        string address_neighborhood
+        string address_city
+        string address_state
+        string cnpj UK "14 dígitos (PJ)"
+        string company_name "PJ"
+        string trade_name "PJ"
+        string contact_person "PJ"
+        text notes
+        boolean active "default true"
+        timestamptz created_at
+        timestamptz updated_at
+        uuid created_by FK
+    }
+    
+    AUTH_USERS {
+        uuid id PK
+        string email UK
+        timestamptz created_at
+    }
+    
+    ORDERS {
+        uuid id PK
+        uuid org_id FK
+        uuid customer_id FK
+        string order_number UK
+        string status
+        timestamptz created_at
+    }
+    
+    BUDGETS {
+        uuid id PK
+        uuid org_id FK
+        uuid customer_id FK
+        string budget_number UK
+        string status
+        decimal total_amount
+        timestamptz created_at
+    }
+    
+    COLLECTIONS {
+        uuid id PK
+        uuid org_id FK
+        uuid customer_id FK
+        string collection_number UK
+        date collection_date
+        time collection_time
+        string location
+        timestamptz created_at
+    }
+```
+
+## 📊 Relacionamentos
+
+### 1:N - Organizations → Customers
+- Uma organização tem múltiplos clientes
+- Um cliente pertence a uma organização
+- Constraint: `org_id` NOT NULL, FK com CASCADE DELETE
+
+### 1:N - Customers → Orders
+- Um cliente pode ter múltiplos pedidos/OS
+- Um pedido pertence a um cliente
+- Constraint: `customer_id` NOT NULL
+
+### 1:N - Customers → Budgets
+- Um cliente pode receber múltiplos orçamentos
+- Um orçamento é para um cliente
+- Constraint: `customer_id` NOT NULL
+
+### 1:N - Customers → Collections
+- Um cliente pode solicitar múltiplas coletas
+- Uma coleta é para um cliente
+- Constraint: `customer_id` NOT NULL
+
+### 1:N - Auth Users → Customers
+- Um usuário pode criar múltiplos clientes
+- Um cliente é criado por um usuário
+- Constraint: `created_by` NULL (opcional)
+
+## 🔑 Constraints Principais
+
+### Unicidade
+- `UNIQUE (org_id, cpf)` - CPF único por organização
+- `UNIQUE (org_id, cnpj)` - CNPJ único por organização
+
+### Check Constraints
+- `type IN ('direto', 'oficina')` - Apenas tipos válidos
+- `length(cpf) = 11` - CPF sempre 11 dígitos
+- `length(cnpj) = 14` - CNPJ sempre 14 dígitos
+- `(type = 'direto' AND cpf IS NOT NULL)` - PF deve ter CPF
+- `(type = 'oficina' AND cnpj IS NOT NULL)` - PJ deve ter CNPJ
+
+### Foreign Keys
+- `org_id → organizations(id)` ON DELETE CASCADE
+- `created_by → auth.users(id)` ON DELETE SET NULL
+
+## 📈 Índices
+
+### Performance
+- `idx_customers_cpf` - Busca rápida por CPF
+- `idx_customers_cnpj` - Busca rápida por CNPJ
+- `idx_customers_name` - Busca full-text por nome (GIN)
+- `idx_customers_phone` - Busca por telefone
+- `idx_customers_active` - Filtro de ativos
+
+## 🔒 Row Level Security (RLS)
+
+### SELECT Policy
+```sql
+-- Usuários veem clientes da sua organização
+org_id IN (SELECT org_id FROM profiles WHERE id = auth.uid())
+```
+
+### INSERT Policy
+```sql
+-- Usuários criam clientes na sua organização
+org_id IN (SELECT org_id FROM profiles WHERE id = auth.uid())
+```
+
+### UPDATE Policy
+```sql
+-- Usuários editam clientes da sua organização
+org_id IN (SELECT org_id FROM profiles WHERE id = auth.uid())
+```
+
+### DELETE Policy
+```sql
+-- Apenas admin pode deletar
+org_id IN (SELECT org_id FROM profiles WHERE id = auth.uid() AND role = 'admin')
+```
