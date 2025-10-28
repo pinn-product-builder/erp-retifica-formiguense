@@ -1,229 +1,183 @@
-# 📚 Documentação ERP Retífica Formiguense
+# Documentação Técnica - ERP Retífica Formiguense
 
-> Sistema de Gestão para Retíficas Automotivas - Documentação Completa v1.0
+## 📚 Visão Geral
 
-[![Status](https://img.shields.io/badge/Status-Homologação-yellow)](https://github.com/pinn-product-builder/erp-retifica-formiguense)
-[![Versão](https://img.shields.io/badge/Versão-1.0.0-blue)](https://github.com/pinn-product-builder/erp-retifica-formiguense)
-[![Documentação](https://img.shields.io/badge/Docs-Online-green)](https://pinn-product-builder.github.io/erp-retifica-formiguense/)
+Documentação técnica completa para desenvolvedores e QA do sistema ERP Retífica Formiguense.
 
-## 🚀 Acesso Rápido
+## 🗂️ Estrutura de Documentação
 
-- **[🎯 Início Rápido](quick-start.md)** - Configure e use o sistema em minutos
-- **[📊 Visão Geral do Sistema](system-blueprint.md)** - Entenda a arquitetura completa
-- **[✅ Guia de Validação](validation/functional-validation-guide.md)** - Roteiro de homologação
-- **[📖 Glossário](glossary.md)** - Termos e definições técnicas
-- **[❓ FAQ](faq.md)** - Perguntas frequentes
+### 📂 Raiz (`/docs`)
+Documentos comuns a todos os módulos:
+- **README.md** (este arquivo) - Índice geral
+- **ARCHITECTURE.md** - Arquitetura geral do sistema
+- **DATABASE.md** - Estrutura global do banco de dados
+- **AUTH_PERMISSIONS.md** - Sistema de autenticação e permissões
+- **API_PATTERNS.md** - Padrões de API e integração
+- **TESTING.md** - Estratégias de teste E2E e unitários
+- **DEPLOYMENT.md** - Guia de deployment e CI/CD
 
----
+### 📂 Módulos (`/docs/modules`)
+Documentação específica por módulo:
 
-## 📑 Índice Completo
+| Módulo | Pasta | Descrição |
+|--------|-------|-----------|
+| **Dashboard** | `/modules/dashboard/` | KPIs e métricas gerenciais |
+| **Ordens de Serviço** | `/modules/orders/` | Gestão de OS e workflow |
+| **Operações & Serviços** | `/modules/operations/` | Kanban, Metrologia, Produção |
+| **Clientes** | `/modules/customers/` | CRM e gestão de clientes |
+| **Orçamentos** | `/modules/budgets/` | Orçamentos detalhados |
+| **Compras** | `/modules/purchases/` | Pedidos e fornecedores |
+| **Estoque** | `/modules/inventory/` | Controle de peças |
+| **Fornecedores** | `/modules/suppliers/` | Cadastro e gestão |
+| **Fiscal** | `/modules/fiscal/` | Emissão de notas e impostos |
+| **Financeiro** | `/modules/financial/` | Contas a pagar/receber |
+| **Relatórios** | `/modules/reports/` | Relatórios gerenciais |
+| **Gestão de Usuários** | `/modules/users/` | Perfis e permissões |
+| **Coleta** | `/modules/collection/` | Solicitações de coleta |
 
-### 🏗️ Arquitetura
+## 📖 Estrutura Padrão de Módulo
 
-Documentação técnica da arquitetura do sistema:
+Cada módulo segue a estrutura:
 
-- **[Visão Geral do Sistema](architecture/system-overview.md)** - Arquitetura geral e componentes
-- **[Schema do Banco de Dados](architecture/database-schema.md)** - Estrutura completa do banco
-- **[Multi-tenancy](architecture/multitenancy.md)** - Sistema multi-organizacional
-- **[Modelo de Segurança](architecture/security-model.md)** - RLS e políticas de segurança
-- **[Sistema de Perfis e Permissões](architecture/profile-permissions-system.md)** - RBAC e permissões granulares
-- **[Stack Técnica](architecture/tech-stack.md)** - Tecnologias utilizadas
+```
+module-name/
+├── README.md                  # Visão geral do módulo
+├── user-stories/              # Histórias de usuário (US-XXX-###)
+│   ├── US-XXX-001.md
+│   └── US-XXX-002.md
+├── flows/                     # Fluxos de processo
+│   └── main-flow.md
+├── diagrams/                  # Diagramas Mermaid
+│   ├── workflow.mmd
+│   └── database-erd.mmd
+├── database/                  # Scripts SQL
+│   ├── migrations.sql
+│   ├── views.sql
+│   ├── functions.sql
+│   └── policies.sql
+├── technical/                 # Documentação técnica
+│   ├── components.md          # Componentes React
+│   ├── hooks.md               # Custom hooks
+│   ├── utils.md               # Funções utilitárias
+│   └── types.md               # TypeScript types
+├── api/                       # APIs e integrações
+│   ├── edge-functions.md
+│   └── queries.md
+├── wireframes/                # Wireframes e UI
+│   └── screens.md
+└── testing/                   # Testes
+    ├── e2e-scenarios.md
+    └── acceptance-criteria.md
+```
 
-### 📖 Regras de Negócio
+## 🚀 Como Usar Esta Documentação
 
-Processos e regras implementadas:
+### Para Desenvolvedores Frontend
+1. Comece pelo `README.md` do módulo
+2. Leia as histórias de usuário em `user-stories/`
+3. Consulte `technical/components.md` para arquitetura React
+4. Veja `wireframes/` para referência de UI
 
-- **[Autenticação e Multi-tenancy](business-rules/authentication-multitenancy.md)** - Login e organizações
-- **[Dashboard e KPIs](business-rules/dashboard-kpis.md)** - Métricas e indicadores
-- **[Workflow de Operações](business-rules/operations-workflow.md)** - Fluxo de OS e Kanban
-- **[Orçamentos e Aprovação](business-rules/budgets-approval.md)** - Processo de orçamentos
-- **[Módulo Fiscal](business-rules/fiscal-module.md)** - Gestão tributária
-- **[Módulo Financeiro](business-rules/financial-module.md)** - Contas e fluxo de caixa
-- **[Módulo de Estoque](business-rules/inventory-module.md)** - Gestão de peças
-- **[Módulo de Compras](business-rules/purchasing-module.md)** - Processo de compras
+### Para Desenvolvedores Backend
+1. Consulte `database/migrations.sql` para estrutura
+2. Veja `database/policies.sql` para RLS
+3. Leia `api/edge-functions.md` para lógica de negócio
+4. Consulte `database/functions.sql` para procedures
 
-### 🧩 Módulos
+### Para QA/Testers
+1. Leia `user-stories/` para entender funcionalidades
+2. Consulte `testing/e2e-scenarios.md` para cenários
+3. Veja `testing/acceptance-criteria.md` para validação
+4. Use `flows/` para entender processos completos
 
-Documentação detalhada de cada módulo:
+### Para Product Owners
+1. Comece pelo `README.md` do módulo
+2. Revise `user-stories/` para priorização
+3. Consulte `diagrams/` para visualização
+4. Leia `flows/` para entender jornadas
 
-#### 📈 Dashboard
-- **[README](modules/dashboard/README.md)** - Visão geral do módulo
-- **[Requisitos do Produto](modules/dashboard/product-specs/product-requirements.md)**
-- **[Arquitetura de Componentes](modules/dashboard/technical-specs/component-architecture.md)**
-- **[Integração de Dados](modules/dashboard/technical-specs/data-integration.md)**
-- **[Sistema Unificado de KPIs](modules/dashboard/unified-kpi-system.md)**
-- **[Jornada do Usuário](modules/dashboard/user-flows/dashboard-user-journey.md)**
-- **[Wireframes](modules/dashboard/wireframes/)** - Interfaces principais
+## 🔗 Links Rápidos
 
-#### 🔧 Operações
-- **[README](modules/operations/README.md)** - Visão geral do módulo
-- **[Processo de Ordens de Serviço](modules/operations/business-processes/service-order-process.md)**
-- **[Gestão de Workflow](modules/operations/business-processes/workflow-management.md)**
-- **[Configuração Dinâmica de Status](modules/operations/business-processes/dynamic-workflow-status-configuration.md)**
-- **[Arquitetura de Componentes](modules/operations/technical-specs/component-architecture.md)**
-- **[Fluxo Kanban](modules/operations/user-flows/kanban-workflow.md)**
-- **[Ciclo de Vida da OS](modules/operations/user-flows/order-lifecycle.md)**
-- **[Guia de Configurações](modules/operations/user-guides/operations-configuration-guide.md)**
-- **[Wireframes](modules/operations/wireframes/)** - Interfaces do módulo
+### Documentação Comum
+- [Arquitetura do Sistema](./ARCHITECTURE.md)
+- [Banco de Dados Global](./DATABASE.md)
+- [Autenticação e Permissões](./AUTH_PERMISSIONS.md)
+- [Padrões de API](./API_PATTERNS.md)
+- [Guia de Testes](./TESTING.md)
 
-#### 💰 Orçamentos
-- **[README](modules/budgets/README.md)** - Visão geral do módulo
-- **[Arquitetura de Componentes](modules/budgets/technical-specs/component-architecture.md)**
-- **[Fluxo de Aprovação](modules/budgets/user-flows/budget-approval-flow.md)**
-- **[Wireframes](modules/budgets/wireframes/)** - Interfaces de orçamento
+### Módulos Principais
+- [Dashboard](./modules/dashboard/README.md)
+- [Ordens de Serviço](./modules/orders/README.md)
+- [Operações & Serviços](./modules/operations/README.md)
+  - [Metrologia](./modules/operations/metrologia/README.md)
+- [Clientes](./modules/customers/README.md)
+- [Orçamentos](./modules/budgets/README.md)
+- [Estoque](./modules/inventory/README.md)
 
-#### 📋 Fiscal
-- **[README](modules/fiscal/README.md)** - Visão geral do módulo fiscal
+## 📊 Status de Implementação
 
-#### 📦 Estoque (Inventário)
-- **[README](modules/inventory/README.md)** - Visão geral do módulo
-- **[Plano de Implementação](modules/inventory/implementation-plan.md)**
-- **[Guia de Deploy](modules/inventory/DEPLOYMENT_GUIDE.md)**
-- **[Checklist de Implementação](modules/inventory/IMPLEMENTATION_CHECKLIST.md)**
-- **[Resumo da Implementação](modules/inventory/IMPLEMENTATION_SUMMARY.md)**
+| Módulo | Documentação | Desenvolvimento | Testes | Status |
+|--------|--------------|-----------------|--------|--------|
+| Dashboard | ✅ | ✅ | ⚠️ | Produção |
+| Ordens de Serviço | ✅ | ✅ | ⚠️ | Produção |
+| **Metrologia** | ✅ | 🔨 | ❌ | Em Desenvolvimento |
+| Clientes | ✅ | ✅ | ⚠️ | Produção |
+| Orçamentos | ✅ | ✅ | ⚠️ | Produção |
+| Estoque | ✅ | ✅ | ⚠️ | Produção |
+| Fiscal | ✅ | ✅ | ⚠️ | Produção |
+| Financeiro | ⏳ | ⏳ | ❌ | Planejamento |
 
-### 👥 Fluxos e Guias do Usuário
+**Legenda**: ✅ Completo | 🔨 Em Desenvolvimento | ⏳ Planejamento | ⚠️ Parcial | ❌ Não Iniciado
 
-- **[Jornadas Completas de Usuário](user-flows/complete-user-journeys.md)** - Fluxos end-to-end
-- **[Matriz de Permissões](user-flows/permissions-matrix.md)** - Controle de acesso
-- **[Primeiros Passos](user-guides/getting-started.md)** - Guia inicial
-- **[Sistema de Temas](user-guides/theme-system-guide.md)** - Personalização visual
-
-### ✅ Validação e Testes
-
-Roteiros para homologação:
-
-- **[Guia de Validação Funcional](validation/functional-validation-guide.md)** - Checklist completo
-- **[Guia de Interface](validation/interface-guide.md)** - Validação de UI/UX
-- **[Testes End-to-End](testing/end-to-end-test-guide.md)** - Cenários E2E
-- **[Matriz de Cenários de Teste](testing/test-scenarios-matrix.md)** - Casos de teste
-
-### 🔧 Desenvolvimento
-
-Guias técnicos para desenvolvedores:
-
-- **[Guia de Configuração](development/setup-guide.md)** - Setup do ambiente
-- **[Setup Supabase](api/supabase-setup.md)** - Configuração do backend
-- **[Verificação de Banco](guidelines/database-verification.md)** - Checklist de BD
-
-### 📝 Documentação Técnica
-
-Especificações técnicas detalhadas:
-
-- **[Geração de Número de Orçamento](technical/budget-number-generation-explained.md)**
-- **[Issue Multi-tenant de Orçamentos](technical/budget-number-multi-tenant-issue.md)**
-
-### 🔄 Fixes e Correções
-
-Documentação de problemas resolvidos:
-
-- **[Fix: Constraint Multi-tenant de Budget](fixes/budget-number-multi-tenant-constraint-fix.md)**
-- **[Fix: Race Condition em Budget Number](fixes/budget-number-race-condition-fix.md)**
-
-### 📊 Diagramas
-
-- **[Arquitetura do Sistema](diagrams/system-architecture.mmd)** - Diagrama Mermaid
-
-### 🔄 Releases
-
-- **[CHANGELOG](releases/CHANGELOG.md)** - Histórico de mudanças
-- **[Roadmap de Implementação](implementation-roadmap.md)** - Status atual
-- **[Melhorias Futuras](future-improvements.md)** - Planejamento futuro
-
----
-
-## 🎯 Para Homologação do Cliente
-
-### Passo 1: Configuração Inicial
-Siga o **[Guia de Primeiros Passos](user-guides/getting-started.md)** para configurar:
-- Criar organização
-- Adicionar usuários
-- Configurar perfis e permissões
-- Ajustar configurações básicas
-
-### Passo 2: Validação Funcional
-Execute os testes do **[Guia de Validação](validation/functional-validation-guide.md)**:
-- ✅ Dashboard e KPIs
-- ✅ Workflow Kanban
-- ✅ Orçamentos e Aprovações
-- ✅ Módulo Fiscal
-- ✅ Módulo Financeiro
-- ✅ Gestão de Estoque
-- ✅ Módulo de Compras
-
-### Passo 3: Testes por Cenário
-Consulte a **[Matriz de Cenários](testing/test-scenarios-matrix.md)** para:
-- Fluxo completo de OS
-- Isolamento multi-tenant
-- Controle de permissões
-- Integrações entre módulos
-
----
-
-## 📌 Características Principais
-
-### ✨ Funcionalidades Core
-- ✅ **Multi-tenancy** com isolamento completo de dados
-- ✅ **Autenticação e Autorização** via Supabase Auth
-- ✅ **Sistema de Perfis e Permissões** granular por página
-- ✅ **Dashboard Executivo** com KPIs em tempo real
-- ✅ **Workflow Kanban** com drag-and-drop
-- ✅ **Gestão de Ordens de Serviço** completa
-- ✅ **Diagnóstico por Componente** (biela, bloco, cabeçote, comando, eixo)
-- ✅ **Orçamentos e Aprovação** com workflow
-- ✅ **Módulo Fiscal** com cálculo de impostos
-- ✅ **Módulo Financeiro** (Contas a Pagar/Receber, DRE, Fluxo de Caixa)
-- ✅ **Gestão de Estoque** com movimentações e contagens
-- ✅ **Módulo de Compras** com cotações e recebimentos
-
-### 🎨 Interface e UX
-- 📱 **Design Responsivo** (Desktop, Tablet, Mobile)
-- 🌓 **Tema Claro/Escuro** configurável
-- 🔍 **Busca Global** (Ctrl+K)
-- 🔔 **Central de Notificações** em tempo real
-- ⚡ **Ações Rápidas** contextuais
-- 🎯 **Gamificação** com conquistas e ranking
-
-### 🔐 Segurança
-- 🛡️ **Row Level Security (RLS)** em todas as tabelas
-- 🔒 **Políticas de Acesso** por organização
-- 👥 **Controle de Permissões** por perfil
-- 📝 **Auditoria Completa** de ações
-
-### ⚡ Performance
-- 🚀 **React Query** para cache inteligente
-- 🔄 **WebSocket** para updates em tempo real
-- 📦 **Lazy Loading** de componentes
-- 🎯 **Memoization** de cálculos pesados
-
----
-
-## 📚 Stack Técnico
+## 🛠️ Stack Tecnológico
 
 ### Frontend
-- **React 18** com TypeScript
-- **Vite** para build ultra-rápido
-- **Tailwind CSS** para estilização
-- **shadcn/ui** para componentes
-- **React Query** para gerenciamento de estado
-- **React Router** para navegação
+- **Framework**: React 18 + TypeScript
+- **Roteamento**: React Router v6
+- **Formulários**: React Hook Form + Zod
+- **UI**: Shadcn/ui + Tailwind CSS
+- **Estado**: TanStack Query (React Query)
+- **Gráficos**: Recharts
+- **Drag & Drop**: @hello-pangea/dnd
 
 ### Backend
-- **Supabase** (PostgreSQL + APIs)
-- **Row Level Security (RLS)** para segurança
-- **Edge Functions** para lógica server-side
-- **Supabase Realtime** para updates ao vivo
-- **Supabase Storage** para arquivos
+- **Database**: Supabase (PostgreSQL)
+- **Auth**: Supabase Auth
+- **Storage**: Supabase Storage
+- **Edge Functions**: Deno (TypeScript)
+- **RLS**: Row Level Security
 
----
+### DevOps
+- **CI/CD**: GitHub Actions
+- **Hosting**: Lovable (Frontend) + Supabase (Backend)
+- **Monitoring**: Supabase Dashboard
 
-## 🔗 Links Úteis
+## 📝 Convenções
 
-- **🌐 Documentação Online**: [GitHub Pages](https://pinn-product-builder.github.io/erp-retifica-formiguense/)
-- **📦 Repositório**: [GitHub](https://github.com/pinn-product-builder/erp-retifica-formiguense)
+### Nomenclatura de User Stories
+- **Formato**: `US-[MÓDULO]-[NÚMERO]`
+- **Exemplo**: `US-MET-002` (Metrologia, Story #2)
 
----
+### Nomenclatura de Branches Git
+- **Feature**: `feature/US-XXX-###-descricao`
+- **Bugfix**: `bugfix/descricao-curta`
+- **Hotfix**: `hotfix/descricao-urgente`
 
-**📌 Versão:** 1.0.0  
-**📅 Última Atualização:** Janeiro 2025  
-**🔗 GitHub:** [erp-retifica-formiguense](https://github.com/pinn-product-builder/erp-retifica-formiguense)
+### Commits Semânticos
+- `feat: adiciona US-MET-002 identificação do motor`
+- `fix: corrige validação de fotos na metrologia`
+- `docs: atualiza README do módulo de orçamentos`
+- `test: adiciona testes E2E para coleta`
+
+## 🔐 Segurança e Compliance
+
+- **RLS (Row Level Security)**: Obrigatório em todas as tabelas
+- **Multitenancy**: Isolamento por `org_id`
+- **LGPD**: Anonimização de dados sensíveis
+- **Auditoria**: Logs em `audit_logs` para ações críticas
+
+## 📅 Última Atualização
+
+**Data**: 28/10/2025  
+**Responsável**: Equipe de Desenvolvimento ERP Retífica  
+**Versão**: 2.0.0
