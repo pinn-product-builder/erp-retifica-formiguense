@@ -1,0 +1,239 @@
+erDiagram
+    ORGANIZATIONS ||--o{ ORDERS : "possui"
+    CUSTOMERS ||--o{ ORDERS : "solicitante"
+    ENGINES }o--|| ORDERS : "veículo"
+    EMPLOYEES }o--o{ ORDERS : "consultor"
+    COLLECTION_REQUESTS ||--o| ORDERS : "origina"
+    
+    ORDERS ||--o{ ORDER_WORKFLOW : "gera itens"
+    ORDERS ||--o{ ORDER_STATUS_HISTORY : "histórico"
+    ORDERS ||--o{ ORDER_MATERIALS : "materiais"
+    ORDERS ||--o{ ORDER_WARRANTIES : "garantias"
+    ORDERS ||--o{ ORDER_PHOTOS : "fotos"
+    ORDERS ||--o{ TIME_LOGS : "tempos"
+    ORDERS ||--o{ DIAGNOSTIC_RESPONSES : "diagnósticos"
+    ORDERS ||--o{ DETAILED_BUDGETS : "orçamentos"
+    ORDERS ||--o{ METROLOGY_INSPECTIONS : "metrologia"
+    ORDERS ||--o{ ACCOUNTS_RECEIVABLE : "financeiro"
+    
+    PARTS_INVENTORY ||--o{ ORDER_MATERIALS : "peça aplicada"
+    AUTH_USERS ||--o{ ORDER_STATUS_HISTORY : "alterou"
+    AUTH_USERS ||--o{ ORDER_MATERIALS : "aplicou"
+    PROFILES ||--o{ ORDER_WORKFLOW : "responsável"
+
+    ORGANIZATIONS {
+        uuid id PK
+        text name
+        text code
+        timestamp created_at
+    }
+
+    CUSTOMERS {
+        uuid id PK
+        uuid org_id FK
+        text name
+        text document
+        text email
+        text phone
+        text address
+        timestamp created_at
+    }
+
+    ENGINES {
+        uuid id PK
+        uuid org_id FK
+        uuid customer_id FK
+        text brand
+        text model
+        text year
+        text plate
+        text engine_code
+        timestamp created_at
+    }
+
+    EMPLOYEES {
+        uuid id PK
+        uuid org_id FK
+        text name
+        text email
+        text role
+        timestamp created_at
+    }
+
+    COLLECTION_REQUESTS {
+        uuid id PK
+        uuid org_id FK
+        uuid customer_id FK
+        text status
+        date scheduled_date
+        text address
+        timestamp created_at
+    }
+
+    ORDERS {
+        uuid id PK
+        text order_number UK "RET-2025-0001"
+        uuid org_id FK
+        uuid customer_id FK
+        uuid engine_id FK
+        uuid collection_request_id FK
+        uuid consultant_id FK
+        text status "draft|ativa|em_andamento|pausada|concluida|entregue|garantia|cancelada|arquivada"
+        int priority "1-4"
+        date estimated_delivery
+        date actual_delivery
+        int warranty_months "default 3"
+        text notes
+        uuid created_by FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ORDER_WORKFLOW {
+        uuid id PK
+        uuid order_id FK
+        uuid org_id FK
+        text component "biela|bloco|cabecote|comando|eixo|pistao|virabrequim"
+        text status "aguardando_diagnostico|em_diagnostico|..."
+        uuid assigned_to FK
+        timestamp started_at
+        timestamp completed_at
+        text notes
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ORDER_STATUS_HISTORY {
+        uuid id PK
+        uuid order_id FK
+        uuid org_id FK
+        text old_status
+        text new_status
+        uuid changed_by FK
+        text notes
+        timestamp changed_at
+    }
+
+    ORDER_MATERIALS {
+        uuid id PK
+        uuid order_id FK
+        uuid org_id FK
+        uuid part_id FK
+        text part_name
+        text part_code
+        int quantity
+        numeric unit_cost
+        numeric total_cost "GENERATED"
+        uuid used_by FK
+        timestamp used_at
+        text notes
+        timestamp created_at
+    }
+
+    ORDER_WARRANTIES {
+        uuid id PK
+        uuid order_id FK
+        uuid org_id FK
+        text warranty_type "pecas|servico|total"
+        date start_date
+        date end_date
+        text terms
+        bool is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ORDER_PHOTOS {
+        uuid id PK
+        uuid order_id FK
+        uuid org_id FK
+        text photo_url
+        text stage "check-in|diagnostico|producao|entrega"
+        text description
+        uuid uploaded_by FK
+        timestamp uploaded_at
+    }
+
+    TIME_LOGS {
+        uuid id PK
+        uuid order_workflow_id FK
+        uuid org_id FK
+        uuid user_id FK
+        timestamp start_time
+        timestamp end_time
+        int duration_minutes "GENERATED"
+        text activity_type
+        text notes
+        timestamp created_at
+    }
+
+    DIAGNOSTIC_RESPONSES {
+        uuid id PK
+        uuid order_id FK
+        uuid org_id FK
+        uuid checklist_id FK
+        text component
+        text status
+        uuid diagnosed_by FK
+        timestamp diagnosed_at
+        timestamp created_at
+    }
+
+    DETAILED_BUDGETS {
+        uuid id PK
+        uuid order_id FK
+        uuid org_id FK
+        text budget_number
+        text component
+        text status
+        numeric labor_cost
+        numeric parts_cost
+        numeric total_cost
+        timestamp created_at
+    }
+
+    METROLOGY_INSPECTIONS {
+        uuid id PK
+        uuid order_id FK
+        uuid org_id FK
+        text component
+        text status
+        uuid inspector_id FK
+        timestamp inspection_date
+        timestamp created_at
+    }
+
+    ACCOUNTS_RECEIVABLE {
+        uuid id PK
+        uuid order_id FK
+        uuid org_id FK
+        numeric amount
+        date due_date
+        text status
+        timestamp created_at
+    }
+
+    PARTS_INVENTORY {
+        uuid id PK
+        uuid org_id FK
+        text part_name
+        text part_code
+        int quantity
+        numeric unit_cost
+        timestamp created_at
+    }
+
+    AUTH_USERS {
+        uuid id PK
+        text email
+        timestamp created_at
+    }
+
+    PROFILES {
+        uuid id PK
+        uuid user_id FK
+        uuid org_id FK
+        text name
+        text role
+        timestamp created_at
+    }
