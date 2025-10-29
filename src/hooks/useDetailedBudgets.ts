@@ -111,7 +111,7 @@ export function useDetailedBudgets() {
         query = query.eq('order_id', filters.orderId);
       }
       if (filters?.component && filters.component !== 'todos') {
-        query = query.eq('component', filters.component as unknown);
+        query = query.eq('component', filters.component as Database['public']['Enums']['engine_component']);
       }
       if (filters?.dateFrom) {
         query = query.gte('created_at', filters.dateFrom);
@@ -124,7 +124,7 @@ export function useDetailedBudgets() {
       if (error) throw error;
 
       // Mapear o resultado do Supabase para o tipo correto
-      const mappedData = (data || []).map((budget: unknown) => ({
+      const mappedData = (data || []).map((budget: any) => ({
         ...budget,
         order: budget.orders ? {
           order_number: budget.orders.order_number,
@@ -190,7 +190,7 @@ export function useDetailedBudgets() {
       const { created_by, ...insertData } = budgetData;
       const { data, error } = await supabase
         .from('detailed_budgets')
-        .insert(insertData as unknown)
+        .insert(insertData as any)
         .select(`
           *,
           orders(
@@ -218,7 +218,7 @@ export function useDetailedBudgets() {
       setLoading(true);
       const { data, error } = await supabase
         .from('detailed_budgets')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id)
         .select(`
           *,
@@ -250,7 +250,7 @@ export function useDetailedBudgets() {
       // Criar registro de aprovação
       const { data: approval, error: approvalError } = await supabase
         .from('budget_approvals')
-        .insert(approvalData as unknown)
+        .insert(approvalData as any)
         .select()
         .single();
 

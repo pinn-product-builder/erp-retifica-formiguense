@@ -93,7 +93,7 @@ export function useDiagnosticChecklists() {
       }
 
       if (component) {
-        query = query.eq('component', component as unknown);
+        query = query.eq('component', component as any);
       }
 
       const { data, error } = await query;
@@ -267,7 +267,7 @@ export function useDiagnosticChecklists() {
     try {
       const { data, error } = await supabase
         .from('diagnostic_checklist_items')
-        .insert(item)
+        .insert([item] as any)
         .select()
         .single();
 
@@ -296,7 +296,7 @@ export function useDiagnosticChecklists() {
     try {
       const { data, error } = await supabase
         .from('diagnostic_checklist_items')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id)
         .select()
         .single();
@@ -352,10 +352,9 @@ export function useDiagnosticChecklists() {
     try {
       const { data, error } = await supabase
         .from('diagnostic_checklist_responses')
-        .insert({
+        .insert([{
           ...response,
-          diagnosed_at: new Date().toISOString()
-        })
+        }] as any)
         .select()
         .single();
 

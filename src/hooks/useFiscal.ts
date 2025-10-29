@@ -546,12 +546,12 @@ export const useFiscal = () => {
       // Salvar cálculo no banco
       const taxCalculation: TaxCalculation = {
         ...calculation,
-        result
+        result: result as Json
       };
 
       const { data, error } = await supabase
         .from('tax_calculations')
-        .insert([taxCalculation])
+        .insert([taxCalculation] as any)
         .select()
         .single();
 

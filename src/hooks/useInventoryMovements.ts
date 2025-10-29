@@ -99,7 +99,7 @@ export function useInventoryMovements() {
       setLoading(true);
 
       let query = supabase
-        .from('inventory_movements_with_users' as unknown)
+        .from('inventory_movements_with_users' as any)
         .select('*')
         .eq('org_id', currentOrganization.id)
         .order('created_at', { ascending: false });
@@ -212,8 +212,7 @@ export function useInventoryMovements() {
 
       const { data: movement, error: movementError } = await supabase
         .from('inventory_movements')
-        .insert({
-          org_id: currentOrganization.id,
+        .insert([{
           part_id: movementData.part_id,
           movement_type: movementData.movement_type,
           quantity: Math.abs(movementData.quantity), // Sempre positivo
@@ -226,7 +225,7 @@ export function useInventoryMovements() {
           notes: movementData.notes,
           metadata: movementData.metadata,
           created_by: userData.user?.id,
-        })
+        }] as any)
         .select()
         .single();
 
@@ -241,17 +240,17 @@ export function useInventoryMovements() {
       await fetchMovements();
 
       return movement as InventoryMovement;
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error('Error creating movement:', error);
       
       // Mensagens de erro específicas
-      if (error.message?.includes('Estoque não pode ficar negativo')) {
+      if (error?.message?.includes('Estoque não pode ficar negativo')) {
         toast({
           title: 'Estoque Insuficiente',
           description: error.message,
           variant: 'destructive',
         });
-      } else if (error.message?.includes('Conflito de concorrência')) {
+      } else if (error?.message?.includes('Conflito de concorrência')) {
         toast({
           title: 'Conflito Detectado',
           description: 'O estoque foi alterado por outro usuário. Tente novamente.',
@@ -372,7 +371,7 @@ export function useInventoryMovements() {
 
     try {
       const { data, error } = await supabase
-        .from('inventory_movements' as unknown)
+        .from('inventory_movements' as any)
         .select(`
           *,
           part:parts_inventory(part_name, part_code, quantity)
@@ -398,7 +397,7 @@ export function useInventoryMovements() {
       const { data: userData } = await supabase.auth.getUser();
 
       const { error } = await supabase
-        .from('inventory_movements' as unknown)
+        .from('inventory_movements' as any)
         .update({
           approval_status: 'approved',
           approved_by: userData.user?.id,
@@ -436,7 +435,7 @@ export function useInventoryMovements() {
       const { data: userData } = await supabase.auth.getUser();
 
       const { error } = await supabase
-        .from('inventory_movements' as unknown)
+        .from('inventory_movements' as any)
         .update({
           approval_status: 'rejected',
           approved_by: userData.user?.id,
