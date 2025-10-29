@@ -434,7 +434,6 @@ export const useFinancial = () => {
       const currentYear = new Date().getFullYear();
       
       const [cashFlowData, receivableData, payableData] = await Promise.all([
-        // @ts-expect-error - Supabase generated types cause deep instantiation error
         supabase
           .from('cash_flow')
           .select('transaction_type, amount')

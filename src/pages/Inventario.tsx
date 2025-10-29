@@ -6,6 +6,7 @@ import ApprovalManager from '@/components/inventory/ApprovalManager';
 import InventoryCountManager from '@/components/inventory/InventoryCountManager';
 import { InventoryDashboard } from '@/components/inventory/InventoryDashboard';
 import { MovementHistory } from '@/components/inventory/MovementHistory';
+import { SeedDieselComponents } from '@/components/inventory/SeedDieselComponents';
 
 export default function Inventario() {
   return (
@@ -18,6 +19,7 @@ export default function Inventario() {
             Controle completo de movimentações, contagens e aprovações de estoque
           </p>
         </div>
+        <SeedDieselComponents />
       </div>
 
       {/* Main Content */}
