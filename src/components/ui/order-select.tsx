@@ -5,24 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/hooks/useOrganization";
-import { Search, Package, User, Calendar } from "lucide-react";
+import { Search, Package, User, Calendar, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { OrderService, OrderWithDetails } from "@/services/OrderService";
 
-interface Order {
-  id: string;
-  order_number: string;
-  created_at: string;
-  status: string;
-  customer?: {
-    name: string;
-  };
-  engine?: {
-    brand: string;
-    model: string;
-    type: string;
-  };
-}
+// Usando OrderWithDetails do OrderService
+type Order = OrderWithDetails;
 
 interface OrderSelectProps {
   value?: string;
@@ -32,55 +20,46 @@ interface OrderSelectProps {
   required?: boolean;
   disabled?: boolean;
   className?: string;
+  filterByApprovedBudget?: 'aprovado' | 'pendente' | 'reprovado' | 'em_producao';
 }
 
 export function OrderSelect({
   value,
   onValueChange,
-  placeholder = "Selecionar Ordem de Serviço",
+  placeholder,
   label = "Ordem de Serviço",
   required = false,
   disabled = false,
-  className = ""
+  className = "",
+  filterByApprovedBudget
 }: OrderSelectProps) {
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [orders, setOrders] = useState<Order[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPreviousPage, setHasPreviousPage] = useState(false);
 
-  // Buscar ordens quando o modal abrir
+  // Buscar ordens quando o modal abrir ou parâmetros mudarem
   useEffect(() => {
     if (isOpen && currentOrganization?.id) {
       fetchOrders();
     }
-  }, [isOpen, currentOrganization?.id]);
-
-  // Filtrar ordens baseado no termo de busca
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredOrders(orders);
-      return;
-    }
-
-    const filtered = orders.filter(order => 
-      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.engine?.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.engine?.model.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    
-    setFilteredOrders(filtered);
-  }, [searchTerm, orders]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, currentOrganization?.id, searchTerm, currentPage]);
 
   // Buscar ordem selecionada quando value mudar
   useEffect(() => {
     if (value && !selectedOrder) {
       fetchSelectedOrder(value);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, selectedOrder]);
 
   const fetchOrders = async () => {
@@ -88,23 +67,21 @@ export function OrderSelect({
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          order_number,
-          created_at,
-          status,
-          customer:customers(name),
-          engine:engines(brand, model, type)
-        `)
-        .eq('org_id', currentOrganization.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const result = await OrderService.searchOrders({
+        orgId: currentOrganization.id,
+        searchTerm: searchTerm.trim() || undefined,
+        budgetStatus: filterByApprovedBudget || undefined,
+        page: currentPage,
+        limit: 20,
+        orderBy: 'created_at',
+        orderDirection: 'desc'
+      });
 
-      if (error) throw error;
-
-      setOrders(data || []);
+      setOrders(result.orders);
+      setTotalPages(result.totalPages);
+      setTotalCount(result.totalCount);
+      setHasNextPage(result.hasNextPage);
+      setHasPreviousPage(result.hasPreviousPage);
     } catch (error) {
       console.error('Erro ao buscar ordens:', error);
       toast({
@@ -121,23 +98,13 @@ export function OrderSelect({
     if (!currentOrganization?.id) return;
 
     try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          order_number,
-          created_at,
-          status,
-          customer:customers(name),
-          engine:engines(brand, model, type)
-        `)
-        .eq('id', orderId)
-        .eq('org_id', currentOrganization.id)
-        .single();
-
-      if (error) throw error;
-
-      setSelectedOrder(data);
+      const order = await OrderService.getOrderById(
+        orderId, 
+        currentOrganization.id, 
+        filterByApprovedBudget || undefined
+      );
+      
+      setSelectedOrder(order);
     } catch (error) {
       console.error('Erro ao buscar ordem selecionada:', error);
     }
@@ -153,6 +120,15 @@ export function OrderSelect({
       title: "Sucesso",
       description: `Ordem ${order.order_number} selecionada`
     });
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset para primeira página ao buscar
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   const handleClearSelection = () => {
@@ -242,7 +218,7 @@ export function OrderSelect({
                 disabled={disabled}
               >
                 <Search className="w-4 h-4 mr-2" />
-                {placeholder}
+                {placeholder || (filterByApprovedBudget ? "Selecionar Ordem com Orçamento Aprovado" : "Selecionar Ordem")}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[80vh]">
@@ -252,9 +228,9 @@ export function OrderSelect({
               
               <div className="space-y-4">
                 <Input
-                  placeholder="Buscar por número da OS, cliente, marca..."
+                  placeholder={`Buscar por número da OS, cliente, marca...${filterByApprovedBudget ? ' (apenas com orçamento aprovado)' : ''}`}
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="w-full"
                 />
 
@@ -263,8 +239,8 @@ export function OrderSelect({
                     <div className="text-center py-4 text-muted-foreground">
                       Carregando ordens...
                     </div>
-                  ) : filteredOrders.length > 0 ? (
-                    filteredOrders.map((order) => (
+                  ) : orders.length > 0 ? (
+                    orders.map((order) => (
                       <div
                         key={order.id}
                         className="p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
@@ -306,15 +282,49 @@ export function OrderSelect({
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>Nenhuma ordem encontrada</p>
+                      <p>{filterByApprovedBudget ? 'Nenhuma ordem com orçamento aprovado encontrada' : 'Nenhuma ordem encontrada'}</p>
                       {searchTerm && (
                         <p className="text-sm">
                           Tente ajustar o termo de busca
                         </p>
                       )}
+                      {filterByApprovedBudget && (
+                        <p className="text-xs mt-2">
+                          Apenas ordens com orçamento aprovado são exibidas
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
+
+                {/* Controles de Paginação */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <div className="text-sm text-muted-foreground">
+                      Página {currentPage} de {totalPages} ({totalCount} ordens)
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={!hasPreviousPage}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Anterior
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={!hasNextPage}
+                      >
+                        Próxima
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </DialogContent>
           </Dialog>

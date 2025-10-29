@@ -161,7 +161,8 @@ export default function PCP() {
                 label="Ordem de Serviço"
                 value={newSchedule.order_id}
                 onValueChange={(orderId) => setNewSchedule({...newSchedule, order_id: orderId})}
-                placeholder="Selecionar Ordem de Serviço"
+                // placeholder="Selecionar Ordem de Serviço"
+                filterByApprovedBudget="aprovado"
                 required
               />
               <div>
