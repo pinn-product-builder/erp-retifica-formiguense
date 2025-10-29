@@ -144,7 +144,7 @@ export function RecentServicesMonitor() {
                 variant="ghost"
                 className="w-full justify-start h-auto p-3 hover:bg-primary/5"
               >
-                <Link to={`/workflow/${service.id}`}>
+                <Link to={`/ordens-servico?orderId=${service.id}`}>
                   <div className="flex items-center gap-3 w-full">
                     {/* Ícone de status */}
                     <div className="flex-shrink-0">

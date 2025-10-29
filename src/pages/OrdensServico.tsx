@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,15 +6,31 @@ import { OrdersList } from '@/components/orders/OrdersList';
 import { OrderDetails } from '@/components/orders/OrderDetails';
 import { Order, useOrders } from '@/hooks/useOrders';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 type ViewMode = 'list' | 'details';
 
 export default function OrdensServico() {
   const { orders, loading } = useOrders();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
+  // Detectar parâmetro orderId na URL e abrir modal automaticamente
+  useEffect(() => {
+    const orderIdFromUrl = searchParams.get('orderId');
+    if (orderIdFromUrl && !loading && orders.length > 0) {
+      // Verificar se a ordem existe na lista
+      const orderExists = orders.find(order => order.id === orderIdFromUrl);
+      if (orderExists) {
+        setSelectedOrderId(orderIdFromUrl);
+        setViewMode('details');
+        // Limpar o parâmetro da URL para evitar reabertura
+        navigate('/ordens-servico', { replace: true });
+      }
+    }
+  }, [searchParams, orders, loading, navigate]);
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrderId(order.id);
