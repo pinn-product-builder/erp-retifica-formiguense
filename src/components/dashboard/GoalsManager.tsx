@@ -100,8 +100,21 @@ export function GoalsManager() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [progressDialogOpen, setProgressDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [newProgress, setNewProgress] = useState<number>(0);
   const [newGoal, setNewGoal] = useState<NewGoal>({
+    goal_type: 'custom',
+    target_value: 0,
+    progress_unit: 'number',
+    target_period_end: '',
+    priority: 'medium',
+    description: ''
+  });
+  const [editGoal, setEditGoal] = useState<NewGoal>({
     goal_type: 'custom',
     target_value: 0,
     progress_unit: 'number',
@@ -191,8 +204,8 @@ export function GoalsManager() {
       if (error) throw error;
 
       toast({
-        title: "Meta criada",
-        description: "A meta foi criada com sucesso"
+        title: "Sucesso",
+        description: "A meta foi criada com sucesso",
       });
 
       setDialogOpen(false);
@@ -202,57 +215,102 @@ export function GoalsManager() {
       console.error('Erro ao criar meta:', error);
       toast({
         title: "Erro",
-        description: "Erro ao criar meta",
+        description: "Não foi possível criar a meta",
         variant: "destructive"
       });
     }
   };
 
-  const updateGoalProgress = async (goalId: string, newProgress: number) => {
+  const updateGoalProgress = async () => {
+    if (!selectedGoal) return;
+
     try {
       const { error } = await supabase
         .from('kpi_targets')
         .update({ progress_current: newProgress } as Record<string, unknown>)
-        .eq('id', goalId);
+        .eq('id', selectedGoal.id);
 
       if (error) throw error;
 
       toast({
-        title: "Progresso atualizado",
-        description: "O progresso da meta foi atualizado"
+        title: "Sucesso",
+        description: "O progresso da meta foi atualizado com sucesso",
       });
 
+      setProgressDialogOpen(false);
+      setSelectedGoal(null);
+      setNewProgress(0);
       fetchGoals();
     } catch (error) {
       console.error('Erro ao atualizar progresso:', error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar progresso",
+        description: "Não foi possível atualizar o progresso da meta",
         variant: "destructive"
       });
     }
   };
 
-  const deleteGoal = async (goalId: string) => {
+  const updateGoal = async () => {
+    if (!editingGoal) return;
+
     try {
       const { error } = await supabase
         .from('kpi_targets')
-        .delete()
-        .eq('id', goalId);
+        .update({
+          goal_type: editGoal.goal_type,
+          target_value: editGoal.target_value,
+          progress_unit: editGoal.progress_unit,
+          target_period_end: editGoal.target_period_end,
+          priority: editGoal.priority,
+          description: editGoal.description
+        } as Record<string, unknown>)
+        .eq('id', editingGoal.id);
 
       if (error) throw error;
 
       toast({
-        title: "Meta excluída",
-        description: "A meta foi excluída com sucesso"
+        title: "Sucesso",
+        description: "A meta foi atualizada com sucesso",
       });
 
+      setEditDialogOpen(false);
+      resetEditForm();
+      fetchGoals();
+    } catch (error) {
+      console.error('Erro ao atualizar meta:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a meta",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteGoal = async () => {
+    if (!selectedGoal) return;
+
+    try {
+      const { error } = await supabase
+        .from('kpi_targets')
+        .delete()
+        .eq('id', selectedGoal.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "A meta foi excluída com sucesso",
+      });
+
+      setDeleteDialogOpen(false);
+      setSelectedGoal(null);
       fetchGoals();
     } catch (error) {
       console.error('Erro ao excluir meta:', error);
       toast({
         title: "Erro",
-        description: "Erro ao excluir meta",
+        description: "Não foi possível excluir a meta",
         variant: "destructive"
       });
     }
@@ -268,6 +326,42 @@ export function GoalsManager() {
       description: ''
     });
     setEditingGoal(null);
+  };
+
+  const resetEditForm = () => {
+    setEditGoal({
+      goal_type: 'custom',
+      target_value: 0,
+      progress_unit: 'number',
+      target_period_end: '',
+      priority: 'medium',
+      description: ''
+    });
+    setEditingGoal(null);
+  };
+
+  const openEditDialog = (goal: Goal) => {
+    setEditingGoal(goal);
+    setEditGoal({
+      goal_type: goal.goal_type,
+      target_value: goal.target_value,
+      progress_unit: goal.progress_unit,
+      target_period_end: goal.target_period_end.split('T')[0],
+      priority: goal.priority,
+      description: goal.description || ''
+    });
+    setEditDialogOpen(true);
+  };
+
+  const openProgressDialog = (goal: Goal) => {
+    setSelectedGoal(goal);
+    setNewProgress(goal.progress_current);
+    setProgressDialogOpen(true);
+  };
+
+  const openDeleteDialog = (goal: Goal) => {
+    setSelectedGoal(goal);
+    setDeleteDialogOpen(true);
   };
 
   const getProgressPercentage = (goal: Goal) => {
@@ -431,6 +525,188 @@ export function GoalsManager() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* Modal de Edição de Meta */}
+          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Editar Meta</DialogTitle>
+                <DialogDescription>
+                  Atualize as informações da meta
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_goal_type">Tipo de Meta</Label>
+                  <Select
+                    value={editGoal.goal_type}
+                    onValueChange={(value: 'kpi' | 'custom' | 'project') => setEditGoal({ ...editGoal, goal_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="custom">Personalizada</SelectItem>
+                      <SelectItem value="kpi">Baseada em KPI</SelectItem>
+                      <SelectItem value="project">Projeto</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="edit_description">Descrição</Label>
+                  <Textarea
+                    id="edit_description"
+                    value={editGoal.description}
+                    onChange={(e) => setEditGoal({ ...editGoal, description: e.target.value })}
+                    placeholder="Descreva a meta..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit_target_value">Valor Alvo</Label>
+                    <Input
+                      id="edit_target_value"
+                      type="number"
+                      value={editGoal.target_value}
+                      onChange={(e) => setEditGoal({ ...editGoal, target_value: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit_progress_unit">Unidade</Label>
+                    <Select
+                      value={editGoal.progress_unit}
+                      onValueChange={(value) => setEditGoal({ ...editGoal, progress_unit: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="number">Número</SelectItem>
+                        <SelectItem value="currency">Moeda (R$)</SelectItem>
+                        <SelectItem value="percentage">Porcentagem (%)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit_priority">Prioridade</Label>
+                    <Select
+                      value={editGoal.priority}
+                      onValueChange={(value: 'low' | 'medium' | 'high' | 'critical') => setEditGoal({ ...editGoal, priority: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Baixa</SelectItem>
+                        <SelectItem value="medium">Média</SelectItem>
+                        <SelectItem value="high">Alta</SelectItem>
+                        <SelectItem value="critical">Crítica</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit_target_period_end">Data Limite</Label>
+                    <Input
+                      id="edit_target_period_end"
+                      type="date"
+                      value={editGoal.target_period_end}
+                      onChange={(e) => setEditGoal({ ...editGoal, target_period_end: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => {
+                  setEditDialogOpen(false);
+                  resetEditForm();
+                }}>
+                  Cancelar
+                </Button>
+                <Button onClick={updateGoal}>
+                  Salvar Alterações
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Modal de Edição de Progresso */}
+          <Dialog open={progressDialogOpen} onOpenChange={setProgressDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Atualizar Progresso</DialogTitle>
+                <DialogDescription>
+                  {selectedGoal && `Atualize o progresso da meta: ${selectedGoal.description}`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="progress">Progresso Atual</Label>
+                  <Input
+                    id="progress"
+                    type="number"
+                    value={newProgress}
+                    onChange={(e) => setNewProgress(parseFloat(e.target.value) || 0)}
+                    min="0"
+                    step={selectedGoal?.progress_unit === 'currency' ? '0.01' : '1'}
+                  />
+                  {selectedGoal && (
+                    <p className="text-sm text-muted-foreground">
+                      Meta: {formatValue(selectedGoal.target_value, selectedGoal.progress_unit)}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => {
+                  setProgressDialogOpen(false);
+                  setSelectedGoal(null);
+                  setNewProgress(0);
+                }}>
+                  Cancelar
+                </Button>
+                <Button onClick={updateGoalProgress}>
+                  Atualizar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Modal de Confirmação de Exclusão */}
+          <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Confirmar Exclusão</DialogTitle>
+                <DialogDescription>
+                  {selectedGoal && (
+                    <>
+                      Tem certeza que deseja excluir a meta <strong>"{selectedGoal.description}"</strong>?
+                      <br />
+                      <br />
+                      Esta ação não pode ser desfeita.
+                    </>
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setSelectedGoal(null);
+                }}>
+                  Cancelar
+                </Button>
+                <Button variant="destructive" onClick={deleteGoal}>
+                  Excluir
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -488,27 +764,26 @@ export function GoalsManager() {
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0"
-                              onClick={() => {
-                                const newProgress = prompt(
-                                  'Digite o novo progresso:',
-                                  goal.progress_current.toString()
-                                );
-                                if (newProgress) {
-                                  updateGoalProgress(goal.id, parseFloat(newProgress));
-                                }
-                              }}
+                              onClick={() => openEditDialog(goal)}
+                              title="Editar meta"
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => openProgressDialog(goal)}
+                              title="Atualizar progresso"
+                            >
+                              <TrendingUp className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="h-8 w-8 p-0 hover:bg-destructive/10"
-                              onClick={() => {
-                                if (confirm('Tem certeza que deseja excluir esta meta?')) {
-                                  deleteGoal(goal.id);
-                                }
-                              }}
+                              onClick={() => openDeleteDialog(goal)}
+                              title="Excluir meta"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
