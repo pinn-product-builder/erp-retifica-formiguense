@@ -8,12 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { MaskedInput } from "@/components/ui/masked-input";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase } from "@/hooks/useSupabase";
 import { useCustomers, Customer } from "@/hooks/useCustomers";
 import { useConsultants } from "@/hooks/useConsultants";
-import { MapPin, User, Building, Wrench, Search, Plus, UserPlus } from "lucide-react";
+import { MapPin, User, Building, Wrench, Search, Plus, UserPlus, Check } from "lucide-react";
 
 export default function Coleta() {
   const [formData, setFormData] = useState({
@@ -60,6 +61,16 @@ export default function Coleta() {
     fetchConsultants();
   }, [fetchConsultants]);
 
+  // Carregar todos os clientes quando o modal de busca é aberto
+  useEffect(() => {
+    if (showSearchDialog && searchResults.length === 0 && !customersLoading) {
+      fetchCustomers().then(results => {
+        setSearchResults(results);
+        setShowSearchResults(true);
+      });
+    }
+  }, [showSearchDialog]);
+
   // Buscar clientes
   const handleSearchCustomers = async (term: string) => {
     setSearchTerm(term);
@@ -68,8 +79,15 @@ export default function Coleta() {
       setSearchResults(results);
       setShowSearchResults(true);
     } else {
-      setSearchResults([]);
-      setShowSearchResults(false);
+      // Carregar todos os clientes quando o campo está vazio ou com menos de 2 caracteres
+      if (term.length === 0) {
+        const allResults = await fetchCustomers();
+        setSearchResults(allResults);
+        setShowSearchResults(true);
+      } else {
+        setSearchResults([]);
+        setShowSearchResults(false);
+      }
     }
   };
 
@@ -306,35 +324,50 @@ export default function Coleta() {
                         Digite o nome, documento ou telefone para buscar
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4">
-                      <Input
-                        placeholder="Digite para buscar..."
+                    <Command className="rounded-lg border shadow-md">
+                      <CommandInput
+                        placeholder="Buscar cliente por nome, documento ou telefone..."
                         value={searchTerm}
-                        onChange={(e) => handleSearchCustomers(e.target.value)}
+                        onValueChange={handleSearchCustomers}
                       />
-                      {showSearchResults && searchResults.length > 0 && (
-                        <div className="max-h-60 overflow-y-auto space-y-2">
-                          {searchResults.map((customer) => (
-                            <div
+                      <CommandList>
+                        <CommandEmpty>
+                          {searchTerm.length >= 2 
+                            ? "Nenhum cliente encontrado" 
+                            : "Digite pelo menos 2 caracteres para buscar"}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {searchResults.length > 0 && searchResults.map((customer) => (
+                            <CommandItem
                               key={customer.id}
-                              className="p-3 border rounded cursor-pointer hover:bg-muted/50 transition-colors"
-                              onClick={() => handleSelectCustomer(customer)}
+                              value={`${customer.name} ${customer.document} ${customer.phone || ''}`}
+                              onSelect={() => handleSelectCustomer(customer)}
+                              className="cursor-pointer"
                             >
-                              <div className="font-medium text-foreground">{customer.name}</div>
-                              <div className="text-sm text-muted-foreground">{customer.document}</div>
-                              {customer.phone && (
-                                <div className="text-sm text-muted-foreground">{customer.phone}</div>
-                              )}
-                            </div>
+                              <div className="flex flex-col w-full">
+                                <div className="flex items-center justify-between">
+                                  <div className="font-medium">{customer.name}</div>
+                                  {selectedCustomer?.id === customer.id && (
+                                    <Check className="h-4 w-4 text-primary" />
+                                  )}
+                                </div>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  <span>{customer.document}</span>
+                                  {customer.phone && (
+                                    <span className="ml-2">• {customer.phone}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </CommandItem>
                           ))}
-                        </div>
-                      )}
-                      {showSearchResults && searchResults.length === 0 && searchTerm.length >= 2 && (
-                        <div className="text-center py-4 text-gray-500">
-                          Nenhum cliente encontrado
-                        </div>
-                      )}
-                    </div>
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                    {customersLoading && (
+                      <div className="text-center py-4 text-muted-foreground text-sm">
+                        Buscando clientes...
+                      </div>
+                    )}
                   </DialogContent>
                 </Dialog>
                 <Dialog open={showNewCustomerDialog} onOpenChange={setShowNewCustomerDialog}>

@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Search, AlertCircle, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Search, AlertCircle, Loader2, Check, ChevronsUpDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -55,7 +57,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   // @ts-expect-error - Budget services/parts are Record<string, unknown>[] but need to be Service[]/Part[]
   const [parts, setParts] = useState<Part[]>(budget?.parts || []);
   const [laborHours, setLaborHours] = useState<number>(budget?.labor_hours || 0);
-  const [laborDescription, setLaborDescription] = useState<string>((budget as any)?.labor_description || '');
+  const [laborDescription, setLaborDescription] = useState<string>((budget as { labor_description?: string })?.labor_description || '');
   const [laborRate, setLaborRate] = useState<number>(budget?.labor_rate || 50);
   const [discount, setDiscount] = useState<number>(budget?.discount || 0);
   const [taxPercentage, setTaxPercentage] = useState<number>(budget?.tax_percentage || 0);
@@ -79,6 +81,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   // Novo serviço/peça temporário
   const [newService, setNewService] = useState<Partial<Service>>({ description: '', quantity: 1, unit_price: 0 });
   const [searchPartTerm, setSearchPartTerm] = useState('');
+  const [partSelectOpen, setPartSelectOpen] = useState(false);
 
   // Funções de validação e formatação
   const validateAndSetHours = (value: string) => {
@@ -270,6 +273,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
 
     setParts([...parts, part]);
     setSearchPartTerm('');
+    setPartSelectOpen(false);
   };
 
   // Atualizar quantidade da peça
@@ -338,10 +342,20 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     }
   };
 
-  const filteredParts = partsInventory.filter(p =>
-    (p as { part_code: string; part_name: string }).part_code.toLowerCase().includes(searchPartTerm.toLowerCase()) ||
-    (p as { part_code: string; part_name: string }).part_name.toLowerCase().includes(searchPartTerm.toLowerCase())
-  );
+  // Filtrar peças baseado no termo de busca
+  const filteredParts = useMemo(() => {
+    if (!searchPartTerm || searchPartTerm.length === 0) {
+      return partsInventory;
+    }
+    const term = searchPartTerm.toLowerCase();
+    return partsInventory.filter(p => {
+      const partData = p as { part_code: string; part_name: string };
+      return (
+        partData.part_code?.toLowerCase().includes(term) ||
+        partData.part_name?.toLowerCase().includes(term)
+      );
+    });
+  }, [partsInventory, searchPartTerm]);
 
   return (
     <div className="space-y-6">
@@ -515,35 +529,71 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
           <CardTitle>Peças e Materiais</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Buscar peça por código ou nome..."
-              value={searchPartTerm}
-              onChange={(e) => setSearchPartTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          {searchPartTerm && filteredParts.length > 0 && (
-            <div className="border rounded-lg max-h-48 overflow-y-auto">
-              {filteredParts.map(part => (
-                <div
-                  key={part.id as string}
-                  className="p-3 hover:bg-accent cursor-pointer flex justify-between items-center"
-                  onClick={() => addPart(part as { part_code: string; part_name: string; unit_cost: number; quantity: number })}
-                >
-                  <div>
-                    <p className="font-medium">{(part as { part_code: string; part_name: string }).part_code} - {(part as { part_code: string; part_name: string }).part_name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Estoque: {(part as { quantity: number }).quantity} | R$ {(part as { unit_cost: number }).unit_cost?.toFixed(2)}
-                    </p>
-                  </div>
-                  <Plus className="h-4 w-4" />
-                </div>
-              ))}
-            </div>
-          )}
+          <Popover open={partSelectOpen} onOpenChange={setPartSelectOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={partSelectOpen}
+                className="w-full justify-between"
+              >
+                <span className="text-muted-foreground">Buscar peça por código ou nome...</span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-96" align="start">
+              <Command className="rounded-lg">
+                <CommandInput
+                  placeholder="Buscar peça por código ou nome..."
+                  value={searchPartTerm}
+                  onValueChange={setSearchPartTerm}
+                />
+                <CommandEmpty>
+                  {searchPartTerm.length > 0
+                    ? "Nenhuma peça encontrada"
+                    : loadingParts
+                      ? "Carregando peças..."
+                      : "Digite para buscar peças ou comece a digitar"}
+                </CommandEmpty>
+                <CommandList className="max-h-64 overflow-auto">
+                  <CommandGroup className="p-1">
+                      {filteredParts.length > 0 && filteredParts.map(part => {
+                        const partData = part as { id: string; part_code: string; part_name: string; unit_cost: number; quantity: number };
+                        const isAlreadyAdded = parts.some(p => p.part_code === partData.part_code);
+                        
+                        return (
+                          <CommandItem
+                            key={partData.id}
+                            value={`${partData.part_code} ${partData.part_name}`}
+                            onSelect={() => !isAlreadyAdded && addPart(partData)}
+                            className="cursor-pointer"
+                            disabled={isAlreadyAdded}
+                          >
+                            <div className="flex flex-col w-full">
+                              <div className="flex items-center justify-between">
+                                <div className="flex flex-col">
+                                  <div className="font-medium">
+                                    {partData.part_code} - {partData.part_name}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground mt-1">
+                                    Estoque: {partData.quantity} | R$ {partData.unit_cost?.toFixed(2)}
+                                  </div>
+                                </div>
+                                {isAlreadyAdded ? (
+                                  <Badge variant="secondary" className="ml-2">Já adicionada</Badge>
+                                ) : (
+                                  <Plus className="h-4 w-4 text-primary ml-2" />
+                                )}
+                              </div>
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
 
           {parts.length > 0 && (
             <Table>
