@@ -36,15 +36,36 @@ import {
   Workflow
 } from 'lucide-react';
 import { useEngineTypes, EngineType, WorkflowStep } from '@/hooks/useEngineTypes';
+import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { WorkflowStepForm } from './WorkflowStepForm';
 
-const COMPONENTS = [
-  { id: 'bloco', name: 'Bloco', color: 'bg-green-500' },
-  { id: 'eixo', name: 'Eixo', color: 'bg-orange-500' },
-  { id: 'biela', name: 'Biela', color: 'bg-yellow-500' },
-  { id: 'comando', name: 'Comando', color: 'bg-purple-500' },
-  { id: 'cabecote', name: 'Cabeçote', color: 'bg-red-500' },
-];
+// Função para obter cor do componente
+const getComponentColor = (componentId: string): string => {
+  const colorMap: Record<string, string> = {
+    'bloco': 'bg-green-500',
+    'eixo': 'bg-orange-500',
+    'biela': 'bg-yellow-500',
+    'comando': 'bg-purple-500',
+    'cabecote': 'bg-red-500',
+    'virabrequim': 'bg-cyan-500',
+    'pistao': 'bg-pink-500',
+    'pistao_com_anel': 'bg-rose-500',
+    'anel': 'bg-indigo-500',
+    'camisas': 'bg-teal-500',
+    'bucha_comando': 'bg-violet-500',
+    'retentores_dianteiro': 'bg-blue-600',
+    'retentores_traseiro': 'bg-blue-700',
+    'pista_virabrequim': 'bg-sky-500',
+    'selo_comando': 'bg-fuchsia-500',
+    'gaxeta': 'bg-emerald-500',
+    'selo_dagua': 'bg-amber-500',
+    'borrachas_camisa': 'bg-lime-500',
+    'calco_camisas': 'bg-green-600',
+    'bujao_carter': 'bg-stone-500',
+    'tubo_bloco': 'bg-gray-500'
+  };
+  return colorMap[componentId] || 'bg-gray-500';
+};
 
 interface WorkflowStepsManagerProps {
   engineType: EngineType;
@@ -59,6 +80,7 @@ export function WorkflowStepsManager({ engineType, onClose }: WorkflowStepsManag
     reorderWorkflowSteps,
     loading 
   } = useEngineTypes();
+  const { components: engineComponents } = useEngineComponents();
   
   const [selectedComponent, setSelectedComponent] = useState<string>('bloco');
   const [selectedStep, setSelectedStep] = useState<WorkflowStep | null>(null);
@@ -112,7 +134,10 @@ export function WorkflowStepsManager({ engineType, onClose }: WorkflowStepsManag
   };
 
   const getComponentData = (componentId: string) => {
-    return COMPONENTS.find(c => c.id === componentId) || { id: componentId, name: componentId, color: 'bg-gray-500' };
+    const component = engineComponents.find(c => c.value === componentId);
+    return component 
+      ? { id: componentId, name: component.label, color: getComponentColor(componentId) }
+      : { id: componentId, name: componentId, color: getComponentColor(componentId) };
   };
 
   const getTotalStepsForComponent = (component: string) => {

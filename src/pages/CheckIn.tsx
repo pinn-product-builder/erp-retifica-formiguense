@@ -41,7 +41,8 @@ export default function CheckIn() {
     lateral2: null as File | null,
     cabecote: null as File | null,
     carter: null as File | null,
-    etiqueta: null as File | null
+    etiqueta: null as File | null,
+    documento_carro: null as File | null
   });
 
   const [coletaData, setColetaData] = useState<unknown>(null);
@@ -156,7 +157,7 @@ export default function CheckIn() {
     navigate('/');
   };
 
-  const renderFileInput = (tipo: string, label: string, obrigatorio = true) => (
+  const renderFileInput = (tipo: string, label: string, obrigatorio = true, accept = 'image/*') => (
     <div className="space-y-2">
       <Label htmlFor={tipo}>
         {label} {obrigatorio && <span className="text-red-500">*</span>}
@@ -164,12 +165,12 @@ export default function CheckIn() {
       <Input
         id={tipo}
         type="file"
-        accept="image/*"
+        accept={accept}
         onChange={(e) => handleFileChange(tipo, e.target.files?.[0] || null)}
         required={obrigatorio}
       />
       {fotos[tipo as keyof typeof fotos] && (
-        <p className="text-sm text-green-600">✓ Foto adicionada</p>
+        <p className="text-sm text-green-600">✓ {tipo === 'documento_carro' ? 'Documento' : 'Foto'} adicionada</p>
       )}
     </div>
   );
@@ -320,6 +321,7 @@ export default function CheckIn() {
             {renderFileInput('cabecote', 'Cabeçote')}
             {renderFileInput('carter', 'Cárter')}
             {renderFileInput('etiqueta', 'Etiqueta', false)}
+            {renderFileInput('documento_carro', 'Documento do Carro', false, 'image/*,application/pdf')}
           </CardContent>
         </Card>
 

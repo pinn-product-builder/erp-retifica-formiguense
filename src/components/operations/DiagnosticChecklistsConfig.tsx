@@ -19,11 +19,19 @@ import { useEngineTypes } from '@/hooks/useEngineTypes';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { z } from 'zod';
 
+// Valores do enum engine_component (todos os componentes disponíveis)
+const ENGINE_COMPONENT_VALUES = [
+  'bloco', 'eixo', 'biela', 'comando', 'cabecote', 'virabrequim', 'pistao',
+  'pistao_com_anel', 'anel', 'camisas', 'bucha_comando', 'retentores_dianteiro',
+  'retentores_traseiro', 'pista_virabrequim', 'selo_comando', 'gaxeta', 'selo_dagua',
+  'borrachas_camisa', 'calco_camisas', 'bujao_carter', 'tubo_bloco'
+] as const;
+
 // Schemas de validação
 const checklistSchema = z.object({
   name: z.string().trim().min(3, "Nome deve ter pelo menos 3 caracteres").max(100, "Nome deve ter no máximo 100 caracteres"),
   description: z.string().optional(),
-  component: z.enum(['bloco', 'eixo', 'biela', 'comando', 'cabecote'], {
+  component: z.enum(ENGINE_COMPONENT_VALUES, {
     required_error: "Componente é obrigatório",
     invalid_type_error: "Componente inválido"
   }),

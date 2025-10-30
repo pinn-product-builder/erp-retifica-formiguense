@@ -7,16 +7,37 @@ import { ComponentCard } from './ComponentCard';
 import { useWorkflowUpdate } from '@/hooks/useWorkflowUpdate';
 import { useWorkflowStatusConfig } from '@/hooks/useWorkflowStatusConfig';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { Badge } from '@/components/ui/badge';
 
-const COMPONENTS = [
-  { id: 'todos', name: 'Todos', color: 'bg-blue-500' },
-  { id: 'bloco', name: 'Bloco', color: 'bg-green-500' },
-  { id: 'eixo', name: 'Eixo', color: 'bg-orange-500' },
-  { id: 'biela', name: 'Biela', color: 'bg-yellow-500' },
-  { id: 'comando', name: 'Comando', color: 'bg-purple-500' },
-  { id: 'cabecote', name: 'Cabeçote', color: 'bg-red-500' }
-];
+// Função para obter cor do componente
+const getComponentColor = (componentId: string): string => {
+  const colorMap: Record<string, string> = {
+    'todos': 'bg-blue-500',
+    'bloco': 'bg-green-500',
+    'eixo': 'bg-orange-500',
+    'biela': 'bg-yellow-500',
+    'comando': 'bg-purple-500',
+    'cabecote': 'bg-red-500',
+    'virabrequim': 'bg-cyan-500',
+    'pistao': 'bg-pink-500',
+    'pistao_com_anel': 'bg-rose-500',
+    'anel': 'bg-indigo-500',
+    'camisas': 'bg-teal-500',
+    'bucha_comando': 'bg-violet-500',
+    'retentores_dianteiro': 'bg-blue-600',
+    'retentores_traseiro': 'bg-blue-700',
+    'pista_virabrequim': 'bg-sky-500',
+    'selo_comando': 'bg-fuchsia-500',
+    'gaxeta': 'bg-emerald-500',
+    'selo_dagua': 'bg-amber-500',
+    'borrachas_camisa': 'bg-lime-500',
+    'calco_camisas': 'bg-green-600',
+    'bujao_carter': 'bg-stone-500',
+    'tubo_bloco': 'bg-gray-500'
+  };
+  return colorMap[componentId] || 'bg-gray-500';
+};
 
 // STATUS_ORDER será obtido dinamicamente das configurações
 
@@ -29,7 +50,18 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
   const { updateWorkflowStatus } = useWorkflowUpdate();
   const { workflowStatuses, getStatusColors, getNextAllowedStatuses, loading } = useWorkflowStatusConfig();
   const { isMobile, isTablet } = useBreakpoint();
+  const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
   const [selectedComponent, setSelectedComponent] = useState<string>('todos');
+  
+  // Construir lista de componentes incluindo "todos"
+  const COMPONENTS = [
+    { id: 'todos', name: 'Todos', color: 'bg-blue-500' },
+    ...engineComponents.map(comp => ({
+      id: comp.value,
+      name: comp.label,
+      color: getComponentColor(comp.value)
+    }))
+  ];
 
   // Obter ordem dos status das configurações
   const statusOrder = workflowStatuses
@@ -40,9 +72,9 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
   const statusColors = getStatusColors();
 
   // Função para obter cor do componente
-  const getComponentColor = (component: string) => {
+  const getComponentColorById = (component: string) => {
     const componentData = COMPONENTS.find(c => c.id === component);
-    return componentData?.color || 'bg-gray-500';
+    return componentData?.color || getComponentColor(component);
   };
 
   // Organizar workflows por status para o componente selecionado
@@ -65,7 +97,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
               customerName: order.customers?.name,
               engineModel: order.engines ? `${order.engines.brand || ''} ${order.engines.model || ''}`.trim() : 'Motor não informado',
               collectionDate: order.collection_date,
-              componentColor: getComponentColor(workflow.component) // Adicionar cor específica do componente
+              componentColor: getComponentColorById(workflow.component) // Adicionar cor específica do componente
             };
             
             workflowsByStatus[workflow.status]?.push(workflowItem);
@@ -84,7 +116,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
               customerName: order.customers?.name,
               engineModel: order.engines ? `${order.engines.brand || ''} ${order.engines.model || ''}`.trim() : 'Motor não informado',
               collectionDate: order.collection_date,
-              componentColor: getComponentColor(componentWorkflow.component) // Adicionar cor específica do componente
+              componentColor: getComponentColorById(componentWorkflow.component) // Adicionar cor específica do componente
             };
             
             workflowsByStatus[componentWorkflow.status]?.push(workflowItem);

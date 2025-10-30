@@ -254,7 +254,7 @@ export function useSupabase() {
     }
   };
 
-  const getWorkflowsByComponent = async (component: 'bloco' | 'eixo' | 'biela' | 'comando' | 'cabecote') => {
+  const getWorkflowsByComponent = async (component: string) => {
     if (!currentOrganization?.id) {
       handleError(new Error('Organização não encontrada'), 'Erro: organização não encontrada');
       return [];

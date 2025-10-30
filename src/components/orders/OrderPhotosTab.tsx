@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Camera, Upload, Trash2, Eye, Plus, Loader2 } from 'lucide-react';
 import { useOrderPhotos } from '@/hooks/useOrderPhotos';
+import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -27,16 +28,10 @@ const PHOTO_TYPES = [
   { value: 'outros', label: 'Outros' }
 ];
 
-const COMPONENTS = [
-  { value: 'bloco', label: 'Bloco' },
-  { value: 'eixo', label: 'Eixo' },
-  { value: 'biela', label: 'Biela' },
-  { value: 'comando', label: 'Comando' },
-  { value: 'cabecote', label: 'Cabeçote' }
-];
 
 export function OrderPhotosTab({ orderId }: OrderPhotosTabProps) {
   const { photos, loading, uploadPhoto, deletePhoto } = useOrderPhotos(orderId);
+  const { components: engineComponents } = useEngineComponents();
   const [selectedPhoto, setSelectedPhoto] = useState<unknown>(null);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [uploadData, setUploadData] = useState({
@@ -87,7 +82,7 @@ export function OrderPhotosTab({ orderId }: OrderPhotosTabProps) {
 
   const getComponentLabel = (component: string | null) => {
     if (!component) return null;
-    return COMPONENTS.find(c => c.value === component)?.label || component;
+    return engineComponents.find(c => c.value === component)?.label || component;
   };
 
   if (loading && photos.length === 0) {
@@ -159,7 +154,7 @@ export function OrderPhotosTab({ orderId }: OrderPhotosTabProps) {
                     <SelectValue placeholder="Selecione o componente" />
                   </SelectTrigger>
                   <SelectContent>
-                    {COMPONENTS.map(component => (
+                    {engineComponents.map(component => (
                       <SelectItem key={component.value} value={component.value}>
                         {component.label}
                       </SelectItem>
