@@ -356,7 +356,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
               <Label htmlFor="order">Ordem de Serviço *</Label>
               <Select value={selectedOrderId} onValueChange={setSelectedOrderId} disabled={!!orderId || !!budget}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione a OS" />
+                  <SelectValue placeholder="Selecione a OS (O diagnóstico deve ter sido realizado)" />
                 </SelectTrigger>
                 <SelectContent>
                   {loadingOrders ? (
