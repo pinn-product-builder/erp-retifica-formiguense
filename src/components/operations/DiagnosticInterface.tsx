@@ -43,6 +43,8 @@ import { useOrders } from "@/hooks/useOrders";
 import { useToast } from "@/hooks/use-toast";
 import BudgetFromDiagnostic from './BudgetFromDiagnostic';
 import DiagnosticValidation from './DiagnosticValidation';
+import { useEngineComponents } from '@/hooks/useEngineComponents';
+import { EngineComponentSelect } from '@/components/ui/EngineComponentSelect';
 
 interface DiagnosticInterfaceProps {
   orderId?: string;
@@ -74,14 +76,11 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
   const { data: checklists } = useDiagnosticChecklistsQuery(selectedEngineType, selectedComponent);
   const { orders } = useOrders();
   const mutations = useDiagnosticChecklistMutations();
+  const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
 
-  const componentOptions = [
-    { value: 'bloco', label: 'Bloco' },
-    { value: 'eixo', label: 'Eixo' },
-    { value: 'biela', label: 'Biela' },
-    { value: 'comando', label: 'Comando' },
-    { value: 'cabecote', label: 'Cabeçote' }
-  ];
+  const getComponentLabel = (value: string) => {
+    return engineComponents.find(c => c.value === value)?.label || value;
+  };
 
   const itemTypeIcons = {
     checkbox: CheckCircle,
@@ -507,18 +506,10 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
               
               <div>
                 <Label htmlFor="component">Componente</Label>
-                <Select value={selectedComponent} onValueChange={setSelectedComponent}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o componente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {componentOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <EngineComponentSelect
+                  value={selectedComponent || undefined}
+                  onChange={(v) => setSelectedComponent(v || '')}
+                />
               </div>
             </div>
 
@@ -540,9 +531,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
                               {checklist.description || "Sem descrição"}
                             </p>
                             <div className="flex gap-2 mt-2">
-                              <Badge variant="outline">
-                                {componentOptions.find(c => c.value === checklist.component)?.label}
-                              </Badge>
+                              <Badge variant="outline">{getComponentLabel(checklist.component)}</Badge>
                               <Badge variant="secondary">
                                 {checklist.items?.length || 0} itens
                               </Badge>
@@ -582,9 +571,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
                     {selectedChecklist.description || "Checklist de diagnóstico"}
                   </CardDescription>
                   <div className="flex gap-2 mt-2">
-                    <Badge variant="outline">
-                      {componentOptions.find(c => c.value === selectedChecklist.component)?.label}
-                    </Badge>
+                    <Badge variant="outline">{getComponentLabel(selectedChecklist.component)}</Badge>
                     <Badge variant="secondary">
                       {selectedChecklist.items?.length || 0} itens
                     </Badge>

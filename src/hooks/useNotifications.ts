@@ -151,9 +151,9 @@ export function useNotifications() {
         }
       );
 
-      return () => {
-        subscription.unsubscribe();
-      };
+    return () => {
+      subscription.unsubscribe();
+    };
     }
   }, [currentOrganization?.id]);
 

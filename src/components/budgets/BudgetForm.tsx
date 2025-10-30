@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import type { DetailedBudget } from '@/hooks/useDetailedBudgets';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
+import { EngineComponentSelect } from '@/components/ui/EngineComponentSelect';
 import { MaskedInput } from '@/components/ui/masked-input';
 
 interface BudgetFormProps {
@@ -48,11 +49,13 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   // Estados do formulário
   const [selectedOrderId, setSelectedOrderId] = useState<string>(orderId || budget?.order_id || '');
   const [component, setComponent] = useState<string>(budget?.component || 'bloco');
+  const [componentsSelected, setComponentsSelected] = useState<string[]>(budget?.component ? [budget.component] : []);
   // @ts-expect-error - Budget services/parts are Record<string, unknown>[] but need to be Service[]/Part[]
   const [services, setServices] = useState<Service[]>(budget?.services || []);
   // @ts-expect-error - Budget services/parts are Record<string, unknown>[] but need to be Service[]/Part[]
   const [parts, setParts] = useState<Part[]>(budget?.parts || []);
   const [laborHours, setLaborHours] = useState<number>(budget?.labor_hours || 0);
+  const [laborDescription, setLaborDescription] = useState<string>((budget as any)?.labor_description || '');
   const [laborRate, setLaborRate] = useState<number>(budget?.labor_rate || 50);
   const [discount, setDiscount] = useState<number>(budget?.discount || 0);
   const [taxPercentage, setTaxPercentage] = useState<number>(budget?.tax_percentage || 0);
@@ -147,10 +150,11 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
         const { data, error } = await supabase
           .from('orders')
           .select(`
-            id, 
-            order_number, 
+            id,
+            order_number,
             customer_id,
-            customers!inner(name)
+            customers!inner(name),
+            diagnostic_checklist_responses!inner(id)
           `)
           .eq('org_id', currentOrganization.id)
           .eq('status', 'ativa')
@@ -314,6 +318,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
         labor_hours: laborHours,
         labor_rate: laborRate,
         labor_total: laborTotal,
+        // @ts-expect-error campo novo ainda não nos tipos gerados
+        labor_description: laborDescription,
         parts_total: partsTotal,
         discount,
         tax_percentage: taxPercentage,
@@ -369,23 +375,15 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
             </div>
 
             <div>
-              <Label htmlFor="component">Componente *</Label>
-              <Select value={component} onValueChange={setComponent}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {componentsLoading ? (
-                    <SelectItem value="loading" disabled>Carregando componentes...</SelectItem>
-                  ) : (
-                    engineComponents.map((component) => (
-                      <SelectItem key={component.value} value={component.value}>
-                        {component.label}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="component">Componente(s) *</Label>
+              <EngineComponentSelect
+                multiple
+                value={componentsSelected}
+                onChange={(vals) => {
+                  setComponentsSelected(vals);
+                  setComponent(vals[0] || '');
+                }}
+              />
             </div>
           </div>
         </CardContent>
@@ -423,6 +421,16 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
               <Label>Total Mão de Obra</Label>
               <Input value={`R$ ${laborTotal.toFixed(2)}`} disabled />
             </div>
+          </div>
+          <div className="mt-4">
+            <Label htmlFor="laborDescription">Descrição da Mão de Obra</Label>
+            <Textarea
+              id="laborDescription"
+              placeholder="Ex.: Retífica de cabeçote, montagem, ajustes e testes."
+              value={laborDescription}
+              onChange={(e) => setLaborDescription(e.target.value)}
+              rows={3}
+            />
           </div>
         </CardContent>
       </Card>

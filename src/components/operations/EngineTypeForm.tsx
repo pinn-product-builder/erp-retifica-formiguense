@@ -30,6 +30,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, X, Save, Loader2 } from 'lucide-react';
 import { useEngineTypes, EngineType } from '@/hooks/useEngineTypes';
+import { useEngineComponents } from '@/hooks/useEngineComponents';
 
 const CATEGORIES = [
   { value: 'geral', label: 'Geral' },
@@ -38,14 +39,6 @@ const CATEGORIES = [
   { value: 'bosch', label: 'Bosch' },
   { value: 'bosch_specialized', label: 'Bosch 14 Etapas' },
   { value: 'garantia', label: 'Garantia' },
-];
-
-const COMPONENTS = [
-  { value: 'bloco', label: 'Bloco' },
-  { value: 'eixo', label: 'Eixo' },
-  { value: 'biela', label: 'Biela' },
-  { value: 'comando', label: 'Comando' },
-  { value: 'cabecote', label: 'Cabeçote' },
 ];
 
 const TECHNICAL_STANDARDS = [
@@ -87,6 +80,7 @@ interface EngineTypeFormProps {
 
 export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: EngineTypeFormProps) {
   const { createEngineType, updateEngineType, loading } = useEngineTypes();
+  const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
   const [customStandard, setCustomStandard] = useState('');
   const [customEquipment, setCustomEquipment] = useState('');
 
@@ -97,7 +91,7 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
       category: '',
       description: '',
       technical_standards: [],
-      required_components: ['bloco', 'eixo', 'biela', 'comando', 'cabecote'],
+      required_components: ['bloco', 'eixo', 'biela', 'comando', 'cabecote'], // Valores padrão iniciais
       default_warranty_months: 3,
       is_active: true,
       display_order: 0,
@@ -147,7 +141,7 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
           is_active: data.is_active,
           display_order: data.display_order,
           default_warranty_months: data.default_warranty_months,
-          required_components: data.required_components as ("bloco" | "eixo" | "biela" | "comando" | "cabecote")[],
+          required_components: data.required_components as unknown,
           technical_standards: data.technical_standards as unknown,
           special_requirements: data.special_requirements as unknown,
         });
@@ -348,8 +342,16 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
                 name="required_components"
                 render={() => (
                   <FormItem>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {COMPONENTS.map((component) => (
+                    {componentsLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                        <span className="ml-2 text-sm text-muted-foreground">
+                          Carregando componentes...
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {engineComponents.map((component) => (
                         <FormField
                           key={component.value}
                           control={form.control}
@@ -383,6 +385,7 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
                         />
                       ))}
                     </div>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

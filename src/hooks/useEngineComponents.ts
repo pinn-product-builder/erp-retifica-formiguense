@@ -15,14 +15,36 @@ export function useEngineComponents() {
 
   // Mapeamento de componentes para labels em português
   const componentLabels: Record<string, string> = {
-    'bloco': 'Bloco',
+    'bloco': 'Bloco do Motor',
     'eixo': 'Eixo',
     'biela': 'Biela',
     'comando': 'Comando',
     'cabecote': 'Cabeçote',
     'virabrequim': 'Virabrequim',
-    'pistao': 'Pistão'
+    'pistao': 'Pistão',
+    'pistao_com_anel': 'Pistão c/anel',
+    'anel': 'Anel',
+    'camisas': 'Camisas',
+    'bucha_comando': 'Bucha Comando',
+    'retentores_dianteiro': 'Retentores Dianteiro',
+    'retentores_traseiro': 'Retentores Traseiro',
+    'pista_virabrequim': 'Pista Virabrequim',
+    'selo_comando': 'Selo do Comando',
+    'gaxeta': 'Gaxeta',
+    'selo_dagua': 'Selo D\'agua',
+    'borrachas_camisa': 'Borrachas de Camisa',
+    'calco_camisas': 'Calço das camisas',
+    'bujao_carter': 'Bujão do Cárter',
+    'tubo_bloco': 'Tubo do Bloco'
   };
+
+  // Lista completa padrão (usada sempre como base)
+  const defaultComponentsFull = [
+    'bloco', 'eixo', 'biela', 'comando', 'cabecote', 'virabrequim', 'pistao',
+    'pistao_com_anel', 'anel', 'camisas', 'bucha_comando', 'retentores_dianteiro',
+    'retentores_traseiro', 'pista_virabrequim', 'selo_comando', 'gaxeta', 'selo_dagua',
+    'borrachas_camisa', 'calco_camisas', 'bujao_carter', 'tubo_bloco'
+  ] as EngineComponent[];
 
   // Buscar componentes da tabela engine_types
   const fetchComponents = useCallback(async () => {
@@ -37,12 +59,8 @@ export function useEngineComponents() {
 
       if (error) {
         console.warn('Erro ao buscar componentes da tabela engine_types, usando valores padrão:', error);
-        // Fallback: usar valores hardcoded se a consulta falhar
-        const defaultComponents = [
-          'bloco', 'eixo', 'biela', 'comando', 'cabecote', 'virabrequim', 'pistao'
-        ] as EngineComponent[];
-        
-        const componentOptions = defaultComponents.map(component => ({
+        // Fallback: usar lista completa padrão
+        const componentOptions = defaultComponentsFull.map(component => ({
           value: component,
           label: componentLabels[component] || component
         }));
@@ -51,8 +69,8 @@ export function useEngineComponents() {
         return;
       }
 
-      // Extrair todos os componentes únicos dos tipos de motor
-      const allComponents = new Set<EngineComponent>();
+      // Extrair todos os componentes únicos dos tipos de motor + sempre incluir os padrões
+      const allComponents = new Set<EngineComponent>(defaultComponentsFull);
       
       (data || []).forEach((item: any) => {
         if (item.required_components && Array.isArray(item.required_components)) {
@@ -61,21 +79,6 @@ export function useEngineComponents() {
           });
         }
       });
-
-      // Se não encontrou componentes na tabela, usar valores padrão
-      if (allComponents.size === 0) {
-        const defaultComponents = [
-          'bloco', 'eixo', 'biela', 'comando', 'cabecote', 'virabrequim', 'pistao'
-        ] as EngineComponent[];
-        
-        const componentOptions = defaultComponents.map(component => ({
-          value: component,
-          label: componentLabels[component] || component
-        }));
-        
-        setComponents(componentOptions);
-        return;
-      }
 
       // Converter Set para Array e mapear para opções do select
       const componentOptions = Array.from(allComponents).map(component => ({
@@ -87,12 +90,8 @@ export function useEngineComponents() {
     } catch (error) {
       console.error('Erro ao buscar componentes:', error);
       
-      // Fallback em caso de erro
-      const defaultComponents = [
-        'bloco', 'eixo', 'biela', 'comando', 'cabecote', 'virabrequim', 'pistao'
-      ] as EngineComponent[];
-      
-      const componentOptions = defaultComponents.map(component => ({
+      // Fallback em caso de erro: lista mínima mas funcional
+      const componentOptions = defaultComponentsFull.map(component => ({
         value: component,
         label: componentLabels[component]
       }));
