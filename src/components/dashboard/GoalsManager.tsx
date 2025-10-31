@@ -131,6 +131,23 @@ export function GoalsManager() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentOrganization?.id]);
 
+  // Escutar eventos de refresh do dashboard
+  useEffect(() => {
+    const handleRefresh = () => {
+      if (currentOrganization?.id) {
+        fetchGoals();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('dashboard-refresh', handleRefresh);
+      return () => {
+        window.removeEventListener('dashboard-refresh', handleRefresh);
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentOrganization?.id]);
+
   const fetchGoals = async () => {
     if (!currentOrganization?.id) {
       return;

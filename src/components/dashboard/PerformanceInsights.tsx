@@ -78,6 +78,23 @@ export function PerformanceInsights() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentOrganization?.id, selectedPeriod]);
 
+  // Escutar eventos de refresh do dashboard
+  useEffect(() => {
+    const handleRefresh = () => {
+      if (currentOrganization?.id) {
+        fetchPerformanceData();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('dashboard-refresh', handleRefresh);
+      return () => {
+        window.removeEventListener('dashboard-refresh', handleRefresh);
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentOrganization?.id]);
+
   const fetchPerformanceData = async () => {
     try {
       setLoading(true);

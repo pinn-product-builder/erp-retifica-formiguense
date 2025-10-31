@@ -265,6 +265,23 @@ export default function InventoryPurchaseDashboard() {
     }
   }, [currentOrganization?.id, period, fetchDashboardData]);
 
+  // Escutar eventos de refresh do dashboard
+  useEffect(() => {
+    const handleRefresh = () => {
+      if (currentOrganization?.id) {
+        fetchDashboardData();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('dashboard-refresh', handleRefresh);
+      return () => {
+        window.removeEventListener('dashboard-refresh', handleRefresh);
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentOrganization?.id, fetchDashboardData]);
+
   const calculateInventoryKPIs = (
     inventory: InventoryItem[],
     movements: MovementItem[],

@@ -385,6 +385,11 @@ export const useDashboard = () => {
       // Fetch recent services
       await fetchRecentServices();
 
+      // Disparar evento de refresh após atualizar todos os dados
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('dashboard-refresh'));
+      }
+
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'Erro desconhecido');
       console.error('Error fetching dashboard data:', error);
