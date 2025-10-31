@@ -228,6 +228,11 @@ export function GoalsManager() {
       setDialogOpen(false);
       resetForm();
       fetchGoals();
+      
+      // Disparar evento para atualizar metas no período no PerformanceInsights
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('goals-updated'));
+      }
     } catch (error) {
       console.error('Erro ao criar meta:', error);
       toast({
@@ -258,6 +263,11 @@ export function GoalsManager() {
       setSelectedGoal(null);
       setNewProgress(0);
       fetchGoals();
+      
+      // Disparar evento para atualizar metas no período no PerformanceInsights
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('goals-updated'));
+      }
     } catch (error) {
       console.error('Erro ao atualizar progresso:', error);
       toast({
@@ -294,6 +304,11 @@ export function GoalsManager() {
       setEditDialogOpen(false);
       resetEditForm();
       fetchGoals();
+      
+      // Disparar evento para atualizar metas no período no PerformanceInsights
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('goals-updated'));
+      }
     } catch (error) {
       console.error('Erro ao atualizar meta:', error);
       toast({

@@ -95,6 +95,23 @@ export function PerformanceInsights() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentOrganization?.id]);
 
+  // Escutar eventos de atualização de metas (disparado pelo GoalsManager)
+  useEffect(() => {
+    const handleGoalsUpdated = () => {
+      if (currentOrganization?.id) {
+        fetchGoals().then(goalsData => setGoals(goalsData));
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('goals-updated', handleGoalsUpdated);
+      return () => {
+        window.removeEventListener('goals-updated', handleGoalsUpdated);
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentOrganization?.id]);
+
   const fetchPerformanceData = async () => {
     try {
       setLoading(true);
