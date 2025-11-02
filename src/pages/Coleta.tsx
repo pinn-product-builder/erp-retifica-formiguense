@@ -69,6 +69,7 @@ export default function Coleta() {
         setShowSearchResults(true);
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSearchDialog]);
 
   // Buscar clientes
@@ -113,30 +114,62 @@ export default function Coleta() {
     setShowSearchDialog(false); // Fechar o modal após seleção
   };
 
-  // Criar novo cliente
+  // Criar novo cliente (apenas no dialog)
   const handleCreateNewCustomer = async () => {
+    if (!formData.nomeCliente || !formData.documento) {
+      toast({
+        title: "Erro",
+        description: "Preencha pelo menos o nome e documento do cliente",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const customerData = {
       name: formData.nomeCliente,
       document: formData.documento,
-      phone: formData.telefone,
-      email: formData.email,
-      address: formData.endereco,
-      type: formData.tipoCliente as 'direto' | 'oficina',
-      workshop_name: formData.tipoCliente === 'oficina' ? formData.nomeOficina : undefined,
-      workshop_cnpj: formData.tipoCliente === 'oficina' ? formData.cnpjOficina : undefined,
-      workshop_contact: formData.tipoCliente === 'oficina' ? formData.contatoOficina : undefined
+      phone: formData.telefone || undefined,
+      email: formData.email || undefined,
+      address: formData.endereco || undefined,
+      type: (formData.tipoCliente || 'direto') as 'direto' | 'oficina',
+      workshop_name: formData.tipoCliente === 'oficina' ? formData.nomeOficina || undefined : undefined,
+      workshop_cnpj: formData.tipoCliente === 'oficina' ? formData.cnpjOficina || undefined : undefined,
+      workshop_contact: formData.tipoCliente === 'oficina' ? formData.contatoOficina || undefined : undefined
     };
 
     const newCustomer = await createNewCustomer(customerData);
     if (newCustomer) {
-      setSelectedCustomer(newCustomer);
+      // Selecionar o cliente recém-criado
+      handleSelectCustomer(newCustomer);
+      // Limpar campos do dialog
+      setFormData(prev => ({
+        ...prev,
+        nomeCliente: "",
+        documento: "",
+        telefone: "",
+        email: "",
+        endereco: "",
+        nomeOficina: "",
+        cnpjOficina: "",
+        contatoOficina: ""
+      }));
+      setDocumentType('auto');
       setShowNewCustomerDialog(false);
+      toast({
+        title: "Sucesso",
+        description: "Cliente cadastrado e selecionado com sucesso",
+      });
     }
   };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // Função no-op para campos disabled (apenas visualização)
+  const noOpChange = useCallback((_value: string, _rawValue: string) => {
+    // Não faz nada - apenas para evitar warnings do React
+  }, []);
 
   // Função para detectar automaticamente o tipo de documento
   const detectDocumentType = (value: string): 'cpf' | 'cnpj' => {
@@ -159,6 +192,15 @@ export default function Coleta() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!selectedCustomer) {
+      toast({
+        title: "Erro",
+        description: "Selecione ou cadastre um cliente",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!formData.consultor) {
       toast({
         title: "Erro",
@@ -167,26 +209,10 @@ export default function Coleta() {
       });
       return;
     }
-    
-    // Criar cliente
-    const customerData = {
-      type: formData.tipoCliente as 'oficina' | 'direto',
-      name: formData.nomeCliente,
-      document: formData.documento,
-      phone: formData.telefone,
-      email: formData.email || undefined,
-      address: formData.endereco || undefined,
-      workshop_name: formData.tipoCliente === 'oficina' ? formData.nomeOficina || undefined : undefined,
-      workshop_cnpj: formData.tipoCliente === 'oficina' ? formData.cnpjOficina || undefined : undefined,
-      workshop_contact: formData.tipoCliente === 'oficina' ? formData.contatoOficina || undefined : undefined,
-    };
-
-    const customer = await createNewCustomer(customerData);
-    if (!customer) return;
 
     // Salvar dados da coleta no sessionStorage para usar no check-in
     const coletaData = {
-      customer_id: customer.id,
+      customer_id: selectedCustomer.id,
       consultant_id: formData.consultor,
       collection_date: formData.dataColeta,
       collection_time: formData.horaColeta,
@@ -199,7 +225,7 @@ export default function Coleta() {
     
     toast({
       title: "Coleta registrada",
-      description: "Cliente cadastrado. Prossiga para o check-in técnico.",
+      description: "Dados salvos. Prossiga para o check-in técnico.",
     });
     
     navigate('/checkin');
@@ -340,7 +366,7 @@ export default function Coleta() {
                           {searchResults.length > 0 && searchResults.map((customer) => (
                             <CommandItem
                               key={customer.id}
-                              value={`${customer.name} ${customer.document} ${customer.phone || ''}`}
+                              value={`${customer.id} ${customer.name} ${customer.document} ${customer.phone || ''}`}
                               onSelect={() => handleSelectCustomer(customer)}
                               className="cursor-pointer"
                             >
@@ -386,17 +412,34 @@ export default function Coleta() {
                     </DialogHeader>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="newClientName">Nome Completo / Razão Social</Label>
+                        <Label htmlFor="newClientType">Tipo de Cliente</Label>
+                        <Select 
+                          value={formData.tipoCliente} 
+                          onValueChange={(value) => handleInputChange('tipoCliente', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o tipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="oficina">Oficina</SelectItem>
+                            <SelectItem value="direto">Cliente Direto</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div></div>
+                      <div>
+                        <Label htmlFor="newClientName">Nome Completo / Razão Social *</Label>
                         <Input
                           id="newClientName"
                           value={formData.nomeCliente}
                           onChange={(e) => handleInputChange('nomeCliente', e.target.value)}
                           placeholder="Nome do cliente"
+                          required
                         />
                       </div>
                       <div>
                         <Label htmlFor="newClientDoc">
-                          {documentType === 'auto' ? 'CPF / CNPJ' : documentType === 'cpf' ? 'CPF' : 'CNPJ'}
+                          {documentType === 'auto' ? 'CPF / CNPJ *' : documentType === 'cpf' ? 'CPF *' : 'CNPJ *'}
                         </Label>
                         <MaskedInput
                           id="newClientDoc"
@@ -404,6 +447,7 @@ export default function Coleta() {
                           value={formData.documento}
                           onChange={handleDocumentChange}
                           placeholder={documentType === 'auto' ? '000.000.000-00' : documentType === 'cpf' ? '000.000.000-00' : '00.000.000/0000-00'}
+                          required
                         />
                       </div>
                       <div>
@@ -436,6 +480,43 @@ export default function Coleta() {
                           placeholder="Endereço completo"
                         />
                       </div>
+                      {formData.tipoCliente === "oficina" && (
+                        <>
+                          <div>
+                            <Label htmlFor="newClientWorkshopName">Nome da Oficina</Label>
+                            <Input
+                              id="newClientWorkshopName"
+                              value={formData.nomeOficina}
+                              onChange={(e) => handleInputChange('nomeOficina', e.target.value)}
+                              placeholder="Nome da oficina"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="newClientWorkshopDoc">CNPJ / CPF da Oficina</Label>
+                            <MaskedInput
+                              id="newClientWorkshopDoc"
+                              mask="cpfcnpj"
+                              value={formData.cnpjOficina}
+                              onChange={(maskedValue, rawValue) => {
+                                setFormData(prev => ({ ...prev, cnpjOficina: rawValue }));
+                              }}
+                              placeholder="00.000.000/0000-00"
+                            />
+                          </div>
+                          <div className="sm:col-span-2">
+                            <Label htmlFor="newClientWorkshopContact">Contato da Oficina (WhatsApp)</Label>
+                            <MaskedInput
+                              id="newClientWorkshopContact"
+                              mask="phone"
+                              value={formData.contatoOficina}
+                              onChange={(maskedValue, rawValue) => {
+                                setFormData(prev => ({ ...prev, contatoOficina: rawValue }));
+                              }}
+                              placeholder="(00) 00000-0000"
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
                     <DialogFooter>
                       <Button 
@@ -451,79 +532,79 @@ export default function Coleta() {
             </CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {selectedCustomer && (
-              <div className="sm:col-span-2 p-3 bg-green-50 border border-green-200 rounded">
-                <div className="flex items-center gap-2 text-green-800">
-                  <User className="w-4 h-4" />
-                  <span className="font-medium">Cliente Selecionado: {selectedCustomer.name}</span>
-                </div>
+            {!selectedCustomer ? (
+              <div className="sm:col-span-2 p-4 bg-muted border border-dashed rounded-lg text-center text-muted-foreground">
+                <User className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Nenhum cliente selecionado</p>
+                <p className="text-xs mt-1">Use os botões acima para buscar ou cadastrar um cliente</p>
               </div>
+            ) : (
+              <>
+                <div className="sm:col-span-2 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded">
+                  <div className="flex items-center gap-2 text-green-800 dark:text-green-200">
+                    <User className="w-4 h-4" />
+                    <span className="font-medium">Cliente Selecionado: {selectedCustomer.name}</span>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="nomeCliente">Nome Completo / Razão Social</Label>
+                  <Input
+                    id="nomeCliente"
+                    value={formData.nomeCliente}
+                    readOnly
+                    className="bg-muted cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="documento">
+                    {documentType === 'auto' ? 'CPF / CNPJ' : documentType === 'cpf' ? 'CPF' : 'CNPJ'}
+                  </Label>
+                  <MaskedInput
+                    id="documento"
+                    mask={documentType === 'auto' ? 'cpfcnpj' : documentType}
+                    value={formData.documento}
+                    // onChange={noOpChange}
+                    disabled
+                    className="bg-muted cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="telefone">Telefone</Label>
+                  <MaskedInput
+                    id="telefone"
+                    mask="phone"
+                    value={formData.telefone}
+                    // onChange={noOpChange}
+                    disabled
+                    className="bg-muted cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="email">E-mail</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    readOnly
+                    className="bg-muted cursor-not-allowed"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="endereco">Endereço Completo</Label>
+                  <Input
+                    id="endereco"
+                    value={formData.endereco}
+                    readOnly
+                    className="bg-muted cursor-not-allowed"
+                  />
+                </div>
+              </>
             )}
-            <div>
-              <Label htmlFor="nomeCliente">Nome Completo / Razão Social</Label>
-              <Input
-                id="nomeCliente"
-                placeholder="Nome do cliente"
-                value={formData.nomeCliente}
-                onChange={(e) => handleInputChange('nomeCliente', e.target.value)}
-                required
-                disabled={!!selectedCustomer}
-              />
-            </div>
-            <div>
-              <Label htmlFor="documento">
-                {documentType === 'auto' ? 'CPF / CNPJ' : documentType === 'cpf' ? 'CPF' : 'CNPJ'}
-              </Label>
-              <MaskedInput
-                id="documento"
-                mask={documentType === 'auto' ? 'cpfcnpj' : documentType}
-                value={formData.documento}
-                onChange={handleDocumentChange}
-                placeholder={documentType === 'auto' ? '000.000.000-00' : documentType === 'cpf' ? '000.000.000-00' : '00.000.000/0000-00'}
-                required
-                disabled={!!selectedCustomer}
-              />
-            </div>
-            <div>
-              <Label htmlFor="telefone">Telefone</Label>
-              <MaskedInput
-                id="telefone"
-                mask="phone"
-                value={formData.telefone}
-                onChange={(maskedValue, rawValue) => {
-                  setFormData(prev => ({ ...prev, telefone: rawValue }));
-                }}
-                placeholder="(00) 00000-0000"
-                required
-                disabled={!!selectedCustomer}
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="cliente@email.com"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                disabled={!!selectedCustomer}
-              />
-            </div>
-            <div className="md:col-span-2">
-              <Label htmlFor="endereco">Endereço Completo</Label>
-              <Input
-                id="endereco"
-                placeholder="Rua, número, bairro, cidade, CEP"
-                value={formData.endereco}
-                onChange={(e) => handleInputChange('endereco', e.target.value)}
-                disabled={!!selectedCustomer}
-              />
-            </div>
           </CardContent>
         </Card>
 
-        {/* Oficina (Condicional) */}
-        {formData.tipoCliente === "oficina" && (
+        {/* Oficina (Condicional - Apenas Visualização) */}
+        {selectedCustomer && formData.tipoCliente === "oficina" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -531,7 +612,7 @@ export default function Coleta() {
                 Oficina
               </CardTitle>
               <CardDescription>
-                Dados da oficina parceira (opcional para cliente direto)
+                Dados da oficina parceira
               </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -539,9 +620,9 @@ export default function Coleta() {
                 <Label htmlFor="nomeOficina">Nome da Oficina</Label>
                 <Input
                   id="nomeOficina"
-                  placeholder="Nome da oficina"
                   value={formData.nomeOficina}
-                  onChange={(e) => handleInputChange('nomeOficina', e.target.value)}
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
                 />
               </div>
               <div>
@@ -550,10 +631,9 @@ export default function Coleta() {
                   id="cnpjOficina"
                   mask="cpfcnpj"
                   value={formData.cnpjOficina}
-                  onChange={(maskedValue, rawValue) => {
-                    setFormData(prev => ({ ...prev, cnpjOficina: rawValue }));
-                  }}
-                  placeholder="00.000.000/0000-00"
+                  onChange={noOpChange}
+                  disabled
+                  className="bg-muted cursor-not-allowed"
                 />
               </div>
               <div className="md:col-span-2">
@@ -562,10 +642,9 @@ export default function Coleta() {
                   id="contatoOficina"
                   mask="phone"
                   value={formData.contatoOficina}
-                  onChange={(maskedValue, rawValue) => {
-                    setFormData(prev => ({ ...prev, contatoOficina: rawValue }));
-                  }}
-                  placeholder="(00) 00000-0000"
+                  onChange={noOpChange}
+                  disabled
+                  className="bg-muted cursor-not-allowed"
                 />
               </div>
             </CardContent>

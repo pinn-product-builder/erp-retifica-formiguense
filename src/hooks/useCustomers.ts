@@ -47,6 +47,7 @@ export function useCustomers() {
       if (error) throw error;
 
       const customersData = data as Customer[];
+
       setCustomers(customersData);
       return customersData;
     } catch (error) {
