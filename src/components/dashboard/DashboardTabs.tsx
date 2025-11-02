@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 // Lazy load dos componentes das abas para melhor performance
 const DashboardTab = lazy(() => import('./tabs/DashboardTab').then(m => ({ default: m.DashboardTab })));
 const PerformanceTab = lazy(() => import('./tabs/PerformanceTab').then(m => ({ default: m.PerformanceTab })));
-const GamificationTab = lazy(() => import('./tabs/GamificationTab').then(m => ({ default: m.GamificationTab })));
+//const GamificationTab = lazy(() => import('./tabs/GamificationTab').then(m => ({ default: m.GamificationTab })));
 const PurchasesTab = lazy(() => import('./tabs/PurchasesTab').then(m => ({ default: m.PurchasesTab })));
 
 // Loading component
@@ -33,7 +33,7 @@ export function DashboardTabs() {
   const tabComponents: Record<string, React.ReactNode> = {
     dashboard: <DashboardTab />,
     performance: <PerformanceTab />,
-    gamification: <GamificationTab />,
+    //gamification: <GamificationTab />,
     purchases: <PurchasesTab />
   };
 

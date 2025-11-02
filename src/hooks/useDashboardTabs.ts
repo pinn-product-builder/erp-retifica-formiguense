@@ -29,12 +29,12 @@ const TABS: DashboardTab[] = [
     icon: TrendingUp,
     description: 'Insights, metas e desempenho'
   },
-  {
-    id: 'gamification',
-    label: 'Gamificação',
-    icon: Trophy,
-    description: 'Progresso, conquistas e ranking'
-  },
+  // {
+  //   id: 'gamification',
+  //   label: 'Gamificação',
+  //   icon: Trophy,
+  //   description: 'Progresso, conquistas e ranking'
+  // },
   {
     id: 'purchases',
     label: 'Compras',
