@@ -478,7 +478,7 @@ export default function Coleta() {
                           mask="cpfcnpj"
                           value={newCustomerForm.documento}
                           onChange={handleNewCustomerDocumentChange}
-                          placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                          
                           required
                         />
                       </div>
