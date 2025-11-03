@@ -110,12 +110,24 @@ export function useOrderMaterials(orderId: string) {
 
   const markAsSeparated = async (reservationId: string, userId: string) => {
     try {
+      // Buscar dados da reserva para obter quantity_reserved
+      const { data: reservation, error: fetchError } = await supabase
+        .from('parts_reservations')
+        .select('quantity_reserved')
+        .eq('id', reservationId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Ao separar, quantity_separated deve ser igual a quantity_reserved
+      // (ou poderia ser parcial, mas por padrão separamos tudo que foi reservado)
       const { error } = await supabase
         .from('parts_reservations')
         .update({
           reservation_status: 'separated',
           separated_at: new Date().toISOString(),
           separated_by: userId,
+          quantity_separated: reservation.quantity_reserved, // Respeita constraint: <= quantity_reserved
         })
         .eq('id', reservationId);
 
@@ -141,14 +153,41 @@ export function useOrderMaterials(orderId: string) {
 
   const markAsApplied = async (reservationId: string, userId: string) => {
     try {
-      // Primeiro buscar os dados da reserva
+      // Primeiro buscar os dados da reserva com todas as quantidades
       const { data: reservation, error: fetchError } = await supabase
         .from('parts_reservations')
-        .select('quantity_reserved, part_code, part_name, part_id, order_id, org_id')
+        .select('quantity_reserved, quantity_separated, quantity_applied, part_code, part_name, part_id, order_id, org_id, reservation_status')
         .eq('id', reservationId)
         .single();
 
       if (fetchError) throw fetchError;
+
+      // Validar se a peça foi separada antes de aplicar
+      const quantitySeparated = reservation.quantity_separated || 0;
+      if (quantitySeparated === 0) {
+        toast({
+          title: 'Peça não separada',
+          description: 'A peça precisa ser separada antes de ser aplicada na ordem de serviço',
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      // Calcular quantidade já aplicada e quantidade disponível para aplicar
+      const quantityAlreadyApplied = reservation.quantity_applied || 0;
+      const quantityAvailableToApply = quantitySeparated - quantityAlreadyApplied;
+
+      if (quantityAvailableToApply <= 0) {
+        toast({
+          title: 'Peça já aplicada',
+          description: 'Toda a quantidade separada já foi aplicada',
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      // A quantidade a aplicar é o que ainda falta aplicar (mas não mais que o separado)
+      const quantityToApply = quantityAvailableToApply;
 
       // Buscar a quantidade atual do estoque
       const { data: currentStock, error: stockFetchError } = await supabase
@@ -160,11 +199,11 @@ export function useOrderMaterials(orderId: string) {
 
       if (stockFetchError) throw stockFetchError;
 
-      // Validar se há estoque suficiente
-      if (currentStock.quantity < reservation.quantity_reserved) {
+      // Validar se há estoque suficiente para a quantidade a aplicar
+      if (currentStock.quantity < quantityToApply) {
         toast({
           title: 'Estoque Insuficiente',
-          description: `Estoque disponível: ${currentStock.quantity}. Necessário: ${reservation.quantity_reserved}`,
+          description: `Estoque disponível: ${currentStock.quantity}. Necessário: ${quantityToApply}`,
           variant: 'destructive',
         });
         return false;
@@ -177,9 +216,9 @@ export function useOrderMaterials(orderId: string) {
           org_id: reservation.org_id,
           part_id: reservation.part_id || currentStock.id,
           movement_type: 'saida',
-          quantity: reservation.quantity_reserved,
+          quantity: quantityToApply,
           previous_quantity: currentStock.quantity,
-          new_quantity: currentStock.quantity - reservation.quantity_reserved,
+          new_quantity: currentStock.quantity - quantityToApply,
           order_id: reservation.order_id,
           reason: `Aplicação na OS - Peça: ${reservation.part_name}`,
           notes: `Peça aplicada na ordem de serviço. Reserva: ${reservationId}`,
@@ -197,14 +236,20 @@ export function useOrderMaterials(orderId: string) {
 
       if (movementError) throw movementError;
 
+      // Calcular nova quantidade aplicada (respeitando constraint: quantity_applied <= quantity_separated)
+      const newQuantityApplied = quantityAlreadyApplied + quantityToApply;
+      
       // Atualizar status da reserva
+      // Se aplicou tudo que foi separado, marca como 'applied', senão mantém status atual
+      const isFullyApplied = newQuantityApplied >= quantitySeparated;
+      
       const { error } = await supabase
         .from('parts_reservations')
         .update({
-          reservation_status: 'applied',
-          applied_at: new Date().toISOString(),
-          applied_by: userId,
-          quantity_applied: reservation.quantity_reserved,
+          reservation_status: isFullyApplied ? 'applied' : reservation.reservation_status,
+          applied_at: isFullyApplied ? new Date().toISOString() : undefined,
+          applied_by: isFullyApplied ? userId : undefined,
+          quantity_applied: newQuantityApplied, // Respeita constraint: <= quantity_separated
         })
         .eq('id', reservationId);
 
@@ -212,7 +257,7 @@ export function useOrderMaterials(orderId: string) {
 
       toast({
         title: 'Sucesso',
-        description: 'Peça marcada como aplicada e movimentação registrada',
+        description: `Peça aplicada: ${quantityToApply} unidade(s). Total aplicado: ${newQuantityApplied} de ${quantitySeparated} separadas`,
       });
 
       fetchMaterials(); // Refresh

@@ -34,6 +34,22 @@ export class DiagnosticService {
 
     if (error) throw error;
 
+    // Buscar nomes dos usuários que fizeram os diagnósticos
+    const userIds = [...new Set((responses || []).map(r => r.diagnosed_by).filter(Boolean))] as string[];
+    let userNames: Record<string, string> = {};
+    
+    if (userIds.length > 0) {
+      const { data: users } = await supabase
+        .from('user_basic_info')
+        .select('user_id, name')
+        .in('user_id', userIds);
+        
+      userNames = (users || []).reduce((acc, user) => ({
+        ...acc,
+        [user.user_id]: user.name
+      }), {}) as Record<string, string>;
+    }
+
     const base = (responses || []) as unknown as DiagnosticResponse[];
     const enriched = await Promise.all(
       base.map(async (response) => {
@@ -49,9 +65,26 @@ export class DiagnosticService {
             .eq('org_id', orgId)
             .single();
 
-          return { ...response, order: orderData as any } as DiagnosticResponse;
+          // Adicionar nome do usuário que diagnosticou
+          const diagnosedByName = response.diagnosed_by 
+            ? (userNames[response.diagnosed_by] || response.diagnosed_by || 'Usuário não identificado')
+            : 'N/A';
+
+          return { 
+            ...response, 
+            order: orderData as any,
+            diagnosed_by_name: diagnosedByName
+          } as DiagnosticResponse;
         } catch (_e) {
-          return response;
+          // Mesmo em caso de erro, adicionar o nome do usuário se disponível
+          const diagnosedByName = response.diagnosed_by 
+            ? (userNames[response.diagnosed_by] || response.diagnosed_by || 'Usuário não identificado')
+            : 'N/A';
+          
+          return { 
+            ...response,
+            diagnosed_by_name: diagnosedByName
+          } as DiagnosticResponse;
         }
       })
     );
@@ -124,7 +157,32 @@ export class DiagnosticService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data as unknown) as DiagnosticResponse[];
+
+    // Buscar nomes dos usuários que fizeram os diagnósticos
+    const userIds = [...new Set((data || []).map((r: any) => r.diagnosed_by).filter(Boolean))] as string[];
+    let userNames: Record<string, string> = {};
+    
+    if (userIds.length > 0) {
+      const { data: users } = await supabase
+        .from('user_basic_info')
+        .select('user_id, name')
+        .in('user_id', userIds);
+        
+      userNames = (users || []).reduce((acc, user) => ({
+        ...acc,
+        [user.user_id]: user.name
+      }), {}) as Record<string, string>;
+    }
+
+    // Mapear os dados para incluir o nome do usuário
+    const enrichedData = (data || []).map((response: any) => ({
+      ...response,
+      diagnosed_by_name: response.diagnosed_by 
+        ? (userNames[response.diagnosed_by] || response.diagnosed_by || 'Usuário não identificado')
+        : 'N/A'
+    }));
+
+    return enrichedData as DiagnosticResponse[];
   }
 }
 

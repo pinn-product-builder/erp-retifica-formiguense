@@ -75,7 +75,7 @@ export function StatCard({
             </div>
             <div className="flex items-baseline gap-1 sm:gap-2 mt-1 sm:mt-2">
               <h3 className={cn(
-                "text-lg sm:text-xl lg:text-2xl font-bold whitespace-nowrap",
+                "text-lg sm:text-lg lg:text-xl font-bold whitespace-nowrap",
                 variant === "primary" ? "text-primary-foreground" : "text-foreground"
               )}>
                 {value}
