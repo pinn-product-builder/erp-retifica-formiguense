@@ -11,6 +11,7 @@ export interface TimelineEvent {
   description?: string;
   details?: Record<string, unknown>;
   user_id?: string;
+  user_name?: string;
   icon_type: 'status' | 'workflow' | 'diagnostic' | 'budget' | 'package' | 'file' | 'shield';
   color: string;
 }
@@ -228,7 +229,29 @@ export function useOrderTimeline(orderId: string) {
       // Ordenar todos os eventos por timestamp (mais recente primeiro)
       allEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-      setEvents(allEvents);
+      // Buscar nomes dos usuários
+      const userIds = [...new Set(allEvents.map(e => e.user_id).filter(Boolean))] as string[];
+      let userNames: Record<string, string> = {};
+      
+      if (userIds.length > 0) {
+        const { data: users } = await supabase
+          .from('user_basic_info')
+          .select('user_id, name')
+          .in('user_id', userIds);
+          
+        userNames = (users || []).reduce((acc, user) => ({
+          ...acc,
+          [user.user_id]: user.name
+        }), {}) as Record<string, string>;
+      }
+
+      // Adicionar nomes dos usuários aos eventos
+      const eventsWithUserNames = allEvents.map(event => ({
+        ...event,
+        user_name: event.user_id ? (userNames[event.user_id] || 'Usuário não identificado') : undefined
+      }));
+
+      setEvents(eventsWithUserNames);
     } catch (error) {
       console.error('Error fetching timeline:', error);
       toast({

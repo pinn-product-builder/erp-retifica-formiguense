@@ -41,6 +41,17 @@ const STATUS_LABELS = {
   'cancelado': 'Cancelado'
 };
 
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  'order_status': 'Status da Ordem',
+  'workflow_status': 'Status do Workflow',
+  'diagnostic': 'Diagnóstico',
+  'budget': 'Orçamento',
+  'reservation': 'Reserva de Peça',
+  'material': 'Material',
+  'report': 'Relatório Técnico',
+  'warranty': 'Garantia'
+};
+
 export function OrderTimeline({ orderId }: OrderTimelineProps) {
   const { events, loading } = useOrderTimeline(orderId);
 
@@ -107,7 +118,7 @@ export function OrderTimeline({ orderId }: OrderTimelineProps) {
                       </p>
                     </div>
                     <Badge variant="outline" className="text-xs">
-                      {event.event_type}
+                      {EVENT_TYPE_LABELS[event.event_type] || event.event_type}
                     </Badge>
                   </div>
                   
@@ -129,10 +140,10 @@ export function OrderTimeline({ orderId }: OrderTimelineProps) {
                     </div>
                   )}
                   
-                  {event.user_id && (
+                  {event.user_name && (
                     <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                       <User className="h-3 w-3" />
-                      <span>Usuário ID: {event.user_id}</span>
+                      <span>Usuário: {event.user_name}</span>
                     </div>
                   )}
                 </div>
