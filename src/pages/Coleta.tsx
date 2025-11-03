@@ -45,6 +45,20 @@ export default function Coleta() {
   // Estado para controlar o tipo de documento (CPF/CNPJ)
   const [documentType, setDocumentType] = useState<'cpf' | 'cnpj' | 'auto'>('auto');
 
+  // Estado separado para o formulário de criação de cliente (modal)
+  const [newCustomerForm, setNewCustomerForm] = useState({
+    nomeCliente: "",
+    documento: "",
+    telefone: "",
+    email: "",
+    endereco: "",
+    tipoCliente: "",
+    nomeOficina: "",
+    cnpjOficina: "",
+    contatoOficina: ""
+  });
+  const [newCustomerDocumentType, setNewCustomerDocumentType] = useState<'cpf' | 'cnpj' | 'auto'>('auto');
+
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -72,6 +86,12 @@ export default function Coleta() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showSearchDialog]);
 
+  // Função para detectar automaticamente o tipo de documento
+  const detectDocumentType = (value: string): 'cpf' | 'cnpj' => {
+    const numbers = value.replace(/\D/g, '');
+    return numbers.length <= 11 ? 'cpf' : 'cnpj';
+  };
+
   // Buscar clientes
   const handleSearchCustomers = async (term: string) => {
     setSearchTerm(term);
@@ -95,10 +115,14 @@ export default function Coleta() {
   // Selecionar cliente existente
   const handleSelectCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
+    
+    // Detectar tipo de documento baseado no tamanho
+    const detectedDocType = detectDocumentType(customer.document);
+    
     setFormData(prev => ({
       ...prev,
       nomeCliente: customer.name,
-      documento: customer.document,
+      documento: customer.document, // Manter o documento como está (pode estar formatado ou não)
       telefone: customer.phone || "",
       email: customer.email || "",
       endereco: customer.address || "",
@@ -107,8 +131,9 @@ export default function Coleta() {
       cnpjOficina: customer.workshop_cnpj || "",
       contatoOficina: customer.workshop_contact || ""
     }));
-    // Resetar tipo de documento para auto quando cliente é selecionado
-    setDocumentType('auto');
+    
+    // Atualizar tipo de documento baseado no documento do cliente
+    setDocumentType(detectedDocType);
     setShowSearchResults(false);
     setSearchTerm("");
     setShowSearchDialog(false); // Fechar o modal após seleção
@@ -116,7 +141,7 @@ export default function Coleta() {
 
   // Criar novo cliente (apenas no dialog)
   const handleCreateNewCustomer = async () => {
-    if (!formData.nomeCliente || !formData.documento) {
+    if (!newCustomerForm.nomeCliente || !newCustomerForm.documento) {
       toast({
         title: "Erro",
         description: "Preencha pelo menos o nome e documento do cliente",
@@ -126,35 +151,30 @@ export default function Coleta() {
     }
 
     const customerData = {
-      name: formData.nomeCliente,
-      document: formData.documento,
-      phone: formData.telefone || undefined,
-      email: formData.email || undefined,
-      address: formData.endereco || undefined,
-      type: (formData.tipoCliente || 'direto') as 'direto' | 'oficina',
-      workshop_name: formData.tipoCliente === 'oficina' ? formData.nomeOficina || undefined : undefined,
-      workshop_cnpj: formData.tipoCliente === 'oficina' ? formData.cnpjOficina || undefined : undefined,
-      workshop_contact: formData.tipoCliente === 'oficina' ? formData.contatoOficina || undefined : undefined
+      name: newCustomerForm.nomeCliente,
+      document: newCustomerForm.documento,
+      phone: newCustomerForm.telefone || undefined,
+      email: newCustomerForm.email || undefined,
+      address: newCustomerForm.endereco || undefined,
+      type: (newCustomerForm.tipoCliente || 'direto') as 'direto' | 'oficina',
+      workshop_name: newCustomerForm.tipoCliente === 'oficina' ? newCustomerForm.nomeOficina || undefined : undefined,
+      workshop_cnpj: newCustomerForm.tipoCliente === 'oficina' ? newCustomerForm.cnpjOficina || undefined : undefined,
+      workshop_contact: newCustomerForm.tipoCliente === 'oficina' ? newCustomerForm.contatoOficina || undefined : undefined
     };
 
     const newCustomer = await createNewCustomer(customerData);
     if (newCustomer) {
-      // Selecionar o cliente recém-criado
-      handleSelectCustomer(newCustomer);
-      // Limpar campos do dialog
-      setFormData(prev => ({
-        ...prev,
-        nomeCliente: "",
-        documento: "",
-        telefone: "",
-        email: "",
-        endereco: "",
-        nomeOficina: "",
-        cnpjOficina: "",
-        contatoOficina: ""
-      }));
-      setDocumentType('auto');
+      // Atualizar a listagem de clientes (refresh)
+      const updatedCustomers = await fetchCustomers();
+      setSearchResults(updatedCustomers);
+      
+      // Fechar o dialog
       setShowNewCustomerDialog(false);
+      
+      // Selecionar o cliente recém-criado (isso vai preencher os campos do formulário principal)
+      // O handleSelectCustomer já atualiza o formData com os dados do cliente
+      handleSelectCustomer(newCustomer);
+      
       toast({
         title: "Sucesso",
         description: "Cliente cadastrado e selecionado com sucesso",
@@ -171,20 +191,14 @@ export default function Coleta() {
     // Não faz nada - apenas para evitar warnings do React
   }, []);
 
-  // Função para detectar automaticamente o tipo de documento
-  const detectDocumentType = (value: string): 'cpf' | 'cnpj' => {
-    const numbers = value.replace(/\D/g, '');
-    return numbers.length <= 11 ? 'cpf' : 'cnpj';
-  };
-
-  // Função para lidar com mudanças no campo de documento
-  const handleDocumentChange = (maskedValue: string, rawValue: string) => {
-    setFormData(prev => ({ ...prev, documento: rawValue }));
+  // Função para lidar com mudanças no campo de documento (modal de criação)
+  const handleNewCustomerDocumentChange = (maskedValue: string, rawValue: string) => {
+    setNewCustomerForm(prev => ({ ...prev, documento: rawValue }));
     // Atualizar o tipo de documento baseado no tamanho
     if (rawValue.length > 0) {
-      setDocumentType(detectDocumentType(rawValue));
+      setNewCustomerDocumentType(detectDocumentType(rawValue));
     } else {
-      setDocumentType('auto');
+      setNewCustomerDocumentType('auto');
     }
   };
 
@@ -396,7 +410,27 @@ export default function Coleta() {
                     )}
                   </DialogContent>
                 </Dialog>
-                <Dialog open={showNewCustomerDialog} onOpenChange={setShowNewCustomerDialog}>
+                <Dialog 
+                  open={showNewCustomerDialog} 
+                  onOpenChange={(open) => {
+                    setShowNewCustomerDialog(open);
+                    // Limpar campos do formulário do modal quando abrir
+                    if (open) {
+                      setNewCustomerForm({
+                        nomeCliente: "",
+                        documento: "",
+                        telefone: "",
+                        email: "",
+                        endereco: "",
+                        nomeOficina: "",
+                        cnpjOficina: "",
+                        contatoOficina: "",
+                        tipoCliente: ""
+                      });
+                      setNewCustomerDocumentType('auto');
+                    }
+                  }}
+                >
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm">
                       <UserPlus className="w-4 h-4 mr-2" />
@@ -414,8 +448,8 @@ export default function Coleta() {
                       <div>
                         <Label htmlFor="newClientType">Tipo de Cliente</Label>
                         <Select 
-                          value={formData.tipoCliente} 
-                          onValueChange={(value) => handleInputChange('tipoCliente', value)}
+                          value={newCustomerForm.tipoCliente} 
+                          onValueChange={(value) => setNewCustomerForm(prev => ({ ...prev, tipoCliente: value }))}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione o tipo" />
@@ -431,22 +465,20 @@ export default function Coleta() {
                         <Label htmlFor="newClientName">Nome Completo / Razão Social *</Label>
                         <Input
                           id="newClientName"
-                          value={formData.nomeCliente}
-                          onChange={(e) => handleInputChange('nomeCliente', e.target.value)}
+                          value={newCustomerForm.nomeCliente}
+                          onChange={(e) => setNewCustomerForm(prev => ({ ...prev, nomeCliente: e.target.value }))}
                           placeholder="Nome do cliente"
                           required
                         />
                       </div>
                       <div>
-                        <Label htmlFor="newClientDoc">
-                          {documentType === 'auto' ? 'CPF / CNPJ *' : documentType === 'cpf' ? 'CPF *' : 'CNPJ *'}
-                        </Label>
+                        <Label htmlFor="newClientDoc">CPF / CNPJ *</Label>
                         <MaskedInput
                           id="newClientDoc"
-                          mask={documentType === 'auto' ? 'cpfcnpj' : documentType}
-                          value={formData.documento}
-                          onChange={handleDocumentChange}
-                          placeholder={documentType === 'auto' ? '000.000.000-00' : documentType === 'cpf' ? '000.000.000-00' : '00.000.000/0000-00'}
+                          mask="cpfcnpj"
+                          value={newCustomerForm.documento}
+                          onChange={handleNewCustomerDocumentChange}
+                          placeholder="000.000.000-00 ou 00.000.000/0000-00"
                           required
                         />
                       </div>
@@ -455,9 +487,9 @@ export default function Coleta() {
                         <MaskedInput
                           id="newClientPhone"
                           mask="phone"
-                          value={formData.telefone}
+                          value={newCustomerForm.telefone}
                           onChange={(maskedValue, rawValue) => {
-                            setFormData(prev => ({ ...prev, telefone: rawValue }));
+                            setNewCustomerForm(prev => ({ ...prev, telefone: rawValue }));
                           }}
                           placeholder="(00) 00000-0000"
                         />
@@ -466,8 +498,8 @@ export default function Coleta() {
                         <Label htmlFor="newClientEmail">E-mail</Label>
                         <Input
                           id="newClientEmail"
-                          value={formData.email}
-                          onChange={(e) => handleInputChange('email', e.target.value)}
+                          value={newCustomerForm.email}
+                          onChange={(e) => setNewCustomerForm(prev => ({ ...prev, email: e.target.value }))}
                           placeholder="cliente@email.com"
                         />
                       </div>
@@ -475,19 +507,19 @@ export default function Coleta() {
                         <Label htmlFor="newClientAddress">Endereço</Label>
                         <Input
                           id="newClientAddress"
-                          value={formData.endereco}
-                          onChange={(e) => handleInputChange('endereco', e.target.value)}
+                          value={newCustomerForm.endereco}
+                          onChange={(e) => setNewCustomerForm(prev => ({ ...prev, endereco: e.target.value }))}
                           placeholder="Endereço completo"
                         />
                       </div>
-                      {formData.tipoCliente === "oficina" && (
+                      {newCustomerForm.tipoCliente === "oficina" && (
                         <>
                           <div>
                             <Label htmlFor="newClientWorkshopName">Nome da Oficina</Label>
                             <Input
                               id="newClientWorkshopName"
-                              value={formData.nomeOficina}
-                              onChange={(e) => handleInputChange('nomeOficina', e.target.value)}
+                              value={newCustomerForm.nomeOficina}
+                              onChange={(e) => setNewCustomerForm(prev => ({ ...prev, nomeOficina: e.target.value }))}
                               placeholder="Nome da oficina"
                             />
                           </div>
@@ -496,9 +528,9 @@ export default function Coleta() {
                             <MaskedInput
                               id="newClientWorkshopDoc"
                               mask="cpfcnpj"
-                              value={formData.cnpjOficina}
+                              value={newCustomerForm.cnpjOficina}
                               onChange={(maskedValue, rawValue) => {
-                                setFormData(prev => ({ ...prev, cnpjOficina: rawValue }));
+                                setNewCustomerForm(prev => ({ ...prev, cnpjOficina: rawValue }));
                               }}
                               placeholder="00.000.000/0000-00"
                             />
@@ -508,9 +540,9 @@ export default function Coleta() {
                             <MaskedInput
                               id="newClientWorkshopContact"
                               mask="phone"
-                              value={formData.contatoOficina}
+                              value={newCustomerForm.contatoOficina}
                               onChange={(maskedValue, rawValue) => {
-                                setFormData(prev => ({ ...prev, contatoOficina: rawValue }));
+                                setNewCustomerForm(prev => ({ ...prev, contatoOficina: rawValue }));
                               }}
                               placeholder="(00) 00000-0000"
                             />
@@ -556,12 +588,10 @@ export default function Coleta() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="documento">
-                    {documentType === 'auto' ? 'CPF / CNPJ' : documentType === 'cpf' ? 'CPF' : 'CNPJ'}
-                  </Label>
+                  <Label htmlFor="documento">CPF / CNPJ</Label>
                   <MaskedInput
                     id="documento"
-                    mask={documentType === 'auto' ? 'cpfcnpj' : documentType}
+                    mask="cpfcnpj"
                     value={formData.documento}
                     // onChange={noOpChange}
                     disabled

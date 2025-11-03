@@ -105,29 +105,55 @@ const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
       );
     }
 
-    // Para campos CPF/CNPJ automático, detectar o tipo baseado no valor
+    // Para campos CPF/CNPJ automático, usar formatação manual (InputMask não permite mudança dinâmica)
     if (mask === 'cpfcnpj') {
-      const detectedType = detectCPForCNPJ(value);
-      const actualMask = masks[detectedType];
+      // Função para formatar CPF/CNPJ baseado no número de dígitos
+      const formatCpfCnpj = (digits: string): string => {
+        if (!digits || digits.length === 0) return '';
+        
+        if (digits.length <= 11) {
+          // Formatar como CPF: 000.000.000-00
+          if (digits.length <= 3) return digits;
+          if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+          if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+          return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+        } else {
+          // Formatar como CNPJ: 00.000.000/0000-00
+          if (digits.length <= 2) return digits;
+          if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+          if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+          if (digits.length <= 12) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}`;
+          return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12, 14)}`;
+        }
+      };
       
+      // Extrair apenas dígitos do valor atual e formatar
+      const currentDigits = value.replace(/\D/g, '');
+      const formattedValue = formatCpfCnpj(currentDigits);
+      
+      const handleCpfCnpjChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const inputValue = e.target.value;
+        const digits = inputValue.replace(/\D/g, '');
+        
+        // Limitar a 14 dígitos (tamanho máximo do CNPJ)
+        const limitedDigits = digits.slice(0, 14);
+        const formatted = formatCpfCnpj(limitedDigits);
+        
+        onChange?.(formatted, limitedDigits);
+      };
+      
+      // Usar Input normal com formatação manual (mais flexível que InputMask para mudança dinâmica)
       return (
-        <InputMask
-          mask={actualMask}
-          value={value}
-          onChange={handleChange}
-          maskChar="_"
-          alwaysShowMask={false}
+        <Input
+          {...props}
+          ref={ref}
+          value={formattedValue}
+          onChange={handleCpfCnpjChange}
           disabled={disabled}
-        >
-          {(inputProps: React.InputHTMLAttributes<HTMLInputElement>) => (
-            <Input
-              {...props}
-              {...inputProps}
-              ref={ref}
-              className={cn(className)}
-            />
-          )}
-        </InputMask>
+          className={cn(className)}
+          type="text"
+          inputMode="numeric"
+        />
       );
     }
 
