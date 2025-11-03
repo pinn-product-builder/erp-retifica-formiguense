@@ -68,7 +68,7 @@ export default function Coleta() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { loading } = useSupabase();
-  const { fetchCustomers, createCustomer: createNewCustomer, loading: customersLoading } = useCustomers();
+  const { fetchCustomers, createCustomer: createNewCustomer, checkDocumentExists, loading: customersLoading } = useCustomers();
   const { consultants, loading: consultantsLoading, fetchConsultants } = useConsultants();
 
   useEffect(() => {
@@ -145,6 +145,17 @@ export default function Coleta() {
       toast({
         title: "Erro",
         description: "Preencha pelo menos o nome e documento do cliente",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validar se o CPF/CNPJ já existe
+    const existingCustomer = await checkDocumentExists(newCustomerForm.documento);
+    if (existingCustomer) {
+      toast({
+        title: "Erro",
+        description: `Já existe um cliente cadastrado com este CPF/CNPJ: ${existingCustomer.name}`,
         variant: "destructive"
       });
       return;

@@ -83,6 +83,35 @@ export function useCustomers() {
     }
   }, [currentOrganization?.id]);
 
+  // Verificar se já existe um cliente com o mesmo documento (CPF/CNPJ)
+  const checkDocumentExists = useCallback(async (document: string) => {
+    if (!currentOrganization?.id || !document) return null;
+
+    try {
+      // Normalizar documento (remover formatação para comparação)
+      const normalizedDocument = document.replace(/\D/g, '');
+      
+      // Buscar todos os clientes da organização
+      const { data, error } = await supabase
+        .from('customers')
+        .select('id, name, document')
+        .eq('org_id', currentOrganization.id);
+
+      if (error) throw error;
+
+      // Verificar se algum cliente tem o mesmo documento (normalizado)
+      const existingCustomer = data?.find(customer => {
+        const customerDocNormalized = customer.document?.replace(/\D/g, '') || '';
+        return customerDocNormalized === normalizedDocument;
+      });
+
+      return existingCustomer || null;
+    } catch (error) {
+      console.error('Erro ao verificar documento:', error);
+      return null;
+    }
+  }, [currentOrganization?.id]);
+
   // Criar cliente
   const createCustomer = useCallback(async (customerData: Omit<Customer, 'id' | 'org_id' | 'created_at' | 'updated_at' | 'created_by'>) => {
     if (!currentOrganization?.id) return null;
@@ -201,6 +230,7 @@ export function useCustomers() {
     loading,
     fetchCustomers,
     getCustomerById,
+    checkDocumentExists,
     createCustomer,
     updateCustomer,
     deleteCustomer
