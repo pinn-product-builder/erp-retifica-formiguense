@@ -52,9 +52,9 @@ export function PerformanceInsights() {
     if (currentOrganization?.id) {
       fetchPerformanceData();
       
-      // WebSocket para atualizar metas em tempo real
+      // WebSocket para atualizar dados em tempo real
       const channel = supabase
-        .channel(`performance-goals-${currentOrganization.id}`)
+        .channel(`performance-${currentOrganization.id}`)
         .on(
           'postgres_changes',
           {
@@ -63,10 +63,22 @@ export function PerformanceInsights() {
             table: 'kpi_targets',
             filter: `org_id=eq.${currentOrganization.id}`
           },
-          (payload) => {
-            console.log('Meta atualizada:', payload);
-            // Recarregar apenas as metas
-            fetchGoals().then(goalsData => setGoals(goalsData));
+          () => {
+            // Recarregar todas as métricas e metas
+            fetchPerformanceData();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'orders',
+            filter: `org_id=eq.${currentOrganization.id}`
+          },
+          () => {
+            // Recarregar métricas quando orders mudarem
+            fetchPerformanceData();
           }
         )
         .subscribe();
@@ -99,7 +111,8 @@ export function PerformanceInsights() {
   useEffect(() => {
     const handleGoalsUpdated = () => {
       if (currentOrganization?.id) {
-        fetchGoals().then(goalsData => setGoals(goalsData));
+        // Atualizar tanto as métricas quanto as metas
+        fetchPerformanceData();
       }
     };
 
@@ -241,42 +254,11 @@ export function PerformanceInsights() {
       }
 
       if (!targets || targets.length === 0) {
-        // Retornar metas placeholder com valores zerados para manter layout
-        return [
-          {
-            id: 'placeholder-1',
-            title: 'Nenhuma meta configurada',
-            description: 'Crie metas para acompanhar o progresso',
-            current: 0,
-            target: 100,
-            unit: '%',
-            deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            status: 'on_track' as const
-          },
-          {
-            id: 'placeholder-2',
-            title: 'Nenhuma meta configurada',
-            description: 'Crie metas para acompanhar o progresso',
-            current: 0,
-            target: 100,
-            unit: '%',
-            deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            status: 'on_track' as const
-          },
-          {
-            id: 'placeholder-3',
-            title: 'Nenhuma meta configurada',
-            description: 'Crie metas para acompanhar o progresso',
-            current: 0,
-            target: 100,
-            unit: '%',
-            deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            status: 'on_track' as const
-          }
-        ];
+        // Retornar array vazio - não mostrar placeholders
+        return [];
       }
 
-      // Mapear targets para GoalProgress
+      // Mapear targets para GoalProgress (apenas metas cadastradas)
       const mappedTargets = targets.map((target) => {
         const t = target as Record<string, unknown>;
         // Mapear unidades
@@ -296,20 +278,6 @@ export function PerformanceInsights() {
           status: (t.status as string) || 'pending'
         };
       });
-
-      // Preencher com placeholders se houver menos de 3 metas
-      while (mappedTargets.length < 3) {
-        mappedTargets.push({
-          id: `placeholder-${mappedTargets.length + 1}`,
-          title: 'Nenhuma meta configurada',
-          description: 'Crie metas para acompanhar o progresso',
-          current: 0,
-          target: 100,
-          unit: '%',
-          deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'pending' as const
-        });
-      }
 
       return mappedTargets as GoalProgress[];
     } catch (error) {
@@ -384,7 +352,8 @@ export function PerformanceInsights() {
     if (unit === '%') {
       return `${value.toFixed(1)}%`;
     }
-    return `${value} ${unit}`;
+
+    return `${value}`;
   };
 
   const calculateProgress = (current: number, target: number) => {
@@ -475,51 +444,63 @@ export function PerformanceInsights() {
               <Target className="w-5 h-5" />
               Metas do Período
             </h3>
-            <div className="space-y-4">
-              {goals.map((goal) => {
-                const progress = calculateProgress(goal.current, goal.target);
-                const daysRemaining = Math.ceil(
-                  (new Date(goal.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-                );
+            {goals.length === 0 ? (
+              <Card className="bg-card border">
+                <CardContent className="p-6 text-center">
+                  <Target className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground">Nenhuma meta cadastrada</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Crie metas na aba "Metas" para acompanhar o progresso
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {goals.map((goal) => {
+                  const progress = calculateProgress(goal.current, goal.target);
+                  const daysRemaining = Math.ceil(
+                    (new Date(goal.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+                  );
 
-                return (
-                  <Card key={goal.id} className="bg-card border">
-                    <CardContent className="p-4">
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-semibold">{goal.title}</h4>
-                            <p className="text-sm text-muted-foreground">{goal.description}</p>
+                  return (
+                    <Card key={goal.id} className="bg-card border">
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-semibold">{goal.title}</h4>
+                              <p className="text-sm text-muted-foreground">{goal.description}</p>
+                            </div>
+                            <Badge className={getStatusColor(goal.status)}>
+                              {getStatusLabel(goal.status)}
+                            </Badge>
                           </div>
-                          <Badge className={getStatusColor(goal.status)}>
-                            {getStatusLabel(goal.status)}
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {formatValue(goal.current, goal.unit)} de {formatValue(goal.target, goal.unit)}
-                          </span>
-                          <span className="text-muted-foreground flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            {daysRemaining > 0 ? `${daysRemaining} dias restantes` : 'Prazo expirado'}
-                          </span>
-                        </div>
+                          
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              {formatValue(goal.current, goal.unit)} de {formatValue(goal.target, goal.unit)}
+                            </span>
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              {daysRemaining > 0 ? `${daysRemaining} dias restantes` : 'Prazo expirado'}
+                            </span>
+                          </div>
 
-                        <div className="space-y-2">
-                          <Progress value={progress} className="h-3" />
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>0%</span>
-                            <span className="font-medium">{progress.toFixed(1)}%</span>
-                            <span>100%</span>
+                          <div className="space-y-2">
+                            <Progress value={progress} className="h-3" />
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>0%</span>
+                              <span className="font-medium">{progress.toFixed(1)}%</span>
+                              <span>100%</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

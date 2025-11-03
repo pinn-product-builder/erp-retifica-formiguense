@@ -246,6 +246,19 @@ export function GoalsManager() {
   const updateGoalProgress = async () => {
     if (!selectedGoal) return;
 
+    // Bloquear atualização de progresso de metas concluídas
+    if (selectedGoal.status === 'completed') {
+      toast({
+        title: "Meta concluída",
+        description: "Não é possível atualizar o progresso de uma meta que já foi concluída",
+        variant: "destructive"
+      });
+      setProgressDialogOpen(false);
+      setSelectedGoal(null);
+      setNewProgress(0);
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('kpi_targets')
@@ -280,6 +293,18 @@ export function GoalsManager() {
 
   const updateGoal = async () => {
     if (!editingGoal) return;
+
+    // Bloquear atualização de metas concluídas
+    if (editingGoal.status === 'completed') {
+      toast({
+        title: "Meta concluída",
+        description: "Não é possível editar uma meta que já foi concluída",
+        variant: "destructive"
+      });
+      setEditDialogOpen(false);
+      resetEditForm();
+      return;
+    }
 
     try {
       const { error } = await supabase
@@ -373,6 +398,16 @@ export function GoalsManager() {
   };
 
   const openEditDialog = (goal: Goal) => {
+    // Bloquear edição de metas concluídas
+    if (goal.status === 'completed') {
+      toast({
+        title: "Meta concluída",
+        description: "Não é possível editar uma meta que já foi concluída",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setEditingGoal(goal);
     setEditGoal({
       goal_type: goal.goal_type,
@@ -386,6 +421,16 @@ export function GoalsManager() {
   };
 
   const openProgressDialog = (goal: Goal) => {
+    // Bloquear atualização de progresso de metas concluídas
+    if (goal.status === 'completed') {
+      toast({
+        title: "Meta concluída",
+        description: "Não é possível atualizar o progresso de uma meta que já foi concluída",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setSelectedGoal(goal);
     setNewProgress(goal.progress_current);
     setProgressDialogOpen(true);
@@ -798,6 +843,7 @@ export function GoalsManager() {
                               className="h-8 w-8 p-0"
                               onClick={() => openEditDialog(goal)}
                               title="Editar meta"
+                              disabled={goal.status === 'completed'}
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -807,6 +853,7 @@ export function GoalsManager() {
                               className="h-8 w-8 p-0"
                               onClick={() => openProgressDialog(goal)}
                               title="Atualizar progresso"
+                              disabled={goal.status === 'completed'}
                             >
                               <TrendingUp className="w-4 h-4" />
                             </Button>
