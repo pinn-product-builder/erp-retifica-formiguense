@@ -213,13 +213,20 @@ export function useOrders() {
     }
   }, [currentOrganization?.id, toast]);
 
-  const updateOrderStatus = useCallback(async (orderId: string, newStatus: 'ativa' | 'concluida' | 'cancelada', notes?: string) => {
+  const updateOrderStatus = useCallback(async (orderId: string, newStatus: 'ativa' | 'concluida' | 'cancelada' | 'entregue', notes?: string) => {
     if (!currentOrganization?.id) return false;
 
     try {
+      const updateData: { status: string; actual_delivery?: string } = { status: newStatus };
+      
+      // Se está marcando como entregue, definir actual_delivery
+      if (newStatus === 'entregue') {
+        updateData.actual_delivery = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('orders')
-        .update({ status: newStatus })
+        .update(updateData)
         .eq('id', orderId)
         .eq('org_id', currentOrganization.id);
 
@@ -245,6 +252,65 @@ export function useOrders() {
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar status';
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return false;
+    }
+  }, [currentOrganization?.id, toast, fetchOrders]);
+
+  const markOrderAsDelivered = useCallback(async (orderId: string, deliveryNotes?: string) => {
+    if (!currentOrganization?.id) return false;
+
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.warn('Erro ao obter usuário:', userError);
+      }
+      
+      const userId = userData?.user?.id || null;
+
+      // Atualizar ordem: status = 'entregue' e actual_delivery = agora
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'entregue',
+          actual_delivery: new Date().toISOString()
+        })
+        .eq('id', orderId)
+        .eq('org_id', currentOrganization.id);
+
+      if (updateError) throw updateError;
+
+      // Criar entrada no histórico de status
+      const { error: historyError } = await supabase
+        .from('order_status_history')
+        .insert({
+          order_id: orderId,
+          old_status: null, // Será preenchido pelo trigger
+          new_status: 'entregue',
+          changed_by: userId,
+          notes: deliveryNotes || 'Ordem de serviço entregue ao cliente',
+          org_id: currentOrganization.id
+        });
+
+      if (historyError) {
+        console.warn('Erro ao criar histórico de status:', historyError);
+        // Não falhar se apenas o histórico falhar
+      }
+
+      toast({
+        title: "Ordem Entregue",
+        description: "A ordem de serviço foi marcada como entregue com sucesso.",
+      });
+
+      fetchOrders(); // Refresh the list
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao marcar ordem como entregue';
       toast({
         title: "Erro",
         description: errorMessage,
@@ -330,6 +396,7 @@ export function useOrders() {
     fetchOrders,
     fetchOrderDetails,
     updateOrderStatus,
+    markOrderAsDelivered,
     addOrderMaterial,
     updateOrder
   };

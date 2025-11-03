@@ -16,7 +16,8 @@ import {
   Shield,
   FileText,
   Camera,
-  Printer
+  Printer,
+  CheckCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +31,17 @@ import { OrderPhotosTab } from './OrderPhotosTab';
 import { OrderMaterialsTab } from './OrderMaterialsTab';
 import { OrderWarrantyTab } from './OrderWarrantyTab';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 interface OrderDetailsProps {
   orderId: string;
@@ -66,8 +78,12 @@ const PRIORITY_LABELS = {
 export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
-  const { fetchOrderDetails } = useOrders();
+  const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [markingAsDelivered, setMarkingAsDelivered] = useState(false);
+  const { fetchOrderDetails, markOrderAsDelivered } = useOrders();
   const { printOrder } = usePrintOrder();
+  const { toast } = useToast();
 
   useEffect(() => {
     const loadOrderDetails = async () => {
@@ -79,6 +95,31 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
 
     loadOrderDetails();
   }, [orderId, fetchOrderDetails]);
+
+  const handleMarkAsDelivered = async () => {
+    if (!order) return;
+
+    setMarkingAsDelivered(true);
+    try {
+      const success = await markOrderAsDelivered(orderId, deliveryNotes || undefined);
+      if (success) {
+        setShowDeliveryDialog(false);
+        setDeliveryNotes('');
+        // Recarregar detalhes da ordem
+        const orderData = await fetchOrderDetails(orderId);
+        setOrder(orderData);
+      }
+    } catch (error) {
+      console.error('Error marking as delivered:', error);
+    } finally {
+      setMarkingAsDelivered(false);
+    }
+  };
+
+  const canMarkAsDelivered = order && 
+    order.status !== 'entregue' && 
+    order.status !== 'cancelada' &&
+    (order.status === 'concluida' || order.status === 'em_producao' || order.status === 'aprovada');
 
   if (loading) {
     return (
@@ -153,7 +194,18 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
             Imprimir
           </Button>
           
-          {onEdit && (
+          {canMarkAsDelivered && (
+            <Button 
+              size="sm" 
+              variant="default"
+              onClick={() => setShowDeliveryDialog(true)}
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Marcar como Entregue
+            </Button>
+          )}
+          
+          {onEdit && order.status !== 'entregue' && (
             <Button size="sm" onClick={() => onEdit(order)}>
               <Edit className="h-4 w-4 mr-2" />
               Editar
@@ -364,6 +416,75 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog de Confirmação de Entrega */}
+      <Dialog open={showDeliveryDialog} onOpenChange={setShowDeliveryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Confirmar Entrega
+            </DialogTitle>
+            <DialogDescription>
+              Confirme que a ordem de serviço foi entregue ao cliente.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">
+                Ao confirmar, o sistema irá:
+              </p>
+              <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
+                <li>Marcar o status como "Entregue"</li>
+                <li>Registrar data e hora da entrega</li>
+                <li>Atualizar o histórico da ordem</li>
+              </ul>
+            </div>
+
+            <div>
+              <Label htmlFor="delivery-notes">Observações (Opcional)</Label>
+              <Textarea
+                id="delivery-notes"
+                placeholder="Adicione observações sobre a entrega, como método de entrega, responsável, etc."
+                value={deliveryNotes}
+                onChange={(e) => setDeliveryNotes(e.target.value)}
+                rows={3}
+                className="mt-2"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeliveryDialog(false);
+                setDeliveryNotes('');
+              }}
+              disabled={markingAsDelivered}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleMarkAsDelivered}
+              disabled={markingAsDelivered}
+            >
+              {markingAsDelivered ? (
+                <>
+                  <Clock className="h-4 w-4 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Confirmar Entrega
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
