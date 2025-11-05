@@ -800,10 +800,6 @@ export function GoalsManager() {
               <p className="text-muted-foreground mb-4">
                 Crie metas para acompanhar o progresso da equipe
               </p>
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Criar Primeira Meta
-              </Button>
             </motion.div>
           ) : (
             goals.map((goal, index) => {
