@@ -58,7 +58,7 @@ export function Layout({ children }: LayoutProps) {
       'user': 'Usuário',
       'viewer': 'Visualizador'
     };
-    return roleMap[role || ''] || role || 'Sem role';
+    return roleMap[role || ''] || role || 'Sem função';
   };
 
   // Obter cor da badge baseado na role
@@ -234,7 +234,7 @@ export function Layout({ children }: LayoutProps) {
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2 text-xs">
                               <Shield className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
-                              <span className="text-muted-foreground">Role:</span>
+                              <span className="text-muted-foreground">Função:</span>
                             </div>
                             <Badge className={`${getRoleColor(userRole)} text-xs`}>
                               {getRoleLabel(userRole)}
