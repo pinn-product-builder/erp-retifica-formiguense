@@ -111,33 +111,49 @@ export function IntelligentAlerts() {
     if (currentOrganization?.id) {
       fetchAlerts();
       fetchAlertHistory();
-      setupRealtimeSubscription();
+      const cleanup = setupRealtimeSubscription();
+      return cleanup;
+    } else {
+      // Limpar alertas quando não há organização
+      setAlerts([]);
+      setAlertHistory([]);
+      setLoading(false);
     }
   }, [currentOrganization?.id]);
 
   const fetchAlerts = async () => {
+    if (!currentOrganization?.id) {
+      setAlerts([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
       const { data, error } = await supabase
         .from('alerts')
         .select('*')
-        .eq('org_id', currentOrganization?.id)
+        .eq('org_id', currentOrganization.id)
         .eq('is_active', true)
         .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      if (data) {
+      if (data && data.length > 0) {
         const typedAlerts: Alert[] = data.map((alert) => ({
           ...(alert as Record<string, unknown>),
           severity: (alert as { severity: string }).severity as 'error' | 'success' | 'info' | 'warning'
         } as Alert));
         setAlerts(typedAlerts);
+      } else {
+        // Garantir que a lista está vazia quando não há dados
+        setAlerts([]);
       }
     } catch (error) {
       console.error('Erro ao buscar alertas:', error);
+      setAlerts([]); // Garantir estado vazio em caso de erro
       toast({
         title: "Erro",
         description: "Erro ao carregar alertas",
@@ -165,15 +181,17 @@ export function IntelligentAlerts() {
   };
 
   const setupRealtimeSubscription = () => {
+    if (!currentOrganization?.id) return () => {};
+
     const channel = supabase
-      .channel(`alerts-${currentOrganization?.id}`)
+      .channel(`alerts-${currentOrganization.id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'alerts',
-          filter: `org_id=eq.${currentOrganization?.id}`
+          filter: `org_id=eq.${currentOrganization.id}`
         },
         (payload) => {
           console.log('Alert change detected:', payload);
@@ -397,16 +415,20 @@ export function IntelligentAlerts() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="text-center py-8"
+                  className="text-center py-12"
                 >
-                  <CheckCircle className="w-12 h-12 text-success mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Nenhum alerta</h3>
-                  <p className="text-muted-foreground">
-                    {selectedSeverity === 'all' 
-                      ? 'Não há alertas ativos no momento'
-                      : `Não há alertas de ${ALERT_CATEGORIES[selectedSeverity]?.label.toLowerCase()}`
-                    }
-                  </p>
+                  <div className="flex flex-col items-center justify-center">
+                    <CheckCircle className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2 text-foreground">
+                      Nenhum alerta ativo
+                    </h3>
+                    <p className="text-sm text-muted-foreground max-w-md">
+                      {selectedSeverity === 'all' 
+                        ? 'Não há alertas ativos no momento. Você será notificado quando novos alertas forem gerados.'
+                        : `Não há alertas de ${ALERT_CATEGORIES[selectedSeverity]?.label.toLowerCase()} no momento.`
+                      }
+                    </p>
+                  </div>
                 </motion.div>
               ) : (
               filteredAlerts.map((alert, index) => {

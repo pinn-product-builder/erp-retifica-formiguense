@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,8 @@ import {
   ClipboardList,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Image
 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import DiagnosticInterface from "@/components/operations/DiagnosticInterface";
@@ -52,6 +53,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { DiagnosticService } from "@/services/DiagnosticService";
 import { DIAGNOSTIC_STATUS, translateStatus, translateAction, translateMessage } from "@/utils/statusTranslations";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DiagnosticResponse {
   id: string;
@@ -164,6 +166,204 @@ const Diagnosticos = () => {
       cabecote: "Cabeçote"
     };
     return components[component as keyof typeof components] || component;
+  };
+
+  // Componente para exibir respostas do checklist
+  const ChecklistResponsesDisplay = ({ responses, checklistId }: { responses: Record<string, any>, checklistId?: string | null }) => {
+    const [checklistItems, setChecklistItems] = useState<Record<string, { item_name: string; item_type: string; item_description?: string }>>({});
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const fetchChecklistItems = async () => {
+        if (!checklistId) {
+          setLoading(false);
+          return;
+        }
+
+        try {
+          const { data, error } = await supabase
+            .from('diagnostic_checklist_items')
+            .select('id, item_name, item_type, item_description')
+            .eq('checklist_id', checklistId);
+
+          if (error) throw error;
+
+          const itemsMap: Record<string, { item_name: string; item_type: string; item_description?: string }> = {};
+          (data || []).forEach((item: any) => {
+            itemsMap[item.id] = {
+              item_name: item.item_name,
+              item_type: item.item_type,
+              item_description: item.item_description
+            };
+          });
+
+          setChecklistItems(itemsMap);
+        } catch (error) {
+          console.error('Erro ao buscar itens do checklist:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchChecklistItems();
+    }, [checklistId]);
+
+    const formatValue = (value: any, itemType?: string): string => {
+      if (value === null || value === undefined) return 'N/A';
+      
+      // Se for um objeto com propriedades
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        // Se tem propriedade 'value', usar ela
+        if ('value' in value) {
+          return formatValue(value.value, itemType);
+        }
+        // Se tem propriedade 'notes', usar ela
+        if ('notes' in value && value.notes) {
+          return value.notes;
+        }
+        // Se é um objeto de medição
+        if ('measurement' in value || 'value' in value) {
+          const measurement = value.measurement || value.value;
+          const unit = value.unit || '';
+          return `${measurement}${unit ? ` ${unit}` : ''}`;
+        }
+        // Tentar converter para string legível
+        return JSON.stringify(value, null, 2);
+      }
+
+      // Valores primitivos
+      if (typeof value === 'boolean') {
+        return value ? 'Sim' : 'Não';
+      }
+      
+      if (typeof value === 'number') {
+        return value.toString();
+      }
+
+      if (Array.isArray(value)) {
+        if (value.length === 0) return 'Nenhum';
+        return value.join(', ');
+      }
+
+      return String(value);
+    };
+
+    const getItemPhotos = (responseData: any): string[] => {
+      if (!responseData || typeof responseData !== 'object') return [];
+      
+      if (Array.isArray(responseData.photos)) {
+        return responseData.photos.filter((p: any) => p && typeof p === 'string');
+      }
+      
+      return [];
+    };
+
+    if (loading) {
+      return (
+        <div className="text-center py-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+          <p className="text-sm text-muted-foreground mt-2">Carregando itens do checklist...</p>
+        </div>
+      );
+    }
+
+    const responseEntries = Object.entries(responses || {});
+
+    if (responseEntries.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          <p>Nenhuma resposta registrada</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {responseEntries.map(([itemId, responseData]) => {
+          const item = checklistItems[itemId];
+          const itemName = item?.item_name || itemId;
+          const itemType = item?.item_type || 'unknown';
+          const itemDescription = item?.item_description;
+          
+          // Se responseData é um objeto com propriedades
+          const actualValue = typeof responseData === 'object' && responseData !== null && !Array.isArray(responseData)
+            ? (responseData.value !== undefined ? responseData.value : responseData)
+            : responseData;
+          
+          const notes = typeof responseData === 'object' && responseData !== null && 'notes' in responseData
+            ? responseData.notes
+            : null;
+          
+          const photos = getItemPhotos(responseData);
+          
+          return (
+            <div key={itemId} className="border rounded-lg p-4 space-y-2">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <h5 className="font-semibold text-sm">{itemName}</h5>
+                  {itemDescription && (
+                    <p className="text-xs text-muted-foreground mt-1">{itemDescription}</p>
+                  )}
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  {itemType === 'checkbox' ? 'Checkbox' :
+                   itemType === 'measurement' ? 'Medição' :
+                   itemType === 'photo' ? 'Foto' :
+                   itemType === 'text' ? 'Texto' :
+                   itemType === 'select' ? 'Seleção' :
+                   itemType}
+                </Badge>
+              </div>
+              
+              <div className="pt-2 border-t">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">Resposta:</span>
+                  <span className="text-sm font-semibold">
+                    {formatValue(actualValue, itemType)}
+                  </span>
+                </div>
+                
+                {notes && (
+                  <div className="mt-2 pt-2 border-t">
+                    <span className="text-xs font-medium text-muted-foreground">Observações:</span>
+                    <p className="text-sm mt-1">{notes}</p>
+                  </div>
+                )}
+                
+                {photos.length > 0 && (
+                  <div className="mt-2 pt-2 border-t">
+                    <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <Image className="w-3 h-3" />
+                      Fotos ({photos.length})
+                    </span>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      {photos.map((photoUrl, idx) => (
+                        <a
+                          key={idx}
+                          href={photoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="relative aspect-video bg-muted rounded overflow-hidden group"
+                        >
+                          <img
+                            src={photoUrl}
+                            alt={`Foto ${idx + 1}`}
+                            className="w-full h-full object-cover group-hover:opacity-75 transition-opacity"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ddd"/%3E%3Ctext x="50" y="50" text-anchor="middle" dy=".3em" fill="%23999"%3EImagem não disponível%3C/text%3E%3C/svg%3E';
+                            }}
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   const handleStartDiagnostic = (orderId: string) => {
@@ -393,16 +593,16 @@ const Diagnosticos = () => {
               {/* Respostas do Checklist */}
               <div>
                 <h4 className="font-semibold mb-4">Respostas do Checklist</h4>
-                <div className="space-y-3">
-                  {selectedDiagnostic.responses && Object.entries(selectedDiagnostic.responses).map(([key, value]) => (
-                    <div key={key} className="flex justify-between items-center p-3 border rounded-lg">
-                      <span className="font-medium">{key}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {typeof value === 'boolean' ? (value ? 'Sim' : 'Não') : String(value)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                {selectedDiagnostic.responses && Object.keys(selectedDiagnostic.responses).length > 0 ? (
+                  <ChecklistResponsesDisplay 
+                    responses={selectedDiagnostic.responses} 
+                    checklistId={selectedDiagnostic.checklist_id}
+                  />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Nenhuma resposta registrada</p>
+                  </div>
+                )}
               </div>
 
               {/* Status e Data */}

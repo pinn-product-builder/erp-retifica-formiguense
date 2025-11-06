@@ -40,13 +40,13 @@ export function NotificationsPanel() {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'error':
-        return 'bg-red-100 text-red-900 border-red-500';
+        return 'bg-destructive/10 text-destructive border-l-destructive dark:bg-destructive/20';
       case 'warning':
-        return 'bg-yellow-100 text-yellow-900 border-yellow-500';
+        return 'bg-yellow-500/10 text-yellow-700 border-l-yellow-500 dark:bg-yellow-500/20 dark:text-yellow-400';
       case 'success':
-        return 'bg-green-100 text-green-900 border-green-500';
+        return 'bg-green-500/10 text-green-700 border-l-green-500 dark:bg-green-500/20 dark:text-green-400';
       default:
-        return 'bg-blue-100 text-blue-900 border-blue-500';
+        return 'bg-primary/10 text-primary border-l-primary dark:bg-primary/20';
     }
   };
 
@@ -103,8 +103,10 @@ export function NotificationsPanel() {
               {notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-4 rounded-lg border-l-4 cursor-pointer transition-colors hover:bg-accent ${
-                    !notification.is_read ? getSeverityColor(notification.severity || 'info') : 'bg-muted border-muted'
+                  className={`p-4 rounded-lg border-l-4 cursor-pointer transition-all hover:bg-accent/50 ${
+                    !notification.is_read 
+                      ? `${getSeverityColor(notification.severity || 'info')} border-l-4` 
+                      : 'bg-muted/50 border-l-muted-foreground/20'
                   }`}
                   onClick={() => handleNotificationClick(notification)}
                 >
@@ -112,13 +114,17 @@ export function NotificationsPanel() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         {!notification.is_read && (
-                          <div className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />
+                          <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 animate-pulse" />
                         )}
-                        <h4 className="font-semibold text-sm line-clamp-1">
+                        <h4 className={`font-semibold text-sm line-clamp-1 ${
+                          !notification.is_read ? '' : 'text-muted-foreground'
+                        }`}>
                           {notification.title}
                         </h4>
                       </div>
-                      <p className="text-sm text-foreground line-clamp-2 mb-2">
+                      <p className={`text-sm line-clamp-2 mb-2 ${
+                        !notification.is_read ? 'text-foreground' : 'text-muted-foreground'
+                      }`}>
                         {notification.message}
                       </p>
                       <p className="text-xs text-muted-foreground">

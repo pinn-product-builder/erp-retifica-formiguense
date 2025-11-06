@@ -247,33 +247,56 @@ export function useDetailedBudgets() {
     try {
       setLoading(true);
       
-      // Criar registro de aprovação
+      if (!approvalData.budget_id || !approvalData.approval_type || !approvalData.approved_amount) {
+        throw new Error('Dados incompletos para aprovação');
+      }
+
+      // Chamar Edge Function para processar aprovação
+      const { data: result, error: functionError } = await supabase.functions.invoke('process-budget-approval', {
+        body: {
+          budget_id: approvalData.budget_id,
+          approval_type: approvalData.approval_type,
+          approved_amount: approvalData.approved_amount || 0,
+          registered_by: approvalData.registered_by || undefined,
+          approval_notes: approvalData.approval_notes || undefined
+        }
+      });
+
+      if (functionError) {
+        console.error('Erro na Edge Function:', functionError);
+        throw functionError;
+      }
+
+      if (!result || !result.success) {
+        throw new Error(result?.error || 'Erro ao processar aprovação');
+      }
+
+      // Buscar registro de aprovação criado
       const { data: approval, error: approvalError } = await supabase
         .from('budget_approvals')
-        .insert(approvalData as any)
-        .select()
+        .select('*')
+        .eq('budget_id', approvalData.budget_id)
+        .order('approved_at', { ascending: false })
+        .limit(1)
         .single();
 
-      if (approvalError) throw approvalError;
-
-      // Atualizar status do orçamento baseado no tipo de aprovação
-      const newStatus = approvalData.approval_type === 'total' ? 'approved' : 
-                       approvalData.approval_type === 'partial' ? 'partially_approved' : 
-                       'rejected';
-
-      const { error: updateError } = await supabase
-        .from('detailed_budgets')
-        .update({ status: newStatus })
-        .eq('id', approvalData.budget_id);
-
-      if (updateError) throw updateError;
+      if (approvalError) {
+        console.warn('Aviso: Não foi possível buscar registro de aprovação:', approvalError);
+      }
 
       const successMessage = approvalData.approval_type === 'total' ? 'Orçamento aprovado totalmente!' :
                              approvalData.approval_type === 'partial' ? 'Orçamento aprovado parcialmente!' :
                              'Orçamento rejeitado!';
       
       handleSuccess(successMessage);
-      return approval;
+      
+      // Retornar resultado da Edge Function com dados adicionais
+      return {
+        ...approval,
+        ...result,
+        order_id: result.order_id,
+        order_status: result.order_status
+      };
     } catch (error) {
       handleError(error, 'Erro ao processar aprovação do orçamento');
       return null;
