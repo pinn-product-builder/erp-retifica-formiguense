@@ -34,6 +34,16 @@ import { useInventoryCounts, CountStatus } from '@/hooks/useInventoryCounts';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+// Função para formatar valores monetários
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
 const STATUS_CONFIG = {
   draft: {
     label: 'Rascunho',
@@ -423,7 +433,7 @@ export default function InventoryCountManager() {
                     </span>
                     {divergenceReport.financialImpact !== 0 && (
                       <span className="text-muted-foreground">
-                        Impacto: R$ {Math.abs(divergenceReport.financialImpact).toFixed(2)}
+                        Impacto: {formatCurrency(Math.abs(divergenceReport.financialImpact))}
                       </span>
                     )}
                   </div>

@@ -23,6 +23,16 @@ import {
 import { usePurchaseNeeds, type CreatePurchaseNeedData } from '@/hooks/usePurchaseNeeds';
 import { usePartsInventory } from '@/hooks/usePartsInventory';
 
+// Função para formatar valores monetários
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
 interface PurchaseNeedFormProps {
   onSuccess: () => void;
 }
@@ -223,7 +233,7 @@ export default function PurchaseNeedForm({ onSuccess }: PurchaseNeedFormProps) {
                     </div>
                     <div>
                       <span className="text-muted-foreground">Custo Unit.:</span>
-                      <span className="font-medium ml-1">R$ {selectedPart.unit_cost.toFixed(2)}</span>
+                      <span className="font-medium ml-1">{formatCurrency(selectedPart.unit_cost)}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Fornecedor:</span>
@@ -426,7 +436,7 @@ export default function PurchaseNeedForm({ onSuccess }: PurchaseNeedFormProps) {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Custo Est.:</span>
-                  <p className="font-medium">R$ {parseFloat(formData.estimated_cost || '0').toFixed(2)}</p>
+                  <p className="font-medium">{formatCurrency(parseFloat(formData.estimated_cost || '0'))}</p>
                 </div>
               </div>
             </div>

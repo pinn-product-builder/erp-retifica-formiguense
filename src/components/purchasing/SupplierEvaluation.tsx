@@ -57,6 +57,16 @@ import { useSupplierEvaluation, type EvaluationFormData, type EnhancedSupplier }
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+// Função para formatar valores monetários
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
 interface SupplierEvaluationProps {
   supplierId?: string;
   purchaseOrderId?: string;
@@ -558,7 +568,7 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                           {format(new Date(order.order_date), 'dd/MM/yyyy')}
                         </TableCell>
                         <TableCell>
-                          R$ {order.total_value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          {formatCurrency(order.total_value)}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{order.status}</Badge>

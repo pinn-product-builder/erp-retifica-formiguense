@@ -14,6 +14,16 @@ import { Loader2 } from "lucide-react";
 import { usePartsInventory, type PartInventory, type ComponentType, type PartStatus } from "@/hooks/usePartsInventory";
 import { useEngineComponents } from '@/hooks/useEngineComponents';
 
+// Função para formatar valores monetários
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
 interface PartFormProps {
   part?: PartInventory;
   onSuccess: () => void;
@@ -160,10 +170,13 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess }) => {
           </Label>
           <Input
             id="quantity"
-            type="number"
-            min="0"
-            value={formData.quantity}
-            onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
+            type="text"
+            value={formData.quantity.toString()}
+            onChange={(e) => {
+              const numericValue = e.target.value.replace(/[^\d]/g, '');
+              const quantity = numericValue ? parseInt(numericValue) : 0;
+              setFormData({ ...formData, quantity: Math.max(0, quantity) });
+            }}
           />
           {errors.quantity && (
             <p className="text-sm text-red-500 mt-1">{errors.quantity}</p>
@@ -177,11 +190,18 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess }) => {
           </Label>
           <Input
             id="unit_cost"
-            type="number"
-            min="0"
-            step="0.01"
-            value={formData.unit_cost}
-            onChange={(e) => setFormData({ ...formData, unit_cost: parseFloat(e.target.value) || 0 })}
+            type="text"
+            value={formData.unit_cost.toString()}
+            onChange={(e) => {
+              // Permitir vírgula como separador decimal
+              let numericValue = e.target.value.replace(/[^\d.,]/g, '');
+              if (numericValue.includes(',')) {
+                numericValue = numericValue.replace(',', '.');
+              }
+              const cost = parseFloat(numericValue) || 0;
+              setFormData({ ...formData, unit_cost: Math.max(0, cost) });
+            }}
+            placeholder="0,00"
           />
           {errors.unit_cost && (
             <p className="text-sm text-red-500 mt-1">{errors.unit_cost}</p>
@@ -235,7 +255,7 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess }) => {
       <div className="bg-muted p-4 rounded-lg">
         <p className="text-sm text-muted-foreground">Valor Total do Estoque desta Peça:</p>
         <p className="text-2xl font-bold">
-          R$ {(formData.quantity * formData.unit_cost).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          {formatCurrency(formData.quantity * formData.unit_cost)}
         </p>
       </div>
 

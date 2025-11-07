@@ -22,6 +22,16 @@ import {
 import { type DetailedBudget } from "@/hooks/useDetailedBudgets";
 import { useBudgetPDF } from '@/hooks/useBudgetPDF';
 
+// Função para formatar valores monetários
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
 interface BudgetDetailsProps {
   budget: DetailedBudget;
   onDuplicate?: () => void;
@@ -150,20 +160,20 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Mão de Obra</span>
                 <span className="font-medium">
-                  R$ {budget.labor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {formatCurrency(budget.labor_total)}
                 </span>
               </div>
               
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {budget.labor_hours}h × R$ {budget.labor_rate.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {budget.labor_hours}h × {formatCurrency(budget.labor_rate)}
                 </span>
               </div>
 
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Peças</span>
                 <span className="font-medium">
-                  R$ {budget.parts_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {formatCurrency(budget.parts_total)}
                 </span>
               </div>
 
@@ -172,7 +182,7 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Subtotal</span>
                 <span className="font-medium">
-                  R$ {(budget.labor_total + budget.parts_total).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {formatCurrency(budget.labor_total + budget.parts_total)}
                 </span>
               </div>
 
@@ -180,7 +190,7 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
                 <div className="flex justify-between text-red-600">
                   <span className="text-sm">Desconto</span>
                   <span>
-                    -R$ {budget.discount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    -{formatCurrency(budget.discount)}
                   </span>
                 </div>
               )}
@@ -191,7 +201,7 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
                     Impostos ({budget.tax_percentage}%)
                   </span>
                   <span className="font-medium">
-                    R$ {budget.tax_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    {formatCurrency(budget.tax_amount)}
                   </span>
                 </div>
               )}
@@ -201,7 +211,7 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
               <div className="flex justify-between text-lg font-bold">
                 <span>Total</span>
                 <span className="whitespace-nowrap">
-                  R$ {budget.total_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {formatCurrency(budget.total_amount)}
                 </span>
               </div>
             </div>
@@ -285,12 +295,12 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
                     )}
                     <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
                       <span>{typedService.labor_hours || 0}h</span>
-                      <span>R$ {(typedService.labor_rate || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/h</span>
+                      <span>{formatCurrency(typedService.labor_rate || 0)}/h</span>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">
-                      R$ {(typedService.total || typedService.labor_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {formatCurrency(typedService.total || typedService.labor_total || 0)}
                     </p>
                   </div>
                 </div>
@@ -324,12 +334,12 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
                     )}
                     <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
                       <span>Qtd: {typedPart.quantity || 1}</span>
-                      <span>R$ {(typedPart.unit_price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} cada</span>
+                      <span>{formatCurrency(typedPart.unit_price || 0)} cada</span>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">
-                      R$ {(typedPart.total || ((typedPart.quantity || 0) * (typedPart.unit_price || 0)) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {formatCurrency(typedPart.total || ((typedPart.quantity || 0) * (typedPart.unit_price || 0)) || 0)}
                     </p>
                   </div>
                 </div>
@@ -371,7 +381,7 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
                     </div>
                     {approval.approved_amount && (
                       <p className="text-sm font-medium mt-1">
-                        Valor: R$ {approval.approved_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        Valor: {formatCurrency(approval.approved_amount)}
                       </p>
                     )}
                     {approval.approval_notes && (

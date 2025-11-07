@@ -83,6 +83,16 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   const [searchPartTerm, setSearchPartTerm] = useState('');
   const [partSelectOpen, setPartSelectOpen] = useState(false);
 
+  // Função para formatar valores monetários
+  const formatCurrency = (value: number): string => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+
   // Funções de validação e formatação
   const validateAndSetHours = (value: string) => {
     // Permitir vírgula como separador decimal
@@ -433,7 +443,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
             </div>
             <div>
               <Label>Total Mão de Obra</Label>
-              <Input value={`R$ ${laborTotal.toFixed(2)}`} disabled />
+              <Input value={formatCurrency(laborTotal)} disabled />
             </div>
           </div>
           <div className="mt-4">
@@ -465,10 +475,14 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
             </div>
             <div className="md:col-span-2">
               <Input
-                type="number"
+                type="text"
                 placeholder="Qtd"
-                value={newService.quantity || 1}
-                onChange={(e) => setNewService({ ...newService, quantity: parseFloat(e.target.value) || 1 })}
+                value={(newService.quantity || 1).toString()}
+                onChange={(e) => {
+                  const numericValue = e.target.value.replace(/[^\d]/g, '');
+                  const quantity = numericValue ? parseInt(numericValue) : 1;
+                  setNewService({ ...newService, quantity: Math.max(1, quantity) });
+                }}
               />
             </div>
             <div className="md:col-span-3">
@@ -504,8 +518,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                   <TableRow key={service.id}>
                     <TableCell>{service.description}</TableCell>
                     <TableCell>{service.quantity}</TableCell>
-                    <TableCell>R$ {service.unit_price.toFixed(2)}</TableCell>
-                    <TableCell className="font-medium">R$ {service.total.toFixed(2)}</TableCell>
+                    <TableCell>{formatCurrency(service.unit_price)}</TableCell>
+                    <TableCell className="font-medium">{formatCurrency(service.total)}</TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -576,7 +590,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                                     {partData.part_code} - {partData.part_name}
                                   </div>
                                   <div className="text-sm text-muted-foreground mt-1">
-                                    Estoque: {partData.quantity} | R$ {partData.unit_cost?.toFixed(2)}
+                                    Estoque: {partData.quantity} | {formatCurrency(partData.unit_cost || 0)}
                                   </div>
                                 </div>
                                 {isAlreadyAdded ? (
@@ -622,15 +636,18 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                     </TableCell>
                     <TableCell>
                       <Input
-                        type="number"
-                        min="1"
-                        value={part.quantity}
-                        onChange={(e) => updatePartQuantity(part.id, parseInt(e.target.value) || 1)}
+                        type="text"
+                        value={part.quantity.toString()}
+                        onChange={(e) => {
+                          const numericValue = e.target.value.replace(/[^\d]/g, '');
+                          const quantity = numericValue ? parseInt(numericValue) : 1;
+                          updatePartQuantity(part.id, Math.max(1, quantity));
+                        }}
                         className="w-20"
                       />
                     </TableCell>
-                    <TableCell>R$ {part.unit_price.toFixed(2)}</TableCell>
-                    <TableCell className="font-medium">R$ {part.total.toFixed(2)}</TableCell>
+                    <TableCell>{formatCurrency(part.unit_price)}</TableCell>
+                    <TableCell className="font-medium">{formatCurrency(part.total)}</TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -722,23 +739,23 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
           <div className="border-t pt-4 space-y-2">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Subtotal:</span>
-              <span className="font-medium">R$ {subtotal.toFixed(2)}</span>
+              <span className="font-medium">{formatCurrency(subtotal)}</span>
             </div>
             {discount > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Desconto ({discount}%):</span>
-                <span className="text-red-600">- R$ {discountAmount.toFixed(2)}</span>
+                <span className="text-red-600">- {formatCurrency(discountAmount)}</span>
               </div>
             )}
             {taxPercentage > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Impostos ({taxPercentage}%):</span>
-                <span>+ R$ {taxAmount.toFixed(2)}</span>
+                <span>+ {formatCurrency(taxAmount)}</span>
               </div>
             )}
             <div className="flex justify-between text-lg font-bold pt-2 border-t">
               <span>Total:</span>
-              <span>R$ {totalAmount.toFixed(2)}</span>
+              <span>{formatCurrency(totalAmount)}</span>
             </div>
           </div>
         </CardContent>

@@ -52,6 +52,16 @@ import { MovementHistory } from "@/components/inventory/MovementHistory";
 import InventoryCountManager from "@/components/inventory/InventoryCountManager";
 import PartsSeparationManager from "@/components/inventory/PartsSeparationManager";
 
+// Função para formatar valores monetários
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
 const Estoque = () => {
   const { parts, loading, deletePart, fetchParts } = usePartsInventory();
   
@@ -198,7 +208,7 @@ const Estoque = () => {
         />
         <StatCard
           title="Valor Total"
-          value={`R$ ${stats.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+          value={formatCurrency(stats.valor)}
           icon={Package}
           subtitle="Valor do estoque"
           variant="primary"
@@ -322,10 +332,10 @@ const Estoque = () => {
                         </span>
                       </TableCell>
                       <TableCell>
-                        R$ {part.unit_cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {formatCurrency(part.unit_cost)}
                       </TableCell>
                       <TableCell className="font-medium">
-                        R$ {(part.unit_cost * part.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {formatCurrency(part.unit_cost * part.quantity)}
                       </TableCell>
                       <TableCell>{getStatusBadge(part.status)}</TableCell>
                       <TableCell>{part.supplier || '-'}</TableCell>

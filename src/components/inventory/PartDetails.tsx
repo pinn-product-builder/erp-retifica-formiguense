@@ -16,6 +16,16 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { type PartInventory } from "@/hooks/usePartsInventory";
 
+// Função para formatar valores monetários
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
 interface PartDetailsProps {
   part: PartInventory;
 }
@@ -112,7 +122,7 @@ export const PartDetails: React.FC<PartDetailsProps> = ({ part }) => {
             <span>Valor Unitário</span>
           </div>
           <p className="text-2xl font-bold">
-            R$ {part.unit_cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            {formatCurrency(part.unit_cost)}
           </p>
         </div>
 
@@ -123,7 +133,7 @@ export const PartDetails: React.FC<PartDetailsProps> = ({ part }) => {
             <span>Valor Total em Estoque</span>
           </div>
           <p className="text-3xl font-bold text-primary">
-            R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            {formatCurrency(totalValue)}
           </p>
         </div>
 

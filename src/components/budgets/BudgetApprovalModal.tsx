@@ -36,6 +36,16 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 
+// Função para formatar valores monetários
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
 const approvalSchema = z.object({
   approval_type: z.enum(['total', 'partial', 'rejected'], {
     required_error: "Tipo de aprovação é obrigatório",
@@ -352,7 +362,7 @@ const BudgetApprovalModal = ({
                 <div>
                   <Label className="text-sm text-muted-foreground">Valor Total</Label>
                   <p className="font-medium text-lg whitespace-nowrap">
-                    R$ {budget.total_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    {formatCurrency(budget.total_amount)}
                   </p>
                 </div>
               </div>

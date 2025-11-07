@@ -54,6 +54,16 @@ import { useOrganization } from "@/contexts/OrganizationContext";
 import { useBudgetReports } from "@/hooks/useBudgetReports";
 import { BUDGET_STATUS, translateStatus, translateAction, translateMessage } from "@/utils/statusTranslations";
 
+// Função para formatar valores monetários
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
 const Orcamentos = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
@@ -258,7 +268,7 @@ const Orcamentos = () => {
         />
         <StatCard
           title="Valor Total"
-          value={`R$ ${stats.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+          value={formatCurrency(stats.valorTotal)}
           icon={DollarSign}
           variant="primary"
         />
@@ -344,7 +354,7 @@ const Orcamentos = () => {
                     </Badge>
                   </TableCell>
                   <TableCell className="font-medium whitespace-nowrap">
-                    R$ {budget.total_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    {formatCurrency(budget.total_amount)}
                   </TableCell>
                   <TableCell>{getStatusBadge(budget.status)}</TableCell>
                   <TableCell>

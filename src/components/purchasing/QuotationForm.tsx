@@ -34,6 +34,16 @@ import { useQuotations, type CreateQuotationData, type QuotationItem } from '@/h
 import { usePurchasing } from '@/hooks/usePurchasing';
 import { useSupplierEvaluation } from '@/hooks/useSupplierEvaluation';
 
+// Função para formatar valores monetários
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
 interface QuotationFormProps {
   onSuccess: () => void;
 }
@@ -387,10 +397,13 @@ export default function QuotationForm({ onSuccess }: QuotationFormProps) {
                     </TableCell>
                     <TableCell>
                       <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value) || 0)}
+                        type="text"
+                        value={item.quantity.toString()}
+                        onChange={(e) => {
+                          const numericValue = e.target.value.replace(/[^\d]/g, '');
+                          const quantity = numericValue ? parseInt(numericValue) : 0;
+                          handleItemChange(index, 'quantity', Math.max(1, quantity));
+                        }}
                         className={`w-20 ${errors[`item_${index}_quantity`] ? 'border-red-500' : ''}`}
                       />
                       {errors[`item_${index}_quantity`] && (
@@ -399,12 +412,19 @@ export default function QuotationForm({ onSuccess }: QuotationFormProps) {
                     </TableCell>
                     <TableCell>
                       <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.unit_price}
-                        onChange={(e) => handleItemChange(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                        type="text"
+                        value={item.unit_price.toString()}
+                        onChange={(e) => {
+                          // Permitir vírgula como separador decimal
+                          let numericValue = e.target.value.replace(/[^\d.,]/g, '');
+                          if (numericValue.includes(',')) {
+                            numericValue = numericValue.replace(',', '.');
+                          }
+                          const price = parseFloat(numericValue) || 0;
+                          handleItemChange(index, 'unit_price', Math.max(0, price));
+                        }}
                         className={`w-24 ${errors[`item_${index}_price`] ? 'border-red-500' : ''}`}
+                        placeholder="0,00"
                       />
                       {errors[`item_${index}_price`] && (
                         <p className="text-xs text-red-500 mt-1">{errors[`item_${index}_price`]}</p>
@@ -412,7 +432,7 @@ export default function QuotationForm({ onSuccess }: QuotationFormProps) {
                     </TableCell>
                     <TableCell>
                       <span className="font-semibold">
-                        R$ {item.total_price.toFixed(2)}
+                        {formatCurrency(item.total_price)}
                       </span>
                     </TableCell>
                     <TableCell>

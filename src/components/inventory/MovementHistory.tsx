@@ -31,6 +31,16 @@ import { useInventoryMovements, MovementType, type MovementFilters } from '@/hoo
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+// Função para formatar valores monetários
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
 interface MovementHistoryProps {
   partId?: string;
   orderId?: string;
@@ -295,7 +305,7 @@ export function MovementHistory({ partId, orderId, showFilters = true }: Movemen
                                 <div>
                                   <strong className="text-sm">Custo Unitário:</strong>
                                   <p className="text-sm text-muted-foreground">
-                                    R$ {movement.unit_cost.toFixed(2)}
+                                    {formatCurrency(movement.unit_cost)}
                                   </p>
                                 </div>
                               )}

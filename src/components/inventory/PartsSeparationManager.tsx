@@ -20,6 +20,16 @@ import {
   Wrench
 } from 'lucide-react';
 
+// Função para formatar valores monetários
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+};
+
 interface PartsReservation {
   id: string;
   order_id: string;
@@ -376,7 +386,7 @@ export default function PartsSeparationManager() {
                       <div>
                         <span className="text-muted-foreground">Valor Unit.:</span>
                         <span className="font-medium ml-1">
-                          R$ {reservation.unit_cost.toFixed(2)}
+                          {formatCurrency(reservation.unit_cost)}
                         </span>
                       </div>
                     </div>

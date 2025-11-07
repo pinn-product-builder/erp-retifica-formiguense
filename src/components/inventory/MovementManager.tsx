@@ -445,21 +445,30 @@ export default function MovementManager() {
                 <div>
                   <Label>Quantidade *</Label>
                   <Input
-                    type="number"
-                    min="1"
-                    value={formData.quantity}
-                    onChange={(e) => handleInputChange('quantity', Number(e.target.value))}
+                    type="text"
+                    value={formData.quantity.toString()}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(/[^\d]/g, '');
+                      const quantity = numericValue ? parseInt(numericValue) : 1;
+                      handleInputChange('quantity', Math.max(1, quantity));
+                    }}
                   />
                 </div>
                 
                 <div>
                   <Label>Custo Unitário</Label>
                   <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.unit_cost}
-                    onChange={(e) => handleInputChange('unit_cost', Number(e.target.value))}
+                    type="text"
+                    value={formData.unit_cost.toString()}
+                    onChange={(e) => {
+                      // Permitir vírgula como separador decimal
+                      let numericValue = e.target.value.replace(/[^\d.,]/g, '');
+                      if (numericValue.includes(',')) {
+                        numericValue = numericValue.replace(',', '.');
+                      }
+                      const cost = parseFloat(numericValue) || 0;
+                      handleInputChange('unit_cost', Math.max(0, cost));
+                    }}
                     placeholder="0,00"
                   />
                 </div>

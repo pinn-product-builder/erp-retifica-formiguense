@@ -363,9 +363,13 @@ export default function Compras() {
                           <div>
                             <Label className="text-xs">Quantidade</Label>
                             <Input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => updateRequisitionItem(index, 'quantity', Number(e.target.value))}
+                              type="text"
+                              value={item.quantity.toString()}
+                              onChange={(e) => {
+                                const numericValue = e.target.value.replace(/[^\d]/g, '');
+                                const quantity = numericValue ? parseInt(numericValue) : 1;
+                                updateRequisitionItem(index, 'quantity', Math.max(1, quantity));
+                              }}
                             />
                           </div>
                         </div>
@@ -381,10 +385,18 @@ export default function Compras() {
                           <div className="w-32">
                             <Label className="text-xs">Preço Unitário</Label>
                             <Input
-                              type="number"
-                              step="0.01"
-                              value={item.unit_price}
-                              onChange={(e) => updateRequisitionItem(index, 'unit_price', Number(e.target.value))}
+                              type="text"
+                              value={item.unit_price.toString()}
+                              onChange={(e) => {
+                                // Permitir vírgula como separador decimal
+                                let numericValue = e.target.value.replace(/[^\d.,]/g, '');
+                                if (numericValue.includes(',')) {
+                                  numericValue = numericValue.replace(',', '.');
+                                }
+                                const price = parseFloat(numericValue) || 0;
+                                updateRequisitionItem(index, 'unit_price', Math.max(0, price));
+                              }}
+                              placeholder="0,00"
                             />
                           </div>
                           {newRequisition.items.length > 1 && (
