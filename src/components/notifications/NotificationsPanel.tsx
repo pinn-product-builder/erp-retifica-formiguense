@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import React from 'react';
 import { Bell, Check, CheckCheck, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,15 +24,13 @@ export function NotificationsPanel() {
   const [open, setOpen] = React.useState(false);
   const navigate = useNavigate();
 
-  const handleNotificationClick = async (notification: unknown) => {
-    // Marcar como lida
+  const handleNotificationClick = async (notification: Record<string, unknown>) => {
     if (!notification.is_read) {
-      await markAsRead(notification.id);
+      await markAsRead(notification.id as string);
     }
 
-    // Navegar para URL de ação se existir
     if (notification.action_url) {
-      navigate(notification.action_url);
+      navigate(notification.action_url as string);
       setOpen(false);
     }
   };
@@ -40,7 +38,7 @@ export function NotificationsPanel() {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'error':
-        return 'bg-destructive/10 text-destructive border-l-destructive dark:bg-destructive/20';
+          return 'bg-destructive/10 text-destructive border-l-destructive dark:bg-destructive/20';
       case 'warning':
         return 'bg-yellow-500/10 text-yellow-700 border-l-yellow-500 dark:bg-yellow-500/20 dark:text-yellow-400';
       case 'success':
