@@ -113,7 +113,7 @@ export const useDashboard = () => {
     const calculationDescriptions: Record<string, string> = {
       'total_orders': 'Conta todos os pedidos da sua organização criados nos últimos 30 dias.',
       'orders_in_progress': 'Conta pedidos com situação "ativa" ou "em andamento" nos últimos 30 dias.',
-      'completed_orders': 'Conta pedidos com situação "concluída" nos últimos 30 dias.',
+      'completed_orders': 'Conta pedidos com situação "concluída" ou "entregue" nos últimos 30 dias.',
       'pending_budget_approvals': 'Conta orçamentos detalhados com situação "rascunho" ou "pendente" nos últimos 30 dias.',
       'revenue_current_month': 'Soma o valor total de todos os orçamentos com situação "aprovado" nos últimos 30 dias.',
       'average_order_value': 'Calcula a média dos valores de orçamentos aprovados nos últimos 30 dias.',

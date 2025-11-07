@@ -44,7 +44,8 @@ export default function OrdensServico() {
 
   const totalOrders = orders.length;
   const activeOrders = orders.filter(o => !['entregue', 'cancelada'].includes(o.status)).length;
-  const completedOrders = orders.filter(o => o.status === 'concluida').length;
+  // Incluir tanto 'concluida' quanto 'entregue' como ordens concluídas
+  const completedOrders = orders.filter(o => o.status === 'concluida' || o.status === 'entregue').length;
   const delayedOrders = orders.filter(o => 
     o.estimated_delivery && 
     new Date(o.estimated_delivery) < new Date() && 

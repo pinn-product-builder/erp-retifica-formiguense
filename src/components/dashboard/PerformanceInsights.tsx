@@ -174,7 +174,8 @@ export function PerformanceInsights() {
       .gte('created_at', startDate.toISOString());
 
     const totalOrders = orders?.length || 0;
-    const completedOrders = orders?.filter(o => o.status === 'concluida').length || 0;
+    // Incluir tanto 'concluida' quanto 'entregue' como ordens concluídas
+    const completedOrders = orders?.filter(o => o.status === 'concluida' || o.status === 'entregue').length || 0;
     const totalRevenue = budgets?.filter(b => b.status === 'approved').reduce((sum, b) => sum + (b.total_amount || 0), 0) || 0;
     const avgOrderValue = totalRevenue / (completedOrders || 1);
 
@@ -182,7 +183,12 @@ export function PerformanceInsights() {
     const completionRate = totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
 
     // Calcular tempo médio de conclusão (real)
-    const ordersWithDelivery = orders?.filter(o => o.status === 'concluida' && o.actual_delivery && o.created_at) || [];
+    // Incluir ordens 'concluida' e 'entregue' que tenham actual_delivery
+    const ordersWithDelivery = orders?.filter(o => 
+      (o.status === 'concluida' || o.status === 'entregue') && 
+      o.actual_delivery && 
+      o.created_at
+    ) || [];
     const avgCompletionTime = ordersWithDelivery.length > 0
       ? ordersWithDelivery.reduce((sum, o) => {
           const start = new Date(o.created_at).getTime();
@@ -200,7 +206,7 @@ export function PerformanceInsights() {
         target: 85,
         unit: '%',
         trend: completionRate >= 85 ? 'up' : completionRate >= 70 ? 'stable' : 'down',
-        trendValue: 0, // Seria calculado comparando com período anterior
+        trendValue: 0,  
         category: 'productivity'
       },
       {
@@ -210,17 +216,17 @@ export function PerformanceInsights() {
         target: 5000,
         unit: 'R$',
         trend: avgOrderValue >= 5000 ? 'up' : avgOrderValue >= 4000 ? 'stable' : 'down',
-        trendValue: 0, // Seria calculado comparando com período anterior
+        trendValue: 0,  
         category: 'financial'
       },
       {
         id: '3',
         name: 'Tempo Médio de Conclusão',
-        value: avgCompletionTime,
+        value: Number(avgCompletionTime.toFixed(2)),
         target: 7,
         unit: 'dias',
         trend: avgCompletionTime <= 7 ? 'up' : avgCompletionTime <= 10 ? 'stable' : 'down',
-        trendValue: 0, // Seria calculado comparando com período anterior
+        trendValue: 0,  
         category: 'time'
       },
       {
@@ -230,7 +236,7 @@ export function PerformanceInsights() {
         target: 50,
         unit: 'pedidos',
         trend: completedOrders >= 50 ? 'up' : completedOrders >= 40 ? 'stable' : 'down',
-        trendValue: 0, // Seria calculado comparando com período anterior
+        trendValue: 0,  
         category: 'productivity'
       }
     ];
