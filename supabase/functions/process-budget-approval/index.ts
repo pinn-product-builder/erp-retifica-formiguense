@@ -43,7 +43,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verificar método
     if (req.method !== 'POST') {
       return new Response(
         JSON.stringify({ error: 'Method not allowed' }),
@@ -54,7 +53,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar autenticação
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -66,7 +64,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Criar cliente Supabase com service role para ter permissões administrativas
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -78,7 +75,6 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Obter usuário autenticado
     const jwt = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(jwt);
     
@@ -93,10 +89,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Parse request body
     const { budget_id, approval_type, approved_amount, registered_by, approval_notes }: BudgetApprovalRequest = await req.json();
 
-    // Validação
     if (!budget_id || !approval_type || !approved_amount) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields: budget_id, approval_type, approved_amount' }),
@@ -117,12 +111,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Usar user.id se registered_by não foi fornecido
     const finalRegisteredBy = registered_by || user.id;
 
     console.log(`📋 Processando aprovação de orçamento: ${budget_id}, tipo: ${approval_type}`);
 
-    // ETAPA 1: Buscar dados do orçamento
     const { data: budget, error: budgetError } = await supabaseAdmin
       .from('detailed_budgets')
       .select('id, order_id, org_id, parts, status')
@@ -143,7 +135,6 @@ Deno.serve(async (req) => {
     const detailedBudget = budget as DetailedBudget;
     console.log(`✅ Orçamento encontrado: order_id=${detailedBudget.order_id}, org_id=${detailedBudget.org_id}`);
 
-    // ETAPA 2: Capturar status ANTIGO da ordem ANTES de qualquer UPDATE
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
       .select('id, status, customer_id')
@@ -164,7 +155,6 @@ Deno.serve(async (req) => {
     const oldOrderStatus = order.status as string;
     console.log(`📊 Status atual da ordem: ${oldOrderStatus}`);
 
-    // Verificar se approval_type é válido para processamento
     if (!['total', 'partial', 'parcial'].includes(approval_type)) {
       console.log(`⚠️ Tipo de aprovação não processado: ${approval_type}`);
       return new Response(
@@ -178,8 +168,7 @@ Deno.serve(async (req) => {
         }
       );
     }
-
-    // ETAPA 3: Processar cada peça do orçamento
+  
     const parts = detailedBudget.parts as Part[];
     let reservationsCreated = 0;
     let purchaseNeedsCreated = 0;
@@ -243,35 +232,75 @@ Deno.serve(async (req) => {
           console.error(`    ❌ Erro ao criar alerta de estoque:`, stockAlertError);
         }
 
-        // Criar necessidade de compra
+        
         const priorityLevel = shortage > partQuantity * 0.5 ? 'high' : 
                              availableStock === 0 ? 'critical' : 'normal';
 
-        const { error: purchaseNeedError } = await supabaseAdmin
+        const { data: existingPurchaseNeed } = await supabaseAdmin
           .from('purchase_needs')
-          .upsert({
-            org_id: detailedBudget.org_id,
-            part_code: partCode,
-            part_name: partName,
-            required_quantity: partQuantity,
-            available_quantity: availableStock,
-            shortage_quantity: shortage,
-            priority_level: priorityLevel,
-            need_type: 'planned',
-            related_orders: [{ order_id: detailedBudget.order_id }],
-            estimated_cost: partUnitPrice * shortage,
-            delivery_urgency_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            status: 'pending'
-          }, {
-            onConflict: 'org_id,part_code,status'
-          });
+          .select('id')
+          .eq('org_id', detailedBudget.org_id)
+          .eq('part_code', partCode)
+          .eq('status', 'pending')
+          .limit(1)
+          .single();
+
+          console.log('existingPurchaseNeed', JSON.stringify(existingPurchaseNeed, null, 2));
+
+        let purchaseNeedError;
+        if (existingPurchaseNeed?.id) {
+          try {
+          const { error } = await supabaseAdmin
+            .from('purchase_needs')
+            .update({
+              part_name: partName,
+              required_quantity: partQuantity,
+              available_quantity: availableStock,
+              priority_level: priorityLevel,
+              need_type: 'planned',
+              related_orders: [{ order_id: detailedBudget.order_id }],
+              estimated_cost: partUnitPrice * shortage,
+              delivery_urgency_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingPurchaseNeed.id);
+
+            console.log('purchaseNeedError update', JSON.stringify(error, null, 2));
+            purchaseNeedError = error;
+          } catch (error) {
+            console.log('purchaseNeedError update', JSON.stringify(error, null, 2));
+            purchaseNeedError = error;
+          }
+        } else {
+          try {
+          const { error } = await supabaseAdmin
+            .from('purchase_needs')
+            .insert({
+              org_id: detailedBudget.org_id,
+              part_code: partCode,
+              part_name: partName,
+              required_quantity: partQuantity,
+              available_quantity: availableStock,
+              priority_level: priorityLevel,
+              need_type: 'planned',
+              related_orders: [{ order_id: detailedBudget.order_id }],
+              estimated_cost: partUnitPrice * shortage,
+              delivery_urgency_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              status: 'pending'
+            });
+
+            console.log('purchaseNeedError insert', JSON.stringify(error, null, 2));
+            purchaseNeedError = error;
+          } catch (error) {
+            console.log('purchaseNeedError insert', JSON.stringify(error, null, 2));
+            purchaseNeedError = error;
+          }
+        }
 
         if (!purchaseNeedError) {
           purchaseNeedsCreated++;
           console.log(`    ✅ Purchase need criado/atualizado`);
           
-          // Criar alerta na tabela alerts (além do trigger automático)
-          // Isso garante que o alerta seja criado mesmo se o trigger falhar
           const { data: purchaseNeedData } = await supabaseAdmin
             .from('purchase_needs')
             .select('id')
@@ -283,7 +312,6 @@ Deno.serve(async (req) => {
             .single();
 
           if (purchaseNeedData?.id) {
-            // Verificar se já existe alerta para este purchase_need
             const { data: existingAlert } = await supabaseAdmin
               .from('alerts')
               .select('id')
@@ -330,14 +358,12 @@ Deno.serve(async (req) => {
 
             let alertError;
             if (existingAlert?.id) {
-              // Atualizar alerta existente
               const { error } = await supabaseAdmin
                 .from('alerts')
                 .update(alertData)
                 .eq('id', existingAlert.id);
               alertError = error;
             } else {
-              // Criar novo alerta
               const { error } = await supabaseAdmin
                 .from('alerts')
                 .insert(alertData);
@@ -357,7 +383,6 @@ Deno.serve(async (req) => {
 
       // Se houver estoque, reservar o que tem
       if (availableStock > 0 && inventoryPart?.id) {
-        // Verificar se já existe reserva para evitar duplicatas
         const { data: existingReservation } = await supabaseAdmin
           .from('parts_reservations')
           .select('id')
@@ -389,7 +414,6 @@ Deno.serve(async (req) => {
             reservationsCreated++;
             console.log(`    ✅ Reserva criada: ${quantityToReserve} unidades`);
             
-            // Criar movimento de estoque do tipo 'reserva'
             const { error: movementError } = await supabaseAdmin
               .from('inventory_movements')
               .insert({
@@ -424,21 +448,42 @@ Deno.serve(async (req) => {
     console.log(`✅ Processamento de peças concluído: ${reservationsCreated} reservas, ${purchaseNeedsCreated} purchase needs, ${alertsCreated} alertas`);
 
     // ETAPA 4: Criar contas a receber
-    const { error: accountsReceivableError } = await supabaseAdmin
+    const { data: existingAccount } = await supabaseAdmin
       .from('accounts_receivable')
-      .upsert({
-        order_id: detailedBudget.order_id,
-        budget_id: budget_id,
-        customer_id: order.customer_id,
-        installment_number: 1,
-        total_installments: 1,
-        amount: approved_amount,
-        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        status: 'pending',
-        org_id: detailedBudget.org_id
-      }, {
-        onConflict: 'order_id,budget_id'
-      });
+      .select('id')
+      .eq('order_id', detailedBudget.order_id)
+      .eq('budget_id', budget_id)
+      .limit(1)
+      .single();
+
+    let accountsReceivableError;
+    if (existingAccount?.id) {
+      const { error } = await supabaseAdmin
+        .from('accounts_receivable')
+        .update({
+          amount: approved_amount,
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'pending',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingAccount.id);
+      accountsReceivableError = error;
+    } else {
+      const { error } = await supabaseAdmin
+        .from('accounts_receivable')
+        .insert({
+          order_id: detailedBudget.order_id,
+          budget_id: budget_id,
+          customer_id: order.customer_id,
+          installment_number: 1,
+          total_installments: 1,
+          amount: approved_amount,
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: 'pending',
+          org_id: detailedBudget.org_id
+        });
+      accountsReceivableError = error;
+    }
 
     if (accountsReceivableError) {
       console.error('⚠️ Erro ao criar conta a receber:', accountsReceivableError);
@@ -446,7 +491,6 @@ Deno.serve(async (req) => {
       console.log('✅ Conta a receber criada/atualizada');
     }
 
-    // ETAPA 5: Atualizar status do orçamento
     const { error: budgetUpdateError } = await supabaseAdmin
       .from('detailed_budgets')
       .update({
@@ -462,7 +506,6 @@ Deno.serve(async (req) => {
 
     console.log('✅ Status do orçamento atualizado para "approved"');
 
-    // ETAPA 6: Atualizar status da ordem para 'aprovada'
     const { error: orderUpdateError } = await supabaseAdmin
       .from('orders')
       .update({
@@ -478,7 +521,6 @@ Deno.serve(async (req) => {
 
     console.log(`✅ Status da ordem atualizado de "${oldOrderStatus}" para "aprovada"`);
 
-    // ETAPA 7: Registrar no histórico usando o status ANTIGO capturado
     const { error: historyError } = await supabaseAdmin
       .from('order_status_history')
       .insert({
@@ -496,37 +538,39 @@ Deno.serve(async (req) => {
       console.log('✅ Histórico de status criado');
     }
 
-    // ETAPA 8: Criar registro de aprovação (se ainda não existir)
-    // Nota: Isso geralmente já é feito pelo frontend, mas garantimos aqui
-    // Verificar se já existe registro de aprovação
-    const { data: existingApproval } = await supabaseAdmin
+    const { data: existingApproval, error: checkError } = await supabaseAdmin
       .from('budget_approvals')
-      .select('id')
+      .select('id, approval_method')
       .eq('budget_id', budget_id)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     let approvalError;
     if (existingApproval?.id) {
-      // Atualizar registro existente
+      const updateData: Record<string, unknown> = {
+        approval_type: approval_type,
+        approved_amount: approved_amount,
+        registered_by: finalRegisteredBy,
+        approval_notes: approval_notes || null
+      };
+      
+      if (!existingApproval.approval_method) {
+        updateData.approval_method = 'manual';
+      }
+      
       const { error } = await supabaseAdmin
         .from('budget_approvals')
-        .update({
-          approval_type: approval_type,
-          approved_amount: approved_amount,
-          registered_by: finalRegisteredBy,
-          approval_notes: approval_notes || null
-        })
+        .update(updateData)
         .eq('id', existingApproval.id);
       approvalError = error;
     } else {
-      // Criar novo registro
       const { error } = await supabaseAdmin
         .from('budget_approvals')
         .insert({
           budget_id: budget_id,
           approval_type: approval_type,
           approved_amount: approved_amount,
+            approval_method: 'manual',
           registered_by: finalRegisteredBy,
           approval_notes: approval_notes || null,
           org_id: detailedBudget.org_id

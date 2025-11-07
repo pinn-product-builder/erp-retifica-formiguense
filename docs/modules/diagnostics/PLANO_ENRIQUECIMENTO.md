@@ -628,3 +628,5 @@ src/utils/
 **Responsável:** Equipe de Desenvolvimento ERP Retífica  
 **Status:** 📋 Aguardando Aprovação
 
+
+
