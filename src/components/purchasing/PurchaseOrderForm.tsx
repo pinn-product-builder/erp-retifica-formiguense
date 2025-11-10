@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,11 +12,13 @@ import { usePurchasing, Supplier, PurchaseOrder, PurchaseOrderItem } from '@/hoo
 import { useToast } from '@/hooks/use-toast';
 import { FormField } from '@/components/ui/form-field';
 import { formatCurrency } from '@/lib/utils';
+import { type PurchaseNeed } from '@/hooks/usePurchaseNeeds';
 
 interface PurchaseOrderFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quotationId?: string;
+  purchaseNeed?: PurchaseNeed | null;
   onSuccess?: () => void;
 }
 
@@ -45,31 +47,61 @@ export default function PurchaseOrderForm({
   open, 
   onOpenChange, 
   quotationId,
+  purchaseNeed,
   onSuccess 
 }: PurchaseOrderFormProps) {
   const { suppliers, createPurchaseOrder, loading } = usePurchasing();
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState<POFormData>({
-    supplier_id: '',
-    requisition_id: '',
-    expected_delivery: '',
-    terms: '',
-    notes: '',
-    delivery_address: '',
-    items: [{ item_name: '', description: '', quantity: 1, unit_price: 0, total_price: 0 }],
-    subtotal: 0,
-    taxes: 0,
-    freight: 0,
-    discount: 0,
-    total_value: 0,
+  // Função para obter itens iniciais baseado na necessidade de compra
+  const getInitialItems = useCallback(() => {
+    if (purchaseNeed) {
+      return [{
+        item_name: purchaseNeed.part_name,
+        description: `${purchaseNeed.part_code} - ${purchaseNeed.part_name}`,
+        quantity: purchaseNeed.shortage_quantity,
+        unit_price: purchaseNeed.estimated_cost / purchaseNeed.shortage_quantity || 0,
+        total_price: purchaseNeed.estimated_cost || 0,
+      }];
+    }
+    return [{ item_name: '', description: '', quantity: 1, unit_price: 0, total_price: 0 }];
+  }, [purchaseNeed]);
+
+  const [formData, setFormData] = useState<POFormData>(() => {
+    const initialItems = purchaseNeed ? [{
+      item_name: purchaseNeed.part_name,
+      description: `${purchaseNeed.part_code} - ${purchaseNeed.part_name}`,
+      quantity: purchaseNeed.shortage_quantity,
+      unit_price: purchaseNeed.estimated_cost / purchaseNeed.shortage_quantity || 0,
+      total_price: purchaseNeed.estimated_cost || 0,
+    }] : [{ item_name: '', description: '', quantity: 1, unit_price: 0, total_price: 0 }];
+    
+    const initialSubtotal = initialItems.reduce((sum, item) => sum + item.total_price, 0);
+    
+    return {
+      supplier_id: '',
+      requisition_id: '',
+      expected_delivery: '',
+      terms: '',
+      notes: '',
+      delivery_address: '',
+      items: initialItems,
+      subtotal: initialSubtotal,
+      taxes: 0,
+      freight: 0,
+      discount: 0,
+      total_value: initialSubtotal,
+    };
   });
 
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
-  // Reset form when modal opens
+  // Reset form when modal opens, mas manter dados da necessidade se houver
   useEffect(() => {
     if (open) {
+      const initialItems = getInitialItems();
+      const initialSubtotal = initialItems.reduce((sum, item) => sum + item.total_price, 0);
+      
       setFormData({
         supplier_id: '',
         requisition_id: '',
@@ -77,16 +109,16 @@ export default function PurchaseOrderForm({
         terms: '',
         notes: '',
         delivery_address: '',
-        items: [{ item_name: '', description: '', quantity: 1, unit_price: 0, total_price: 0 }],
-        subtotal: 0,
+        items: initialItems,
+        subtotal: initialSubtotal,
         taxes: 0,
         freight: 0,
         discount: 0,
-        total_value: 0,
+        total_value: initialSubtotal,
       });
       setSelectedSupplier(null);
     }
-  }, [open]);
+  }, [open, getInitialItems]);
 
   // Calculate totals whenever items, taxes, freight, or discount change
   useEffect(() => {

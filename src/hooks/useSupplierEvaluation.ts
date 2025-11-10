@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -368,10 +367,23 @@ export const useSupplierEvaluation = () => {
 
       if (error) {
         console.error('Erro ao sugerir fornecedores:', error);
+        
+        // Mensagem de erro mais amigável
+        let errorMessage = 'Não foi possível obter sugestões de fornecedores.';
+        if (error.message?.includes('ambiguous')) {
+          errorMessage = 'Erro interno: referência ambígua na consulta. Por favor, tente novamente ou contate o suporte.';
+        } else if (error.message?.includes('permission') || error.message?.includes('permissão')) {
+          errorMessage = 'Você não tem permissão para acessar esta funcionalidade.';
+        } else if (error.message?.includes('timeout') || error.message?.includes('timeout')) {
+          errorMessage = 'A consulta demorou muito para responder. Tente novamente.';
+        } else if (error.message) {
+          errorMessage = `Erro: ${error.message}`;
+        }
+        
         toast({
           variant: "destructive",
           title: "Erro ao sugerir fornecedores",
-          description: error.message
+          description: errorMessage
         });
         return [];
       }
@@ -379,10 +391,18 @@ export const useSupplierEvaluation = () => {
       return data || [];
     } catch (error) {
       console.error('Erro ao sugerir fornecedores:', error);
+      
+      // Mensagem de erro mais amigável para erros não tratados
+      const errorObj = error as { message?: string };
+      let errorMessage = 'Não foi possível obter sugestões de fornecedores no momento.';
+      if (errorObj?.message) {
+        errorMessage = `Erro inesperado: ${errorObj.message}`;
+      }
+      
       toast({
         variant: "destructive",
         title: "Erro ao sugerir fornecedores",
-        description: "Não foi possível obter sugestões de fornecedores"
+        description: errorMessage
       });
       return [];
     }

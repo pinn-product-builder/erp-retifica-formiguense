@@ -1,0 +1,168 @@
+-- Corrigir função para buscar part_id do purchase_order_item se não estiver definido
+-- Garantir que recebimentos sempre tenham part_id quando possível
+
+CREATE OR REPLACE FUNCTION public.create_inventory_entry_on_receipt()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_receipt RECORD;
+  v_po RECORD;
+  v_part RECORD;
+  v_user_id UUID;
+  v_approved_qty INTEGER;
+  v_part_id UUID;
+BEGIN
+  -- Buscar informações do recebimento
+  SELECT * INTO v_receipt
+  FROM purchase_receipts
+  WHERE id = NEW.receipt_id;
+  
+  -- Buscar informações do pedido de compra
+  SELECT * INTO v_po
+  FROM purchase_orders
+  WHERE id = v_receipt.purchase_order_id;
+  
+  -- Se part_id não está definido, tentar buscar do purchase_order_item
+  v_part_id := NEW.part_id;
+  
+  IF v_part_id IS NULL THEN
+    SELECT part_id INTO v_part_id
+    FROM purchase_order_items
+    WHERE id = NEW.purchase_order_item_id;
+  END IF;
+  
+  -- Se ainda não tem part_id, tentar buscar pela correspondência de nome
+  IF v_part_id IS NULL THEN
+    SELECT pi.id INTO v_part_id
+    FROM purchase_order_items poi
+    JOIN parts_inventory pi ON (
+      poi.item_name ILIKE '%' || pi.part_code || '%'
+      OR poi.item_name ILIKE '%' || pi.part_name || '%'
+      OR pi.part_name ILIKE '%' || poi.item_name || '%'
+    )
+    WHERE poi.id = NEW.purchase_order_item_id
+      AND pi.org_id = v_receipt.org_id
+    LIMIT 1;
+    
+    -- Se encontrou, atualizar o purchase_order_item e o receipt_item
+    IF v_part_id IS NOT NULL THEN
+      -- Atualizar purchase_order_item para ter o part_id
+      UPDATE purchase_order_items
+      SET part_id = v_part_id
+      WHERE id = NEW.purchase_order_item_id;
+      
+      -- Atualizar receipt_item para ter o part_id
+      UPDATE purchase_receipt_items
+      SET part_id = v_part_id
+      WHERE id = NEW.id;
+    END IF;
+  END IF;
+  
+  -- Apenas processar se o item tem part_id (vínculo com estoque)
+  IF v_part_id IS NULL THEN
+    RAISE NOTICE 'Item % não tem part_id e não foi possível encontrar correspondência no estoque. Nome do item: %', 
+      NEW.id, (SELECT item_name FROM purchase_order_items WHERE id = NEW.purchase_order_item_id);
+    RETURN NEW;
+  END IF;
+  
+  -- Apenas processar se a qualidade foi aprovada
+  IF NEW.quality_status != 'approved' THEN
+    RAISE NOTICE 'Item % com qualidade não aprovada (status: %), entrada no estoque ignorada', 
+      NEW.id, NEW.quality_status;
+    RETURN NEW;
+  END IF;
+  
+  -- Buscar informações da peça
+  SELECT * INTO v_part
+  FROM parts_inventory
+  WHERE id = v_part_id;
+  
+  IF NOT FOUND THEN
+    RAISE NOTICE 'Peça % não encontrada no estoque', v_part_id;
+    RETURN NEW;
+  END IF;
+  
+  -- Buscar usuário que recebeu
+  SELECT received_by INTO v_user_id
+  FROM purchase_receipts
+  WHERE id = NEW.receipt_id;
+  
+  -- Usar approved_quantity em vez de received_quantity
+  -- Apenas itens aprovados devem entrar no estoque
+  v_approved_qty := COALESCE(NEW.approved_quantity, 0);
+  
+  -- Se não há quantidade aprovada, não criar movimentação
+  IF v_approved_qty <= 0 THEN
+    RAISE NOTICE 'Item % não tem quantidade aprovada, entrada no estoque ignorada', NEW.id;
+    RETURN NEW;
+  END IF;
+  
+  -- Criar movimentação de entrada no estoque
+  -- Usar approved_quantity para garantir que apenas itens aprovados entrem
+  INSERT INTO inventory_movements (
+    org_id,
+    part_id,
+    movement_type,
+    quantity,
+    previous_quantity,
+    new_quantity,
+    unit_cost,
+    order_id,
+    reason,
+    notes,
+    created_by,
+    metadata
+  ) VALUES (
+    v_receipt.org_id,
+    v_part_id, -- Usar o part_id encontrado
+    'entrada',
+    v_approved_qty, -- Usar approved_quantity
+    v_part.quantity,
+    v_part.quantity + v_approved_qty, -- Atualizar com quantidade aprovada
+    NEW.unit_cost,
+    NULL, -- Não vincula com ordem de serviço, apenas com PO
+    'Recebimento de compra - PO: ' || v_po.po_number || ' | Recebimento: ' || v_receipt.receipt_number,
+    CASE 
+      WHEN NEW.has_divergence THEN 
+        'Recebido com divergência: ' || COALESCE(NEW.divergence_reason, 'Não especificada') ||
+        CASE 
+          WHEN NEW.rejected_quantity > 0 THEN 
+            ' | Rejeitados: ' || NEW.rejected_quantity || ' unidade(s)'
+          ELSE ''
+        END
+      WHEN NEW.rejected_quantity > 0 THEN
+        'Recebimento parcial: ' || NEW.rejected_quantity || ' unidade(s) rejeitada(s)'
+      ELSE 
+        'Recebimento conforme pedido'
+    END,
+    COALESCE(v_user_id, v_receipt.created_by),
+    jsonb_build_object(
+      'receipt_id', v_receipt.id,
+      'receipt_number', v_receipt.receipt_number,
+      'purchase_order_id', v_po.id,
+      'po_number', v_po.po_number,
+      'supplier_id', v_po.supplier_id,
+      'has_divergence', NEW.has_divergence,
+      'quality_status', NEW.quality_status,
+      'received_quantity', NEW.received_quantity,
+      'approved_quantity', NEW.approved_quantity,
+      'rejected_quantity', NEW.rejected_quantity,
+      'is_partial_receipt', (NEW.received_quantity != NEW.approved_quantity OR NEW.rejected_quantity > 0),
+      'part_id_found', (v_part_id IS NOT NULL)
+    )
+  );
+  
+  RAISE NOTICE 'Entrada no estoque criada para peça % (quantidade aprovada: %, recebida: %, rejeitada: %)', 
+    v_part.part_name, v_approved_qty, NEW.received_quantity, COALESCE(NEW.rejected_quantity, 0);
+  
+  RETURN NEW;
+END;
+$$;
+
+-- Atualizar comentário da função
+COMMENT ON FUNCTION public.create_inventory_entry_on_receipt() IS 
+'Cria automaticamente uma movimentação de entrada no estoque quando um item é recebido no recebimento de compra (parcial ou completo). Busca part_id automaticamente se não estiver definido. Apenas processa itens com qualidade aprovada e usa approved_quantity para atualizar o estoque.';
+

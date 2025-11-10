@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +31,8 @@ import {
 } from 'lucide-react';
 import { useQuotations, type CreateQuotationData, type QuotationItem } from '@/hooks/useQuotations';
 import { usePurchasing } from '@/hooks/usePurchasing';
-import { useSupplierEvaluation } from '@/hooks/useSupplierEvaluation';
+import { useSupplierEvaluation, type SuggestedSupplier } from '@/hooks/useSupplierEvaluation';
+import { type PurchaseNeed } from '@/hooks/usePurchaseNeeds';
 
 // Função para formatar valores monetários
 const formatCurrency = (value: number): string => {
@@ -46,9 +46,11 @@ const formatCurrency = (value: number): string => {
 
 interface QuotationFormProps {
   onSuccess: () => void;
+  onCancel?: () => void;
+  purchaseNeed?: PurchaseNeed | null;
 }
 
-export default function QuotationForm({ onSuccess }: QuotationFormProps) {
+export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: QuotationFormProps) {
   const { createQuotation, loading } = useQuotations();
   const { requisitions, suppliers, fetchRequisitions, fetchSuppliers } = usePurchasing();
   const { suggestSuppliersForPart } = useSupplierEvaluation();
@@ -62,24 +64,57 @@ export default function QuotationForm({ onSuccess }: QuotationFormProps) {
     terms: '',
   });
 
-  const [items, setItems] = useState<Omit<QuotationItem, 'id' | 'quotation_id'>[]>([
-    {
+  // Inicializar itens com dados da necessidade de compra se disponível
+  const [items, setItems] = useState<Omit<QuotationItem, 'id' | 'quotation_id'>[]>(() => {
+    if (purchaseNeed) {
+      return [{
+        item_name: purchaseNeed.part_name,
+        description: `${purchaseNeed.part_code} - ${purchaseNeed.part_name}`,
+        quantity: purchaseNeed.shortage_quantity,
+        unit_price: purchaseNeed.estimated_cost / purchaseNeed.shortage_quantity || 0,
+        total_price: purchaseNeed.estimated_cost || 0,
+      }];
+    }
+    return [{
       item_name: '',
       description: '',
       quantity: 1,
       unit_price: 0,
       total_price: 0,
-    },
-  ]);
+    }];
+  });
 
   const [selectedRequisition, setSelectedRequisition] = useState<unknown>(null);
-  const [suggestedSuppliers, setSuggestedSuppliers] = useState<Array<Record<string, unknown>>>([]);
+  const [suggestedSuppliers, setSuggestedSuppliers] = useState<SuggestedSupplier[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchRequisitions();
     fetchSuppliers();
   }, [fetchRequisitions, fetchSuppliers]);
+
+  // Quando há uma necessidade de compra, atualizar itens e buscar fornecedores sugeridos
+  useEffect(() => {
+    if (purchaseNeed) {
+      // Atualizar itens com dados da necessidade
+      setItems([{
+        item_name: purchaseNeed.part_name,
+        description: `${purchaseNeed.part_code} - ${purchaseNeed.part_name}`,
+        quantity: purchaseNeed.shortage_quantity,
+        unit_price: purchaseNeed.estimated_cost / purchaseNeed.shortage_quantity || 0,
+        total_price: purchaseNeed.estimated_cost || 0,
+      }]);
+      
+      // Buscar fornecedores sugeridos para a peça
+      suggestSuppliersForPart(purchaseNeed.part_name).then(suggested => {
+        setSuggestedSuppliers(suggested || []);
+        // Se houver fornecedores sugeridos, selecionar o primeiro automaticamente
+        if (suggested && suggested.length > 0 && !formData.supplier_id) {
+          setFormData(prev => ({ ...prev, supplier_id: suggested[0].supplier_id }));
+        }
+      });
+    }
+  }, [purchaseNeed, suggestSuppliersForPart, formData.supplier_id]);
 
   // Quando uma requisição é selecionada, buscar fornecedores sugeridos
   useEffect(() => {
@@ -88,8 +123,8 @@ export default function QuotationForm({ onSuccess }: QuotationFormProps) {
       setSelectedRequisition(requisition);
       
       // Pré-preencher itens baseado na requisição
-      if (requisition?.items && requisition.items.length > 0) {
-        const newItems = requisition.items.map((item: unknown) => ({
+      if (requisition?.items && Array.isArray(requisition.items) && requisition.items.length > 0) {
+        const newItems = requisition.items.map((item: { item_name?: string; description?: string; quantity?: number }) => ({
           item_name: item.item_name || '',
           description: item.description || '',
           quantity: item.quantity || 1,
@@ -148,7 +183,8 @@ export default function QuotationForm({ onSuccess }: QuotationFormProps) {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.requisition_id) {
+    // Requisição só é obrigatória se não vier de uma necessidade de compra
+    if (!purchaseNeed && !formData.requisition_id) {
       newErrors.requisition_id = 'Selecione uma requisição';
     }
     if (!formData.supplier_id) {
@@ -184,6 +220,7 @@ export default function QuotationForm({ onSuccess }: QuotationFormProps) {
 
     const quotationData: CreateQuotationData = {
       ...formData,
+      requisition_id: purchaseNeed ? undefined : formData.requisition_id || undefined,
       delivery_time: formData.delivery_time ? parseInt(formData.delivery_time) : undefined,
       items: items.filter(item => item.item_name.trim()),
     };
@@ -209,27 +246,39 @@ export default function QuotationForm({ onSuccess }: QuotationFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="requisition">Requisição de Compra *</Label>
-              <Select
-                value={formData.requisition_id}
-                onValueChange={(value) => handleInputChange('requisition_id', value)}
-              >
-                <SelectTrigger className={errors.requisition_id ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="Selecione uma requisição" />
-                </SelectTrigger>
-                <SelectContent>
-                  {requisitions.map((req) => (
-                    <SelectItem key={req.id} value={req.id}>
-                      {req.requisition_number} - {req.justification || 'Requisição'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.requisition_id && (
-                <p className="text-sm text-red-500 mt-1">{errors.requisition_id}</p>
-              )}
-            </div>
+            {!purchaseNeed && (
+              <div>
+                <Label htmlFor="requisition">Requisição de Compra *</Label>
+                <Select
+                  value={formData.requisition_id}
+                  onValueChange={(value) => handleInputChange('requisition_id', value)}
+                >
+                  <SelectTrigger className={errors.requisition_id ? 'border-red-500' : ''}>
+                    <SelectValue placeholder="Selecione uma requisição" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {requisitions.map((req) => (
+                      <SelectItem key={req.id} value={req.id}>
+                        {req.requisition_number} - {req.justification || 'Requisição'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.requisition_id && (
+                  <p className="text-sm text-red-500 mt-1">{errors.requisition_id}</p>
+                )}
+              </div>
+            )}
+            {purchaseNeed && (
+              <div style={{ width: '100%' }}>
+                <Label>Necessidade de Compra</Label>
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="font-medium">{purchaseNeed.part_name}</p>
+                  <p className="text-sm text-muted-foreground">Código: {purchaseNeed.part_code}</p>
+                  <p className="text-sm text-muted-foreground">Quantidade necessária: {purchaseNeed.shortage_quantity}</p>
+                </div>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="supplier">Fornecedor *</Label>
@@ -269,14 +318,14 @@ export default function QuotationForm({ onSuccess }: QuotationFormProps) {
                   <div className="flex flex-wrap gap-2">
                     {suggestedSuppliers.slice(0, 3).map((supplier) => (
                       <Button
-                        key={supplier.id}
+                        key={supplier.supplier_id}
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handleInputChange('supplier_id', supplier.id)}
+                        onClick={() => handleInputChange('supplier_id', supplier.supplier_id)}
                         className="text-xs"
                       >
-                        {supplier.name} (⭐ {supplier.rating?.toFixed(1)})
+                        {supplier.supplier_name} (⭐ {supplier.rating.toFixed(1)})
                       </Button>
                     ))}
                   </div>
@@ -458,7 +507,7 @@ export default function QuotationForm({ onSuccess }: QuotationFormProps) {
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Valor Total da Cotação</p>
               <p className="text-2xl font-bold">
-                R$ {totalValue.toFixed(2)}
+                {formatCurrency(totalValue)}
               </p>
             </div>
           </div>
@@ -467,7 +516,15 @@ export default function QuotationForm({ onSuccess }: QuotationFormProps) {
 
       {/* Botões */}
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onSuccess}>
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={() => {
+            if (onCancel) {
+              onCancel();
+            }
+          }}
+        >
           Cancelar
         </Button>
         <Button type="submit" disabled={loading}>

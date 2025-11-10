@@ -46,9 +46,12 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { usePurchaseNeeds, type PurchaseNeed } from '@/hooks/usePurchaseNeeds';
+import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import PurchaseNeedForm from './PurchaseNeedForm';
+import QuotationForm from './QuotationForm';
+import PurchaseOrderForm from './PurchaseOrderForm';
 
 const PRIORITY_CONFIG = {
   critical: {
@@ -113,6 +116,8 @@ export default function PurchaseNeedsManager() {
     getCriticalNeeds,
   } = usePurchaseNeeds();
 
+  const { toast } = useToast();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
@@ -121,6 +126,10 @@ export default function PurchaseNeedsManager() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [generatingAuto, setGeneratingAuto] = useState(false);
   const [convertingToReq, setConvertingToReq] = useState(false);
+  const [showQuotationDialog, setShowQuotationDialog] = useState(false);
+  const [showOrderDialog, setShowOrderDialog] = useState(false);
+  const [needForQuotation, setNeedForQuotation] = useState<PurchaseNeed | null>(null);
+  const [needForOrder, setNeedForOrder] = useState<PurchaseNeed | null>(null);
 
   useEffect(() => {
     fetchNeeds();
@@ -221,8 +230,45 @@ export default function PurchaseNeedsManager() {
       manual_request: 'Solicitação Manual',
       project_requirement: 'Projeto',
       maintenance: 'Manutenção',
+      planned: 'Planejada',
     };
     return types[type as keyof typeof types] || type;
+  };
+
+  const handleOpenQuotation = (need: PurchaseNeed) => {
+    setNeedForQuotation(need);
+    setShowQuotationDialog(true);
+  };
+
+  const handleOpenOrder = (need: PurchaseNeed) => {
+    setNeedForOrder(need);
+    setShowOrderDialog(true);
+  };
+
+  const handleQuotationSuccess = async () => {
+    if (needForQuotation) {
+      await updateNeedStatus(needForQuotation.id, 'in_quotation');
+    }
+    await fetchNeeds();
+    toast({
+      title: 'Cotação criada',
+      description: 'A necessidade foi marcada como em cotação.',
+    });
+    setNeedForQuotation(null);
+    setShowQuotationDialog(false);
+  };
+
+  const handleOrderSuccess = async () => {
+    if (needForOrder) {
+      await updateNeedStatus(needForOrder.id, 'ordered');
+    }
+    await fetchNeeds();
+    toast({
+      title: 'Pedido criado',
+      description: 'A necessidade foi marcada como atendida por um pedido.',
+    });
+    setNeedForOrder(null);
+    setShowOrderDialog(false);
   };
 
   return (
@@ -571,7 +617,7 @@ export default function PurchaseNeedsManager() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => updateNeedStatus(need.id, 'in_quotation')}
+                              onClick={() => handleOpenQuotation(need)}
                             >
                               <FileText className="w-4 h-4 mr-1" />
                               Cotar
@@ -581,7 +627,7 @@ export default function PurchaseNeedsManager() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => updateNeedStatus(need.id, 'ordered')}
+                              onClick={() => handleOpenOrder(need)}
                             >
                               <ShoppingCart className="w-4 h-4 mr-1" />
                               Pedido
@@ -597,6 +643,47 @@ export default function PurchaseNeedsManager() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Cotação */}
+      <Dialog
+        open={showQuotationDialog}
+        onOpenChange={(open) => {
+          setShowQuotationDialog(open);
+          if (!open) {
+            setNeedForQuotation(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Criar Cotação
+              {needForQuotation ? ` • ${needForQuotation.part_name} (${needForQuotation.part_code})` : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <QuotationForm
+            onSuccess={handleQuotationSuccess}
+            onCancel={() => {
+              setShowQuotationDialog(false);
+              setNeedForQuotation(null);
+            }}
+            purchaseNeed={needForQuotation}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Pedido */}
+      <PurchaseOrderForm
+        open={showOrderDialog}
+        onOpenChange={(open) => {
+          setShowOrderDialog(open);
+          if (!open) {
+            setNeedForOrder(null);
+          }
+        }}
+        purchaseNeed={needForOrder}
+        onSuccess={handleOrderSuccess}
+      />
     </div>
   );
 }
