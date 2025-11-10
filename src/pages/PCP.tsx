@@ -209,7 +209,7 @@ export default function PCP() {
                 <div>
                   <Label>Horas Estimadas</Label>
                   <Input
-                    type="number"
+                    type="string"
                     value={newSchedule.estimated_hours}
                     onChange={(e) => setNewSchedule({...newSchedule, estimated_hours: Number(e.target.value)})}
                   />
@@ -217,7 +217,7 @@ export default function PCP() {
                 <div>
                   <Label>Prioridade (1-5)</Label>
                   <Input
-                    type="number"
+                    type="string"
                     min="1"
                     max="5"
                     value={newSchedule.priority}

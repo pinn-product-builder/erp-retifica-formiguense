@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -198,7 +197,6 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* Informações Básicas */}
           <Card className="order-1">
             <CardHeader className="pb-3">
               <CardTitle className="text-base sm:text-lg">Informações Básicas</CardTitle>
@@ -273,7 +271,7 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
                       <FormLabel>Garantia (meses)</FormLabel>
                       <FormControl>
                         <Input 
-                          type="number" 
+                          type="string" 
                           min="1" 
                           max="60"
                           {...field}
@@ -293,7 +291,7 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
                       <FormLabel>Ordem de Exibição</FormLabel>
                       <FormControl>
                         <Input 
-                          type="number" 
+                          type="string" 
                           min="0"
                           {...field}
                           onChange={e => field.onChange(parseInt(e.target.value) || 0)}
@@ -328,7 +326,6 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
             </CardContent>
           </Card>
 
-          {/* Componentes Obrigatórios */}
           <Card className="order-3 lg:order-2">
             <CardHeader className="pb-3">
               <CardTitle className="text-base sm:text-lg">Componentes Obrigatórios</CardTitle>
@@ -394,7 +391,6 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
           </Card>
         </div>
 
-        {/* Normas Técnicas */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Normas Técnicas</CardTitle>
@@ -482,7 +478,6 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
           </CardContent>
         </Card>
 
-        {/* Requisitos Especiais */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Requisitos Especiais</CardTitle>
@@ -643,7 +638,6 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
           </CardContent>
         </Card>
 
-        {/* Botões de Ação */}
         <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 sm:pt-6 border-t">
           <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">
             Cancelar

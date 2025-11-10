@@ -167,7 +167,7 @@ export const useSupplierEvaluation = () => {
       setLoading(true);
       
       const { data, error } = await supabase
-        .from('suppliers' as unknown)
+        .from('suppliers')
         .select(`
           *,
           contacts:supplier_contacts(*),
