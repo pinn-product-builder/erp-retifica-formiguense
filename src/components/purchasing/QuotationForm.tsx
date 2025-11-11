@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,10 +29,19 @@ import {
   Truck,
   Calendar,
 } from 'lucide-react';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
+import type { Dayjs } from 'dayjs';
+import 'dayjs/locale/pt-br';
 import { useQuotations, type CreateQuotationData, type QuotationItem } from '@/hooks/useQuotations';
 import { usePurchasing } from '@/hooks/usePurchasing';
 import { useSupplierEvaluation, type SuggestedSupplier } from '@/hooks/useSupplierEvaluation';
 import { type PurchaseNeed } from '@/hooks/usePurchaseNeeds';
+
+// Configurar locale do dayjs
+dayjs.locale('pt-br');
 
 // Função para formatar valores monetários
 const formatCurrency = (value: number): string => {
@@ -58,11 +67,49 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
   const [formData, setFormData] = useState({
     requisition_id: '',
     supplier_id: '',
-    quote_date: new Date().toISOString().split('T')[0],
+    quote_date: dayjs().format('YYYY-MM-DD'),
     validity_date: '',
     delivery_time: '',
     terms: '',
   });
+
+  const [quoteDate, setQuoteDate] = useState<Dayjs | null>(dayjs());
+  const [validityDate, setValidityDate] = useState<Dayjs | null>(null);
+
+  // Função para resetar o formulário
+  const resetForm = useCallback(() => {
+    setFormData({
+      requisition_id: '',
+      supplier_id: '',
+      quote_date: dayjs().format('YYYY-MM-DD'),
+      validity_date: '',
+      delivery_time: '',
+      terms: '',
+    });
+    setQuoteDate(dayjs());
+    setValidityDate(null);
+    setItems(() => {
+      if (purchaseNeed) {
+        return [{
+          item_name: purchaseNeed.part_name,
+          description: `${purchaseNeed.part_code} - ${purchaseNeed.part_name}`,
+          quantity: purchaseNeed.shortage_quantity,
+          unit_price: purchaseNeed.estimated_cost / purchaseNeed.shortage_quantity || 0,
+          total_price: purchaseNeed.estimated_cost || 0,
+        }];
+      }
+      return [{
+        item_name: '',
+        description: '',
+        quantity: 1,
+        unit_price: 0,
+        total_price: 0,
+      }];
+    });
+    setErrors({});
+    setSelectedRequisition(null);
+    setSuggestedSuppliers([]);
+  }, [purchaseNeed]);
 
   // Inicializar itens com dados da necessidade de compra se disponível
   const [items, setItems] = useState<Omit<QuotationItem, 'id' | 'quotation_id'>[]>(() => {
@@ -109,12 +156,15 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
       suggestSuppliersForPart(purchaseNeed.part_name).then(suggested => {
         setSuggestedSuppliers(suggested || []);
         // Se houver fornecedores sugeridos, selecionar o primeiro automaticamente
-        if (suggested && suggested.length > 0 && !formData.supplier_id) {
+        if (suggested && suggested.length > 0) {
           setFormData(prev => ({ ...prev, supplier_id: suggested[0].supplier_id }));
         }
       });
+    } else {
+      // Se purchaseNeed for null (modal fechado), resetar o formulário
+      resetForm();
     }
-  }, [purchaseNeed, suggestSuppliersForPart, formData.supplier_id]);
+  }, [purchaseNeed, suggestSuppliersForPart, resetForm]);
 
   // Quando uma requisição é selecionada, buscar fornecedores sugeridos
   useEffect(() => {
@@ -147,6 +197,38 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const handleQuoteDateChange = (date: Dayjs | null) => {
+    setQuoteDate(date);
+    if (date) {
+      const dateStr = date.format('YYYY-MM-DD');
+      setFormData(prev => ({ ...prev, quote_date: dateStr }));
+      // Se a data de validade for anterior à nova data de cotação, limpar
+      if (validityDate && validityDate.isBefore(date, 'day')) {
+        setValidityDate(null);
+        setFormData(prev => ({ ...prev, validity_date: '' }));
+      }
+    }
+    if (errors.quote_date) {
+      setErrors(prev => ({ ...prev, quote_date: '' }));
+    }
+  };
+
+  const handleValidityDateChange = (date: Dayjs | null) => {
+    if (date && quoteDate && date.isBefore(quoteDate, 'day')) {
+      setErrors(prev => ({ ...prev, validity_date: 'Data de validade deve ser posterior à data de criação' }));
+      return;
+    }
+    setValidityDate(date);
+    if (date) {
+      setFormData(prev => ({ ...prev, validity_date: date.format('YYYY-MM-DD') }));
+    } else {
+      setFormData(prev => ({ ...prev, validity_date: '' }));
+    }
+    if (errors.validity_date) {
+      setErrors(prev => ({ ...prev, validity_date: '' }));
     }
   };
 
@@ -193,6 +275,12 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
     if (!formData.quote_date) {
       newErrors.quote_date = 'Data da cotação é obrigatória';
     }
+    if (formData.validity_date && quoteDate) {
+      const validity = dayjs(formData.validity_date);
+      if (validity.isBefore(quoteDate, 'day')) {
+        newErrors.validity_date = 'Data de validade deve ser posterior à data de criação';
+      }
+    }
 
     // Validar itens
     items.forEach((item, index) => {
@@ -227,6 +315,7 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
 
     const success = await createQuotation(quotationData);
     if (success) {
+      resetForm();
       onSuccess();
     }
   };
@@ -235,7 +324,8 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
   const selectedSupplier = suppliers.find(s => s.id === formData.supplier_id);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="pt-br">
+      <form onSubmit={handleSubmit} className="space-y-6">
       {/* Informações Básicas */}
       <Card>
         <CardHeader>
@@ -337,16 +427,38 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="quote_date">Data da Cotação *</Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  id="quote_date"
-                  type="date"
-                  value={formData.quote_date}
-                  onChange={(e) => handleInputChange('quote_date', e.target.value)}
-                  className={`pl-10 ${errors.quote_date ? 'border-red-500' : ''}`}
-                />
-              </div>
+              <DesktopDatePicker
+                value={quoteDate}
+                onChange={handleQuoteDateChange}
+                format="DD/MM/YYYY"
+                slotProps={{
+                  textField: {
+                    error: !!errors.quote_date,
+                    helperText: errors.quote_date,
+                    size: 'small',
+                    fullWidth: true,
+                  },
+                  popper: {
+                    placement: 'bottom-start',
+                    disablePortal: false,
+                    style: { zIndex: 9999 },
+                    modifiers: [
+                      {
+                        name: 'offset',
+                        options: {
+                          offset: [0, 8],
+                        },
+                      },
+                      {
+                        name: 'preventOverflow',
+                        options: {
+                          boundary: 'viewport',
+                        },
+                      },
+                    ],
+                  },
+                }}
+              />
               {errors.quote_date && (
                 <p className="text-sm text-red-500 mt-1">{errors.quote_date}</p>
               )}
@@ -354,16 +466,42 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
 
             <div>
               <Label htmlFor="validity_date">Data de Validade</Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  id="validity_date"
-                  type="date"
-                  value={formData.validity_date}
-                  onChange={(e) => handleInputChange('validity_date', e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+              <DesktopDatePicker
+                value={validityDate}
+                onChange={handleValidityDateChange}
+                format="DD/MM/YYYY"
+                minDate={quoteDate ? quoteDate.add(1, 'day') : undefined}
+                slotProps={{
+                  textField: {
+                    error: !!errors.validity_date,
+                    helperText: errors.validity_date,
+                    size: 'small',
+                    fullWidth: true,
+                  },
+                  popper: {
+                    placement: 'bottom-start',
+                    disablePortal: false,
+                    style: { zIndex: 9999 },
+                    modifiers: [
+                      {
+                        name: 'offset',
+                        options: {
+                          offset: [0, 8],
+                        },
+                      },
+                      {
+                        name: 'preventOverflow',
+                        options: {
+                          boundary: 'viewport',
+                        },
+                      },
+                    ],
+                  },
+                }}
+              />
+              {errors.validity_date && (
+                <p className="text-sm text-red-500 mt-1">{errors.validity_date}</p>
+              )}
             </div>
 
             <div>
@@ -523,6 +661,10 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
             if (onCancel) {
               onCancel();
             }
+            // Resetar após um pequeno delay para garantir que o modal feche primeiro
+            setTimeout(() => {
+              resetForm();
+            }, 100);
           }}
         >
           Cancelar
@@ -532,5 +674,6 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
         </Button>
       </div>
     </form>
+    </LocalizationProvider>
   );
 }

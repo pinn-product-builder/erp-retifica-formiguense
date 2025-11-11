@@ -3,6 +3,28 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Garantir que o popover do Material-UI DatePicker apareça acima do Dialog */
+/* Dialog usa z-40, então o DatePicker precisa estar acima */
+.MuiPickersPopper-root,
+.MuiPickersPopper-root[role="dialog"],
+.MuiPopper-root[role="dialog"],
+.MuiPopper-root {
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
+
+/* Garantir que o backdrop do DatePicker também apareça acima */
+.MuiBackdrop-root {
+  z-index: 9998 !important;
+  pointer-events: auto !important;
+}
+
+/* Permitir que cliques no DatePicker funcionem mesmo dentro do Dialog */
+.MuiPickersPopper-root *,
+.MuiPopper-root * {
+  pointer-events: auto !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

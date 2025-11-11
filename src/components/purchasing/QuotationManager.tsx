@@ -129,16 +129,43 @@ export default function QuotationManager() {
     }).format(value);
   };
 
-  const handleCompareQuotations = (requisitionId: string) => {
+  const handleCompareQuotations = (requisitionId: string | null | undefined) => {
+    if (!requisitionId) {
+      console.warn('requisition_id não fornecido');
+      return;
+    }
+
+    console.log('Comparando cotações para requisição:', requisitionId);
+    
+    // Buscar todas as cotações pendentes para a requisição
     const quotationsForRequisition = quotations.filter(
       q => q.requisition_id === requisitionId && q.status === 'pending'
     );
     
+    console.log('Cotações pendentes encontradas:', quotationsForRequisition.length);
+    
+    let quotationsToCompare: Quotation[] = [];
+    
     if (quotationsForRequisition.length < 2) {
-      return;
+      // Se não houver pelo menos 2 pendentes, buscar todas as cotações da requisição
+      const allQuotationsForRequisition = quotations.filter(
+        q => q.requisition_id === requisitionId
+      );
+      
+      console.log('Total de cotações para a requisição:', allQuotationsForRequisition.length);
+      
+      if (allQuotationsForRequisition.length < 2) {
+        console.warn('É necessário pelo menos 2 cotações para comparar');
+        return;
+      }
+      
+      quotationsToCompare = allQuotationsForRequisition;
+    } else {
+      quotationsToCompare = quotationsForRequisition;
     }
     
-    setSelectedQuotations(quotationsForRequisition);
+    console.log('Abrindo modal de comparação com', quotationsToCompare.length, 'cotações');
+    setSelectedQuotations(quotationsToCompare);
     setShowComparisonDialog(true);
   };
 
@@ -159,12 +186,29 @@ export default function QuotationManager() {
   // Agrupar cotações por requisição para facilitar comparação
   const quotationsByRequisition = quotations.reduce((acc, quotation) => {
     const reqId = quotation.requisition_id;
+    // Ignorar cotações sem requisition_id
+    if (!reqId) return acc;
     if (!acc[reqId]) {
       acc[reqId] = [];
     }
     acc[reqId].push(quotation);
     return acc;
   }, {} as Record<string, Quotation[]>);
+
+  // Verificar se há pelo menos 2 cotações por requisição (para mostrar botão de comparar)
+  const canCompareByRequisition = quotations.reduce((acc, quotation) => {
+    const reqId = quotation.requisition_id;
+    // Ignorar cotações sem requisition_id
+    if (!reqId) return acc;
+    if (!acc[reqId]) {
+      acc[reqId] = { total: 0, pending: 0 };
+    }
+    acc[reqId].total++;
+    if (quotation.status === 'pending') {
+      acc[reqId].pending++;
+    }
+    return acc;
+  }, {} as Record<string, { total: number; pending: number }>);
 
   return (
     <div className="space-y-6">
@@ -176,7 +220,16 @@ export default function QuotationManager() {
             Gerencie cotações de fornecedores e compare propostas
           </p>
         </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <Dialog 
+        open={showCreateDialog} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowCreateDialog(false);
+          } else {
+            setShowCreateDialog(open);
+          }
+        }}
+      >
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -187,12 +240,17 @@ export default function QuotationManager() {
             <DialogHeader>
               <DialogTitle>Nova Cotação</DialogTitle>
             </DialogHeader>
-            <QuotationForm
-              onSuccess={() => {
-                setShowCreateDialog(false);
-                fetchQuotations();
-              }}
-            />
+            {showCreateDialog && (
+              <QuotationForm
+                onSuccess={() => {
+                  setShowCreateDialog(false);
+                  fetchQuotations();
+                }}
+                onCancel={() => {
+                  setShowCreateDialog(false);
+                }}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>
@@ -416,16 +474,33 @@ export default function QuotationManager() {
                           )}
                           
                           {/* Botão de comparação - só aparece se há múltiplas cotações para a mesma requisição */}
-                          {quotationsByRequisition[quotation.requisition_id]?.length > 1 && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleCompareQuotations(quotation.requisition_id)}
-                            >
-                              <Award className="w-4 h-4 mr-1" />
-                              Comparar
-                            </Button>
-                          )}
+                          {(() => {
+                            const reqId = quotation.requisition_id;
+                            const canCompare = canCompareByRequisition[reqId];
+                            const hasMultiple = (canCompare?.total || 0) >= 2;
+                            
+                            if (!hasMultiple) return null;
+                            
+                            return (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  console.log('Botão Comparar clicado para requisição:', reqId);
+                                  if (reqId) {
+                                    handleCompareQuotations(reqId);
+                                  } else {
+                                    console.error('requisition_id é null ou undefined');
+                                  }
+                                }}
+                              >
+                                <Award className="w-4 h-4 mr-1" />
+                                Comparar
+                              </Button>
+                            );
+                          })()}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -437,22 +512,43 @@ export default function QuotationManager() {
         </CardContent>
       </Card>
 
-      {/* Dialog de Comparação */}
-      <Dialog open={showComparisonDialog} onOpenChange={setShowComparisonDialog}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+      {/* Modal de Comparação */}
+      <Dialog 
+        open={showComparisonDialog} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowComparisonDialog(false);
+            setSelectedQuotations([]);
+          } else {
+            setShowComparisonDialog(open);
+          }
+        }}
+      >
+        <DialogContent className="max-w-5xl h-[80vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
             <DialogTitle>Comparação de Cotações</DialogTitle>
           </DialogHeader>
-          <QuotationComparison
-            quotations={selectedQuotations}
-            onApprove={(quotationId) => {
-              updateQuotationStatus(quotationId, 'approved');
-              setShowComparisonDialog(false);
-            }}
-            onReject={(quotationId) => {
-              updateQuotationStatus(quotationId, 'rejected');
-            }}
-          />
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 pb-6 min-h-0">
+            {showComparisonDialog && selectedQuotations.length > 0 && (
+              <QuotationComparison
+                quotations={selectedQuotations}
+                onApprove={(quotationId) => {
+                  updateQuotationStatus(quotationId, 'approved');
+                  // Rejeitar todas as outras cotações da mesma requisição
+                  selectedQuotations
+                    .filter(q => q.id !== quotationId)
+                    .forEach(q => updateQuotationStatus(q.id, 'rejected'));
+                  setShowComparisonDialog(false);
+                  setSelectedQuotations([]);
+                  fetchQuotations();
+                }}
+                onReject={(quotationId) => {
+                  updateQuotationStatus(quotationId, 'rejected');
+                  fetchQuotations();
+                }}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

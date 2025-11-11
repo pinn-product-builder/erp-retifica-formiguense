@@ -650,9 +650,11 @@ export default function PurchaseNeedsManager() {
       <Dialog
         open={showQuotationDialog}
         onOpenChange={(open) => {
-          setShowQuotationDialog(open);
           if (!open) {
+            setShowQuotationDialog(false);
             setNeedForQuotation(null);
+          } else {
+            setShowQuotationDialog(open);
           }
         }}
       >
@@ -663,14 +665,17 @@ export default function PurchaseNeedsManager() {
               {needForQuotation ? ` • ${needForQuotation.part_name} (${needForQuotation.part_code})` : ''}
             </DialogTitle>
           </DialogHeader>
-          <QuotationForm
-            onSuccess={handleQuotationSuccess}
-            onCancel={() => {
-              setShowQuotationDialog(false);
-              setNeedForQuotation(null);
-            }}
-            purchaseNeed={needForQuotation}
-          />
+          {showQuotationDialog && (
+            <QuotationForm
+              onSuccess={handleQuotationSuccess}
+              onCancel={() => {
+                setShowQuotationDialog(false);
+                setNeedForQuotation(null);
+              }}
+              purchaseNeed={needForQuotation}
+              key={needForQuotation?.id || 'new'}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
