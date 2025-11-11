@@ -54,6 +54,7 @@ import {
   Package
 } from "lucide-react";
 import { useSupplierEvaluation, type EvaluationFormData, type EnhancedSupplier } from "@/hooks/useSupplierEvaluation";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -91,6 +92,8 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
     fetchEvaluations,
     fetchEnhancedSuppliers
   } = useSupplierEvaluation();
+  
+  const { toast } = useToast();
 
   const [selectedSupplier, setSelectedSupplier] = useState<EnhancedSupplier | null>(null);
   const [isEvaluationDialogOpen, setIsEvaluationDialogOpen] = useState(false);
@@ -120,6 +123,11 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
   });
 
   const [editForm, setEditForm] = useState<Partial<EnhancedSupplier>>({});
+  const [editFormErrors, setEditFormErrors] = useState<{
+    email?: string;
+    phone?: string;
+    cnpj?: string;
+  }>({});
 
   // Filtrar fornecedores se um ID específico foi fornecido
   const displaySuppliers = supplierId 
@@ -253,15 +261,110 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
     }
   };
 
+  // Validar CNPJ
+  const validateCNPJ = (cnpj: string): boolean => {
+    if (!cnpj) return true; // CNPJ é opcional
+    
+    const cleanCNPJ = cnpj.replace(/\D/g, '');
+    
+    // Deve ter 14 dígitos
+    if (cleanCNPJ.length !== 14) return false;
+    
+    // Verificar se todos os dígitos são iguais (CNPJ inválido)
+    if (/^(\d)\1+$/.test(cleanCNPJ)) return false;
+    
+    // Validar dígitos verificadores
+    let length = cleanCNPJ.length - 2;
+    let numbers = cleanCNPJ.substring(0, length);
+    const digits = cleanCNPJ.substring(length);
+    let sum = 0;
+    let pos = length - 7;
+    
+    for (let i = length; i >= 1; i--) {
+      sum += parseInt(numbers.charAt(length - i)) * pos--;
+      if (pos < 2) pos = 9;
+    }
+    
+    let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (result !== parseInt(digits.charAt(0))) return false;
+    
+    length = length + 1;
+    numbers = cleanCNPJ.substring(0, length);
+    sum = 0;
+    pos = length - 7;
+    
+    for (let i = length; i >= 1; i--) {
+      sum += parseInt(numbers.charAt(length - i)) * pos--;
+      if (pos < 2) pos = 9;
+    }
+    
+    result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (result !== parseInt(digits.charAt(1))) return false;
+    
+    return true;
+  };
+
+  // Validar email
+  const validateEmail = (email: string): boolean => {
+    if (!email) return true; // Email é opcional
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Validar telefone
+  const validatePhone = (phone: string): boolean => {
+    if (!phone) return true; // Telefone é opcional
+    
+    const cleanPhone = phone.replace(/\D/g, '');
+    // Telefone deve ter 10 ou 11 dígitos (com DDD)
+    return cleanPhone.length === 10 || cleanPhone.length === 11;
+  };
+
+  // Validar formulário de edição
+  const validateEditForm = (): boolean => {
+    const errors: {
+      email?: string;
+      phone?: string;
+      cnpj?: string;
+    } = {};
+
+    if (editForm.email && !validateEmail(editForm.email)) {
+      errors.email = 'Email inválido';
+    }
+
+    if (editForm.phone && !validatePhone(editForm.phone)) {
+      errors.phone = 'Telefone inválido. Deve ter 10 ou 11 dígitos';
+    }
+
+    if (editForm.cnpj && !validateCNPJ(editForm.cnpj)) {
+      errors.cnpj = 'CNPJ inválido';
+    }
+
+    setEditFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   // Atualizar fornecedor
   const handleUpdateSupplier = async () => {
     if (!selectedSupplier) return;
+    
+    // Validar formulário antes de enviar
+    if (!validateEditForm()) {
+      toast({
+        variant: "destructive",
+        title: "Erro de validação",
+        description: "Por favor, corrija os erros no formulário antes de salvar"
+      });
+      return;
+    }
     
     const success = await updateSupplier(selectedSupplier.id, editForm);
     
     if (success) {
       setIsEditDialogOpen(false);
       setEditForm({});
+      setEditFormErrors({});
       setSelectedSupplier(null);
     }
   };
@@ -797,11 +900,12 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
             </div>
             
             <div>
-              <Label htmlFor="contact-whatsapp">WhatsApp</Label>
-              <Input
-                id="contact-whatsapp"
+              <FormField
+                label="WhatsApp"
+                name="contact-whatsapp"
+                mask="phone"
                 value={contactForm.whatsapp}
-                onChange={(e) => setContactForm({ ...contactForm, whatsapp: e.target.value })}
+                onChange={(value, rawValue) => setContactForm({ ...contactForm, whatsapp: rawValue || '' })}
                 placeholder="(11) 99999-9999"
               />
             </div>
@@ -854,7 +958,20 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                   name="edit-cnpj"
                   mask="cnpj"
                   value={editForm.cnpj || ''}
-                  onChange={(value, rawValue) => setEditForm({ ...editForm, cnpj: rawValue || '' })}
+                  onChange={(value, rawValue) => {
+                    setEditForm({ ...editForm, cnpj: rawValue || '' });
+                    // Limpar erro quando o usuário começar a digitar
+                    if (editFormErrors.cnpj) {
+                      setEditFormErrors({ ...editFormErrors, cnpj: undefined });
+                    }
+                  }}
+                  error={editFormErrors.cnpj}
+                  validation={{
+                    custom: (value) => {
+                      if (!value) return true; // CNPJ é opcional
+                      return validateCNPJ(value);
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -866,8 +983,24 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                   id="edit-email"
                   type="email"
                   value={editForm.email || ''}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  onChange={(e) => {
+                    setEditForm({ ...editForm, email: e.target.value });
+                    // Limpar erro quando o usuário começar a digitar
+                    if (editFormErrors.email) {
+                      setEditFormErrors({ ...editFormErrors, email: undefined });
+                    }
+                  }}
+                  onBlur={() => {
+                    // Validar ao sair do campo
+                    if (editForm.email && !validateEmail(editForm.email)) {
+                      setEditFormErrors({ ...editFormErrors, email: 'Email inválido' });
+                    }
+                  }}
+                  className={editFormErrors.email ? 'border-destructive' : ''}
                 />
+                {editFormErrors.email && (
+                  <p className="text-sm text-destructive mt-1">{editFormErrors.email}</p>
+                )}
               </div>
               <div>
                 <FormField
@@ -875,18 +1008,33 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                   name="edit-phone"
                   mask="phone"
                   value={editForm.phone || ''}
-                  onChange={(value, rawValue) => setEditForm({ ...editForm, phone: rawValue || '' })}
+                  onChange={(value, rawValue) => {
+                    setEditForm({ ...editForm, phone: rawValue || '' });
+                    // Limpar erro quando o usuário começar a digitar
+                    if (editFormErrors.phone) {
+                      setEditFormErrors({ ...editFormErrors, phone: undefined });
+                    }
+                  }}
+                  error={editFormErrors.phone}
+                  validation={{
+                    custom: (value) => {
+                      if (!value) return true; // Telefone é opcional
+                      return validatePhone(value);
+                    }
+                  }}
                 />
               </div>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit-whatsapp">WhatsApp</Label>
-                <Input
-                  id="edit-whatsapp"
+                <FormField
+                  label="WhatsApp"
+                  name="edit-whatsapp"
+                  mask="phone"
                   value={editForm.whatsapp || ''}
-                  onChange={(e) => setEditForm({ ...editForm, whatsapp: e.target.value })}
+                  onChange={(value, rawValue) => setEditForm({ ...editForm, whatsapp: rawValue || '' })}
+                  placeholder="(11) 99999-9999"
                 />
               </div>
               <div>
@@ -931,10 +1079,20 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
           </div>
           
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsEditDialogOpen(false);
+                setEditForm({});
+                setEditFormErrors({});
+              }}
+            >
               Cancelar
             </Button>
-            <Button onClick={handleUpdateSupplier} disabled={loading}>
+            <Button 
+              onClick={handleUpdateSupplier} 
+              disabled={loading}
+            >
               Salvar Alterações
             </Button>
           </div>

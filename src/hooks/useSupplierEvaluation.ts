@@ -312,9 +312,48 @@ export const useSupplierEvaluation = () => {
     try {
       setLoading(true);
       
+      // Filtrar apenas campos que são colunas da tabela suppliers
+      // Remover relacionamentos e campos calculados
+      const {
+        contacts,
+        evaluations,
+        rating, // rating é calculado automaticamente, não deve ser atualizado manualmente
+        on_time_delivery_rate, // calculado
+        total_orders, // calculado
+        quality_rating, // calculado
+        price_rating, // calculado
+        last_purchase_date, // calculado
+        ...validUpdateData
+      } = updateData;
+
+      // Garantir que apenas campos válidos sejam enviados
+      const allowedFields = [
+        'name',
+        'cnpj',
+        'email',
+        'phone',
+        'whatsapp',
+        'website',
+        'address',
+        'contact_person',
+        'payment_terms',
+        'delivery_days',
+        'is_active',
+        'is_preferred',
+        'categories',
+        'brands'
+      ];
+
+      const filteredData = Object.keys(validUpdateData)
+        .filter(key => allowedFields.includes(key))
+        .reduce((obj, key) => {
+          obj[key] = validUpdateData[key as keyof typeof validUpdateData];
+          return obj;
+        }, {} as Record<string, unknown>);
+      
       const { error } = await supabase
         .from('suppliers')
-        .update(updateData)
+        .update(filteredData)
         .eq('id', supplierId)
         .eq('org_id', currentOrganization.id);
 
