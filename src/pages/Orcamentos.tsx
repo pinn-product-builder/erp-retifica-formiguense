@@ -53,6 +53,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import { useBudgetReports } from "@/hooks/useBudgetReports";
 import { BUDGET_STATUS, translateStatus, translateAction, translateMessage } from "@/utils/statusTranslations";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 
 // Função para formatar valores monetários
 const formatCurrency = (value: number): string => {

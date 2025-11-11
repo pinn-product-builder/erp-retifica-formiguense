@@ -51,6 +51,8 @@ import ReservationManager from "@/components/inventory/ReservationManager";
 import { MovementHistory } from "@/components/inventory/MovementHistory";
 import InventoryCountManager from "@/components/inventory/InventoryCountManager";
 import PartsSeparationManager from "@/components/inventory/PartsSeparationManager";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 
 // Função para formatar valores monetários
 const formatCurrency = (value: number): string => {
@@ -145,11 +147,11 @@ const Estoque = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Gestão de Estoque</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Gestão de Estoque</h1>
           <p className="text-muted-foreground">
             Gerencie inventário, reservas e movimentações de peças
           </p>
@@ -217,24 +219,24 @@ const Estoque = () => {
 
       {/* Tabs de Navegação */}
       <Tabs defaultValue="inventory" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="inventory" className="flex items-center gap-2">
+        <TabsList className="w-full overflow-x-auto flex sm:grid sm:grid-cols-5">
+          <TabsTrigger value="inventory" className="flex items-center gap-2 flex-shrink-0">
             <Package className="w-4 h-4" />
             Inventário
           </TabsTrigger>
-          <TabsTrigger value="reservations" className="flex items-center gap-2">
+          <TabsTrigger value="reservations" className="flex items-center gap-2 flex-shrink-0">
             <BookOpen className="w-4 h-4" />
             Reservas
           </TabsTrigger>
-          <TabsTrigger value="movements" className="flex items-center gap-2">
+          <TabsTrigger value="movements" className="flex items-center gap-2 flex-shrink-0">
             <TrendingUp className="w-4 h-4" />
             Movimentações
           </TabsTrigger>
-          <TabsTrigger value="separation" className="flex items-center gap-2">
+          <TabsTrigger value="separation" className="flex items-center gap-2 flex-shrink-0">
             <Archive className="w-4 h-4" />
             Separação
           </TabsTrigger>
-          <TabsTrigger value="counts" className="flex items-center gap-2">
+          <TabsTrigger value="counts" className="flex items-center gap-2 flex-shrink-0">
             <CheckCircle className="w-4 h-4" />
             Inventário Físico
           </TabsTrigger>
@@ -247,7 +249,7 @@ const Estoque = () => {
             <CardHeader>
               <CardTitle>Filtros</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-4">
+            <CardContent className="flex flex-col sm:flex-row flex-wrap gap-4">
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -300,86 +302,114 @@ const Estoque = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Componente</TableHead>
-                    <TableHead>Quantidade</TableHead>
-                    <TableHead>Valor Unit.</TableHead>
-                    <TableHead>Valor Total</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Fornecedor</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredParts.map((part) => (
-                    <TableRow key={part.id}>
-                      <TableCell className="font-medium">
-                        {part.part_code || '-'}
-                      </TableCell>
-                      <TableCell>{part.part_name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {getComponentLabel(part.component)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className={part.quantity < 5 ? 'text-red-600 font-bold' : ''}>
-                          {part.quantity}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {formatCurrency(part.unit_cost)}
-                      </TableCell>
-                      <TableCell className="font-medium">
+              <ResponsiveTable
+                data={filteredParts}
+                keyExtractor={(part) => part.id}
+                emptyMessage="Nenhuma peça encontrada"
+                columns={[
+                  {
+                    key: 'code',
+                    header: 'Código',
+                    mobileLabel: 'Código',
+                    render: (part) => <span className="font-medium">{part.part_code || '-'}</span>
+                  },
+                  {
+                    key: 'name',
+                    header: 'Nome',
+                    mobileLabel: 'Nome',
+                    render: (part) => part.part_name
+                  },
+                  {
+                    key: 'component',
+                    header: 'Componente',
+                    mobileLabel: 'Componente',
+                    render: (part) => (
+                      <Badge variant="outline">
+                        {getComponentLabel(part.component)}
+                      </Badge>
+                    )
+                  },
+                  {
+                    key: 'quantity',
+                    header: 'Quantidade',
+                    mobileLabel: 'Qtd',
+                    render: (part) => (
+                      <span className={part.quantity < 5 ? 'text-red-600 font-bold' : ''}>
+                        {part.quantity}
+                      </span>
+                    )
+                  },
+                  {
+                    key: 'unit_cost',
+                    header: 'Valor Unit.',
+                    mobileLabel: 'Valor Unit.',
+                    hideInMobile: true,
+                    render: (part) => formatCurrency(part.unit_cost)
+                  },
+                  {
+                    key: 'total_value',
+                    header: 'Valor Total',
+                    mobileLabel: 'Valor Total',
+                    render: (part) => (
+                      <span className="font-medium">
                         {formatCurrency(part.unit_cost * part.quantity)}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(part.status)}</TableCell>
-                      <TableCell>{part.supplier || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPart(part);
-                              setIsDetailsDialogOpen(true);
-                            }}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPart(part);
-                              setIsEditDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPart(part);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {filteredParts.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">Nenhuma peça encontrada.</p>
-              )}
+                      </span>
+                    )
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    mobileLabel: 'Status',
+                    render: (part) => getStatusBadge(part.status)
+                  },
+                  {
+                    key: 'supplier',
+                    header: 'Fornecedor',
+                    mobileLabel: 'Fornecedor',
+                    hideInMobile: true,
+                    render: (part) => part.supplier || '-'
+                  },
+                  {
+                    key: 'actions',
+                    header: 'Ações',
+                    mobileLabel: 'Ações',
+                    render: (part) => (
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPart(part);
+                            setIsDetailsDialogOpen(true);
+                          }}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPart(part);
+                            setIsEditDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedPart(part);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )
+                  }
+                ]}
+              />
             </CardContent>
           </Card>
         </TabsContent>
