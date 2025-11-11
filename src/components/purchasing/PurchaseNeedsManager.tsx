@@ -301,16 +301,18 @@ export default function PurchaseNeedsManager() {
                 Nova Necessidade
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Nova Necessidade de Compra</DialogTitle>
               </DialogHeader>
-              <PurchaseNeedForm
-                onSuccess={() => {
-                  setShowCreateDialog(false);
-                  fetchNeeds();
-                }}
-              />
+              <div className="overflow-y-auto max-h-[calc(90vh-120px)] pr-2">
+                <PurchaseNeedForm
+                  onSuccess={() => {
+                    setShowCreateDialog(false);
+                    fetchNeeds();
+                  }}
+                />
+              </div>
             </DialogContent>
           </Dialog>
         </div>

@@ -269,9 +269,9 @@ const ReservationManager: React.FC<ReservationManagerProps> = ({
 
       {/* Alertas de Reservas Expirando */}
       {expiringReservations.length > 0 && (
-        <Card className="border-yellow-200 bg-yellow-50">
+        <Card className="">
           <CardHeader>
-            <CardTitle className="flex items-center text-yellow-800">
+            <CardTitle className="flex items-center">
               <AlertCircle className="w-5 h-5 mr-2" />
               Reservas Próximas do Vencimento
             </CardTitle>
@@ -282,7 +282,7 @@ const ReservationManager: React.FC<ReservationManagerProps> = ({
           <CardContent>
             <div className="space-y-2">
               {expiringReservations.slice(0, 3).map((reservation) => (
-                <div key={reservation.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                <div key={reservation.id} className="flex items-center justify-between p-2 border-gray-200">
                   <div>
                     <p className="font-medium">{reservation.part_name || reservation.part?.part_name}</p>
                     <p className="text-sm text-muted-foreground">

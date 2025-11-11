@@ -538,7 +538,7 @@ export function GoalsManager() {
                     <Label htmlFor="target_value">Valor Alvo</Label>
                     <Input
                       id="target_value"
-                      type="number"
+                      type="string"
                       value={newGoal.target_value}
                       onChange={(e) => setNewGoal({ ...newGoal, target_value: parseFloat(e.target.value) })}
                     />
