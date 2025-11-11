@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import SupplierEvaluation from '@/components/purchasing/SupplierEvaluation';
+import SuppliersManager from '@/components/purchasing/SuppliersManager';
 import QuotationManager from '@/components/purchasing/QuotationManager';
 import PurchaseNeedsManager from '@/components/purchasing/PurchaseNeedsManager';
 import PurchaseOrderManager from '@/components/purchasing/PurchaseOrderManager';
@@ -55,27 +56,14 @@ const translatePriority = (priority: string) => {
 
 export default function Compras() {
   const { 
-    suppliers, 
     requisitions, 
     purchaseOrders, 
     loading, 
-    createSupplier, 
     createRequisition,
     updateRequisitionStatus,
-    createPurchaseOrder 
+    createPurchaseOrder
   } = usePurchasing();
   const { toast } = useToast();
-
-  const [newSupplier, setNewSupplier] = useState({
-    name: '',
-    cnpj: '',
-    email: '',
-    phone: '',
-    address: '',
-    contact_person: '',
-    payment_terms: '',
-    delivery_days: 0,
-  });
 
   const [showRequisitionDialog, setShowRequisitionDialog] = useState(false);
   const [newRequisition, setNewRequisition] = useState({
@@ -84,47 +72,6 @@ export default function Compras() {
     justification: '',
     items: [{ item_name: '', description: '', quantity: 1, unit_price: 0 }],
   });
-
-  const handleCreateSupplier = async () => {
-    if (!newSupplier.name) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Nome do fornecedor é obrigatório"
-      });
-      return;
-    }
-    
-    try {
-      await createSupplier({
-        ...newSupplier,
-        rating: 5.0,
-        is_active: true,
-      });
-      
-      setNewSupplier({
-        name: '',
-        cnpj: '',
-        email: '',
-        phone: '',
-        address: '',
-        contact_person: '',
-        payment_terms: '',
-        delivery_days: 0,
-      });
-
-      toast({
-        title: "Sucesso",
-        description: "Fornecedor criado com sucesso"
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Falha ao criar fornecedor"
-      });
-    }
-  };
 
   const handleCreateRequisition = async () => {
     if (!newRequisition.department || newRequisition.items.length === 0) {
@@ -224,7 +171,7 @@ export default function Compras() {
               <Users className="h-4 w-4 text-blue-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Fornecedores Ativos</p>
-                <p className="text-2xl font-bold">{suppliers.filter(s => s.is_active).length}</p>
+                <p className="text-2xl font-bold">-</p>
               </div>
             </div>
           </CardContent>
@@ -496,139 +443,7 @@ export default function Compras() {
 
         {/* Suppliers Tab */}
         <TabsContent value="suppliers" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Fornecedores</h2>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Fornecedor
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Cadastrar Fornecedor</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label>Nome da Empresa</Label>
-                    <Input
-                      value={newSupplier.name}
-                      onChange={(e) => setNewSupplier({...newSupplier, name: e.target.value})}
-                      placeholder="Razão social do fornecedor"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>CNPJ</Label>
-                      <Input
-                        value={newSupplier.cnpj}
-                        onChange={(e) => setNewSupplier({...newSupplier, cnpj: e.target.value})}
-                        placeholder="00.000.000/0000-00"
-                      />
-                    </div>
-                    <div>
-                      <Label>Prazo de Entrega (dias)</Label>
-                      <Input
-                        type="number"
-                        value={newSupplier.delivery_days}
-                        onChange={(e) => setNewSupplier({...newSupplier, delivery_days: Number(e.target.value)})}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Email</Label>
-                      <Input
-                        type="email"
-                        value={newSupplier.email}
-                        onChange={(e) => setNewSupplier({...newSupplier, email: e.target.value})}
-                        placeholder="contato@fornecedor.com"
-                      />
-                    </div>
-                    <div>
-                      <Label>Telefone</Label>
-                      <Input
-                        value={newSupplier.phone}
-                        onChange={(e) => setNewSupplier({...newSupplier, phone: e.target.value})}
-                        placeholder="(11) 99999-9999"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Pessoa de Contato</Label>
-                    <Input
-                      value={newSupplier.contact_person}
-                      onChange={(e) => setNewSupplier({...newSupplier, contact_person: e.target.value})}
-                      placeholder="Nome do responsável"
-                    />
-                  </div>
-                  <div>
-                    <Label>Endereço</Label>
-                    <Textarea
-                      value={newSupplier.address}
-                      onChange={(e) => setNewSupplier({...newSupplier, address: e.target.value})}
-                      placeholder="Endereço completo"
-                    />
-                  </div>
-                  <div>
-                    <Label>Condições de Pagamento</Label>
-                    <Input
-                      value={newSupplier.payment_terms}
-                      onChange={(e) => setNewSupplier({...newSupplier, payment_terms: e.target.value})}
-                      placeholder="Ex: 30/60/90 dias"
-                    />
-                  </div>
-                  <Button onClick={handleCreateSupplier} className="w-full">
-                    Cadastrar Fornecedor
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {suppliers.map((supplier) => (
-              <Card key={supplier.id}>
-                <CardContent className="p-4">
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between">
-                      <h3 className="font-medium">{supplier.name}</h3>
-                      <div className="flex items-center gap-1">
-                        <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                        <span className="text-sm">{supplier.rating.toFixed(1)}</span>
-                      </div>
-                    </div>
-                    {supplier.contact_person && (
-                      <p className="text-sm text-muted-foreground">
-                        Contato: {supplier.contact_person}
-                      </p>
-                    )}
-                    <p className="text-sm text-muted-foreground">
-                      Entrega: {supplier.delivery_days} dias
-                    </p>
-                    {supplier.phone && (
-                      <p className="text-sm text-muted-foreground">
-                        Tel: {supplier.phone}
-                      </p>
-                    )}
-                    <div className="pt-2">
-                      <Badge variant={supplier.is_active ? "default" : "secondary"}>
-                        {supplier.is_active ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {suppliers.length === 0 && (
-              <Card className="col-span-full">
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">Nenhum fornecedor cadastrado</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+          <SuppliersManager />
         </TabsContent>
 
         {/* Purchase Orders Tab */}

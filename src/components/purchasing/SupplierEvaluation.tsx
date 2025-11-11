@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,15 +13,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -42,11 +33,6 @@ import {
   Phone,
   Mail,
   MessageCircle,
-  Globe,
-  MapPin,
-  Calendar,
-  TrendingUp,
-  TrendingDown,
   Award,
   AlertCircle,
   CheckCircle,
@@ -58,7 +44,6 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-// Função para formatar valores monetários
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -557,7 +542,7 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                       <Star className="h-4 w-4 text-yellow-500" />
                       <div>
                         <p className="text-sm text-muted-foreground">Avaliação Média</p>
-                        <p className="text-2xl font-bold">{supplierStats.averageRating.toFixed(1)}</p>
+                        <p className="text-2xl font-bold">{((supplierStats as Record<string, unknown>).averageRating as number).toFixed(1)}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -569,7 +554,7 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                       <Clock className="h-4 w-4 text-green-500" />
                       <div>
                         <p className="text-sm text-muted-foreground">Pontualidade</p>
-                        <p className="text-2xl font-bold">{supplierStats.onTimeDeliveryRate.toFixed(0)}%</p>
+                        <p className="text-2xl font-bold">{((supplierStats as Record<string, unknown>).onTimeDeliveryRate as number).toFixed(0)}%</p>
                       </div>
                     </div>
                   </CardContent>
@@ -581,7 +566,7 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                       <AlertCircle className="h-4 w-4 text-red-500" />
                       <div>
                         <p className="text-sm text-muted-foreground">Problemas Qualidade</p>
-                        <p className="text-2xl font-bold">{supplierStats.qualityIssuesRate.toFixed(0)}%</p>
+                        <p className="text-2xl font-bold">{((supplierStats as Record<string, unknown>).qualityIssuesRate as number).toFixed(0)}%</p>
                       </div>
                     </div>
                   </CardContent>
@@ -593,7 +578,7 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                       <Award className="h-4 w-4 text-blue-500" />
                       <div>
                         <p className="text-sm text-muted-foreground">Total Avaliações</p>
-                        <p className="text-2xl font-bold">{supplierStats.totalEvaluations}</p>
+                        <p className="text-2xl font-bold">{((supplierStats as Record<string, unknown>).totalEvaluations as number)}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -665,16 +650,16 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                   </TableHeader>
                   <TableBody>
                     {purchaseHistory.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.po_number}</TableCell>
+                      <TableRow key={order.id as string }>
+                        <TableCell className="font-medium">{order.po_number as string}</TableCell>
                         <TableCell>
-                          {format(new Date(order.order_date), 'dd/MM/yyyy')}
+                          {format(new Date(order.order_date as string), 'dd/MM/yyyy')}
                         </TableCell>
                         <TableCell>
-                          {formatCurrency(order.total_value)}
+                          {formatCurrency(order.total_value as number)}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{order.status}</Badge>
+                          <Badge variant="outline">{order.status as string}</Badge>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1070,7 +1055,7 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                 <Label htmlFor="edit-delivery-days">Prazo de Entrega (dias)</Label>
                 <Input
                   id="edit-delivery-days"
-                  type="number"
+                  type="string"
                   value={editForm.delivery_days || 0}
                   onChange={(e) => setEditForm({ ...editForm, delivery_days: Number(e.target.value) })}
                 />
