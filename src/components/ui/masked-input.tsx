@@ -43,6 +43,69 @@ const detectCPForCNPJ = (value: string): 'cpf' | 'cnpj' => {
 
 const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
   ({ className, mask, value = '', onChange, disabled, ...props }, ref) => {
+    const inputRef = React.useRef<HTMLInputElement>(null);
+    const customHandlersRef = React.useRef<{
+      onBlur?: React.FocusEventHandler<HTMLInputElement>;
+      onFocus?: React.FocusEventHandler<HTMLInputElement>;
+      onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
+      onKeyUp?: React.KeyboardEventHandler<HTMLInputElement>;
+      onKeyPress?: React.KeyboardEventHandler<HTMLInputElement>;
+    }>({});
+
+    // Combinar refs
+    React.useImperativeHandle(ref, () => inputRef.current as HTMLInputElement);
+
+    // Separar handlers customizados das outras props
+    const {
+      onBlur: customOnBlur,
+      onFocus: customOnFocus,
+      onKeyDown: customOnKeyDown,
+      onKeyUp: customOnKeyUp,
+      onKeyPress: customOnKeyPress,
+      ...inputMaskProps
+    } = props;
+
+    // Armazenar handlers customizados no ref
+    React.useEffect(() => {
+      customHandlersRef.current = {
+        onBlur: customOnBlur,
+        onFocus: customOnFocus,
+        onKeyDown: customOnKeyDown,
+        onKeyUp: customOnKeyUp,
+        onKeyPress: customOnKeyPress,
+      };
+    }, [customOnBlur, customOnFocus, customOnKeyDown, customOnKeyUp, customOnKeyPress]);
+
+    // Adicionar event listeners via DOM quando o input estiver montado
+    React.useEffect(() => {
+      const input = inputRef.current;
+      if (!input) return;
+
+      const handleBlur = (e: FocusEvent) => {
+        customHandlersRef.current.onBlur?.(e as unknown as React.FocusEvent<HTMLInputElement>);
+      };
+
+      const handleFocus = (e: FocusEvent) => {
+        customHandlersRef.current.onFocus?.(e as unknown as React.FocusEvent<HTMLInputElement>);
+      };
+
+      if (customOnBlur) {
+        input.addEventListener('blur', handleBlur);
+      }
+      if (customOnFocus) {
+        input.addEventListener('focus', handleFocus);
+      }
+
+      return () => {
+        if (customOnBlur) {
+          input.removeEventListener('blur', handleBlur);
+        }
+        if (customOnFocus) {
+          input.removeEventListener('focus', handleFocus);
+        }
+      };
+    }, [customOnBlur, customOnFocus]);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value;
       const raw = rawValue[mask](inputValue);
@@ -158,6 +221,7 @@ const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
     }
 
     // Para outros campos, usar react-input-mask
+    // Não passar handlers customizados diretamente - usar event listeners via ref
     return (
       <InputMask
         mask={masks[mask]}
@@ -169,9 +233,9 @@ const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
       >
         {(inputProps: React.InputHTMLAttributes<HTMLInputElement>) => (
           <Input
-            {...props}
+            {...inputMaskProps}
             {...inputProps}
-            ref={ref}
+            ref={inputRef}
             className={cn(className)}
           />
         )}
