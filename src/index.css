@@ -4,7 +4,7 @@
 @tailwind utilities;
 
 /* Garantir que o popover do Material-UI DatePicker apareça acima do Dialog */
-/* Dialog usa z-40, então o DatePicker precisa estar acima */
+/* Dialog usa z-50, então o DatePicker precisa estar acima */
 .MuiPickersPopper-root,
 .MuiPickersPopper-root[role="dialog"],
 .MuiPopper-root[role="dialog"],
@@ -23,6 +23,19 @@
 .MuiPickersPopper-root *,
 .MuiPopper-root * {
   pointer-events: auto !important;
+}
+
+/* Permitir redimensionamento de modais em desktop */
+[data-radix-dialog-content].resizable-modal {
+  resize: both;
+  overflow: auto;
+  position: fixed !important;
+}
+
+[data-radix-dialog-content].resizable-modal::-webkit-resizer {
+  background: linear-gradient(-45deg, transparent 30%, hsl(var(--border)) 30%, hsl(var(--border)) 40%, transparent 40%, transparent 60%, hsl(var(--border)) 60%, hsl(var(--border)) 70%, transparent 70%);
+  background-size: 12px 12px;
+  cursor: nwse-resize;
 }
 
 @layer base {

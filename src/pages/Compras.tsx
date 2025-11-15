@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Users, FileText, Package, Plus, Star, TrendingUp, Award } from 'lucide-react';
+import { ShoppingCart, Users, FileText, Package, Plus, Star, TrendingUp, Award, Check, X } from 'lucide-react';
 import { usePurchasing } from '@/hooks/usePurchasing';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import SupplierEvaluation from '@/components/purchasing/SupplierEvaluation';
 import SuppliersManager from '@/components/purchasing/SuppliersManager';
 import QuotationManager from '@/components/purchasing/QuotationManager';
@@ -158,56 +159,56 @@ export default function Compras() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Sistema de Compras</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Sistema de Compras</h1>
           <p className="text-muted-foreground">Gerencie fornecedores, requisições e pedidos de compra</p>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
-              <Users className="h-4 w-4 text-blue-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Fornecedores Ativos</p>
-                <p className="text-2xl font-bold">-</p>
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Fornecedores Ativos</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">-</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
-              <FileText className="h-4 w-4 text-yellow-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Requisições Pendentes</p>
-                <p className="text-2xl font-bold">{requisitions.filter(r => r.status === 'pending').length}</p>
+              <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Requisições Pendentes</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">{requisitions.filter(r => r.status === 'pending').length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
-              <Package className="h-4 w-4 text-green-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Pedidos Ativos</p>
-                <p className="text-2xl font-bold">{purchaseOrders.filter(po => ['pending', 'sent', 'confirmed'].includes(po.status)).length}</p>
+              <Package className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Pedidos Ativos</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">{purchaseOrders.filter(po => ['pending', 'sent', 'confirmed'].includes(po.status)).length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
-              <ShoppingCart className="h-4 w-4 text-purple-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Valor em Pedidos</p>
-                <p className="text-2xl font-bold">{formatCurrency(getActiveOrdersValue())}</p>
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Valor em Pedidos</p>
+                <p className="text-xs sm:text-sm md:text-base font-bold truncate">{formatCurrency(getActiveOrdersValue())}</p>
               </div>
             </div>
           </CardContent>
@@ -216,16 +217,17 @@ export default function Compras() {
 
       {/* Main Content */}
       <Tabs defaultValue="requisitions" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="needs">Necessidades</TabsTrigger>
-          <TabsTrigger value="requisitions">Requisições</TabsTrigger>
-          <TabsTrigger value="orders">Pedidos</TabsTrigger>
-          <TabsTrigger value="receipts">Recebimentos</TabsTrigger>
-          <TabsTrigger value="suppliers">Fornecedores</TabsTrigger>
-          <TabsTrigger value="quotations">Cotações</TabsTrigger>
-          <TabsTrigger value="evaluations" className="flex items-center gap-2">
-            <Award className="w-4 h-4" />
-            Avaliações
+        <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-7">
+          <TabsTrigger value="needs" className="flex-shrink-0 text-xs sm:text-sm">Necessidades</TabsTrigger>
+          <TabsTrigger value="requisitions" className="flex-shrink-0 text-xs sm:text-sm">Requisições</TabsTrigger>
+          <TabsTrigger value="orders" className="flex-shrink-0 text-xs sm:text-sm">Pedidos</TabsTrigger>
+          <TabsTrigger value="receipts" className="flex-shrink-0 text-xs sm:text-sm">Recebimentos</TabsTrigger>
+          <TabsTrigger value="suppliers" className="flex-shrink-0 text-xs sm:text-sm">Fornecedores</TabsTrigger>
+          <TabsTrigger value="quotations" className="flex-shrink-0 text-xs sm:text-sm">Cotações</TabsTrigger>
+          <TabsTrigger value="evaluations" className="flex items-center gap-1 sm:gap-2 flex-shrink-0 text-xs sm:text-sm">
+            <Award className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Avaliações</span>
+            <span className="sm:hidden">Aval.</span>
           </TabsTrigger>
         </TabsList>
 
@@ -379,66 +381,124 @@ export default function Compras() {
             </Dialog>
           </div>
 
-          <div className="space-y-4">
-            {loading ? (
-              <p>Carregando requisições...</p>
-            ) : requisitions.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-muted-foreground">Nenhuma requisição encontrada</p>
-                </CardContent>
-              </Card>
-            ) : (
-              requisitions.map((requisition) => (
-                <Card key={requisition.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{requisition.requisition_number}</p>
-                          <Badge className={STATUS_COLORS[requisition.status as keyof typeof STATUS_COLORS] || 'bg-gray-100'}>
-                            {translateStatus(requisition.status)}
-                          </Badge>
-                          <Badge variant="outline">
-                            {translatePriority(requisition.priority)}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          Departamento: {requisition.department}
-                        </p>
-                        <p className="text-sm">
-                          Valor Estimado: {formatCurrency(requisition.total_estimated_value)}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Criado em: {new Date(requisition.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      
-                      <div className="flex gap-2">
+          {loading ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <p className="text-muted-foreground">Carregando requisições...</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-4">
+                <ResponsiveTable
+                  data={requisitions}
+                  keyExtractor={(requisition) => requisition.id}
+                  emptyMessage="Nenhuma requisição encontrada"
+                  columns={[
+                  {
+                    key: 'requisition_number',
+                    header: 'Número',
+                    mobileLabel: 'Número',
+                    priority: 1,
+                    minWidth: 120,
+                    render: (requisition) => (
+                      <span className="font-medium text-xs sm:text-sm">{requisition.requisition_number}</span>
+                    )
+                  },
+                  {
+                    key: 'department',
+                    header: 'Departamento',
+                    mobileLabel: 'Depto',
+                    priority: 3,
+                    minWidth: 120,
+                    render: (requisition) => <span className="text-xs sm:text-sm">{requisition.department}</span>
+                  },
+                  {
+                    key: 'priority',
+                    header: 'Prioridade',
+                    mobileLabel: 'Prioridade',
+                    priority: 2,
+                    minWidth: 100,
+                    render: (requisition) => (
+                      <Badge variant="outline" className="text-xs">
+                        {translatePriority(requisition.priority)}
+                      </Badge>
+                    )
+                  },
+                  {
+                    key: 'total_estimated_value',
+                    header: 'Valor Estimado',
+                    mobileLabel: 'Valor',
+                    priority: 2,
+                    minWidth: 120,
+                    render: (requisition) => (
+                      <span className="font-medium text-xs sm:text-sm whitespace-nowrap">
+                        {formatCurrency(requisition.total_estimated_value)}
+                      </span>
+                    )
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    mobileLabel: 'Status',
+                    priority: 2,
+                    minWidth: 100,
+                    render: (requisition) => (
+                      <Badge className={`text-xs ${STATUS_COLORS[requisition.status as keyof typeof STATUS_COLORS] || 'bg-gray-100'}`}>
+                        {translateStatus(requisition.status)}
+                      </Badge>
+                    )
+                  },
+                  {
+                    key: 'created_at',
+                    header: 'Data',
+                    mobileLabel: 'Data',
+                    priority: 4,
+                    minWidth: 100,
+                    hideInMobile: true,
+                    render: (requisition) => (
+                      <span className="text-xs sm:text-sm">
+                        {new Date(requisition.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                    )
+                  },
+                  {
+                    key: 'actions',
+                    header: 'Ações',
+                    mobileLabel: 'Ações',
+                    priority: 1,
+                    minWidth: 150,
+                    render: (requisition) => (
+                      <div className="flex gap-1 sm:gap-2">
                         {requisition.status === 'pending' && (
                           <>
                             <Button 
                               size="sm" 
+                              className="text-xs h-7 px-2 sm:px-3"
                               onClick={() => updateRequisitionStatus(requisition.id, 'approved')}
                             >
-                              Aprovar
+                              <Check className="h-3 w-3 sm:mr-1" />
+                              <span className="hidden sm:inline">Aprovar</span>
                             </Button>
                             <Button 
                               size="sm" 
                               variant="destructive"
+                              className="text-xs h-7 px-2 sm:px-3"
                               onClick={() => updateRequisitionStatus(requisition.id, 'rejected')}
                             >
-                              Rejeitar
+                              <X className="h-3 w-3 sm:mr-1" />
+                              <span className="hidden sm:inline">Rejeitar</span>
                             </Button>
                           </>
                         )}
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+                    )
+                  }
+                ]}
+                />
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Suppliers Tab */}

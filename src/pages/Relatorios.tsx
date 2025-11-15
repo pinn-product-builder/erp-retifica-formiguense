@@ -69,10 +69,10 @@ const Relatorios = () => {
       </div>
 
       <Tabs defaultValue="performance" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="performance">Performance de Estoque</TabsTrigger>
-          <TabsTrigger value="operational">Relatórios Operacionais</TabsTrigger>
-          <TabsTrigger value="financial">Relatórios Financeiros</TabsTrigger>
+        <TabsList className="w-full overflow-x-auto flex md:grid md:grid-cols-3">
+          <TabsTrigger value="performance" className="flex-shrink-0">Performance de Estoque</TabsTrigger>
+          <TabsTrigger value="operational" className="flex-shrink-0">Relatórios Operacionais</TabsTrigger>
+          <TabsTrigger value="financial" className="flex-shrink-0">Relatórios Financeiros</TabsTrigger>
         </TabsList>
 
         {/* Aba Performance de Estoque */}
@@ -83,7 +83,7 @@ const Relatorios = () => {
         {/* Aba Relatórios Operacionais */}
         <TabsContent value="operational" className="space-y-6">
           {/* Estatísticas rápidas */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {estatisticasRapidas.map((stat, index) => (
               <StatCard
                 key={index}

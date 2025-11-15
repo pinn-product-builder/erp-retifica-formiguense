@@ -149,48 +149,48 @@ export default function ReceiptManager() {
   return (
     <div className="space-y-6">
       {/* Dashboard Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">{stats.pending_receipt}</p>
-              <p className="text-sm text-muted-foreground">Aguardando Recebimento</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-600">{stats.pending_receipt}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Aguardando Recebimento</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-purple-600">{stats.in_transit}</p>
-              <p className="text-sm text-muted-foreground">Em Trânsito</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-purple-600">{stats.in_transit}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Em Trânsito</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
-              <p className="text-sm text-muted-foreground">Atrasados</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-red-600">{stats.overdue}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Atrasados</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="text-center">
-              <p className="text-lg font-bold text-blue-600">{formatCurrency(stats.total_value)}</p>
-              <p className="text-sm text-muted-foreground">Valor Pendente</p>
+              <p className="text-xs sm:text-sm md:text-base font-bold text-blue-600 truncate">{formatCurrency(stats.total_value)}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Valor Pendente</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-emerald-600">{stats.recent_receipts}</p>
-              <p className="text-sm text-muted-foreground">Recebidos (7 dias)</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-emerald-600">{stats.recent_receipts}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Recebidos (7 dias)</p>
             </div>
           </CardContent>
         </Card>

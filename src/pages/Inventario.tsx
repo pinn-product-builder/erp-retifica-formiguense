@@ -24,24 +24,24 @@ export default function Inventario() {
 
       {/* Main Content */}
       <Tabs defaultValue="dashboard" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="dashboard" className="flex items-center gap-2">
+        <TabsList className="w-full overflow-x-auto flex md:grid md:grid-cols-5">
+          <TabsTrigger value="dashboard" className="flex items-center gap-2 flex-shrink-0">
             <BarChart3 className="w-4 h-4" />
             Dashboard
           </TabsTrigger>
-          <TabsTrigger value="movements" className="flex items-center gap-2">
+          <TabsTrigger value="movements" className="flex items-center gap-2 flex-shrink-0">
             <ArrowRightLeft className="w-4 h-4" />
             Movimentações
           </TabsTrigger>
-          <TabsTrigger value="approvals" className="flex items-center gap-2">
+          <TabsTrigger value="approvals" className="flex items-center gap-2 flex-shrink-0">
             <CheckCircle2 className="w-4 h-4" />
             Aprovações
           </TabsTrigger>
-          <TabsTrigger value="counts" className="flex items-center gap-2">
+          <TabsTrigger value="counts" className="flex items-center gap-2 flex-shrink-0">
             <Package className="w-4 h-4" />
             Contagens
           </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2">
+          <TabsTrigger value="history" className="flex items-center gap-2 flex-shrink-0">
             <AlertTriangle className="w-4 h-4" />
             Histórico
           </TabsTrigger>

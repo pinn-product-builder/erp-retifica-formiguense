@@ -335,7 +335,7 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {!purchaseNeed && (
               <div>
                 <Label htmlFor="requisition">Requisição de Compra *</Label>
@@ -424,7 +424,7 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
             </Alert>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="quote_date">Data da Cotação *</Label>
               <DesktopDatePicker
@@ -653,10 +653,11 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
       </Card>
 
       {/* Botões */}
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-col sm:flex-row justify-end gap-2">
         <Button 
           type="button" 
           variant="outline" 
+          className="w-full sm:w-auto"
           onClick={() => {
             if (onCancel) {
               onCancel();
@@ -669,7 +670,7 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
         >
           Cancelar
         </Button>
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" disabled={loading} className="w-full sm:w-auto">
           {loading ? 'Criando...' : 'Criar Cotação'}
         </Button>
       </div>

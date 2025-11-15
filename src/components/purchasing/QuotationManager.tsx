@@ -11,14 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import {
   Select,
   SelectContent,
@@ -256,72 +249,72 @@ export default function QuotationManager() {
       </div>
 
       {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <DollarSign className="w-5 h-5 text-blue-600" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Total</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">{stats.total}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="w-5 h-5 text-yellow-600" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-yellow-100 rounded-lg flex-shrink-0">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pendentes</p>
-                <p className="text-2xl font-bold">{stats.pending}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Aprovadas</p>
-                <p className="text-2xl font-bold">{stats.approved}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Pendentes</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">{stats.pending}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <XCircle className="w-5 h-5 text-red-600" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg flex-shrink-0">
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Rejeitadas</p>
-                <p className="text-2xl font-bold">{stats.rejected}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Aprovadas</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">{stats.approved}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <TrendingUp className="w-5 h-5 text-purple-600" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-red-100 rounded-lg flex-shrink-0">
+                <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Valor Total</p>
-                <p className="text-lg font-bold">{formatCurrency(stats.totalValue)}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Rejeitadas</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">{stats.rejected}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg flex-shrink-0">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Valor Total</p>
+                <p className="text-xs sm:text-sm md:text-base font-bold truncate">{formatCurrency(stats.totalValue)}</p>
               </div>
             </div>
           </CardContent>
@@ -403,111 +396,162 @@ export default function QuotationManager() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Número</TableHead>
-                    <TableHead>Fornecedor</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Validade</TableHead>
-                    <TableHead>Valor Total</TableHead>
-                    <TableHead>Prazo</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredQuotations.map((quotation) => (
-                    <TableRow key={quotation.id}>
-                      <TableCell className="font-mono text-sm">
-                        {quotation.quote_number || `COT-${quotation.id.slice(0, 8)}`}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium">{quotation.supplier?.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-muted-foreground" />
-                          {formatDate(quotation.quote_date)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {quotation.validity_date ? formatDate(quotation.validity_date) : '-'}
-                      </TableCell>
-                      <TableCell className="font-semibold">
-                        {formatCurrency(quotation.total_value)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Truck className="w-4 h-4 text-muted-foreground" />
-                          {quotation.delivery_time || quotation.supplier?.delivery_days || 0} dias
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(quotation.status)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {quotation.status === 'pending' && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => updateQuotationStatus(quotation.id, 'approved')}
-                              >
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Aprovar
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => updateQuotationStatus(quotation.id, 'rejected')}
-                              >
-                                <XCircle className="w-4 h-4 mr-1" />
-                                Rejeitar
-                              </Button>
-                            </>
-                          )}
-                          
-                          {/* Botão de comparação - só aparece se há múltiplas cotações para a mesma requisição */}
-                          {(() => {
-                            const reqId = quotation.requisition_id;
-                            const canCompare = canCompareByRequisition[reqId];
-                            const hasMultiple = (canCompare?.total || 0) >= 2;
-                            
-                            if (!hasMultiple) return null;
-                            
-                            return (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  console.log('Botão Comparar clicado para requisição:', reqId);
-                                  if (reqId) {
-                                    handleCompareQuotations(reqId);
-                                  } else {
-                                    console.error('requisition_id é null ou undefined');
-                                  }
-                                }}
-                              >
-                                <Award className="w-4 h-4 mr-1" />
-                                Comparar
-                              </Button>
-                            );
-                          })()}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <ResponsiveTable
+              data={filteredQuotations}
+              keyExtractor={(quotation) => quotation.id}
+              emptyMessage="Nenhuma cotação encontrada"
+              columns={[
+                {
+                  key: 'quote_number',
+                  header: 'Número',
+                  mobileLabel: 'Número',
+                  priority: 1,
+                  minWidth: 120,
+                  render: (quotation) => (
+                    <span className="font-mono text-xs sm:text-sm">
+                      {quotation.quote_number || `COT-${quotation.id.slice(0, 8)}`}
+                    </span>
+                  )
+                },
+                {
+                  key: 'supplier',
+                  header: 'Fornecedor',
+                  mobileLabel: 'Fornecedor',
+                  priority: 2,
+                  minWidth: 150,
+                  render: (quotation) => (
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                      <span className="font-medium text-xs sm:text-sm">{quotation.supplier?.name}</span>
+                    </div>
+                  )
+                },
+                {
+                  key: 'quote_date',
+                  header: 'Data',
+                  mobileLabel: 'Data',
+                  priority: 3,
+                  minWidth: 100,
+                  hideInMobile: true,
+                  render: (quotation) => (
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                      <span className="text-xs sm:text-sm">{formatDate(quotation.quote_date)}</span>
+                    </div>
+                  )
+                },
+                {
+                  key: 'validity_date',
+                  header: 'Validade',
+                  mobileLabel: 'Validade',
+                  priority: 5,
+                  minWidth: 100,
+                  hideInMobile: true,
+                  render: (quotation) => (
+                    <span className="text-xs sm:text-sm">
+                      {quotation.validity_date ? formatDate(quotation.validity_date) : '-'}
+                    </span>
+                  )
+                },
+                {
+                  key: 'total_value',
+                  header: 'Valor Total',
+                  mobileLabel: 'Valor',
+                  priority: 2,
+                  minWidth: 120,
+                  render: (quotation) => (
+                    <span className="font-semibold text-xs sm:text-sm whitespace-nowrap">{formatCurrency(quotation.total_value)}</span>
+                  )
+                },
+                {
+                  key: 'delivery_time',
+                  header: 'Prazo',
+                  mobileLabel: 'Prazo',
+                  priority: 4,
+                  minWidth: 100,
+                  hideInMobile: true,
+                  render: (quotation) => (
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                      <span className="text-xs sm:text-sm">
+                        {quotation.delivery_time || quotation.supplier?.delivery_days || 0} dias
+                      </span>
+                    </div>
+                  )
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  mobileLabel: 'Status',
+                  priority: 2,
+                  minWidth: 100,
+                  render: (quotation) => getStatusBadge(quotation.status)
+                },
+                {
+                  key: 'actions',
+                  header: 'Ações',
+                  mobileLabel: 'Ações',
+                  priority: 1,
+                  minWidth: 200,
+                  render: (quotation) => (
+                    <div className="flex items-center justify-end gap-1 sm:gap-2 flex-wrap">
+                      {quotation.status === 'pending' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7 px-2 sm:px-3"
+                            onClick={() => updateQuotationStatus(quotation.id, 'approved')}
+                          >
+                            <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Aprovar</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7 px-2 sm:px-3"
+                            onClick={() => updateQuotationStatus(quotation.id, 'rejected')}
+                          >
+                            <XCircle className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Rejeitar</span>
+                          </Button>
+                        </>
+                      )}
+                      
+                      {/* Botão de comparação - só aparece se há múltiplas cotações para a mesma requisição */}
+                      {(() => {
+                        const reqId = quotation.requisition_id;
+                        const canCompare = canCompareByRequisition[reqId];
+                        const hasMultiple = (canCompare?.total || 0) >= 2;
+                        
+                        if (!hasMultiple) return null;
+                        
+                        return (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7 px-2 sm:px-3"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('Botão Comparar clicado para requisição:', reqId);
+                              if (reqId) {
+                                handleCompareQuotations(reqId);
+                              } else {
+                                console.error('requisition_id é null ou undefined');
+                              }
+                            }}
+                          >
+                            <Award className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Comparar</span>
+                          </Button>
+                        );
+                      })()}
+                    </div>
+                  )
+                }
+              ]}
+            />
           )}
         </CardContent>
       </Card>

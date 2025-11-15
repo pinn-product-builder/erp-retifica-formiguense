@@ -2,35 +2,26 @@
 alwaysApply: true
 ---
 
-Quando criar telas:
-- Utilize Clean Architecture (pages → features → components → services).
-- Priorize componentização e reutilização.
-- Nunca coloque lógica de negócio em páginas.
-- As telas serão sempre responsivas para mobile, tablet e desktop
+## Frontend - Quando criar telas:
+- Utilize Clean Architecture: `pages/` → `components/[feature]/` → `hooks/` → `services/`
+- Priorize componentização e reutilização de componentes.
+- Nunca coloque lógica de negócio em páginas - use hooks ou serviços.
+- As telas serão sempre responsivas para mobile, tablet e desktop (use classes Tailwind: `sm:`, `md:`, `lg:`, `xl:`).
+- Componentes específicos de feature devem estar em `components/[feature]/` (ex: `components/purchasing/`, `components/budgets/`).
+- Componentes UI reutilizáveis devem estar em `components/ui/`.
 
-Quando criar backend:
-- Utilize Clean Architecture (domain, application, infrastructure, presentation).
-- Separe o código em módulos por domínio.
-- Controllers nunca acessam banco diretamente, apenas via use cases.
-- Sempre use injeção de dependência para providers externos.
+## Backend - Quando criar backend:
+- Para Supabase Edge Functions: organize por domínio em `supabase/functions/[domain]/`.
+- Para migrations SQL: use `supabase/migrations/` com nomenclatura descritiva.
+- Separe lógica de negócio em funções SQL quando possível.
+- Use RLS (Row Level Security) para segurança de dados.
+- Edge Functions devem ser stateless e usar injeção de dependência quando aplicável.
 
-Regras gerais:
-- Tipagem forte com TypeScript.
-- Nomeação consistente: PascalCase (classes), camelCase (funções), snake_case (colunas).
-- Testes unitários para casos de uso e entidades.
-- Testes de integração para fluxos críticos.Quando criar telas:
-- Utilize Clean Architecture (pages → features → components → services).
-- Priorize componentização e reutilização.
-- Nunca coloque lógica de negócio em páginas.
-
-Quando criar backend:
-- Utilize Clean Architecture (domain, application, infrastructure, presentation).
-- Separe o código em módulos por domínio.
-- Controllers nunca acessam banco diretamente, apenas via use cases.
-- Sempre use injeção de dependência para providers externos.
-
-Regras gerais:
-- Tipagem forte com TypeScript.
-- Nomeação consistente: PascalCase (classes), camelCase (funções), snake_case (colunas).
-- Testes unitários para casos de uso e entidades.
-- Testes de integração para fluxos críticos.
+## Regras gerais:
+- Tipagem forte com TypeScript - evite `@ts-nocheck` e `@ts-expect-error`.
+- Nomeação consistente:
+  - PascalCase: classes, componentes, tipos/interfaces
+  - camelCase: funções, variáveis, hooks (prefixo `use`)
+  - snake_case: colunas do banco de dados
+- Testes: implementar testes unitários para hooks e casos de uso críticos.
+- Testes de integração para fluxos críticos (quando estrutura de testes estiver implementada).

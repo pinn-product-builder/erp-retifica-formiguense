@@ -106,8 +106,8 @@ const Estoque = () => {
     const { icon: Icon, label, color } = config[status as keyof typeof config] || config.pendente;
 
     return (
-      <Badge className={color}>
-        <Icon className="w-3 h-3 mr-1" />
+      <Badge className={`${color} text-xs px-1.5 sm:px-2 py-0.5 sm:py-1`}>
+        <Icon className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
         {label}
       </Badge>
     );
@@ -181,7 +181,7 @@ const Estoque = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         <StatCard
           title="Total de Peças"
           value={stats.total}
@@ -311,20 +311,20 @@ const Estoque = () => {
                     key: 'code',
                     header: 'Código',
                     mobileLabel: 'Código',
-                    render: (part) => <span className="font-medium">{part.part_code || '-'}</span>
+                    render: (part) => <span className="font-medium text-xs sm:text-sm">{part.part_code || '-'}</span>
                   },
                   {
                     key: 'name',
                     header: 'Nome',
                     mobileLabel: 'Nome',
-                    render: (part) => part.part_name
+                    render: (part) => <span className="text-xs sm:text-sm">{part.part_name}</span>
                   },
                   {
                     key: 'component',
                     header: 'Componente',
                     mobileLabel: 'Componente',
                     render: (part) => (
-                      <Badge variant="outline">
+                      <Badge variant="outline" className="text-xs">
                         {getComponentLabel(part.component)}
                       </Badge>
                     )
@@ -334,7 +334,7 @@ const Estoque = () => {
                     header: 'Quantidade',
                     mobileLabel: 'Qtd',
                     render: (part) => (
-                      <span className={part.quantity < 5 ? 'text-red-600 font-bold' : ''}>
+                      <span className={`text-xs sm:text-sm ${part.quantity < 5 ? 'text-red-600 font-bold' : ''}`}>
                         {part.quantity}
                       </span>
                     )
@@ -344,14 +344,18 @@ const Estoque = () => {
                     header: 'Valor Unit.',
                     mobileLabel: 'Valor Unit.',
                     hideInMobile: true,
-                    render: (part) => formatCurrency(part.unit_cost)
+                    render: (part) => (
+                      <span className="text-xs sm:text-sm whitespace-nowrap">
+                        {formatCurrency(part.unit_cost)}
+                      </span>
+                    )
                   },
                   {
                     key: 'total_value',
                     header: 'Valor Total',
                     mobileLabel: 'Valor Total',
                     render: (part) => (
-                      <span className="font-medium">
+                      <span className="font-medium text-xs sm:text-sm whitespace-nowrap">
                         {formatCurrency(part.unit_cost * part.quantity)}
                       </span>
                     )
@@ -374,36 +378,39 @@ const Estoque = () => {
                     header: 'Ações',
                     mobileLabel: 'Ações',
                     render: (part) => (
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-0.5 sm:gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                           onClick={() => {
                             setSelectedPart(part);
                             setIsDetailsDialogOpen(true);
                           }}
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                           onClick={() => {
                             setSelectedPart(part);
                             setIsEditDialogOpen(true);
                           }}
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                           onClick={() => {
                             setSelectedPart(part);
                             setIsDeleteDialogOpen(true);
                           }}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </Button>
                       </div>
                     )

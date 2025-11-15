@@ -149,7 +149,7 @@ export default function GestaoFuncionarios() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -201,11 +201,11 @@ export default function GestaoFuncionarios() {
 
       {/* Main Content */}
       <Tabs defaultValue="employees" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="employees">Funcionários</TabsTrigger>
-          <TabsTrigger value="timetracking">Ponto</TabsTrigger>
-          <TabsTrigger value="commissions">Comissões</TabsTrigger>
-          <TabsTrigger value="schedules">Escalas</TabsTrigger>
+        <TabsList className="w-full overflow-x-auto flex md:grid md:grid-cols-4">
+          <TabsTrigger value="employees" className="flex-shrink-0">Funcionários</TabsTrigger>
+          <TabsTrigger value="timetracking" className="flex-shrink-0">Ponto</TabsTrigger>
+          <TabsTrigger value="commissions" className="flex-shrink-0">Comissões</TabsTrigger>
+          <TabsTrigger value="schedules" className="flex-shrink-0">Escalas</TabsTrigger>
         </TabsList>
 
         {/* Employees Tab */}
@@ -325,7 +325,7 @@ export default function GestaoFuncionarios() {
             </Dialog>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {loading ? (
               <p>Carregando funcionários...</p>
             ) : employees.length === 0 ? (

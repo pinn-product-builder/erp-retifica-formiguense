@@ -375,7 +375,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
           <CardTitle>Dados do Orçamento</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="order">Ordem de Serviço *</Label>
               <Select value={selectedOrderId} onValueChange={setSelectedOrderId} disabled={!!orderId || !!budget}>
@@ -419,7 +419,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
           <CardTitle>Mão de Obra</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="laborHours">Horas de Trabalho</Label>
               <Input
@@ -683,7 +683,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
           <CardTitle>Totais e Condições</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="discount">Desconto (%)</Label>
               <MaskedInput
@@ -762,11 +762,11 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
       </Card>
 
       {/* Ações */}
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={onCancel} disabled={saving}>
+      <div className="flex flex-col sm:flex-row justify-end gap-3">
+        <Button variant="outline" onClick={onCancel} disabled={saving} className="w-full sm:w-auto">
           Cancelar
         </Button>
-        <Button onClick={handleSave} disabled={saving}>
+        <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {budget ? 'Atualizar Orçamento' : 'Criar Orçamento'}
         </Button>

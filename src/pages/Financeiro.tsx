@@ -147,11 +147,11 @@ export default function Financeiro() {
 
       {/* Tabs com módulos financeiros */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
-          <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
-          <TabsTrigger value="receivables" className="text-xs sm:text-sm">A Receber</TabsTrigger>
-          <TabsTrigger value="payables" className="text-xs sm:text-sm">A Pagar</TabsTrigger>
-          <TabsTrigger value="cashflow" className="text-xs sm:text-sm">Fluxo</TabsTrigger>
+        <TabsList className="w-full overflow-x-auto flex md:grid md:grid-cols-4">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm flex-shrink-0">Visão Geral</TabsTrigger>
+          <TabsTrigger value="receivables" className="text-xs sm:text-sm flex-shrink-0">A Receber</TabsTrigger>
+          <TabsTrigger value="payables" className="text-xs sm:text-sm flex-shrink-0">A Pagar</TabsTrigger>
+          <TabsTrigger value="cashflow" className="text-xs sm:text-sm flex-shrink-0">Fluxo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">

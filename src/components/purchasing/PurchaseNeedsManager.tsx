@@ -12,14 +12,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { ResponsiveModalContent } from '@/components/ui/responsive-modal';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import {
   Select,
   SelectContent,
@@ -301,7 +295,7 @@ export default function PurchaseNeedsManager() {
                 Nova Necessidade
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <ResponsiveModalContent size="lg">
               <DialogHeader>
                 <DialogTitle>Nova Necessidade de Compra</DialogTitle>
               </DialogHeader>
@@ -313,7 +307,7 @@ export default function PurchaseNeedsManager() {
                   }}
                 />
               </div>
-            </DialogContent>
+            </ResponsiveModalContent>
           </Dialog>
         </div>
       </div>
@@ -345,86 +339,86 @@ export default function PurchaseNeedsManager() {
       )}
 
       {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Package className="w-5 h-5 text-blue-600" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                <Package className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Total</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">{stats.total}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="w-5 h-5 text-yellow-600" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-yellow-100 rounded-lg flex-shrink-0">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pendentes</p>
-                <p className="text-2xl font-bold">{stats.pending}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Críticas</p>
-                <p className="text-2xl font-bold">{stats.critical}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Pendentes</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">{stats.pending}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <TrendingDown className="w-5 h-5 text-orange-600" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-red-100 rounded-lg flex-shrink-0">
+                <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Alta Prioridade</p>
-                <p className="text-2xl font-bold">{stats.high}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <FileText className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Em Cotação</p>
-                <p className="text-2xl font-bold">{stats.inQuotation}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Críticas</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">{stats.critical}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <DollarSign className="w-5 h-5 text-green-600" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-orange-100 rounded-lg flex-shrink-0">
+                <TrendingDown className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Valor Estimado</p>
-                <p className="text-lg font-bold">{formatCurrency(stats.totalEstimatedCost)}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Alta Prioridade</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">{stats.high}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Em Cotação</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">{stats.inQuotation}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-green-100 rounded-lg flex-shrink-0">
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Valor Estimado</p>
+                <p className="text-xs sm:text-sm md:text-base font-bold truncate">{formatCurrency(stats.totalEstimatedCost)}</p>
               </div>
             </div>
           </CardContent>
@@ -558,90 +552,155 @@ export default function PurchaseNeedsManager() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox
-                        checked={selectedNeeds.length === filteredNeeds.length}
-                        onCheckedChange={handleSelectAll}
-                      />
-                    </TableHead>
-                    <TableHead>Peça</TableHead>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Necessário</TableHead>
-                    <TableHead>Disponível</TableHead>
-                    <TableHead>Falta</TableHead>
-                    <TableHead>Prioridade</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Valor Est.</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Criado</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredNeeds.map((need) => (
-                    <TableRow key={need.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedNeeds.includes(need.id)}
-                          onCheckedChange={(checked) => handleSelectNeed(need.id, !!checked)}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">{need.part_name}</TableCell>
-                      <TableCell className="font-mono text-sm">{need.part_code}</TableCell>
-                      <TableCell>{need.required_quantity}</TableCell>
-                      <TableCell>{need.available_quantity}</TableCell>
-                      <TableCell className="font-semibold text-red-600">
-                        {need.shortage_quantity}
-                      </TableCell>
-                      <TableCell>
-                        {getPriorityBadge(need.priority_level)}
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">{getTypeLabel(need.need_type)}</span>
-                      </TableCell>
-                      <TableCell>{formatCurrency(need.estimated_cost)}</TableCell>
-                      <TableCell>
-                        {getStatusBadge(need.status)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-muted-foreground" />
-                          {formatDate(need.created_at)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {need.status === 'pending' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleOpenQuotation(need)}
-                            >
-                              <FileText className="w-4 h-4 mr-1" />
-                              Cotar
-                            </Button>
-                          )}
-                          {need.status === 'in_quotation' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleOpenOrder(need)}
-                            >
-                              <ShoppingCart className="w-4 h-4 mr-1" />
-                              Pedido
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <>
+              <div className="flex items-center gap-2 mb-4">
+                <Checkbox
+                  checked={selectedNeeds.length === filteredNeeds.length && filteredNeeds.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+                <span className="text-sm text-muted-foreground">Selecionar todos</span>
+              </div>
+              <ResponsiveTable
+              data={filteredNeeds}
+              keyExtractor={(need) => need.id}
+              emptyMessage="Nenhuma necessidade encontrada"
+              columns={[
+                {
+                  key: 'select',
+                  header: '',
+                  mobileLabel: '',
+                  priority: 1,
+                  minWidth: 50,
+                  render: (need) => (
+                    <Checkbox
+                      checked={selectedNeeds.includes(need.id)}
+                      onCheckedChange={(checked) => handleSelectNeed(need.id, !!checked)}
+                    />
+                  )
+                },
+                {
+                  key: 'part_name',
+                  header: 'Peça',
+                  mobileLabel: 'Peça',
+                  priority: 1,
+                  minWidth: 150,
+                  render: (need) => <span className="font-medium">{need.part_name}</span>
+                },
+                {
+                  key: 'part_code',
+                  header: 'Código',
+                  mobileLabel: 'Código',
+                  priority: 2,
+                  minWidth: 100,
+                  render: (need) => <span className="font-mono text-sm">{need.part_code}</span>
+                },
+                {
+                  key: 'required_quantity',
+                  header: 'Necessário',
+                  mobileLabel: 'Necessário',
+                  priority: 2,
+                  minWidth: 80,
+                  render: (need) => need.required_quantity
+                },
+                {
+                  key: 'available_quantity',
+                  header: 'Disponível',
+                  mobileLabel: 'Disponível',
+                  priority: 3,
+                  minWidth: 80,
+                  render: (need) => need.available_quantity
+                },
+                {
+                  key: 'shortage_quantity',
+                  header: 'Falta',
+                  mobileLabel: 'Falta',
+                  priority: 1,
+                  minWidth: 80,
+                  render: (need) => (
+                    <span className="font-semibold text-red-600">{need.shortage_quantity}</span>
+                  )
+                },
+                {
+                  key: 'priority',
+                  header: 'Prioridade',
+                  mobileLabel: 'Prioridade',
+                  priority: 2,
+                  minWidth: 100,
+                  render: (need) => getPriorityBadge(need.priority_level)
+                },
+                {
+                  key: 'type',
+                  header: 'Tipo',
+                  mobileLabel: 'Tipo',
+                  priority: 4,
+                  minWidth: 120,
+                  hideInMobile: true,
+                  render: (need) => <span className="text-sm">{getTypeLabel(need.need_type)}</span>
+                },
+                {
+                  key: 'estimated_cost',
+                  header: 'Valor Est.',
+                  mobileLabel: 'Valor',
+                  priority: 3,
+                  minWidth: 100,
+                  render: (need) => formatCurrency(need.estimated_cost)
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  mobileLabel: 'Status',
+                  priority: 2,
+                  minWidth: 100,
+                  render: (need) => getStatusBadge(need.status)
+                },
+                {
+                  key: 'created_at',
+                  header: 'Criado',
+                  mobileLabel: 'Criado',
+                  priority: 5,
+                  minWidth: 100,
+                  hideInMobile: true,
+                  render: (need) => (
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      {formatDate(need.created_at)}
+                    </div>
+                  )
+                },
+                {
+                  key: 'actions',
+                  header: 'Ações',
+                  mobileLabel: 'Ações',
+                  priority: 1,
+                  minWidth: 150,
+                  render: (need) => (
+                    <div className="flex items-center justify-end gap-2">
+                      {need.status === 'pending' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenQuotation(need)}
+                        >
+                          <FileText className="w-4 h-4 mr-1" />
+                          Cotar
+                        </Button>
+                      )}
+                      {need.status === 'in_quotation' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenOrder(need)}
+                        >
+                          <ShoppingCart className="w-4 h-4 mr-1" />
+                          Pedido
+                        </Button>
+                      )}
+                    </div>
+                  )
+                }
+              ]}
+            />
+            </>
           )}
         </CardContent>
       </Card>
@@ -658,7 +717,7 @@ export default function PurchaseNeedsManager() {
           }
         }}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <ResponsiveModalContent size="lg">
           <DialogHeader>
             <DialogTitle>
               Criar Cotação
@@ -676,7 +735,7 @@ export default function PurchaseNeedsManager() {
               key={needForQuotation?.id || 'new'}
             />
           )}
-        </DialogContent>
+        </ResponsiveModalContent>
       </Dialog>
 
       {/* Modal de Pedido */}

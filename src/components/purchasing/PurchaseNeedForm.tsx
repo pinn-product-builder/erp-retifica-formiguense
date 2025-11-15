@@ -174,7 +174,7 @@ export default function PurchaseNeedForm({ onSuccess }: PurchaseNeedFormProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:grid-cols-3" >
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="part_code">Código da Peça *</Label>
               <Select
@@ -224,7 +224,7 @@ export default function PurchaseNeedForm({ onSuccess }: PurchaseNeedFormProps) {
               <AlertDescription>
                 <div className="space-y-1">
                   <p className="font-medium">Informações da Peça Selecionada:</p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">Estoque Atual:</span>
                       <span className="font-medium ml-1">{(selectedPart as PartInventory).quantity}</span>
@@ -257,7 +257,7 @@ export default function PurchaseNeedForm({ onSuccess }: PurchaseNeedFormProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="required_quantity">Quantidade Necessária *</Label>
               <Input
@@ -320,7 +320,7 @@ export default function PurchaseNeedForm({ onSuccess }: PurchaseNeedFormProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="priority_level">Nível de Prioridade *</Label>
               <Select
@@ -414,7 +414,7 @@ export default function PurchaseNeedForm({ onSuccess }: PurchaseNeedFormProps) {
           <CardContent className="p-4">
             <div className="space-y-2">
               <h4 className="font-semibold text-primary">Resumo da Necessidade</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Peça:</span>
                   <p className="font-medium">{formData.part_name}</p>
@@ -445,11 +445,11 @@ export default function PurchaseNeedForm({ onSuccess }: PurchaseNeedFormProps) {
         </Card>
       )}
 
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onSuccess}>
+      <div className="flex flex-col sm:flex-row justify-end gap-2">
+        <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onSuccess}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" disabled={loading} className="w-full sm:w-auto">
           {loading ? 'Criando...' : 'Criar Necessidade'}
         </Button>
       </div>

@@ -118,7 +118,7 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
         is_active: engineType.is_active,
         display_order: engineType.display_order,
         special_requirements: {
-          ambiente: (engineType.special_requirements as unknown)?.ambiente || '',
+          ambiente: (engineType.special_requirements as Record<string, unknown>)?.ambiente as string || '',
           equipamentos: (engineType.special_requirements as unknown)?.equipamentos || [],
           certificacao_required: (engineType.special_requirements as unknown)?.certificacao_required || false,
           temperatura_controlada: (engineType.special_requirements as unknown)?.temperatura_controlada || false,

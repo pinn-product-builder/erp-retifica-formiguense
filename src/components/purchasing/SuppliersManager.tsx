@@ -388,7 +388,7 @@ export default function SuppliersManager() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {suppliers.map((supplier) => (
           <Card key={supplier.id}>
             <CardContent className="p-4">
@@ -556,11 +556,11 @@ export default function SuppliersManager() {
                   placeholder="Ex: 30/60/90 dias"
                 />
               </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setEditingSupplier(null)}>
+              <div className="flex flex-col sm:flex-row justify-end gap-2">
+                <Button variant="outline" onClick={() => setEditingSupplier(null)} className="w-full sm:w-auto">
                   Cancelar
                 </Button>
-                <Button onClick={handleUpdateSupplier} disabled={loading}>
+                <Button onClick={handleUpdateSupplier} disabled={loading} className="w-full sm:w-auto">
                   Salvar Alterações
                 </Button>
               </div>

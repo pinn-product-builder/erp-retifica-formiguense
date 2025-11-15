@@ -243,57 +243,57 @@ export default function PurchaseOrderManager() {
   return (
     <div className="space-y-6">
       {/* Dashboard Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-sm text-muted-foreground">Total de POs</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold">{stats.total}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Total de POs</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-yellow-600">{stats.pending_approval}</p>
-              <p className="text-sm text-muted-foreground">Aguardando Aprovação</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-yellow-600">{stats.pending_approval}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Aguardando Aprovação</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">{stats.sent}</p>
-              <p className="text-sm text-muted-foreground">Enviados</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-blue-600">{stats.sent}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Enviados</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-purple-600">{stats.in_transit}</p>
-              <p className="text-sm text-muted-foreground">Em Trânsito</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-purple-600">{stats.in_transit}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Em Trânsito</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold text-red-600">{stats.overdue}</p>
-              <p className="text-sm text-muted-foreground">Atrasados</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-red-600">{stats.overdue}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Atrasados</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="text-center">
-              <p className="text-lg font-bold text-green-600">{formatCurrency(stats.total_value)}</p>
-              <p className="text-sm text-muted-foreground">Valor Total</p>
+              <p className="text-xs sm:text-sm md:text-base font-bold text-green-600 truncate">{formatCurrency(stats.total_value)}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Valor Total</p>
             </div>
           </CardContent>
         </Card>

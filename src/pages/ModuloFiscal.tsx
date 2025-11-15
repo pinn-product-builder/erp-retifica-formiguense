@@ -40,52 +40,52 @@ export default function ModuloFiscal() {
       </div>
 
       <Tabs defaultValue="tributos" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 lg:grid-cols-12">
-          <TabsTrigger value="tributos" className="flex items-center gap-2">
+        <TabsList className="w-full overflow-x-auto flex md:grid md:grid-cols-5 lg:grid-cols-12">
+          <TabsTrigger value="tributos" className="flex items-center gap-2 flex-shrink-0">
             <Receipt className="h-4 w-4" />
             Tributos
           </TabsTrigger>
-          <TabsTrigger value="regimes" className="flex items-center gap-2">
+          <TabsTrigger value="regimes" className="flex items-center gap-2 flex-shrink-0">
             <Building2 className="h-4 w-4" />
             Regimes
           </TabsTrigger>
-          <TabsTrigger value="classificacoes" className="flex items-center gap-2">
+          <TabsTrigger value="classificacoes" className="flex items-center gap-2 flex-shrink-0">
             <BookOpen className="h-4 w-4" />
             Classificações
           </TabsTrigger>
-          <TabsTrigger value="regras" className="flex items-center gap-2">
+          <TabsTrigger value="regras" className="flex items-center gap-2 flex-shrink-0">
             <Gavel className="h-4 w-4" />
             Regras
           </TabsTrigger>
-          <TabsTrigger value="aliquotas" className="flex items-center gap-2">
+          <TabsTrigger value="aliquotas" className="flex items-center gap-2 flex-shrink-0">
             <Percent className="h-4 w-4" />
             Alíquotas
           </TabsTrigger>
-          <TabsTrigger value="empresa" className="flex items-center gap-2">
+          <TabsTrigger value="empresa" className="flex items-center gap-2 flex-shrink-0">
             <Building className="h-4 w-4" />
             Empresa
           </TabsTrigger>
-          <TabsTrigger value="obrigacoes-tipos" className="flex items-center gap-2">
+          <TabsTrigger value="obrigacoes-tipos" className="flex items-center gap-2 flex-shrink-0">
             <Settings className="h-4 w-4" />
             Tipos Obrig.
           </TabsTrigger>
-          <TabsTrigger value="obrigacoes" className="flex items-center gap-2">
+          <TabsTrigger value="obrigacoes" className="flex items-center gap-2 flex-shrink-0">
             <AlertTriangle className="h-4 w-4" />
             Obrigações
           </TabsTrigger>
-          <TabsTrigger value="calculos" className="flex items-center gap-2">
+          <TabsTrigger value="calculos" className="flex items-center gap-2 flex-shrink-0">
             <Calculator className="h-4 w-4" />
             Cálculos
           </TabsTrigger>
-          <TabsTrigger value="apuracao" className="flex items-center gap-2">
+          <TabsTrigger value="apuracao" className="flex items-center gap-2 flex-shrink-0">
             <BookOpen className="h-4 w-4" />
             Apuração
           </TabsTrigger>
-          <TabsTrigger value="relatorios" className="flex items-center gap-2">
+          <TabsTrigger value="relatorios" className="flex items-center gap-2 flex-shrink-0">
             <FileText className="h-4 w-4" />
             Relatórios
           </TabsTrigger>
-          <TabsTrigger value="auditoria" className="flex items-center gap-2">
+          <TabsTrigger value="auditoria" className="flex items-center gap-2 flex-shrink-0">
             <Shield className="h-4 w-4" />
             Auditoria
           </TabsTrigger>

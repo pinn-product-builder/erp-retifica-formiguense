@@ -362,7 +362,7 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
   return (
     <div className="space-y-6">
       {/* Lista de Fornecedores */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {displaySuppliers.map((supplier) => (
           <Card key={supplier.id} className="relative">
             <CardHeader className="pb-3">
@@ -535,7 +535,7 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
           <CardContent className="space-y-6">
             {/* Estatísticas */}
             {supplierStats && (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center space-x-2">
@@ -590,7 +590,7 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
             {selectedSupplier.contacts && selectedSupplier.contacts.length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold mb-3">Contatos</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {selectedSupplier.contacts.map((contact) => (
                     <Card key={contact.id}>
                       <CardContent className="p-4">
@@ -758,7 +758,7 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
           </DialogHeader>
           
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {renderRatingInput(
                 evaluationForm.delivery_rating,
                 (value) => setEvaluationForm({ ...evaluationForm, delivery_rating: value }),
