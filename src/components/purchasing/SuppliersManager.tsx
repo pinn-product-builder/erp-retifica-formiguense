@@ -304,6 +304,9 @@ export default function SuppliersManager() {
                   <Label>Prazo de Entrega (dias)</Label>
                   <Input
                     type="text"
+                    style={{
+                      marginTop: '7px',
+                    }}
                     value={newSupplier.delivery_days}
                     onChange={(e) => setNewSupplier({...newSupplier, delivery_days: Number(e.target.value)})}
                   />
