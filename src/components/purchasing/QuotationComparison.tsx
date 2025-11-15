@@ -11,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import {
   CheckCircle,
   XCircle,
@@ -29,6 +30,7 @@ import {
 import { type Quotation } from '@/hooks/useQuotations';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import IconButton from '@mui/material/IconButton';
 
 interface QuotationComparisonProps {
   quotations: Quotation[];
@@ -41,6 +43,9 @@ export default function QuotationComparison({
   onApprove,
   onReject,
 }: QuotationComparisonProps) {
+  const { isMobile, isTablet } = useBreakpoint();
+  const useCardLayout = isMobile || isTablet;
+
   if (quotations.length === 0) {
     return (
       <div className="text-center py-8">
@@ -89,7 +94,7 @@ export default function QuotationComparison({
     
     if (quotation.id === analysis.bestPrice.id) {
       badges.push(
-        <Badge key="price" className="bg-green-100 text-green-800">
+        <Badge key="price" className="bg-green-100 text-green-800 text-xs py-1 px-2">
           <DollarSign className="w-3 h-3 mr-1" />
           Melhor Preço
         </Badge>
@@ -98,7 +103,7 @@ export default function QuotationComparison({
     
     if (quotation.id === analysis.fastestDelivery.id) {
       badges.push(
-        <Badge key="delivery" className="bg-blue-100 text-blue-800">
+        <Badge key="delivery" className="bg-blue-100 text-blue-800 text-xs py-1 px-2">
           <Zap className="w-3 h-3 mr-1" />
           Mais Rápido
         </Badge>
@@ -107,7 +112,7 @@ export default function QuotationComparison({
     
     if (quotation.id === analysis.bestRated.id) {
       badges.push(
-        <Badge key="rating" className="bg-purple-100 text-purple-800">
+        <Badge key="rating" className="bg-purple-100 text-purple-800 text-xs py-1 px-2">
           <Crown className="w-3 h-3 mr-1" />
           Melhor Avaliado
         </Badge>
@@ -216,113 +221,211 @@ export default function QuotationComparison({
         </CardContent>
       </Card>
 
-      {/* Tabela Comparativa */}
+      {/* Comparação Detalhada */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Comparação Detalhada</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="overflow-x-auto -mx-1 px-1 max-w-full">
-            <Table className="w-full">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[140px]">Fornecedor</TableHead>
-                  <TableHead className="min-w-[100px]">Valor</TableHead>
-                  <TableHead className="min-w-[80px]">Prazo</TableHead>
-                  <TableHead className="min-w-[80px]">Avaliação</TableHead>
-                  <TableHead className="min-w-[90px]">Score</TableHead>
-                  <TableHead className="min-w-[100px]">Destaques</TableHead>
-                  <TableHead className="text-right min-w-[140px]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {quotationsWithScores.map((quotation, index) => (
-                  <TableRow 
-                    key={quotation.id}
-                    className={index === 0 ? 'bg-primary/5 border-primary/20' : ''}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {index === 0 && <Crown className="w-3.5 h-3.5 text-primary shrink-0" />}
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm truncate">{quotation.supplier?.name}</p>
+          {useCardLayout ? (
+            // Layout em Cards para Mobile/Tablet
+            <div className="space-y-4">
+              {quotationsWithScores.map((quotation, index) => (
+                <Card 
+                  key={quotation.id}
+                  className={index === 0 ? 'border-2 border-primary/30 bg-primary/5' : ''}
+                >
+                  <CardContent className="p-4 space-y-4">
+                    {/* Header do Card */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        {index === 0 && <Crown className="w-4 h-4 text-primary shrink-0" />}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-sm truncate">{quotation.supplier?.name}</p>
                           <p className="text-xs text-muted-foreground truncate">
                             {quotation.quote_number || `COT-${quotation.id.slice(0, 8)}`}
                           </p>
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-sm whitespace-nowrap">
-                          {formatCurrency(quotation.total_value)}
-                        </span>
-                        {quotation.id === analysis.bestPrice.id && (
-                          <TrendingDown className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <Truck className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <span className="text-sm whitespace-nowrap">{getDeliveryTime(quotation)} dias</span>
-                        {quotation.id === analysis.fastestDelivery.id && (
-                          <Zap className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <Star className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
-                        <span className="text-sm whitespace-nowrap">{quotation.supplier?.rating?.toFixed(1) || 'N/A'}</span>
-                        {quotation.id === analysis.bestRated.id && (
-                          <TrendingUp className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-10 bg-gray-200 rounded-full h-1.5 shrink-0">
-                          <div
-                            className="bg-primary h-1.5 rounded-full"
-                            style={{ width: `${quotation.score}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs font-medium whitespace-nowrap">{quotation.score}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-1 shrink-0">
                         {getBadgeForQuotation(quotation)}
                       </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onApprove(quotation.id)}
-                          className="h-7 px-2 text-xs"
-                        >
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Aprovar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onReject(quotation.id)}
-                          className="h-7 px-2 text-xs"
-                        >
-                          <XCircle className="w-3 h-3 mr-1" />
-                          Rejeitar
-                        </Button>
+                    </div>
+
+                    {/* Métricas Principais */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <DollarSign className="w-4 h-4 text-green-600 shrink-0" />
+                          <span className="text-xs text-muted-foreground">Valor</span>
+                          {quotation.id === analysis.bestPrice.id && (
+                            <TrendingDown className="w-3 h-3 text-green-600 shrink-0" />
+                          )}
+                        </div>
+                        <p className="font-semibold text-base">
+                          {formatCurrency(quotation.total_value)}
+                        </p>
                       </div>
-                    </TableCell>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <Truck className="w-4 h-4 text-blue-600 shrink-0" />
+                          <span className="text-xs text-muted-foreground">Prazo</span>
+                          {quotation.id === analysis.fastestDelivery.id && (
+                            <Zap className="w-3 h-3 text-blue-600 shrink-0" />
+                          )}
+                        </div>
+                        <p className="font-semibold text-base">{getDeliveryTime(quotation)} dias</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <Star className="w-4 h-4 text-yellow-500 shrink-0" />
+                          <span className="text-xs text-muted-foreground">Avaliação</span>
+                          {quotation.id === analysis.bestRated.id && (
+                            <TrendingUp className="w-3 h-3 text-purple-600 shrink-0" />
+                          )}
+                        </div>
+                        <p className="font-semibold text-base">
+                          {quotation.supplier?.rating?.toFixed(1) || 'N/A'}
+                        </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="text-xs text-muted-foreground">Score</span>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-primary h-2 rounded-full"
+                              style={{ width: `${quotation.score}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-semibold whitespace-nowrap">{quotation.score}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Ações */}
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onApprove(quotation.id)}
+                        className="flex-1 text-xs"
+                      >
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onReject(quotation.id)}
+                        className="flex-1 text-xs"
+                      >
+                        <XCircle className="w-3 h-3 mr-1" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            // Layout em Tabela para Desktop (sem scroll horizontal)
+            <div className="w-full overflow-hidden">
+              <Table className="w-full table-fixed">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[20%]">Fornecedor</TableHead>
+                    <TableHead className="w-[12%]">Valor</TableHead>
+                    <TableHead className="w-[10%]">Prazo</TableHead>
+                    <TableHead className="w-[10%]">Avaliação</TableHead>
+                    <TableHead className="w-[12%]">Score</TableHead>
+                    <TableHead className="w-[16%]">Destaques</TableHead>
+                    <TableHead className="text-right w-[20%]">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {quotationsWithScores.map((quotation, index) => (
+                    <TableRow 
+                      key={quotation.id}
+                      className={index === 0 ? 'bg-primary/5 border-primary/20' : ''}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {index === 0 && <Crown className="w-3.5 h-3.5 text-primary shrink-0" />}
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{quotation.supplier?.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {quotation.quote_number || `COT-${quotation.id.slice(0, 8)}`}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-sm whitespace-nowrap">
+                            {formatCurrency(quotation.total_value)}
+                          </span>
+                          {quotation.id === analysis.bestPrice.id && (
+                            <TrendingDown className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <Truck className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <span className="text-sm whitespace-nowrap">{getDeliveryTime(quotation)} dias</span>
+                          {quotation.id === analysis.fastestDelivery.id && (
+                            <Zap className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <Star className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
+                          <span className="text-sm whitespace-nowrap">{quotation.supplier?.rating?.toFixed(1) || 'N/A'}</span>
+                          {quotation.id === analysis.bestRated.id && (
+                            <TrendingUp className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-12 bg-gray-200 rounded-full h-1.5 shrink-0">
+                            <div
+                              className="bg-primary h-1.5 rounded-full"
+                              style={{ width: `${quotation.score}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs font-medium whitespace-nowrap">{quotation.score}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {getBadgeForQuotation(quotation)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <IconButton 
+                            size="small"
+                            onClick={() => onApprove(quotation.id)}
+                          >
+                            <CheckCircle className="w-3 h-3 sm:mr-1" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => onReject(quotation.id)}
+                          >
+                            <XCircle className="w-3 h-3 sm:mr-1" />
+                          </IconButton>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -343,36 +446,33 @@ export default function QuotationComparison({
                 </div>
                 
                 {quotation.items && quotation.items.length > 0 && (
-                  <div className="overflow-x-auto -mx-1 px-1 max-w-full">
-                    <Table className="w-full">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="min-w-[120px]">Item</TableHead>
-                          <TableHead className="min-w-[100px]">Qtd</TableHead>
-                          <TableHead className="min-w-[100px]">Preço Unit.</TableHead>
-                          <TableHead className="min-w-[100px]">Total</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {quotation.items.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-medium text-sm">
-                              <div>
-                                <p className="truncate">{item.item_name}</p>
-                                {item.description && (
-                                  <p className="text-xs text-muted-foreground truncate">{item.description}</p>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-sm">{item.quantity}</TableCell>
-                            <TableCell className="text-sm whitespace-nowrap">{formatCurrency(item.unit_price)}</TableCell>
-                            <TableCell className="font-semibold text-sm whitespace-nowrap">
-                              {formatCurrency(item.total_price)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="space-y-2">
+                    {quotation.items.map((item) => (
+                      <div key={item.id} className="border rounded-lg p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{item.item_name}</p>
+                            {item.description && (
+                              <p className="text-xs text-muted-foreground truncate mt-1">{item.description}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 text-sm">
+                          <div>
+                            <span className="text-xs text-muted-foreground">Quantidade</span>
+                            <p className="font-medium">{item.quantity}</p>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground">Preço Unit.</span>
+                            <p className="font-medium truncate">{formatCurrency(item.unit_price)}</p>
+                          </div>
+                          <div>
+                            <span className="text-xs text-muted-foreground">Total</span>
+                            <p className="font-semibold truncate">{formatCurrency(item.total_price)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
