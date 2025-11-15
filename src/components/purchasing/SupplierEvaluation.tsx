@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +81,7 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
   const { toast } = useToast();
 
   const [selectedSupplier, setSelectedSupplier] = useState<EnhancedSupplier | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isEvaluationDialogOpen, setIsEvaluationDialogOpen] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -124,14 +125,7 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
     ? evaluations.filter(e => e.supplier_id === supplierId)
     : evaluations;
 
-  // Carregar estatísticas quando um fornecedor é selecionado
-  useEffect(() => {
-    if (selectedSupplier) {
-      loadSupplierDetails(selectedSupplier.id);
-    }
-  }, [selectedSupplier]);
-
-  const loadSupplierDetails = async (id: string) => {
+  const loadSupplierDetails = useCallback(async (id: string) => {
     const [stats, history] = await Promise.all([
       getSupplierStats(id),
       getSupplierPurchaseHistory(id)
@@ -139,7 +133,14 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
     
     setSupplierStats(stats);
     setPurchaseHistory(history);
-  };
+  }, [getSupplierStats, getSupplierPurchaseHistory]);
+
+  // Carregar estatísticas quando o modal de detalhes abrir
+  useEffect(() => {
+    if (isDetailsDialogOpen && selectedSupplier) {
+      loadSupplierDetails(selectedSupplier.id);
+    }
+  }, [isDetailsDialogOpen, selectedSupplier, loadSupplierDetails]);
 
   // Renderizar estrelas de rating
   const renderStars = (rating: number, size: 'sm' | 'md' = 'sm') => {
@@ -493,6 +494,7 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                   size="sm"
                   onClick={() => {
                     setSelectedSupplier(supplier);
+                    setIsDetailsDialogOpen(true);
                   }}
                 >
                   <Eye className="w-3 h-3 mr-1" />
@@ -504,17 +506,18 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
         ))}
       </div>
 
-      {/* Detalhes do Fornecedor Selecionado */}
-      {selectedSupplier && !isEditDialogOpen && !isEvaluationDialogOpen && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Detalhes - {selectedSupplier.name}
+      {/* Dialog de Detalhes do Fornecedor */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              Detalhes - {selectedSupplier?.name}
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    setIsDetailsDialogOpen(false);
                     setContactForm({ ...contactForm });
                     setIsContactDialogOpen(true);
                   }}
@@ -522,17 +525,15 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                   <Plus className="w-4 h-4 mr-2" />
                   Adicionar Contato
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedSupplier(null)}
-                >
-                  Fechar
-                </Button>
               </div>
-            </CardTitle>
-          </CardHeader>
+            </DialogTitle>
+            <DialogDescription>
+              Informações completas do fornecedor
+            </DialogDescription>
+          </DialogHeader>
           
-          <CardContent className="space-y-6">
+          {selectedSupplier && (
+            <div className="space-y-6">
             {/* Estatísticas */}
             {supplierStats && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -743,9 +744,10 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-      )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de Avaliação */}
       <Dialog open={isEvaluationDialogOpen} onOpenChange={setIsEvaluationDialogOpen}>
