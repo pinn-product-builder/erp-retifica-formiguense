@@ -489,7 +489,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
               <MaskedInput
                 mask="currency"
                 placeholder="Valor unitário"
-                value={(newService.unit_price || 0).toString()}
+                value={''}
                 onChange={(maskedValue, rawValue) => {
                   setNewService({ ...newService, unit_price: parseFloat(rawValue) || 0 });
                 }}
