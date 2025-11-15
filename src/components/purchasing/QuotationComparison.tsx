@@ -1,7 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -31,6 +30,7 @@ import { type Quotation } from '@/hooks/useQuotations';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import IconButton from '@mui/material/IconButton';
+import Chip from '@mui/material/Chip';
 
 interface QuotationComparisonProps {
   quotations: Quotation[];
@@ -94,28 +94,61 @@ export default function QuotationComparison({
     
     if (quotation.id === analysis.bestPrice.id) {
       badges.push(
-        <Badge key="price" className="bg-green-100 text-green-800 text-xs py-1 px-2">
-          <DollarSign className="w-3 h-3 mr-1" />
-          Melhor Preço
-        </Badge>
+        <Chip
+          key="price"
+          icon={<DollarSign className="w-3 h-3" />}
+          label="Melhor Preço"
+          size="small"
+          color="success"
+          sx={{
+              fontWeight: '500',
+            height: '20px',
+            '& .MuiChip-icon': {
+              marginLeft: '4px',
+              marginRight: '-4px',
+            },
+          }}
+        />
       );
     }
     
     if (quotation.id === analysis.fastestDelivery.id) {
       badges.push(
-        <Badge key="delivery" className="bg-blue-100 text-blue-800 text-xs py-1 px-2">
-          <Zap className="w-3 h-3 mr-1" />
-          Mais Rápido
-        </Badge>
+        <Chip
+          key="delivery"
+          icon={<Zap className="w-3 h-3" />}
+          label="Mais Rápido"
+          size="small"
+          color="secondary"
+          sx={{
+            fontWeight: '500',
+            height: '20px',
+            '& .MuiChip-icon': {
+              marginLeft: '4px',
+              marginRight: '-4px',
+            },
+          }}
+        />
       );
     }
     
     if (quotation.id === analysis.bestRated.id) {
       badges.push(
-        <Badge key="rating" className="bg-purple-100 text-purple-800 text-xs py-1 px-2">
-          <Crown className="w-3 h-3 mr-1" />
-          Melhor Avaliado
-        </Badge>
+        <Chip
+          key="rating"
+          icon={<Crown className="w-3 h-3" />}
+          label="Melhor Avaliado"
+          size="small"
+          color="primary"
+          sx={{
+            fontWeight: '500',
+            height: '20px',
+            '& .MuiChip-icon': {
+              marginLeft: '4px',
+              marginRight: '-4px',
+            },
+          }}
+        />
       );
     }
     
