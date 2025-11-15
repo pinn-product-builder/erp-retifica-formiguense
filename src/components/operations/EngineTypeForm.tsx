@@ -30,6 +30,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, X, Save, Loader2 } from 'lucide-react';
 import { useEngineTypes, EngineType } from '@/hooks/useEngineTypes';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
+import { Json , Database} from '@/integrations/supabase/types';
 
 const CATEGORIES = [
   { value: 'geral', label: 'Geral' },
@@ -119,12 +120,12 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
         display_order: engineType.display_order,
         special_requirements: {
           ambiente: (engineType.special_requirements as Record<string, unknown>)?.ambiente as string || '',
-          equipamentos: (engineType.special_requirements as unknown)?.equipamentos || [],
-          certificacao_required: (engineType.special_requirements as unknown)?.certificacao_required || false,
-          temperatura_controlada: (engineType.special_requirements as unknown)?.temperatura_controlada || false,
-          umidade_controlada: (engineType.special_requirements as unknown)?.umidade_controlada || false,
-          limpeza_especial: (engineType.special_requirements as unknown)?.limpeza_especial || false,
-          rastreabilidade_completa: (engineType.special_requirements as unknown)?.rastreabilidade_completa || false,
+          equipamentos: (engineType.special_requirements as Record<string, unknown>)?.equipamentos as string[] || [],
+          certificacao_required: (engineType.special_requirements as Record<string, unknown>)?.certificacao_required as boolean || false,
+          temperatura_controlada: (engineType.special_requirements as Record<string, unknown>)?.temperatura_controlada as boolean || false,
+          umidade_controlada: (engineType.special_requirements as Record<string, unknown>)?.umidade_controlada as boolean || false,
+          limpeza_especial: (engineType.special_requirements as Record<string, unknown>)?.limpeza_especial as boolean || false,
+          rastreabilidade_completa: (engineType.special_requirements as Record<string, unknown>)?.rastreabilidade_completa as boolean || false,
         },
       });
     }
@@ -140,9 +141,9 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
           is_active: data.is_active,
           display_order: data.display_order,
           default_warranty_months: data.default_warranty_months,
-          required_components: data.required_components as unknown,
-          technical_standards: data.technical_standards as unknown,
-          special_requirements: data.special_requirements as unknown,
+          required_components: data.required_components as Database['public']['Enums']['engine_component'][],
+          technical_standards: data.technical_standards as string[],
+          special_requirements: data.special_requirements as Json ,
         });
       } else if (engineType) {
         await updateEngineType(engineType.id, {
@@ -152,9 +153,9 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
           is_active: data.is_active,
           display_order: data.display_order,
           default_warranty_months: data.default_warranty_months,
-          required_components: data.required_components as unknown,
-          technical_standards: data.technical_standards as unknown,
-          special_requirements: data.special_requirements as unknown,
+          required_components: data.required_components as Database['public']['Enums']['engine_component'][],
+          technical_standards: data.technical_standards as string[],
+          special_requirements: data.special_requirements as Json,
         });
       }
       onSuccess();

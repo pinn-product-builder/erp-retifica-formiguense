@@ -52,10 +52,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   const [selectedOrderId, setSelectedOrderId] = useState<string>(orderId || budget?.order_id || '');
   const [component, setComponent] = useState<string>(budget?.component || 'bloco');
   const [componentsSelected, setComponentsSelected] = useState<string[]>(budget?.component ? [budget.component] : []);
-  // @ts-expect-error - Budget services/parts are Record<string, unknown>[] but need to be Service[]/Part[]
-  const [services, setServices] = useState<Service[]>(budget?.services || []);
-  // @ts-expect-error - Budget services/parts are Record<string, unknown>[] but need to be Service[]/Part[]
-  const [parts, setParts] = useState<Part[]>(budget?.parts || []);
+  const [services, setServices] = useState<Service[]>(budget?.services as unknown as Service[] || []);
+  const [parts, setParts] = useState<Part[]>(budget?.parts as unknown as Part[] || []);
   const [laborHours, setLaborHours] = useState<number>(budget?.labor_hours || 0);
   const [laborDescription, setLaborDescription] = useState<string>((budget as { labor_description?: string })?.labor_description || '');
   const [laborRate, setLaborRate] = useState<number>(budget?.labor_rate || 50);
@@ -223,8 +221,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
 
   // Cálculos automáticos
   const laborTotal = laborHours * laborRate;
-  const servicesTotal = services.reduce((sum, s) => sum + s.total, 0);
-  const partsTotal = parts.reduce((sum, p) => sum + p.total, 0);
+  const servicesTotal = services.reduce((sum, s) => sum + (s.total as number), 0);
+  const partsTotal = parts.reduce((sum, p) => sum + (p.total as number), 0);
   const subtotal = laborTotal + servicesTotal + partsTotal;
   const discountAmount = (subtotal * discount) / 100;
   const subtotalAfterDiscount = subtotal - discountAmount;
@@ -325,14 +323,11 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
       const budgetData: Partial<DetailedBudget> = {
         order_id: selectedOrderId,
         component: component as "bloco" | "eixo" | "biela" | "comando" | "cabecote",
-        // @ts-expect-error - Type mismatch between Service[] and Record<string, unknown>[]
-        services,
-        // @ts-expect-error - Type mismatch between Part[] and Record<string, unknown>[]
-        parts,
+        services : services as unknown as Record<string, unknown>[],
+        parts : parts as unknown as Record<string, unknown>[],
         labor_hours: laborHours,
         labor_rate: laborRate,
         labor_total: laborTotal,
-        // @ts-expect-error campo novo ainda não nos tipos gerados
         labor_description: laborDescription,
         parts_total: partsTotal,
         discount,

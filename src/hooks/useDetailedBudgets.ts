@@ -22,6 +22,7 @@ export interface DetailedBudget {
   total_amount: number;
   warranty_months: number;
   estimated_delivery_days: number;
+  labor_description?: string;
   status: string;
   created_at: string;
   updated_at: string;
