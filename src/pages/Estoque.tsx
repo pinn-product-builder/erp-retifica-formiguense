@@ -75,6 +75,7 @@ const Estoque = () => {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPart, setSelectedPart] = useState<PartInventory | null>(null);
+  const [activeTab, setActiveTab] = useState('inventory');
 
   const filteredParts = parts.filter(part => {
     const matchesSearch = 
@@ -218,7 +219,15 @@ const Estoque = () => {
       </div>
 
       {/* Tabs de Navegação */}
-      <Tabs defaultValue="inventory" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(value) => {
+        setActiveTab(value);
+        // Recarregar dados quando a aba mudar
+        if (value === 'inventory') {
+          fetchParts({ search: '' });
+        }
+        // As outras abas (reservations, movements, separation, counts) 
+        // recarregam automaticamente via useEffect em seus componentes
+      }} className="space-y-4">
         <TabsList className="w-full overflow-x-auto flex sm:grid sm:grid-cols-5">
           <TabsTrigger value="inventory" className="flex items-center gap-2 flex-shrink-0">
             <Package className="w-4 h-4" />

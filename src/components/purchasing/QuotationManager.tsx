@@ -41,6 +41,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import QuotationForm from './QuotationForm';
 import QuotationComparison from './QuotationComparison';
+import PurchaseOrderForm from './PurchaseOrderForm';
 
 const STATUS_CONFIG = {
   pending: {
@@ -77,6 +78,8 @@ export default function QuotationManager() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showComparisonDialog, setShowComparisonDialog] = useState(false);
   const [selectedQuotations, setSelectedQuotations] = useState<Quotation[]>([]);
+  const [showOrderDialog, setShowOrderDialog] = useState(false);
+  const [selectedQuotationForOrder, setSelectedQuotationForOrder] = useState<string | null>(null);
 
   useEffect(() => {
     fetchQuotations();
@@ -518,6 +521,22 @@ export default function QuotationManager() {
                         </>
                       )}
                       
+                      {/* Botão para criar pedido - só aparece se a cotação estiver aprovada */}
+                      {quotation.status === 'approved' && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="text-xs h-7 px-2 sm:px-3"
+                          onClick={() => {
+                            setSelectedQuotationForOrder(quotation.id);
+                            setShowOrderDialog(true);
+                          }}
+                        >
+                          <Truck className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Criar Pedido</span>
+                        </Button>
+                      )}
+                      
                       {/* Botão de comparação - só aparece se há múltiplas cotações para a mesma requisição */}
                       {(() => {
                         const reqId = quotation.requisition_id;
@@ -595,6 +614,23 @@ export default function QuotationManager() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Pedido de Compra */}
+      <PurchaseOrderForm
+        open={showOrderDialog}
+        onOpenChange={(open) => {
+          setShowOrderDialog(open);
+          if (!open) {
+            setSelectedQuotationForOrder(null);
+          }
+        }}
+        quotationId={selectedQuotationForOrder || undefined}
+        onSuccess={() => {
+          setShowOrderDialog(false);
+          setSelectedQuotationForOrder(null);
+          fetchQuotations();
+        }}
+      />
     </div>
   );
 }

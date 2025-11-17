@@ -40,12 +40,14 @@ export interface PurchaseRequisitionItem {
   total_price?: number;
   urgency_date?: string;
   notes?: string;
+  part_id?: string;
 }
 
 export interface PurchaseOrder {
   id: string;
   po_number: string;
   supplier_id: string;
+  quotation_id?: string; // ID da cotação aprovada que originou este pedido
   requisition_id?: string;
   status: string;
   order_date: string;
@@ -74,10 +76,12 @@ export interface PurchaseOrder {
 export interface PurchaseOrderItem {
   id: string;
   item_name: string;
+  description?: string;
   quantity: number;
   unit_price: number;
   total_price: number;
   received_quantity: number;
+  part_id?: string; // ID da peça no estoque (opcional, pode ser criada após recebimento)
 }
 
 export interface Quotation {
@@ -132,7 +136,10 @@ export const usePurchasing = () => {
     try {
       const { data, error } = await supabase
         .from('purchase_requisitions')
-        .select('*')
+        .select(`
+          *,
+          items:purchase_requisition_items(*)
+        `)
         .eq('org_id', currentOrganization.id)
         .order('created_at', { ascending: false });
 
@@ -314,6 +321,7 @@ export const usePurchasing = () => {
         .insert({
           po_number: poNumber,
           supplier_id: order.supplier_id,
+          quotation_id: order.quotation_id,
           requisition_id: order.requisition_id,
           status: order.status || 'draft',
           order_date: order.order_date || new Date().toISOString().split('T')[0],
@@ -342,7 +350,13 @@ export const usePurchasing = () => {
           .from('purchase_order_items')
           .insert(
             items.map(item => ({
-              ...item,
+              item_name: item.item_name,
+              description: item.description,
+              quantity: item.quantity,
+              unit_price: item.unit_price,
+              total_price: item.total_price,
+              received_quantity: item.received_quantity || 0,
+              part_id: item.part_id || null,
               po_id: orderIdToUse,
             }))
           );

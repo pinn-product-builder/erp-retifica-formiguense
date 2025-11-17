@@ -34,6 +34,7 @@ interface OrderItem {
   quantity: number;
   received_quantity: number;
   unit_price: number;
+  part_id?: string; // ID da peça no estoque
 }
 
 interface PurchaseOrder {
@@ -50,6 +51,7 @@ interface PurchaseOrder {
 
 interface ReceiptItem {
   purchase_order_item_id: string;
+  part_id?: string; // ID da peça no estoque (vem do purchase_order_item)
   received_quantity: number;
   approved_quantity: number;
   rejected_quantity: number;
@@ -158,6 +160,7 @@ export function ReceiveOrderModal({
           const remaining = Math.max(0, item.quantity - item.received_quantity);
           initialItems[item.id] = {
             purchase_order_item_id: item.id,
+            part_id: item.part_id, // Incluir part_id do pedido
             received_quantity: remaining,
             approved_quantity: remaining,
             rejected_quantity: 0,

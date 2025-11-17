@@ -174,12 +174,13 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
       
       // Pré-preencher itens baseado na requisição
       if (requisition?.items && Array.isArray(requisition.items) && requisition.items.length > 0) {
-        const newItems = requisition.items.map((item: { item_name?: string; description?: string; quantity?: number }) => ({
+        const newItems = requisition.items.map((item: { item_name?: string; description?: string; quantity?: number; unit_price?: number; total_price?: number; part_id?: string }) => ({
           item_name: item.item_name || '',
           description: item.description || '',
           quantity: item.quantity || 1,
-          unit_price: 0,
-          total_price: 0,
+          unit_price: item.unit_price || 0,
+          total_price: item.total_price || (item.quantity || 1) * (item.unit_price || 0),
+          part_id: item.part_id || undefined,
         }));
         setItems(newItems);
         
@@ -347,11 +348,13 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
                     <SelectValue placeholder="Selecione uma requisição" />
                   </SelectTrigger>
                   <SelectContent>
-                    {requisitions.map((req) => (
-                      <SelectItem key={req.id} value={req.id}>
-                        {req.requisition_number} - {req.justification || 'Requisição'}
-                      </SelectItem>
-                    ))}
+                    {requisitions
+                      .filter(req => req.status === 'approved')
+                      .map((req) => (
+                        <SelectItem key={req.id} value={req.id}>
+                          {req.requisition_number} - {req.department || req.justification || 'Requisição'} ({formatCurrency(req.total_estimated_value)})
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 {errors.requisition_id && (

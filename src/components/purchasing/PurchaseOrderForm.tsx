@@ -9,10 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Calculator } from 'lucide-react';
 import { usePurchasing, Supplier, PurchaseOrder, PurchaseOrderItem } from '@/hooks/usePurchasing';
+import { useQuotations, type Quotation } from '@/hooks/useQuotations';
 import { useToast } from '@/hooks/use-toast';
 import { FormField } from '@/components/ui/form-field';
 import { formatCurrency } from '@/lib/utils';
 import { type PurchaseNeed } from '@/hooks/usePurchaseNeeds';
+import { usePartsInventory } from '@/hooks/usePartsInventory';
 
 interface PurchaseOrderFormProps {
   open: boolean;
@@ -20,9 +22,11 @@ interface PurchaseOrderFormProps {
   quotationId?: string;
   purchaseNeed?: PurchaseNeed | null;
   onSuccess?: () => void;
+  // Removido purchaseNeed - pedidos devem vir apenas de cotações
 }
 
 interface POFormData {
+  quotation_id: string; // OBRIGATÓRIO - pedido deve vir de uma cotação
   supplier_id: string;
   requisition_id?: string;
   expected_delivery: string;
@@ -35,6 +39,7 @@ interface POFormData {
     quantity: number;
     unit_price: number;
     total_price: number;
+    part_id?: string; // ID da peça no estoque (opcional)
   }>;
   subtotal: number;
   taxes: number;
@@ -47,78 +52,149 @@ export default function PurchaseOrderForm({
   open, 
   onOpenChange, 
   quotationId,
-  purchaseNeed,
+  purchaseNeed, // Mantido para compatibilidade, mas não será usado
   onSuccess 
 }: PurchaseOrderFormProps) {
   const { suppliers, createPurchaseOrder, loading } = usePurchasing();
+  const { quotations, fetchQuotations, loading: loadingQuotations } = useQuotations();
+  const { parts, fetchParts } = usePartsInventory();
   const { toast } = useToast();
 
-  // Função para obter itens iniciais baseado na necessidade de compra
-  const getInitialItems = useCallback(() => {
-    if (purchaseNeed) {
-      return [{
-        item_name: purchaseNeed.part_name,
-        description: `${purchaseNeed.part_code} - ${purchaseNeed.part_name}`,
-        quantity: purchaseNeed.shortage_quantity,
-        unit_price: purchaseNeed.estimated_cost / purchaseNeed.shortage_quantity || 0,
-        total_price: purchaseNeed.estimated_cost || 0,
-      }];
-    }
-    return [{ item_name: '', description: '', quantity: 1, unit_price: 0, total_price: 0 }];
-  }, [purchaseNeed]);
-
-  const [formData, setFormData] = useState<POFormData>(() => {
-    const initialItems = purchaseNeed ? [{
-      item_name: purchaseNeed.part_name,
-      description: `${purchaseNeed.part_code} - ${purchaseNeed.part_name}`,
-      quantity: purchaseNeed.shortage_quantity,
-      unit_price: purchaseNeed.estimated_cost / purchaseNeed.shortage_quantity || 0,
-      total_price: purchaseNeed.estimated_cost || 0,
-    }] : [{ item_name: '', description: '', quantity: 1, unit_price: 0, total_price: 0 }];
-    
-    const initialSubtotal = initialItems.reduce((sum, item) => sum + item.total_price, 0);
-    
-    return {
-      supplier_id: '',
-      requisition_id: '',
-      expected_delivery: '',
-      terms: '',
-      notes: '',
-      delivery_address: '',
-      items: initialItems,
-      subtotal: initialSubtotal,
-      taxes: 0,
-      freight: 0,
-      discount: 0,
-      total_value: initialSubtotal,
-    };
-  });
+  const [formData, setFormData] = useState<POFormData>(() => ({
+    quotation_id: quotationId || '',
+    supplier_id: '',
+    requisition_id: '',
+    expected_delivery: '',
+    terms: '',
+    notes: '',
+    delivery_address: '',
+    items: [],
+    subtotal: 0,
+    taxes: 0,
+    freight: 0,
+    discount: 0,
+    total_value: 0,
+  }));
 
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
 
-  // Reset form when modal opens, mas manter dados da necessidade se houver
+  // Buscar cotações e peças quando o modal abrir
   useEffect(() => {
     if (open) {
-      const initialItems = getInitialItems();
-      const initialSubtotal = initialItems.reduce((sum, item) => sum + item.total_price, 0);
-      
+      fetchQuotations();
+      fetchParts({ search: '' });
+    }
+  }, [open, fetchQuotations, fetchParts]);
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
       setFormData({
+        quotation_id: quotationId || '',
         supplier_id: '',
         requisition_id: '',
         expected_delivery: '',
         terms: '',
         notes: '',
         delivery_address: '',
-        items: initialItems,
-        subtotal: initialSubtotal,
+        items: [],
+        subtotal: 0,
         taxes: 0,
         freight: 0,
         discount: 0,
-        total_value: initialSubtotal,
+        total_value: 0,
       });
       setSelectedSupplier(null);
+      setSelectedQuotation(null);
     }
-  }, [open, getInitialItems]);
+  }, [open, quotationId]);
+
+  // Quando uma cotação é selecionada, preencher dados
+  useEffect(() => {
+    if (formData.quotation_id) {
+      const quotation = quotations.find(q => q.id === formData.quotation_id);
+      if (quotation) {
+        setSelectedQuotation(quotation);
+        
+        // Preencher fornecedor
+        setFormData(prev => ({
+          ...prev,
+          supplier_id: quotation.supplier_id,
+          requisition_id: quotation.requisition_id,
+          terms: quotation.terms || '',
+        }));
+        
+        // Preencher itens da cotação
+        if (quotation.items && Array.isArray(quotation.items) && quotation.items.length > 0) {
+          const newItems = quotation.items.map(item => ({
+            item_name: item.item_name || '',
+            description: item.description || '',
+            quantity: item.quantity || 1,
+            unit_price: item.unit_price || 0,
+            total_price: item.total_price || (item.quantity || 1) * (item.unit_price || 0),
+            part_id: (item as any).part_id, // part_id pode vir da cotação se disponível
+          }));
+          
+          const subtotal = newItems.reduce((sum, item) => sum + item.total_price, 0);
+          
+          setFormData(prev => ({
+            ...prev,
+            items: newItems,
+            subtotal,
+            total_value: subtotal + prev.taxes + prev.freight - prev.discount,
+          }));
+        }
+        
+        // Preencher data de entrega baseada no prazo de entrega da cotação
+        if (quotation.delivery_time) {
+          const deliveryDate = new Date();
+          deliveryDate.setDate(deliveryDate.getDate() + quotation.delivery_time);
+          setFormData(prev => ({
+            ...prev,
+            expected_delivery: deliveryDate.toISOString().split('T')[0],
+          }));
+        }
+      }
+    }
+  }, [formData.quotation_id, quotations]);
+
+  // Buscar part_id para itens que não têm quando as peças forem carregadas
+  useEffect(() => {
+    if (open && parts.length > 0 && formData.items.length > 0) {
+      const itemsWithoutPartId = formData.items.filter(item => !item.part_id && item.item_name);
+      
+      if (itemsWithoutPartId.length > 0) {
+        const updatedItems = formData.items.map(item => {
+          if (!item.part_id && item.item_name) {
+            // Tentar encontrar por nome da peça
+            const foundPart = parts.find(p => 
+              p.part_name.toLowerCase() === item.item_name.toLowerCase() ||
+              item.item_name.toLowerCase().includes(p.part_name.toLowerCase()) ||
+              p.part_name.toLowerCase().includes(item.item_name.toLowerCase())
+            );
+            
+            if (foundPart) {
+              return { ...item, part_id: foundPart.id };
+            }
+          }
+          return item;
+        });
+        
+        // Atualizar apenas se houver mudanças
+        const hasChanges = updatedItems.some((item, index) => 
+          item.part_id !== formData.items[index]?.part_id
+        );
+        
+        if (hasChanges) {
+          setFormData(prev => ({
+            ...prev,
+            items: updatedItems,
+          }));
+        }
+      }
+    }
+  }, [open, parts, formData.items]);
 
   // Calculate totals whenever items, taxes, freight, or discount change
   useEffect(() => {
@@ -188,10 +264,19 @@ export default function PurchaseOrderForm({
 
   const handleSubmit = async () => {
     // Validation
+    if (!formData.quotation_id) {
+      toast({
+        title: 'Erro',
+        description: 'Selecione uma cotação aprovada',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!formData.supplier_id) {
       toast({
         title: 'Erro',
-        description: 'Selecione um fornecedor',
+        description: 'Fornecedor é obrigatório',
         variant: 'destructive',
       });
       return;
@@ -209,6 +294,7 @@ export default function PurchaseOrderForm({
     try {
       const orderData: Omit<PurchaseOrder, 'id' | 'po_number' | 'supplier' | 'items' | 'created_at' | 'updated_at'> = {
         supplier_id: formData.supplier_id,
+        quotation_id: formData.quotation_id || undefined,
         requisition_id: formData.requisition_id || undefined,
         status: 'draft',
         order_date: new Date().toISOString().split('T')[0],
@@ -231,6 +317,7 @@ export default function PurchaseOrderForm({
         unit_price: item.unit_price,
         total_price: item.total_price,
         received_quantity: 0,
+        part_id: item.part_id, // Incluir part_id se disponível
       }));
 
       const result = await createPurchaseOrder(orderData, items);
@@ -241,13 +328,14 @@ export default function PurchaseOrderForm({
         
         // Reset form
         setFormData({
+          quotation_id: '',
           supplier_id: '',
           requisition_id: '',
           expected_delivery: '',
           terms: '',
           notes: '',
           delivery_address: '',
-          items: [{ item_name: '', description: '', quantity: 1, unit_price: 0, total_price: 0 }],
+          items: [],
           subtotal: 0,
           taxes: 0,
           freight: 0,
@@ -271,16 +359,52 @@ export default function PurchaseOrderForm({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Supplier Selection */}
+          {/* Quotation Selection - OBRIGATÓRIO */}
+          <div>
+            <Label>Cotação *</Label>
+            <Select 
+              value={formData.quotation_id} 
+              onValueChange={(value) => handleInputChange('quotation_id', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma cotação aprovada" />
+              </SelectTrigger>
+              <SelectContent>
+                {loadingQuotations ? (
+                  <SelectItem value="loading" disabled>Carregando cotações...</SelectItem>
+                ) : quotations.filter(q => q.status === 'approved').length === 0 ? (
+                  <SelectItem value="none" disabled>Nenhuma cotação aprovada disponível</SelectItem>
+                ) : (
+                  quotations
+                    .filter(q => q.status === 'approved')
+                    .map((quotation) => (
+                      <SelectItem key={quotation.id} value={quotation.id}>
+                        {quotation.quote_number || quotation.id.substring(0, 8)} - {quotation.supplier?.name || 'Fornecedor'} - {formatCurrency(quotation.total_value)}
+                      </SelectItem>
+                    ))
+                )}
+              </SelectContent>
+            </Select>
+            {selectedQuotation && (
+              <div className="mt-2 p-2 bg-muted rounded text-sm">
+                <p><strong>Fornecedor:</strong> {selectedQuotation.supplier?.name}</p>
+                <p><strong>Valor Total:</strong> {formatCurrency(selectedQuotation.total_value)}</p>
+                <p><strong>Prazo de Entrega:</strong> {selectedQuotation.delivery_time || selectedQuotation.supplier?.delivery_days || 'N/A'} dias</p>
+              </div>
+            )}
+          </div>
+
+          {/* Supplier Selection - Preenchido automaticamente da cotação */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Fornecedor *</Label>
               <Select 
                 value={formData.supplier_id} 
                 onValueChange={(value) => handleInputChange('supplier_id', value)}
+                disabled={!!formData.quotation_id} // Desabilitar se já veio de uma cotação
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o fornecedor" />
+                  <SelectValue placeholder={formData.quotation_id ? "Preenchido da cotação" : "Selecione o fornecedor"} />
                 </SelectTrigger>
                 <SelectContent>
                   {suppliers.filter(s => s.is_active).map((supplier) => (

@@ -116,3 +116,5 @@
 3. ⏳ Criar estrutura de testes
 4. ⏳ Documentar arquitetura atual
 
+
+

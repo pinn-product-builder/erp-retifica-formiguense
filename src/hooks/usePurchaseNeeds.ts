@@ -11,6 +11,7 @@ export interface PurchaseNeed {
   org_id: string;
   part_code: string;
   part_name: string;
+  part_id?: string; // ID da peça no estoque (opcional)
   required_quantity: number;
   available_quantity: number;
   shortage_quantity: number;
@@ -101,8 +102,70 @@ export function usePurchaseNeeds() {
 
       if (error) throw error;
 
-      setNeeds((data || []) as PurchaseNeed[]);
-      return data as PurchaseNeed[];
+      // Buscar pedidos de compra recebidos para filtrar necessidades já atendidas
+      const { data: receivedOrders } = await supabase
+        .from('purchase_orders')
+        .select(`
+          id,
+          status,
+          items:purchase_order_items!inner(
+            part_id,
+            purchase_receipt_items!inner(
+              id
+            )
+          )
+        `)
+        .eq('org_id', currentOrganization.id)
+        .in('status', ['completed', 'partially_received']);
+
+      // Criar conjunto de part_ids que já foram recebidos (têm recebimentos)
+      const receivedPartIds = new Set<string>();
+      if (receivedOrders) {
+        receivedOrders.forEach(order => {
+          if (order.items && Array.isArray(order.items)) {
+            order.items.forEach((item: any) => {
+              // Verificar se o item tem recebimentos (purchase_receipt_items)
+              if (item.part_id && item.purchase_receipt_items && Array.isArray(item.purchase_receipt_items) && item.purchase_receipt_items.length > 0) {
+                receivedPartIds.add(item.part_id);
+              }
+            });
+          }
+        });
+      }
+
+      // Buscar part_codes das peças recebidas
+      const receivedPartCodes = new Set<string>();
+      if (receivedPartIds.size > 0) {
+        const { data: receivedParts } = await supabase
+          .from('parts_inventory')
+          .select('part_code')
+          .eq('org_id', currentOrganization.id)
+          .in('id', Array.from(receivedPartIds));
+        
+        if (receivedParts) {
+          receivedParts.forEach(part => {
+            if (part.part_code) {
+              receivedPartCodes.add(part.part_code);
+            }
+          });
+        }
+      }
+
+      // Filtrar necessidades que já foram recebidas
+      const filteredData = (data || []).filter((need: any) => {
+        // Se a necessidade tem part_id e já foi recebida, excluir
+        if (need.part_id && receivedPartIds.has(need.part_id)) {
+          return false;
+        }
+        // Se a necessidade tem part_code e já foi recebida, excluir
+        if (need.part_code && receivedPartCodes.has(need.part_code)) {
+          return false;
+        }
+        return true;
+      });
+
+      setNeeds(filteredData as PurchaseNeed[]);
+      return filteredData as PurchaseNeed[];
     } catch (error) {
       console.error('Error fetching purchase needs:', error);
       toastRef.current({
@@ -134,12 +197,28 @@ export function usePurchaseNeeds() {
 
       const shortage_quantity = Math.max(0, needData.required_quantity - needData.available_quantity);
 
+      // Buscar part_id baseado no part_code
+      let part_id: string | null = null;
+      if (needData.part_code) {
+        const { data: partData } = await supabase
+          .from('parts_inventory')
+          .select('id')
+          .eq('org_id', currentOrganization.id)
+          .eq('part_code', needData.part_code)
+          .single();
+        
+        if (partData) {
+          part_id = partData.id;
+        }
+      }
+
       const { data, error } = await supabase
         .from('purchase_needs')
         .insert({
           org_id: currentOrganization.id,
           part_code: needData.part_code,
           part_name: needData.part_name,
+          part_id: part_id,
           required_quantity: needData.required_quantity,
           available_quantity: needData.available_quantity,
           shortage_quantity,

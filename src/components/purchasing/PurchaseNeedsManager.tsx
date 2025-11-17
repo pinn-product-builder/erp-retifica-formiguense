@@ -44,8 +44,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import PurchaseNeedForm from './PurchaseNeedForm';
-import QuotationForm from './QuotationForm';
-import PurchaseOrderForm from './PurchaseOrderForm';
+import RequisitionForm from './RequisitionForm';
 
 const PRIORITY_CONFIG = {
   critical: {
@@ -120,10 +119,8 @@ export default function PurchaseNeedsManager() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [generatingAuto, setGeneratingAuto] = useState(false);
   const [convertingToReq, setConvertingToReq] = useState(false);
-  const [showQuotationDialog, setShowQuotationDialog] = useState(false);
-  const [showOrderDialog, setShowOrderDialog] = useState(false);
-  const [needForQuotation, setNeedForQuotation] = useState<PurchaseNeed | null>(null);
-  const [needForOrder, setNeedForOrder] = useState<PurchaseNeed | null>(null);
+  const [showRequisitionDialog, setShowRequisitionDialog] = useState(false);
+  const [selectedNeedForRequisition, setSelectedNeedForRequisition] = useState<PurchaseNeed | null>(null);
 
   useEffect(() => {
     fetchNeeds();
@@ -210,6 +207,18 @@ export default function PurchaseNeedsManager() {
   const handleConvertToRequisition = async () => {
     if (selectedNeeds.length === 0) return;
     
+    // Se houver apenas uma necessidade selecionada, abrir formulário com peça pré-selecionada
+    if (selectedNeeds.length === 1) {
+      const need = needs.find(n => n.id === selectedNeeds[0]);
+      if (need) {
+        setSelectedNeedForRequisition(need);
+        setShowRequisitionDialog(true);
+        setSelectedNeeds([]);
+        return;
+      }
+    }
+    
+    // Se houver múltiplas necessidades, usar a função antiga (pode ser melhorada depois)
     setConvertingToReq(true);
     const result = await convertToRequisition(selectedNeeds);
     if (result) {
@@ -229,41 +238,6 @@ export default function PurchaseNeedsManager() {
     return types[type as keyof typeof types] || type;
   };
 
-  const handleOpenQuotation = (need: PurchaseNeed) => {
-    setNeedForQuotation(need);
-    setShowQuotationDialog(true);
-  };
-
-  const handleOpenOrder = (need: PurchaseNeed) => {
-    setNeedForOrder(need);
-    setShowOrderDialog(true);
-  };
-
-  const handleQuotationSuccess = async () => {
-    if (needForQuotation) {
-      await updateNeedStatus(needForQuotation.id, 'in_quotation');
-    }
-    await fetchNeeds();
-    toast({
-      title: 'Cotação criada',
-      description: 'A necessidade foi marcada como em cotação.',
-    });
-    setNeedForQuotation(null);
-    setShowQuotationDialog(false);
-  };
-
-  const handleOrderSuccess = async () => {
-    if (needForOrder) {
-      await updateNeedStatus(needForOrder.id, 'ordered');
-    }
-    await fetchNeeds();
-    toast({
-      title: 'Pedido criado',
-      description: 'A necessidade foi marcada como atendida por um pedido.',
-    });
-    setNeedForOrder(null);
-    setShowOrderDialog(false);
-  };
 
   return (
     <div className="space-y-6">
@@ -667,37 +641,6 @@ export default function PurchaseNeedsManager() {
                     </div>
                   )
                 },
-                {
-                  key: 'actions',
-                  header: 'Ações',
-                  mobileLabel: 'Ações',
-                  priority: 1,
-                  minWidth: 150,
-                  render: (need) => (
-                    <div className="flex items-center justify-end gap-2">
-                      {need.status === 'pending' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenQuotation(need)}
-                        >
-                          <FileText className="w-4 h-4 mr-1" />
-                          Cotar
-                        </Button>
-                      )}
-                      {need.status === 'in_quotation' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenOrder(need)}
-                        >
-                          <ShoppingCart className="w-4 h-4 mr-1" />
-                          Pedido
-                        </Button>
-                      )}
-                    </div>
-                  )
-                }
               ]}
             />
             </>
@@ -705,50 +648,25 @@ export default function PurchaseNeedsManager() {
         </CardContent>
       </Card>
 
-      {/* Modal de Cotação */}
-      <Dialog
-        open={showQuotationDialog}
+      {/* Modal de Requisição com peça pré-selecionada */}
+      <RequisitionForm
+        open={showRequisitionDialog}
         onOpenChange={(open) => {
+          setShowRequisitionDialog(open);
           if (!open) {
-            setShowQuotationDialog(false);
-            setNeedForQuotation(null);
-          } else {
-            setShowQuotationDialog(open);
+            setSelectedNeedForRequisition(null);
           }
         }}
-      >
-        <ResponsiveModalContent size="lg">
-          <DialogHeader>
-            <DialogTitle>
-              Criar Cotação
-              {needForQuotation ? ` • ${needForQuotation.part_name} (${needForQuotation.part_code})` : ''}
-            </DialogTitle>
-          </DialogHeader>
-          {showQuotationDialog && (
-            <QuotationForm
-              onSuccess={handleQuotationSuccess}
-              onCancel={() => {
-                setShowQuotationDialog(false);
-                setNeedForQuotation(null);
-              }}
-              purchaseNeed={needForQuotation}
-              key={needForQuotation?.id || 'new'}
-            />
-          )}
-        </ResponsiveModalContent>
-      </Dialog>
-
-      {/* Modal de Pedido */}
-      <PurchaseOrderForm
-        open={showOrderDialog}
-        onOpenChange={(open) => {
-          setShowOrderDialog(open);
-          if (!open) {
-            setNeedForOrder(null);
-          }
+        preselectedPart={selectedNeedForRequisition ? {
+          part_code: selectedNeedForRequisition.part_code,
+          part_name: selectedNeedForRequisition.part_name,
+          shortage_quantity: selectedNeedForRequisition.shortage_quantity,
+        } : undefined}
+        onSuccess={() => {
+          setShowRequisitionDialog(false);
+          setSelectedNeedForRequisition(null);
+          fetchNeeds();
         }}
-        purchaseNeed={needForOrder}
-        onSuccess={handleOrderSuccess}
       />
     </div>
   );

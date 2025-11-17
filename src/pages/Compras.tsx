@@ -5,11 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShoppingCart, Users, FileText, Package, Plus, Star, TrendingUp, Award, Check, X } from 'lucide-react';
 import { usePurchasing } from '@/hooks/usePurchasing';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { usePurchaseNeeds } from '@/hooks/usePurchaseNeeds';
+import { useQuotations } from '@/hooks/useQuotations';
+import { usePurchaseReceipts } from '@/hooks/usePurchaseReceipts';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
@@ -19,6 +17,7 @@ import QuotationManager from '@/components/purchasing/QuotationManager';
 import PurchaseNeedsManager from '@/components/purchasing/PurchaseNeedsManager';
 import PurchaseOrderManager from '@/components/purchasing/PurchaseOrderManager';
 import ReceiptManager from '@/components/purchasing/ReceiptManager';
+import RequisitionForm from '@/components/purchasing/RequisitionForm';
 
 const STATUS_COLORS = {
   pending: 'bg-yellow-500/20 text-yellow-700',
@@ -62,85 +61,18 @@ export default function Compras() {
     loading, 
     createRequisition,
     updateRequisitionStatus,
-    createPurchaseOrder
+    createPurchaseOrder,
+    fetchRequisitions,
+    fetchPurchaseOrders,
+    fetchSuppliers
   } = usePurchasing();
   const { toast } = useToast();
+  const { fetchNeeds } = usePurchaseNeeds();
+  const { fetchQuotations } = useQuotations();
+  const { fetchReceipts } = usePurchaseReceipts();
 
   const [showRequisitionDialog, setShowRequisitionDialog] = useState(false);
-  const [newRequisition, setNewRequisition] = useState({
-    department: '',
-    priority: 'medium',
-    justification: '',
-    items: [{ item_name: '', description: '', quantity: 1, unit_price: 0 }],
-  });
-
-  const handleCreateRequisition = async () => {
-    if (!newRequisition.department || newRequisition.items.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Dados incompletos",
-        description: "Por favor, preencha o departamento e adicione pelo menos um item.",
-      });
-      return;
-    }
-    
-    try {
-      const totalValue = newRequisition.items.reduce((sum, item) => 
-        sum + (item.quantity * (item.unit_price || 0)), 0
-      );
-
-      await createRequisition(
-        {
-          ...newRequisition,
-          total_estimated_value: totalValue,
-          status: 'pending',
-        },
-        newRequisition.items.map(item => ({
-          ...item,
-          total_price: item.quantity * (item.unit_price || 0),
-        }))
-      );
-      
-      setNewRequisition({
-        department: '',
-        priority: 'medium',
-        justification: '',
-        items: [{ item_name: '', description: '', quantity: 1, unit_price: 0 }],
-      });
-      
-      setShowRequisitionDialog(false);
-
-      toast({
-        title: "Requisição criada",
-        description: "Requisição de compra criada com sucesso",
-      });
-    } catch (error) {
-      console.error('Erro ao criar requisição:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao criar requisição",
-        description: "Não foi possível criar a requisição. Tente novamente.",
-      });
-    }
-  };
-
-  const addRequisitionItem = () => {
-    setNewRequisition({
-      ...newRequisition,
-      items: [...newRequisition.items, { item_name: '', description: '', quantity: 1, unit_price: 0 }],
-    });
-  };
-
-  const updateRequisitionItem = (index: number, field: string, value: string | number) => {
-    const updatedItems = [...newRequisition.items];
-    updatedItems[index] = { ...updatedItems[index], [field]: value };
-    setNewRequisition({ ...newRequisition, items: updatedItems });
-  };
-
-  const removeRequisitionItem = (index: number) => {
-    const updatedItems = newRequisition.items.filter((_, i) => i !== index);
-    setNewRequisition({ ...newRequisition, items: updatedItems });
-  };
+  const [activeTab, setActiveTab] = useState('requisitions');
 
   const getPendingRequisitionsValue = () => {
     return requisitions
@@ -216,7 +148,23 @@ export default function Compras() {
       </div>
 
       {/* Main Content */}
-      <Tabs defaultValue="requisitions" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(value) => {
+        setActiveTab(value);
+        // Recarregar dados quando a aba mudar
+        if (value === 'needs') {
+          fetchNeeds();
+        } else if (value === 'requisitions') {
+          fetchRequisitions();
+        } else if (value === 'orders') {
+          fetchPurchaseOrders();
+        } else if (value === 'receipts') {
+          fetchReceipts();
+        } else if (value === 'quotations') {
+          fetchQuotations();
+        } else if (value === 'suppliers') {
+          fetchSuppliers();
+        }
+      }} className="space-y-4">
         <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-7">
           <TabsTrigger value="needs" className="flex-shrink-0 text-xs sm:text-sm">Necessidades</TabsTrigger>
           <TabsTrigger value="requisitions" className="flex-shrink-0 text-xs sm:text-sm">Requisições</TabsTrigger>
@@ -240,146 +188,19 @@ export default function Compras() {
         <TabsContent value="requisitions" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">Requisições de Compra</h2>
-            <Dialog open={showRequisitionDialog} onOpenChange={setShowRequisitionDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Requisição
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Criar Requisição de Compra</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Departamento</Label>
-                      <Input
-                        value={newRequisition.department}
-                        onChange={(e) => setNewRequisition({...newRequisition, department: e.target.value})}
-                        placeholder="Ex: Produção, Manutenção"
-                      />
-                    </div>
-                    <div>
-                      <Label>Prioridade</Label>
-                      <Select 
-                        value={newRequisition.priority} 
-                        onValueChange={(value) => setNewRequisition({...newRequisition, priority: value})}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Baixa</SelectItem>
-                          <SelectItem value="medium">Média</SelectItem>
-                          <SelectItem value="high">Alta</SelectItem>
-                          <SelectItem value="urgent">Urgente</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label>Justificativa</Label>
-                    <Textarea
-                      value={newRequisition.justification}
-                      onChange={(e) => setNewRequisition({...newRequisition, justification: e.target.value})}
-                      placeholder="Justifique a necessidade da compra"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <Label>Itens da Requisição</Label>
-                      <Button type="button" variant="outline" size="sm" onClick={addRequisitionItem}>
-                        <Plus className="h-4 w-4 mr-1" />
-                        Adicionar Item
-                      </Button>
-                    </div>
-                    
-                    {newRequisition.items.map((item, index) => (
-                      <div key={index} className="border p-3 rounded space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <Label className="text-xs">Nome do Item</Label>
-                            <Input
-                              value={item.item_name}
-                              onChange={(e) => updateRequisitionItem(index, 'item_name', e.target.value)}
-                              placeholder="Ex: Rolamento SKF"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Quantidade</Label>
-                            <Input
-                              type="text"
-                              value={item.quantity.toString()}
-                              onChange={(e) => {
-                                const numericValue = e.target.value.replace(/[^\d]/g, '');
-                                const quantity = numericValue ? parseInt(numericValue) : 1;
-                                updateRequisitionItem(index, 'quantity', Math.max(1, quantity));
-                              }}
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <Label className="text-xs">Descrição</Label>
-                          <Input
-                            value={item.description}
-                            onChange={(e) => updateRequisitionItem(index, 'description', e.target.value)}
-                            placeholder="Descrição detalhada do item"
-                          />
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <div className="w-32">
-                            <Label className="text-xs">Preço Unitário</Label>
-                            <Input
-                              type="text"
-                              value={item.unit_price.toString()}
-                              onChange={(e) => {
-                                // Permitir vírgula como separador decimal
-                                let numericValue = e.target.value.replace(/[^\d.,]/g, '');
-                                if (numericValue.includes(',')) {
-                                  numericValue = numericValue.replace(',', '.');
-                                }
-                                const price = parseFloat(numericValue) || 0;
-                                updateRequisitionItem(index, 'unit_price', Math.max(0, price));
-                              }}
-                              placeholder="0,00"
-                            />
-                          </div>
-                          {newRequisition.items.length > 1 && (
-                            <Button 
-                              type="button" 
-                              variant="destructive" 
-                              size="sm"
-                              onClick={() => removeRequisitionItem(index)}
-                            >
-                              Remover
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-lg font-semibold">
-                      Total Estimado: {formatCurrency(
-                        newRequisition.items.reduce((sum, item) => 
-                          sum + (item.quantity * (item.unit_price || 0)), 0
-                        )
-                      )}
-                    </p>
-                  </div>
-
-                  <Button onClick={handleCreateRequisition} className="w-full">
-                    Criar Requisição
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <Button onClick={() => setShowRequisitionDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Requisição
+            </Button>
           </div>
+          
+          <RequisitionForm
+            open={showRequisitionDialog}
+            onOpenChange={setShowRequisitionDialog}
+            onSuccess={() => {
+              setShowRequisitionDialog(false);
+            }}
+          />
 
           {loading ? (
             <Card>
