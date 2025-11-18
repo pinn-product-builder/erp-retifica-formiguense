@@ -168,10 +168,10 @@ export default function Compras() {
         <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-7">
           <TabsTrigger value="needs" className="flex-shrink-0 text-xs sm:text-sm">Necessidades</TabsTrigger>
           <TabsTrigger value="requisitions" className="flex-shrink-0 text-xs sm:text-sm">Requisições</TabsTrigger>
+          <TabsTrigger value="quotations" className="flex-shrink-0 text-xs sm:text-sm">Cotações</TabsTrigger>
           <TabsTrigger value="orders" className="flex-shrink-0 text-xs sm:text-sm">Pedidos</TabsTrigger>
           <TabsTrigger value="receipts" className="flex-shrink-0 text-xs sm:text-sm">Recebimentos</TabsTrigger>
           <TabsTrigger value="suppliers" className="flex-shrink-0 text-xs sm:text-sm">Fornecedores</TabsTrigger>
-          <TabsTrigger value="quotations" className="flex-shrink-0 text-xs sm:text-sm">Cotações</TabsTrigger>
           <TabsTrigger value="evaluations" className="flex items-center gap-1 sm:gap-2 flex-shrink-0 text-xs sm:text-sm">
             <Award className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Avaliações</span>
