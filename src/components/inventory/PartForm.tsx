@@ -29,14 +29,19 @@ interface PartFormProps {
   onSuccess: () => void;
 }
 
-export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess }) => {
+export const PartForm: React.FC<PartFormProps> = ({ 
+  part, 
+  onSuccess
+}) => {
   const { createPart, updatePart, loading } = usePartsInventory();
   const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
+  
+  const isEditing = !!part;
   
   const [formData, setFormData] = useState({
     part_name: '',
     part_code: '',
-    quantity: 1,
+    quantity: isEditing ? 1 : 0,
     unit_cost: 0,
     supplier: '',
     component: undefined as ComponentType | undefined,
@@ -68,12 +73,12 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess }) => {
       newErrors.part_name = 'Nome da peça é obrigatório';
     }
 
-    if (formData.quantity < 0) {
-      newErrors.quantity = 'Quantidade não pode ser negativa';
-    }
-
     if (formData.unit_cost < 0) {
       newErrors.unit_cost = 'Valor unitário não pode ser negativo';
+    }
+
+    if (isEditing && formData.quantity < 0) {
+      newErrors.quantity = 'Quantidade não pode ser negativa';
     }
 
     setErrors(newErrors);
@@ -88,9 +93,9 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess }) => {
     const dataToSend = {
       part_name: formData.part_name,
       part_code: formData.part_code || undefined,
-      quantity: formData.quantity,
+      quantity: isEditing ? formData.quantity : 0,
       unit_cost: formData.unit_cost,
-      supplier: formData.supplier || undefined,
+      supplier: isEditing ? (formData.supplier || undefined) : undefined,
       component: formData.component || undefined,
       status: formData.status,
       notes: formData.notes || undefined,
@@ -125,7 +130,7 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess }) => {
         </div>
 
         {/* Código da Peça */}
-        <div>
+        <div className={!isEditing ? 'col-span-2' : ''}>
           <Label htmlFor="part_code">Código da Peça</Label>
           <Input
             id="part_code"
@@ -163,27 +168,7 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess }) => {
           </Select>
         </div>
 
-        {/* Quantidade */}
-        <div>
-          <Label htmlFor="quantity">
-            Quantidade <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            id="quantity"
-            type="text"
-            value={formData.quantity.toString()}
-            onChange={(e) => {
-              const numericValue = e.target.value.replace(/[^\d]/g, '');
-              const quantity = numericValue ? parseInt(numericValue) : 0;
-              setFormData({ ...formData, quantity: Math.max(0, quantity) });
-            }}
-          />
-          {errors.quantity && (
-            <p className="text-sm text-red-500 mt-1">{errors.quantity}</p>
-          )}
-        </div>
-
-        {/* Valor Unitário */}
+        {/* Valor Unitário - Sempre visível */}
         <div>
           <Label htmlFor="unit_cost">
             Valor Unitário (R$) <span className="text-red-500">*</span>
@@ -193,7 +178,6 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess }) => {
             type="text"
             value={formData.unit_cost.toString()}
             onChange={(e) => {
-              // Permitir vírgula como separador decimal
               let numericValue = e.target.value.replace(/[^\d.,]/g, '');
               if (numericValue.includes(',')) {
                 numericValue = numericValue.replace(',', '.');
@@ -208,16 +192,40 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess }) => {
           )}
         </div>
 
-        {/* Fornecedor */}
-        <div>
-          <Label htmlFor="supplier">Fornecedor</Label>
-          <Input
-            id="supplier"
-            value={formData.supplier}
-            onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-            placeholder="Ex: Fornecedor XYZ"
-          />
-        </div>
+        {/* Quantidade - Só mostrar ao editar, mas desabilitado */}
+        {isEditing && (
+          <div>
+            <Label htmlFor="quantity">
+              Quantidade <span className="text-muted-foreground text-xs">(não editável)</span>
+            </Label>
+            <Input
+              id="quantity"
+              type="text"
+              value={formData.quantity.toString()}
+              disabled
+              className="bg-muted cursor-not-allowed"
+            />
+            {errors.quantity && (
+              <p className="text-sm text-red-500 mt-1">{errors.quantity}</p>
+            )}
+          </div>
+        )}
+
+        {/* Fornecedor - Só mostrar ao editar, mas desabilitado */}
+        {isEditing && (
+          <div>
+            <Label htmlFor="supplier">
+              Fornecedor <span className="text-muted-foreground text-xs">(não editável)</span>
+            </Label>
+            <Input
+              id="supplier"
+              value={formData.supplier}
+              disabled
+              className="bg-muted cursor-not-allowed"
+              placeholder="Ex: Fornecedor XYZ"
+            />
+          </div>
+        )}
 
         {/* Status */}
         <div>
@@ -251,13 +259,15 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess }) => {
         </div>
       </div>
 
-      {/* Valor Total */}
-      <div className="bg-muted p-4 rounded-lg">
-        <p className="text-sm text-muted-foreground">Valor Total do Estoque desta Peça:</p>
-        <p className="text-2xl font-bold">
-          {formatCurrency(formData.quantity * formData.unit_cost)}
-        </p>
-      </div>
+      {/* Valor Total - Mostrar sempre que houver quantidade ou valor unitário */}
+      {(isEditing || formData.unit_cost > 0) && (
+        <div className="bg-muted p-4 rounded-lg">
+          <p className="text-sm text-muted-foreground">Valor Total do Estoque desta Peça:</p>
+          <p className="text-2xl font-bold">
+            {formatCurrency(formData.quantity * formData.unit_cost)}
+          </p>
+        </div>
+      )}
 
       {/* Buttons */}
       <div className="flex justify-end gap-2 pt-4">

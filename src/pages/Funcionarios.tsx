@@ -10,59 +10,44 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Clock, UserPlus, Search, Filter } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
+import { useEmployees } from "@/hooks/useEmployees";
 
 const Funcionarios = () => {
+  const { employees, timeTracking, loading } = useEmployees();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('todos');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Dados de exemplo para funcionários
-  const funcionarios = [
-    {
-      id: 1,
-      nome: "João Silva",
-      cargo: "Mecânico Senior",
-      setor: "Bloco",
-      status: "ativo",
-      horasTrabalhadas: 168,
-      metaHoras: 176,
-      telefone: "(11) 99999-1111",
-      email: "joao@retifica.com"
-    },
-    {
-      id: 2,
-      nome: "Maria Santos",
-      cargo: "Técnica em Motores",
-      setor: "Cabeçote", 
-      status: "ativo",
-      horasTrabalhadas: 172,
-      metaHoras: 176,
-      telefone: "(11) 99999-2222",
-      email: "maria@retifica.com"
-    },
-    {
-      id: 3,
-      nome: "Pedro Costa",
-      cargo: "Auxiliar",
-      setor: "Biela",
-      status: "inativo",
-      horasTrabalhadas: 0,
-      metaHoras: 176,
-      telefone: "(11) 99999-3333",
-      email: "pedro@retifica.com"
-    }
-  ];
-
-  const funcionariosFiltrados = funcionarios.filter(funcionario => {
-    const matchesSearch = funcionario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         funcionario.cargo.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'todos' || funcionario.status === filterStatus;
+  // Filtrar funcionários
+  const funcionariosFiltrados = employees.filter(employee => {
+    const matchesSearch = 
+      employee.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.department?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = filterStatus === 'todos' || 
+      (filterStatus === 'ativo' && employee.is_active) ||
+      (filterStatus === 'inativo' && !employee.is_active);
+    
     return matchesSearch && matchesStatus;
   });
 
-  const funcionariosAtivos = funcionarios.filter(f => f.status === 'ativo').length;
-  const totalHorasTrabalhadas = funcionarios.reduce((sum, f) => sum + f.horasTrabalhadas, 0);
-  const mediaHorasPorFuncionario = totalHorasTrabalhadas / funcionarios.length;
+  // Calcular estatísticas
+  const funcionariosAtivos = employees.filter(emp => emp.is_active).length;
+  const totalFuncionarios = employees.length;
+  
+  // Calcular horas trabalhadas do mês atual
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getFullYear();
+  const horasDoMes = timeTracking.filter(entry => {
+    const entryDate = new Date(entry.date);
+    return entryDate.getMonth() + 1 === currentMonth && 
+           entryDate.getFullYear() === currentYear &&
+           entry.status === 'present';
+  });
+  
+  const totalHorasTrabalhadas = horasDoMes.reduce((sum, entry) => sum + (entry.total_hours || 0), 0);
+  const mediaHorasPorFuncionario = funcionariosAtivos > 0 ? totalHorasTrabalhadas / funcionariosAtivos : 0;
 
   return (
     <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -132,7 +117,7 @@ const Funcionarios = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <StatCard
           title="Total de Funcionários"
-          value={funcionarios.length}
+          value={totalFuncionarios}
           icon={Users}
           subtitle="Ativos e inativos"
         />
@@ -144,7 +129,7 @@ const Funcionarios = () => {
         />
         <StatCard
           title="Horas Trabalhadas"
-          value={totalHorasTrabalhadas}
+          value={Math.round(totalHorasTrabalhadas)}
           icon={Clock}
           subtitle="Total do mês"
         />
@@ -201,38 +186,61 @@ const Funcionarios = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {funcionariosFiltrados.map((funcionario) => (
-                <TableRow key={funcionario.id}>
-                  <TableCell className="font-medium">{funcionario.nome}</TableCell>
-                  <TableCell>{funcionario.cargo}</TableCell>
-                  <TableCell>{funcionario.setor}</TableCell>
-                  <TableCell>
-                    <Badge variant={funcionario.status === 'ativo' ? 'default' : 'secondary'}>
-                      {funcionario.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div>{funcionario.horasTrabalhadas}h / {funcionario.metaHoras}h</div>
-                      <div className="text-muted-foreground">
-                        {Math.round((funcionario.horasTrabalhadas / funcionario.metaHoras) * 100)}% da meta
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div>{funcionario.telefone}</div>
-                      <div className="text-muted-foreground">{funcionario.email}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">Editar</Button>
-                      <Button variant="outline" size="sm">Horas</Button>
-                    </div>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <p className="text-muted-foreground">Carregando funcionários...</p>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : funcionariosFiltrados.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <p className="text-muted-foreground">Nenhum funcionário encontrado</p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                funcionariosFiltrados.map((employee) => {
+                  // Calcular horas do funcionário no mês atual
+                  const employeeHours = horasDoMes
+                    .filter(entry => entry.employee_id === employee.id)
+                    .reduce((sum, entry) => sum + (entry.total_hours || 0), 0);
+                  
+                  const metaHoras = 176; // Meta padrão de horas mensais
+                  
+                  return (
+                    <TableRow key={employee.id}>
+                      <TableCell className="font-medium">{employee.name || 'Sem nome'}</TableCell>
+                      <TableCell>{employee.position || '-'}</TableCell>
+                      <TableCell>{employee.department || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant={employee.is_active ? 'default' : 'secondary'}>
+                          {employee.is_active ? 'ativo' : 'inativo'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <div>{Math.round(employeeHours)}h / {metaHoras}h</div>
+                          <div className="text-muted-foreground">
+                            {metaHoras > 0 ? Math.round((employeeHours / metaHoras) * 100) : 0}% da meta
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <div>{employee.phone || '-'}</div>
+                          <div className="text-muted-foreground">{employee.email || '-'}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm">Editar</Button>
+                          <Button variant="outline" size="sm">Horas</Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </CardContent>

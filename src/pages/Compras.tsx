@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -55,10 +55,11 @@ const translatePriority = (priority: string) => {
 };
 
 export default function Compras() {
-  const { 
-    requisitions, 
-    purchaseOrders, 
-    loading, 
+  const {
+    requisitions,
+    purchaseOrders,
+    suppliers,
+    loading,
     createRequisition,
     updateRequisitionStatus,
     createPurchaseOrder,
@@ -73,6 +74,15 @@ export default function Compras() {
 
   const [showRequisitionDialog, setShowRequisitionDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('requisitions');
+
+  // Carregar fornecedores ao montar o componente
+  useEffect(() => {
+    fetchSuppliers();
+  }, [fetchSuppliers]);
+
+  const getActiveSuppliersCount = () => {
+    return suppliers.filter(supplier => supplier.is_active).length;
+  };
 
   const getPendingRequisitionsValue = () => {
     return requisitions
@@ -104,7 +114,7 @@ export default function Compras() {
               <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 flex-shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">Fornecedores Ativos</p>
-                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">-</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold truncate">{getActiveSuppliersCount()}</p>
               </div>
             </div>
           </CardContent>
@@ -193,12 +203,13 @@ export default function Compras() {
               Nova Requisição
             </Button>
           </div>
-          
+
           <RequisitionForm
             open={showRequisitionDialog}
             onOpenChange={setShowRequisitionDialog}
             onSuccess={() => {
               setShowRequisitionDialog(false);
+              fetchRequisitions(); // Recarregar lista de requisições
             }}
           />
 
@@ -216,106 +227,106 @@ export default function Compras() {
                   keyExtractor={(requisition) => requisition.id}
                   emptyMessage="Nenhuma requisição encontrada"
                   columns={[
-                  {
-                    key: 'requisition_number',
-                    header: 'Número',
-                    mobileLabel: 'Número',
-                    priority: 1,
-                    minWidth: 120,
-                    render: (requisition) => (
-                      <span className="font-medium text-xs sm:text-sm">{requisition.requisition_number}</span>
-                    )
-                  },
-                  {
-                    key: 'department',
-                    header: 'Departamento',
-                    mobileLabel: 'Depto',
-                    priority: 3,
-                    minWidth: 120,
-                    render: (requisition) => <span className="text-xs sm:text-sm">{requisition.department}</span>
-                  },
-                  {
-                    key: 'priority',
-                    header: 'Prioridade',
-                    mobileLabel: 'Prioridade',
-                    priority: 2,
-                    minWidth: 100,
-                    render: (requisition) => (
-                      <Badge variant="outline" className="text-xs">
-                        {translatePriority(requisition.priority)}
-                      </Badge>
-                    )
-                  },
-                  {
-                    key: 'total_estimated_value',
-                    header: 'Valor Estimado',
-                    mobileLabel: 'Valor',
-                    priority: 2,
-                    minWidth: 120,
-                    render: (requisition) => (
-                      <span className="font-medium text-xs sm:text-sm whitespace-nowrap">
-                        {formatCurrency(requisition.total_estimated_value)}
-                      </span>
-                    )
-                  },
-                  {
-                    key: 'status',
-                    header: 'Status',
-                    mobileLabel: 'Status',
-                    priority: 2,
-                    minWidth: 100,
-                    render: (requisition) => (
-                      <Badge className={`text-xs ${STATUS_COLORS[requisition.status as keyof typeof STATUS_COLORS] || 'bg-gray-100'}`}>
-                        {translateStatus(requisition.status)}
-                      </Badge>
-                    )
-                  },
-                  {
-                    key: 'created_at',
-                    header: 'Data',
-                    mobileLabel: 'Data',
-                    priority: 4,
-                    minWidth: 100,
-                    hideInMobile: true,
-                    render: (requisition) => (
-                      <span className="text-xs sm:text-sm">
-                        {new Date(requisition.created_at).toLocaleDateString('pt-BR')}
-                      </span>
-                    )
-                  },
-                  {
-                    key: 'actions',
-                    header: 'Ações',
-                    mobileLabel: 'Ações',
-                    priority: 1,
-                    minWidth: 150,
-                    render: (requisition) => (
-                      <div className="flex gap-1 sm:gap-2">
-                        {requisition.status === 'pending' && (
-                          <>
-                            <Button 
-                              size="sm" 
-                              className="text-xs h-7 px-2 sm:px-3"
-                              onClick={() => updateRequisitionStatus(requisition.id, 'approved')}
-                            >
-                              <Check className="h-3 w-3 sm:mr-1" />
-                              <span className="hidden sm:inline">Aprovar</span>
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="destructive"
-                              className="text-xs h-7 px-2 sm:px-3"
-                              onClick={() => updateRequisitionStatus(requisition.id, 'rejected')}
-                            >
-                              <X className="h-3 w-3 sm:mr-1" />
-                              <span className="hidden sm:inline">Rejeitar</span>
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    )
-                  }
-                ]}
+                    {
+                      key: 'requisition_number',
+                      header: 'Número',
+                      mobileLabel: 'Número',
+                      priority: 1,
+                      minWidth: 120,
+                      render: (requisition) => (
+                        <span className="font-medium text-xs sm:text-sm">{requisition.requisition_number}</span>
+                      )
+                    },
+                    {
+                      key: 'department',
+                      header: 'Departamento',
+                      mobileLabel: 'Depto',
+                      priority: 3,
+                      minWidth: 120,
+                      render: (requisition) => <span className="text-xs sm:text-sm">{requisition.department}</span>
+                    },
+                    {
+                      key: 'priority',
+                      header: 'Prioridade',
+                      mobileLabel: 'Prioridade',
+                      priority: 2,
+                      minWidth: 100,
+                      render: (requisition) => (
+                        <Badge variant="outline" className="text-xs">
+                          {translatePriority(requisition.priority)}
+                        </Badge>
+                      )
+                    },
+                    {
+                      key: 'total_estimated_value',
+                      header: 'Valor Estimado',
+                      mobileLabel: 'Valor',
+                      priority: 2,
+                      minWidth: 120,
+                      render: (requisition) => (
+                        <span className="font-medium text-xs sm:text-sm whitespace-nowrap">
+                          {formatCurrency(requisition.total_estimated_value)}
+                        </span>
+                      )
+                    },
+                    {
+                      key: 'status',
+                      header: 'Status',
+                      mobileLabel: 'Status',
+                      priority: 2,
+                      minWidth: 100,
+                      render: (requisition) => (
+                        <Badge className={`text-xs ${STATUS_COLORS[requisition.status as keyof typeof STATUS_COLORS] || 'bg-gray-100'}`}>
+                          {translateStatus(requisition.status)}
+                        </Badge>
+                      )
+                    },
+                    {
+                      key: 'created_at',
+                      header: 'Data',
+                      mobileLabel: 'Data',
+                      priority: 4,
+                      minWidth: 100,
+                      hideInMobile: true,
+                      render: (requisition) => (
+                        <span className="text-xs sm:text-sm">
+                          {new Date(requisition.created_at).toLocaleDateString('pt-BR')}
+                        </span>
+                      )
+                    },
+                    {
+                      key: 'actions',
+                      header: 'Ações',
+                      mobileLabel: 'Ações',
+                      priority: 1,
+                      minWidth: 150,
+                      render: (requisition) => (
+                        <div className="flex gap-1 sm:gap-2">
+                          {requisition.status === 'pending' && (
+                            <>
+                              <Button
+                                size="sm"
+                                className="text-xs h-7 px-2 sm:px-3"
+                                onClick={() => updateRequisitionStatus(requisition.id, 'approved')}
+                              >
+                                <Check className="h-3 w-3 sm:mr-1" />
+                                <span className="hidden sm:inline">Aprovar</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="text-xs h-7 px-2 sm:px-3"
+                                onClick={() => updateRequisitionStatus(requisition.id, 'rejected')}
+                              >
+                                <X className="h-3 w-3 sm:mr-1" />
+                                <span className="hidden sm:inline">Rejeitar</span>
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      )
+                    }
+                  ]}
                 />
               </CardContent>
             </Card>
@@ -329,7 +340,11 @@ export default function Compras() {
 
         {/* Purchase Orders Tab */}
         <TabsContent value="orders" className="space-y-4">
-          <PurchaseOrderManager />
+          <PurchaseOrderManager 
+            onOrderCreated={() => {
+              fetchPurchaseOrders();
+            }}
+          />
         </TabsContent>
 
         {/* Receipts Tab */}
@@ -339,7 +354,11 @@ export default function Compras() {
 
         {/* Quotations Tab */}
         <TabsContent value="quotations" className="space-y-4">
-          <QuotationManager />
+          <QuotationManager 
+            onOrderCreated={() => {
+              fetchPurchaseOrders();
+            }}
+          />
         </TabsContent>
 
         {/* Evaluations Tab */}

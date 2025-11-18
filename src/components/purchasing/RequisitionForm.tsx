@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
-import { Plus, Trash2, Search, Package } from 'lucide-react';
+import { Plus, Trash2, Search, Package, PackagePlus } from 'lucide-react';
 import { usePurchasing } from '@/hooks/usePurchasing';
 import { usePartsInventory, type PartInventory } from '@/hooks/usePartsInventory';
 import { Badge } from '@/components/ui/badge';
+import { PartForm } from '@/components/inventory/PartForm';
 
 interface RequisitionFormProps {
   open: boolean;
@@ -63,6 +64,7 @@ export default function RequisitionForm({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPartIndex, setSelectedPartIndex] = useState<number | null>(null);
   const [showPartSearch, setShowPartSearch] = useState<Record<number, boolean>>({});
+  const [showCreatePartModal, setShowCreatePartModal] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -90,6 +92,7 @@ export default function RequisitionForm({
       setSearchTerm('');
       setSelectedPartIndex(null);
       setShowPartSearch({});
+      setShowCreatePartModal(false);
     }
   }, [open, fetchParts, preselectedPart]);
 
@@ -285,10 +288,21 @@ export default function RequisitionForm({
         <div>
           <div className="flex justify-between items-center mb-2">
             <Label>Itens da Requisição</Label>
-            <Button type="button" variant="outline" size="sm" onClick={addItem}>
-              <Plus className="h-4 w-4 mr-1" />
-              Adicionar Item
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowCreatePartModal(true)}
+              >
+                <PackagePlus className="h-4 w-4 mr-1" />
+                Nova Peça
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar Item
+              </Button>
+            </div>
           </div>
           
           {items.map((item, index) => (
@@ -421,6 +435,25 @@ export default function RequisitionForm({
         </div>
       </div>
       </DialogContent>
+
+      {/* Modal para criar nova peça */}
+      <Dialog open={showCreatePartModal} onOpenChange={setShowCreatePartModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Criar Nova Peça</DialogTitle>
+          </DialogHeader>
+          <PartForm 
+            onSuccess={() => {
+              setShowCreatePartModal(false);
+              fetchParts({ search: '' }); // Recarregar lista de peças
+              toast({
+                title: "Peça criada",
+                description: "Peça criada com sucesso. Agora você pode selecioná-la.",
+              });
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

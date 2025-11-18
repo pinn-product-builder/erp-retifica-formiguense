@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -288,20 +287,6 @@ export const usePurchasing = () => {
     }
   };
 
-  const generatePONumber = async (): Promise<string | null> => {
-    if (!currentOrganization?.id) return null;
-
-    try {
-      const { data, error } = await supabase
-        .rpc('generate_po_number' as unknown, { p_org_id: currentOrganization.id });
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      return null;
-    }
-  };
-
   const createPurchaseOrder = async (
     order: Omit<PurchaseOrder, 'id' | 'po_number' | 'supplier' | 'items' | 'created_at' | 'updated_at'>,
     items: Omit<PurchaseOrderItem, 'id'>[]
@@ -309,17 +294,14 @@ export const usePurchasing = () => {
     if (!currentOrganization?.id) return null;
 
     try {
-      // Generate PO number
-      const poNumber = await generatePONumber();
-      if (!poNumber) throw new Error('Failed to generate PO number');
-
       // Get current user
       const { data: userData } = await supabase.auth.getUser();
 
+      // O trigger vai gerar o po_number automaticamente se não for fornecido
       const { data: orderData, error: orderError } = await supabase
         .from('purchase_orders')
         .insert({
-          po_number: poNumber,
+          po_number: null, // Deixar o trigger gerar automaticamente
           supplier_id: order.supplier_id,
           quotation_id: order.quotation_id,
           requisition_id: order.requisition_id,
@@ -521,7 +503,6 @@ export const usePurchasing = () => {
     createSupplier,
     createRequisition,
     updateRequisitionStatus,
-    generatePONumber,
     createPurchaseOrder,
     approvePurchaseOrder,
     sendPurchaseOrder,

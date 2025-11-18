@@ -59,7 +59,11 @@ const translateStatus = (status: string) => {
   return statusTranslations[status] || status;
 };
 
-export default function PurchaseOrderManager() {
+interface PurchaseOrderManagerProps {
+  onOrderCreated?: () => void;
+}
+
+export default function PurchaseOrderManager({ onOrderCreated }: PurchaseOrderManagerProps = {}) {
   const { 
     purchaseOrders, 
     suppliers,
@@ -457,6 +461,7 @@ export default function PurchaseOrderManager() {
         onOpenChange={setShowCreateForm}
         onSuccess={() => {
           fetchPurchaseOrders();
+          onOrderCreated?.();
           toast({
             title: 'Sucesso',
             description: 'Pedido de compra criado com sucesso',

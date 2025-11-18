@@ -61,7 +61,11 @@ const STATUS_CONFIG = {
   },
 };
 
-export default function QuotationManager() {
+interface QuotationManagerProps {
+  onOrderCreated?: () => void;
+}
+
+export default function QuotationManager({ onOrderCreated }: QuotationManagerProps = {}) {
   const {
     quotations,
     loading,
@@ -629,6 +633,7 @@ export default function QuotationManager() {
           setShowOrderDialog(false);
           setSelectedQuotationForOrder(null);
           fetchQuotations();
+          onOrderCreated?.();
         }}
       />
     </div>
