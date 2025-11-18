@@ -1,6 +1,6 @@
 // @ts-nocheck
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase } from "@/hooks/useSupabase";
 import { Camera, ClipboardList, Settings, AlertCircle, ArrowRight } from "lucide-react";
+import { EngineTypeSelect } from "@/components/ui/EngineTypeSelect";
+import { useEngineTypes } from "@/hooks/useEngineTypes";
+import { useEngineComponents } from "@/hooks/useEngineComponents";
 
 export default function CheckIn() {
+  const { engineTypes, fetchEngineTypes } = useEngineTypes();
+  const { components: engineComponents } = useEngineComponents();
+  
   const [formData, setFormData] = useState({
     // Identificação do Motor
-    tipo: "",
+    engineTypeId: undefined as string | undefined,
     marca: "",
     modelo: "",
     combustivel: "",
@@ -25,11 +31,7 @@ export default function CheckIn() {
     // Checklist
     motorCompleto: false,
     montado: "",
-    temBloco: false,
-    temCabecote: false,
-    temVirabrequim: false,
-    temPistao: false,
-    temBiela: false,
+    selectedComponents: [] as string[],
     giraManualmente: false,
     observacoes: ""
   });
@@ -52,7 +54,8 @@ export default function CheckIn() {
   const { loading, createEngine, createOrder, uploadPhoto } = useSupabase();
 
   useEffect(() => {
-    // Verificar se há dados da coleta
+    fetchEngineTypes();
+    
     const savedColetaData = sessionStorage.getItem('coletaData');
     if (savedColetaData) {
       setColetaData(JSON.parse(savedColetaData));
@@ -60,7 +63,39 @@ export default function CheckIn() {
     } else {
       setHasColetaData(false);
     }
-  }, []);
+  }, [fetchEngineTypes]);
+
+  const selectedEngineType = useMemo(() => {
+    return engineTypes.find((et) => et.id === formData.engineTypeId);
+  }, [engineTypes, formData.engineTypeId]);
+
+  const availableComponents = useMemo(() => {
+    if (!selectedEngineType || !selectedEngineType.required_components) {
+      return [];
+    }
+    return selectedEngineType.required_components.map((componentId) => {
+      const component = engineComponents.find((c) => c.value === componentId);
+      return {
+        id: componentId,
+        label: component?.label || componentId
+      };
+    });
+  }, [selectedEngineType, engineComponents]);
+
+  useEffect(() => {
+    if (formData.motorCompleto && availableComponents.length > 0) {
+      const allComponentIds = availableComponents.map((c) => c.id);
+      setFormData((prev) => ({
+        ...prev,
+        selectedComponents: allComponentIds
+      }));
+    } else if (!formData.motorCompleto && formData.selectedComponents.length === availableComponents.length) {
+      setFormData((prev) => ({
+        ...prev,
+        selectedComponents: []
+      }));
+    }
+  }, [formData.motorCompleto, availableComponents.length]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -86,7 +121,15 @@ export default function CheckIn() {
       return;
     }
     
-    // Verificar campos obrigatórios
+    if (!formData.engineTypeId) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Selecione o tipo de motor",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!formData.montado) {
       toast({
         title: "Campo obrigatório",
@@ -109,20 +152,19 @@ export default function CheckIn() {
       return;
     }
 
-    // Criar motor
     const engineData = {
-      type: formData.tipo,
+      type: selectedEngineType?.name || formData.marca,
       brand: formData.marca,
       model: formData.modelo,
       fuel_type: formData.combustivel,
       serial_number: formData.numeroSerie || undefined,
       is_complete: formData.motorCompleto,
       assembly_state: formData.montado,
-      has_block: formData.temBloco,
-      has_head: formData.temCabecote,
-      has_crankshaft: formData.temVirabrequim,
-      has_piston: formData.temPistao,
-      has_connecting_rod: formData.temBiela,
+      has_block: formData.selectedComponents.includes('bloco'),
+      has_head: formData.selectedComponents.includes('cabecote'),
+      has_crankshaft: formData.selectedComponents.includes('virabrequim'),
+      has_piston: formData.selectedComponents.includes('pistao'),
+      has_connecting_rod: formData.selectedComponents.includes('biela'),
       turns_manually: formData.giraManualmente,
     };
 
@@ -242,18 +284,21 @@ export default function CheckIn() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="tipo">Tipo de Motor</Label>
-              <Select value={formData.tipo} onValueChange={(value) => handleInputChange('tipo', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="leve">Leve</SelectItem>
-                  <SelectItem value="pesado">Pesado</SelectItem>
-                  <SelectItem value="agricola">Agrícola</SelectItem>
-                  <SelectItem value="estacionario">Estacionário</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="engineTypeId">Tipo de Motor <span className="text-red-500">*</span></Label>
+              <EngineTypeSelect
+                value={formData.engineTypeId}
+                onChange={(value) => {
+                  handleInputChange('engineTypeId', value || '');
+                  if (!value) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      selectedComponents: [],
+                      motorCompleto: false
+                    }));
+                  }
+                }}
+                placeholder="Busque e selecione um tipo de motor..."
+              />
             </div>
             <div>
               <Label htmlFor="marca">Marca</Label>
@@ -334,79 +379,99 @@ export default function CheckIn() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="motorCompleto"
-                checked={formData.motorCompleto}
-                onCheckedChange={(checked) => handleInputChange('motorCompleto', !!checked)}
-              />
-              <Label htmlFor="motorCompleto">Motor completo?</Label>
-            </div>
+            {!selectedEngineType && (
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  Selecione um tipo de motor acima para visualizar os componentes disponíveis.
+                </p>
+              </div>
+            )}
 
-            <div>
-              <Label htmlFor="montado">Estado de montagem <span className="text-red-500">*</span></Label>
-              <Select value={formData.montado} onValueChange={(value) => handleInputChange('montado', value)} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="montado">Montado</SelectItem>
-                  <SelectItem value="desmontado">Desmontado</SelectItem>
-                  <SelectItem value="parcial">Parcialmente montado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {selectedEngineType && (
+              <>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="motorCompleto"
+                    checked={formData.motorCompleto}
+                    onCheckedChange={(checked) => {
+                      handleInputChange('motorCompleto', !!checked);
+                      if (checked && availableComponents.length > 0) {
+                        const allComponentIds = availableComponents.map((c) => c.id);
+                        setFormData((prev) => ({
+                          ...prev,
+                          selectedComponents: allComponentIds
+                        }));
+                      } else {
+                        setFormData((prev) => ({
+                          ...prev,
+                          selectedComponents: []
+                        }));
+                      }
+                    }}
+                  />
+                  <Label htmlFor="motorCompleto">Motor completo (seleciona todos os componentes)</Label>
+                </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="temBloco"
-                  checked={formData.temBloco}
-                  onCheckedChange={(checked) => handleInputChange('temBloco', !!checked)}
-                />
-                <Label htmlFor="temBloco">Tem Bloco</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="temCabecote"
-                  checked={formData.temCabecote}
-                  onCheckedChange={(checked) => handleInputChange('temCabecote', !!checked)}
-                />
-                <Label htmlFor="temCabecote">Tem Cabeçote</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="temVirabrequim"
-                  checked={formData.temVirabrequim}
-                  onCheckedChange={(checked) => handleInputChange('temVirabrequim', !!checked)}
-                />
-                <Label htmlFor="temVirabrequim">Tem Virabrequim</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="temPistao"
-                  checked={formData.temPistao}
-                  onCheckedChange={(checked) => handleInputChange('temPistao', !!checked)}
-                />
-                <Label htmlFor="temPistao">Tem Pistão</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="temBiela"
-                  checked={formData.temBiela}
-                  onCheckedChange={(checked) => handleInputChange('temBiela', !!checked)}
-                />
-                <Label htmlFor="temBiela">Tem Biela</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="giraManualmente"
-                  checked={formData.giraManualmente}
-                  onCheckedChange={(checked) => handleInputChange('giraManualmente', !!checked)}
-                />
-                <Label htmlFor="giraManualmente">Gira Manualmente</Label>
-              </div>
-            </div>
+                <div>
+                  <Label htmlFor="montado">Estado de montagem <span className="text-red-500">*</span></Label>
+                  <Select value={formData.montado} onValueChange={(value) => handleInputChange('montado', value)} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="montado">Montado</SelectItem>
+                      <SelectItem value="desmontado">Desmontado</SelectItem>
+                      <SelectItem value="parcial">Parcialmente montado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {availableComponents.length > 0 && (
+                  <div>
+                    <Label className="mb-2 block">Componentes Presentes</Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {availableComponents.map((component) => {
+                        const isChecked = formData.selectedComponents.includes(component.id);
+                        return (
+                          <div key={component.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={component.id}
+                              checked={isChecked}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    selectedComponents: [...prev.selectedComponents, component.id]
+                                  }));
+                                } else {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    selectedComponents: prev.selectedComponents.filter((id) => id !== component.id),
+                                    motorCompleto: false
+                                  }));
+                                }
+                              }}
+                            />
+                            <Label htmlFor={component.id} className="cursor-pointer">
+                              {component.label}
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="giraManualmente"
+                    checked={formData.giraManualmente}
+                    onCheckedChange={(checked) => handleInputChange('giraManualmente', !!checked)}
+                  />
+                  <Label htmlFor="giraManualmente">Gira Manualmente</Label>
+                </div>
+              </>
+            )}
 
             <div>
               <Label htmlFor="observacoes">Observações Adicionais</Label>
