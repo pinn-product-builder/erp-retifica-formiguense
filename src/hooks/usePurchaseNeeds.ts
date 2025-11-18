@@ -85,6 +85,7 @@ export function usePurchaseNeeds() {
         .from('purchase_needs')
         .select('*')
         .eq('org_id', currentOrganization.id)
+        .neq('status', 'completed')  // Excluir necessidades já concluídas
         .order('priority_level', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -102,67 +103,11 @@ export function usePurchaseNeeds() {
 
       if (error) throw error;
 
-      // Buscar pedidos de compra recebidos para filtrar necessidades já atendidas
-      const { data: receivedOrders } = await supabase
-        .from('purchase_orders')
-        .select(`
-          id,
-          status,
-          items:purchase_order_items!inner(
-            part_id,
-            purchase_receipt_items!inner(
-              id
-            )
-          )
-        `)
-        .eq('org_id', currentOrganization.id)
-        .in('status', ['completed', 'partially_received']);
-
-      // Criar conjunto de part_ids que já foram recebidos (têm recebimentos)
-      const receivedPartIds = new Set<string>();
-      if (receivedOrders) {
-        receivedOrders.forEach(order => {
-          if (order.items && Array.isArray(order.items)) {
-            order.items.forEach((item: any) => {
-              // Verificar se o item tem recebimentos (purchase_receipt_items)
-              if (item.part_id && item.purchase_receipt_items && Array.isArray(item.purchase_receipt_items) && item.purchase_receipt_items.length > 0) {
-                receivedPartIds.add(item.part_id);
-              }
-            });
-          }
-        });
-      }
-
-      // Buscar part_codes das peças recebidas
-      const receivedPartCodes = new Set<string>();
-      if (receivedPartIds.size > 0) {
-        const { data: receivedParts } = await supabase
-          .from('parts_inventory')
-          .select('part_code')
-          .eq('org_id', currentOrganization.id)
-          .in('id', Array.from(receivedPartIds));
-        
-        if (receivedParts) {
-          receivedParts.forEach(part => {
-            if (part.part_code) {
-              receivedPartCodes.add(part.part_code);
-            }
-          });
-        }
-      }
-
-      // Filtrar necessidades que já foram recebidas
-      const filteredData = (data || []).filter((need: any) => {
-        // Se a necessidade tem part_id e já foi recebida, excluir
-        if (need.part_id && receivedPartIds.has(need.part_id)) {
-          return false;
-        }
-        // Se a necessidade tem part_code e já foi recebida, excluir
-        if (need.part_code && receivedPartCodes.has(need.part_code)) {
-          return false;
-        }
-        return true;
-      });
+      // Não precisamos mais filtrar manualmente, pois:
+      // 1. A query já exclui status 'completed'
+      // 2. O trigger atualiza automaticamente o status para 'completed' quando a necessidade é atendida
+      // 3. Isso é mais eficiente e confiável
+      const filteredData = data || [];
 
       setNeeds(filteredData as PurchaseNeed[]);
       return filteredData as PurchaseNeed[];
