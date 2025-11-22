@@ -171,11 +171,6 @@ export function useSupabase() {
 
       if (error) throw error;
       
-      toast({
-        title: "Sucesso!",
-        description: `Ordem de serviço ${data.order_number} criada com sucesso!`
-      });
-      
       return data;
     } catch (error) {
       handleError(error, 'Erro ao criar ordem de serviço');

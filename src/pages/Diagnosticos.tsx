@@ -50,7 +50,7 @@ import { useDiagnosticChecklists, useDiagnosticChecklistsQuery } from "@/hooks/u
 import { useOrders } from "@/hooks/useOrders";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DiagnosticService } from "@/services/DiagnosticService";
 import { DIAGNOSTIC_STATUS, translateStatus, translateAction, translateMessage } from "@/utils/statusTranslations";
 import { supabase } from "@/integrations/supabase/client";
@@ -96,10 +96,10 @@ const Diagnosticos = () => {
   
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
+  const queryClient = useQueryClient();
   
   const canEdit = permissions.canEditModule('production');
   
-  const canEdit = permissions.canEditModule('production');
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [componentFilter, setComponentFilter] = useState<string>("todos");
@@ -414,6 +414,8 @@ const Diagnosticos = () => {
     });
     setIsDiagnosticOpen(false);
     setSelectedOrder("");
+    
+    queryClient.invalidateQueries({ queryKey: ['diagnostic-responses', currentOrganization?.id] });
   };
 
   const handleViewDetails = (diagnostic: DiagnosticResponse) => {

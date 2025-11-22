@@ -55,9 +55,10 @@ export default function CheckIn() {
 
   const [coletaData, setColetaData] = useState<unknown>(null);
   const [hasColetaData, setHasColetaData] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { loading, createEngine, createOrder, uploadPhoto } = useSupabase();
+  const { createEngine, createOrder, uploadPhoto } = useSupabase();
 
   useEffect(() => {
     fetchEngineTypes();
@@ -167,54 +168,80 @@ export default function CheckIn() {
       return;
     }
 
-    const engineData = {
-      type: selectedEngineType?.name || formData.marca,
-      brand: formData.marca,
-      model: formData.modelo,
-      fuel_type: formData.combustivel,
-      serial_number: formData.numeroSerie || undefined,
-      is_complete: formData.estadoMotor === 'completo',
-      assembly_state: formData.montado,
-      has_block: formData.selectedComponents.includes('bloco'),
-      has_head: formData.selectedComponents.includes('cabecote'),
-      has_crankshaft: formData.selectedComponents.includes('virabrequim'),
-      has_piston: formData.selectedComponents.includes('pistao'),
-      has_connecting_rod: formData.selectedComponents.includes('biela'),
-      turns_manually: formData.giraManualmente,
-      removed_by_company: formData.removidoPorEmpresa,
-      removed_by_employee_name: formData.removidoPorEmpresa ? formData.removidoPorFuncionario : undefined,
-      engine_type_id: formData.engineTypeId || undefined,
-    };
+    setIsSubmitting(true);
 
-    const engine = await createEngine(engineData);
-    if (!engine) return;
+    try {
+      const engineData = {
+        type: selectedEngineType?.name || formData.marca,
+        brand: formData.marca,
+        model: formData.modelo,
+        fuel_type: formData.combustivel,
+        serial_number: formData.numeroSerie || undefined,
+        is_complete: formData.estadoMotor === 'completo',
+        assembly_state: formData.montado,
+        has_block: formData.selectedComponents.includes('bloco'),
+        has_head: formData.selectedComponents.includes('cabecote'),
+        has_crankshaft: formData.selectedComponents.includes('virabrequim'),
+        has_piston: formData.selectedComponents.includes('pistao'),
+        has_connecting_rod: formData.selectedComponents.includes('biela'),
+        turns_manually: formData.giraManualmente,
+        removed_by_company: formData.removidoPorEmpresa,
+        removed_by_employee_name: formData.removidoPorEmpresa ? formData.removidoPorFuncionario : undefined,
+        engine_type_id: formData.engineTypeId || undefined,
+      };
 
-    // Criar ordem de serviço
-    const orderData = {
-      ...coletaData,
-      engine_id: engine.id,
-      initial_observations: formData.observacoes || undefined,
-    };
+      const engine = await createEngine(engineData);
+      if (!engine) {
+        setIsSubmitting(false);
+        return;
+      }
 
-    const order = await createOrder(orderData);
-    if (!order) return;
+      // Criar ordem de serviço
+      const orderData = {
+        ...coletaData,
+        engine_id: engine.id,
+        initial_observations: formData.observacoes || undefined,
+      };
 
-    // Upload das fotos
-    const uploadPromises = Object.entries(fotos)
-      .filter(([_, file]) => file !== null)
-      .map(([tipo, file]) => uploadPhoto(file!, order.id, tipo, undefined, 'entrada'));
+      const order = await createOrder(orderData);
+      if (!order) {
+        setIsSubmitting(false);
+        return;
+      }
 
-    await Promise.all(uploadPromises);
-    
-    // Limpar dados da sessão
-    sessionStorage.removeItem('coletaData');
-    
-    toast({
-      title: "Check-in realizado",
-      description: `Ordem de serviço ${order.order_number} criada com sucesso!`,
-    });
-    
-    navigate('/');
+      // Upload das fotos (não bloqueia a conclusão)
+      const uploadPromises = Object.entries(fotos)
+        .filter(([_, file]) => file !== null)
+        .map(([tipo, file]) => uploadPhoto(file!, order.id, tipo, undefined, 'entrada'));
+
+      // Não aguardar upload para não bloquear a UI
+      Promise.all(uploadPromises).catch((error) => {
+        console.error('Erro ao fazer upload das fotos:', error);
+        toast({
+          title: "Aviso",
+          description: "Ordem criada, mas houve erro no upload de algumas fotos.",
+          variant: "default"
+        });
+      });
+      
+      // Limpar dados da sessão
+      sessionStorage.removeItem('coletaData');
+      
+      setIsSubmitting(false);
+      
+      toast({
+        title: "Check-in realizado",
+        description: `Ordem de serviço ${order.order_number} criada com sucesso!`,
+      });
+      
+      // Pequeno delay para garantir que o toast seja exibido
+      setTimeout(() => {
+        navigate('/');
+      }, 500);
+    } catch (error) {
+      console.error('Erro ao criar ordem de serviço:', error);
+      setIsSubmitting(false);
+    }
   };
 
   const renderFileInput = (tipo: string, label: string, obrigatorio = true, accept = 'image/*') => (
@@ -578,8 +605,8 @@ export default function CheckIn() {
         </Card>
 
         <div className="flex justify-center sm:justify-end">
-          <Button type="submit" size="lg" disabled={loading} className="w-full sm:w-auto">
-            {loading ? "Criando OS..." : "Criar Ordem de Serviço"}
+          <Button type="submit" size="lg" disabled={isSubmitting} className="w-full sm:w-auto">
+            {isSubmitting ? "Criando OS..." : "Criar Ordem de Serviço"}
           </Button>
         </div>
       </form>

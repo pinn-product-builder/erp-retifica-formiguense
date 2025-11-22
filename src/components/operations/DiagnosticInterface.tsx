@@ -258,37 +258,66 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
 
     try {
       const generatedServices = generateServices();
+      const user = (await supabase.auth.getUser()).data.user;
       
-      const response = await mutations.saveResponse.mutateAsync({
-        order_id: orderId,
-        checklist_id: selectedChecklist.id,
-        component: selectedChecklist.component,
-        responses,
-        photos: Object.values(responses).flatMap(r => r.photos),
-        generated_services: generatedServices,
-        diagnosed_by: (await supabase.auth.getUser()).data.user?.id,
-        status: 'completed'
-      });
+      let componentsToSave: string[] = [];
+      
+      if (selectedChecklist.component) {
+        componentsToSave = [selectedChecklist.component];
+      } else {
+        const selectedEngineTypeData = engineTypes.find(et => et.id === selectedEngineType);
+        if (selectedEngineTypeData?.required_components && selectedEngineTypeData.required_components.length > 0) {
+          componentsToSave = selectedEngineTypeData.required_components;
+        } else {
+          toast({
+            title: "Erro",
+            description: "Não foi possível determinar os componentes para o diagnóstico. Verifique se o tipo de motor tem componentes obrigatórios definidos.",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      const responsePromises = componentsToSave.map(component =>
+        mutations.saveResponse.mutateAsync({
+          order_id: orderId,
+          checklist_id: selectedChecklist.id,
+          component: component,
+          responses,
+          photos: Object.values(responses).flatMap(r => r.photos),
+          generated_services: generatedServices,
+          diagnosed_by: user?.id,
+          status: 'completed'
+        })
+      );
+
+      const savedResponses = await Promise.all(responsePromises);
+      const firstResponse = savedResponses[0];
 
       toast({
         title: "Sucesso",
-        description: "Diagnóstico salvo com sucesso"
+        description: `Diagnóstico salvo com sucesso para ${componentsToSave.length} componente(s)`
       });
 
-      // Store diagnostic response for budget creation
       setDiagnosticResponse({
-        ...response,
+        ...firstResponse,
         generated_services: generatedServices,
-        component: selectedChecklist.component,
+        component: componentsToSave.length === 1 ? componentsToSave[0] : null,
         checklist: selectedChecklist,
         diagnosed_at: new Date().toISOString()
       });
 
       if (onComplete) {
-        onComplete(response);
+        onComplete(firstResponse);
       }
     } catch (error) {
       console.error('Erro ao salvar diagnóstico:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar diagnóstico. Verifique os dados e tente novamente.",
+        variant: "destructive"
+      });
     } finally {
       setIsSubmitting(false);
     }
