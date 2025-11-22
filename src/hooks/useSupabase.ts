@@ -35,6 +35,7 @@ export interface Engine {
   turns_manually?: boolean;
   removed_by_company?: boolean;
   removed_by_employee_name?: string;
+  engine_type_id?: string;
   org_id?: string;
 }
 

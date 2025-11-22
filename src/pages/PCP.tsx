@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,11 +10,19 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { OrderSelect } from '@/components/ui/order-select';
-import { EngineComponent } from '@/hooks/useEngineComponents';
-import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { useToast } from '@/hooks/use-toast';
 
 import { SCHEDULE_STATUS, translateStatus, translateAction, translateMessage } from '@/utils/statusTranslations';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { useModuleGuard } from "@/hooks/useRoleGuard";
 
 const STATUS_COLORS = {
   planned: 'bg-blue-500/20 text-blue-700',
@@ -31,15 +39,19 @@ const ALERT_COLORS = {
 };
 
 export default function PCP() {
-  const { schedules, resources, alerts, loading, createSchedule, updateSchedule, markAlertRead } = usePCP();
-  const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
+  const { hasPermission, permissions } = useModuleGuard('production', 'read', { blockAccess: true });
+  
+  const { schedules, resources, alerts, loading, totalCount, createSchedule, updateSchedule, markAlertRead, fetchSchedules } = usePCP();
   const { toast } = useToast();
+  
+  const canEdit = permissions.canEditModule('production');
   const [selectedSchedule, setSelectedSchedule] = useState<ProductionSchedule | null>(null);
   const [createLoading, setCreateLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   const [newSchedule, setNewSchedule] = useState({
     order_id: '',
-    component: '' as EngineComponent | '',
     planned_start_date: '',
     planned_end_date: '',
     estimated_hours: 0,
@@ -51,7 +63,6 @@ export default function PCP() {
   const resetForm = () => {
     setNewSchedule({
       order_id: '',
-      component: '' as EngineComponent | '',
       planned_start_date: '',
       planned_end_date: '',
       estimated_hours: 0,
@@ -69,11 +80,11 @@ export default function PCP() {
   };
 
   const handleCreateSchedule = async () => {
-    if (!newSchedule.order_id || !newSchedule.component) {
+    if (!newSchedule.order_id) {
       toast({
         variant: "destructive",
         title: "Dados incompletos",
-        description: "Por favor, selecione uma ordem de serviço e um componente.",
+        description: "Por favor, selecione uma ordem de serviço.",
       });
       return;
     }
@@ -82,7 +93,7 @@ export default function PCP() {
     try {
       const result = await createSchedule({
         ...newSchedule,
-        component: newSchedule.component as EngineComponent,
+        component: null,
         status: 'planned',
       });
 
@@ -136,6 +147,12 @@ export default function PCP() {
       .reduce((total, schedule) => total + schedule.estimated_hours, 0);
   };
 
+  useEffect(() => {
+    fetchSchedules(currentPage, pageSize);
+  }, [currentPage, pageSize, fetchSchedules]);
+
+  const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : 0;
+
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
@@ -145,14 +162,15 @@ export default function PCP() {
           <p className="text-muted-foreground">Gerencie cronogramas, recursos e monitore a produção</p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              {translateAction('new')} Cronograma
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
+        {canEdit && (
+          <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                {translateAction('new')} Cronograma
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>{translateAction('create')} Cronograma</DialogTitle>
             </DialogHeader>
@@ -161,32 +179,9 @@ export default function PCP() {
                 label="Ordem de Serviço"
                 value={newSchedule.order_id}
                 onValueChange={(orderId) => setNewSchedule({...newSchedule, order_id: orderId})}
-                // placeholder="Selecionar Ordem de Serviço"
                 filterByApprovedBudget="aprovado"
                 required
               />
-              <div>
-                <Label>Componente</Label>
-                        <Select 
-                          value={newSchedule.component} 
-                          onValueChange={(value) => setNewSchedule({...newSchedule, component: value as EngineComponent})}
-                        >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o componente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {componentsLoading ? (
-                      <SelectItem value="loading" disabled>Carregando componentes...</SelectItem>
-                    ) : (
-                      engineComponents.map((component) => (
-                        <SelectItem key={component.value} value={component.value}>
-                          {component.label}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label>Data Início</Label>
@@ -206,7 +201,7 @@ export default function PCP() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <div>
+                <div className="grid gap-2">
                   <Label>Horas Estimadas</Label>
                   <Input
                     type="string"
@@ -244,13 +239,14 @@ export default function PCP() {
               <Button 
                 onClick={handleCreateSchedule} 
                 className="w-full"
-                disabled={createLoading || !newSchedule.order_id || !newSchedule.component}
+                disabled={createLoading || !newSchedule.order_id}
               >
                 {createLoading ? translateMessage('creating') : `${translateAction('create')} Cronograma`}
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        )}
       </div>
 
       {/* KPI Cards */}
@@ -352,7 +348,8 @@ export default function PCP() {
             ) : schedules.length === 0 ? (
               <p className="text-muted-foreground">{translateMessage('no_data')}</p>
             ) : (
-              schedules.map((schedule) => (
+              <>
+                {schedules.map((schedule) => (
                 <div
                   key={schedule.id}
                   className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer"
@@ -372,7 +369,7 @@ export default function PCP() {
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        Componente: {schedule.component} | {schedule.estimated_hours}h estimadas
+                        {schedule.estimated_hours}h estimadas
                       </p>
                       <p className="text-sm">
                         {new Date(schedule.planned_start_date).toLocaleDateString()} - {new Date(schedule.planned_end_date).toLocaleDateString()}
@@ -384,33 +381,103 @@ export default function PCP() {
                       )}
                     </div>
                     
-                    <div className="flex gap-1">
-                      {schedule.status === 'planned' && (
-                        <Button 
-                          size="sm" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleUpdateStatus(schedule.id, 'in_progress');
-                          }}
-                        >
-                          {translateAction('start')}
-                        </Button>
-                      )}
-                      {schedule.status === 'in_progress' && (
-                        <Button 
-                          size="sm" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleUpdateStatus(schedule.id, 'completed');
-                          }}
-                        >
-                          {translateAction('complete')}
-                        </Button>
-                      )}
-                    </div>
+                    {canEdit && (
+                      <div className="flex gap-1">
+                        {schedule.status === 'planned' && (
+                          <Button 
+                            size="sm" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUpdateStatus(schedule.id, 'in_progress');
+                            }}
+                          >
+                            {translateAction('start')}
+                          </Button>
+                        )}
+                        {schedule.status === 'in_progress' && (
+                          <Button 
+                            size="sm" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUpdateStatus(schedule.id, 'completed');
+                            }}
+                          >
+                            {translateAction('complete')}
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))
+                ))}
+                {totalCount > 0 && (
+                  <div className="mt-4">
+                    {totalPages > 1 && (
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (currentPage > 1) {
+                                  setCurrentPage(currentPage - 1);
+                                }
+                              }}
+                              className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                            if (
+                              page === 1 ||
+                              page === totalPages ||
+                              (page >= currentPage - 1 && page <= currentPage + 1)
+                            ) {
+                              return (
+                                <PaginationItem key={page}>
+                                  <PaginationLink
+                                    href="#"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setCurrentPage(page);
+                                    }}
+                                    isActive={currentPage === page}
+                                    className="cursor-pointer"
+                                  >
+                                    {page}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              );
+                            } else if (page === currentPage - 2 || page === currentPage + 2) {
+                              return (
+                                <PaginationItem key={page}>
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              );
+                            }
+                            return null;
+                          })}
+                          <PaginationItem>
+                            <PaginationNext
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                if (currentPage < totalPages) {
+                                  setCurrentPage(currentPage + 1);
+                                }
+                              }}
+                              className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    )}
+                    <div className="text-center text-sm text-muted-foreground mt-2">
+                      Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, totalCount)} de {totalCount} cronogramas
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </CardContent>

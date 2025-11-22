@@ -183,6 +183,7 @@ export default function CheckIn() {
       turns_manually: formData.giraManualmente,
       removed_by_company: formData.removidoPorEmpresa,
       removed_by_employee_name: formData.removidoPorEmpresa ? formData.removidoPorFuncionario : undefined,
+      engine_type_id: formData.engineTypeId || undefined,
     };
 
     const engine = await createEngine(engineData);

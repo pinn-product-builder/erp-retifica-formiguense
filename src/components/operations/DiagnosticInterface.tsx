@@ -41,10 +41,10 @@ import { useDiagnosticChecklists, useDiagnosticChecklistsQuery, useDiagnosticChe
 import { useEngineTypes } from "@/hooks/useEngineTypes";
 import { useOrders } from "@/hooks/useOrders";
 import { useToast } from "@/hooks/use-toast";
+import { useOrganization } from "@/hooks/useOrganization";
 import BudgetFromDiagnostic from './BudgetFromDiagnostic';
 import DiagnosticValidation from './DiagnosticValidation';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
-import { EngineComponentSelect } from '@/components/ui/EngineComponentSelect';
 
 interface DiagnosticInterfaceProps {
   orderId?: string;
@@ -71,16 +71,67 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
   const [isValid, setIsValid] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  const [engineTypeLoaded, setEngineTypeLoaded] = useState(false);
 
-  const { engineTypes } = useEngineTypes();
+  const { engineTypes, fetchEngineTypes } = useEngineTypes();
   const { data: checklists } = useDiagnosticChecklistsQuery(selectedEngineType, selectedComponent);
   const { orders } = useOrders();
   const mutations = useDiagnosticChecklistMutations();
   const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
+  const { currentOrganization } = useOrganization();
 
   const getComponentLabel = (value: string) => {
     return engineComponents.find(c => c.value === value)?.label || value;
   };
+
+  useEffect(() => {
+    const fetchOrderEngineType = async () => {
+      if (!orderId || !currentOrganization?.id) {
+        setSelectedEngineType('');
+        setEngineTypeLoaded(false);
+        return;
+      }
+
+      try {
+        await fetchEngineTypes();
+        
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .select(`
+            engine_id,
+            engines(
+              engine_type_id
+            )
+          `)
+          .eq('id', orderId)
+          .eq('org_id', currentOrganization.id)
+          .single();
+
+        if (orderError) {
+          console.error('Erro na query:', orderError);
+          setEngineTypeLoaded(true);
+          return;
+        }
+
+        const enginesData = orderData?.engines;
+        const engine = Array.isArray(enginesData) ? enginesData[0] : enginesData;
+        
+        if (engine?.engine_type_id) {
+          setSelectedEngineType(engine.engine_type_id);
+          setEngineTypeLoaded(true);
+        } else {
+          setSelectedEngineType('');
+          setEngineTypeLoaded(true);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar tipo de motor da ordem:', error);
+        setEngineTypeLoaded(true);
+      }
+    };
+
+    setEngineTypeLoaded(false);
+    fetchOrderEngineType();
+  }, [orderId, currentOrganization?.id, toast, fetchEngineTypes]);
 
   const itemTypeIcons = {
     checkbox: CheckCircle,
@@ -483,34 +534,42 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
           <CardHeader>
             <CardTitle>Selecionar Checklist</CardTitle>
             <CardDescription>
-              Escolha o tipo de motor e componente para carregar o checklist apropriado
+              Escolha o tipo de motor para carregar os checklists disponíveis
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="engine_type">Tipo de Motor</Label>
-                <Select value={selectedEngineType} onValueChange={setSelectedEngineType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo de motor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {engineTypes?.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="component">Componente</Label>
-                <EngineComponentSelect
-                  value={selectedComponent || undefined}
-                  onChange={(v) => setSelectedComponent(v || '')}
-                />
-              </div>
+            <div>
+              <Label htmlFor="engine_type">Tipo de Motor</Label>
+              <Select 
+                value={selectedEngineType} 
+                onValueChange={setSelectedEngineType}
+                disabled={!!orderId && engineTypeLoaded && !!selectedEngineType}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={
+                    orderId && !engineTypeLoaded 
+                      ? "Carregando tipo de motor..." 
+                      : "Selecione o tipo de motor"
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {engineTypes?.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {orderId && selectedEngineType && engineTypeLoaded && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tipo de motor carregado automaticamente da ordem de serviço
+                </p>
+              )}
+              {orderId && engineTypeLoaded && !selectedEngineType && (
+                <p className="text-xs text-yellow-600 mt-1">
+                  A ordem não possui tipo de motor associado. Selecione manualmente.
+                </p>
+              )}
             </div>
 
             {checklists && checklists.length > 0 && (

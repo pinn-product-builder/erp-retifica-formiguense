@@ -333,11 +333,7 @@ const BudgetFromDiagnostic = ({
               <CardTitle className="text-lg">Informações do Diagnóstico</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <Label className="text-muted-foreground">Componente</Label>
-                  <p className="font-medium">{diagnosticResponse.component}</p>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
                   <Label className="text-muted-foreground">Checklist</Label>
                   <p className="font-medium">{diagnosticResponse.checklist?.name}</p>

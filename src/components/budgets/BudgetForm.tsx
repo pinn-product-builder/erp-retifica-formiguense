@@ -477,7 +477,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                 )}
               </SelectContent>
             </Select>
-            {componentsSelected.length > 0 && (
+            {/* {componentsSelected.length > 0 && (
               <div className="mt-3 p-3 bg-muted rounded-lg">
                 <p className="text-sm font-medium mb-2">Componentes da Ordem de Serviço:</p>
                 <div className="flex flex-wrap gap-2">
@@ -491,7 +491,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                   })}
                 </div>
               </div>
-            )}
+            )} */}
           </div>
         </CardContent>
       </Card>

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
@@ -50,15 +50,23 @@ export const usePCP = () => {
   const [resources, setResources] = useState<ResourceCapacity[]>([]);
   const [alerts, setAlerts] = useState<ProductionAlert[]>([]);
   const [loading, setLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [currentPageState, setCurrentPageState] = useState(1);
+  const [pageSizeState, setPageSizeState] = useState(10);
   const { currentOrganization } = useOrganization();
   const { toast } = useToast();
 
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async (page: number = currentPageState, pageSize: number = pageSizeState) => {
     if (!currentOrganization?.id) return;
     
     setLoading(true);
+    setCurrentPageState(page);
+    setPageSizeState(pageSize);
     try {
-      const { data, error } = await supabase
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await supabase
         .from('production_schedules')
         .select(`
           *,
@@ -66,12 +74,14 @@ export const usePCP = () => {
             order_number,
             customer:customers(name)
           )
-        `)
+        `, { count: 'exact' })
         .eq('org_id', currentOrganization.id)
-        .order('planned_start_date');
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
       setSchedules(data || []);
+      setTotalCount(count || 0);
     } catch (error) {
       console.error('Error fetching schedules:', error);
       toast({
@@ -82,9 +92,9 @@ export const usePCP = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentOrganization?.id, toast]);
 
-  const fetchResources = async () => {
+  const fetchResources = useCallback(async () => {
     if (!currentOrganization?.id) return;
     
     try {
@@ -100,9 +110,9 @@ export const usePCP = () => {
     } catch (error) {
       console.error('Error fetching resources:', error);
     }
-  };
+  }, [currentOrganization?.id]);
 
-  const fetchAlerts = async () => {
+  const fetchAlerts = useCallback(async () => {
     if (!currentOrganization?.id) return;
     
     try {
@@ -119,7 +129,7 @@ export const usePCP = () => {
     } catch (error) {
       console.error('Error fetching alerts:', error);
     }
-  };
+  }, [currentOrganization?.id]);
 
   const createSchedule = async (schedule: Omit<ProductionSchedule, 'id'>) => {
     if (!currentOrganization?.id) return null;
@@ -144,7 +154,7 @@ export const usePCP = () => {
 
       if (error) throw error;
       
-      await fetchSchedules();
+      await fetchSchedules(currentPageState, pageSizeState);
       
       return data;
     } catch (error) {
@@ -175,7 +185,7 @@ export const usePCP = () => {
 
       if (error) throw error;
       
-      await fetchSchedules();
+      await fetchSchedules(currentPageState, pageSizeState);
       toast({
         title: 'Sucesso',
         description: 'Cronograma atualizado com sucesso',
@@ -242,17 +252,17 @@ export const usePCP = () => {
 
   useEffect(() => {
     if (currentOrganization?.id) {
-      fetchSchedules();
       fetchResources();
       fetchAlerts();
     }
-  }, [currentOrganization?.id]);
+  }, [currentOrganization?.id, fetchResources, fetchAlerts]);
 
   return {
     schedules,
     resources,
     alerts,
     loading,
+    totalCount,
     createSchedule,
     updateSchedule,
     createResource,

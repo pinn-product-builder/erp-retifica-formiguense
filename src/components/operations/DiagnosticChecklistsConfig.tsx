@@ -31,10 +31,6 @@ const ENGINE_COMPONENT_VALUES = [
 const checklistSchema = z.object({
   name: z.string().trim().min(3, "Nome deve ter pelo menos 3 caracteres").max(100, "Nome deve ter no máximo 100 caracteres"),
   description: z.string().optional(),
-  component: z.enum(ENGINE_COMPONENT_VALUES, {
-    required_error: "Componente é obrigatório",
-    invalid_type_error: "Componente inválido"
-  }),
   engine_type_id: z.string().min(1, "Tipo de motor é obrigatório"),
   version: z.number().min(1, "Versão deve ser maior que 0").default(1),
   is_active: z.boolean().default(true)
@@ -84,7 +80,6 @@ export default function DiagnosticChecklistsConfig() {
   const [checklistForm, setChecklistForm] = useState<ChecklistFormData>({
     name: '',
     description: '',
-    component: 'bloco',
     engine_type_id: '',
     version: 1,
     is_active: true
@@ -105,7 +100,6 @@ export default function DiagnosticChecklistsConfig() {
     setChecklistForm({
       name: '',
       description: '',
-      component: 'bloco',
       engine_type_id: '',
       version: 1,
       is_active: true
@@ -136,10 +130,11 @@ export default function DiagnosticChecklistsConfig() {
       const validatedData = checklistSchema.parse(checklistForm);
       
       // Criar checklist
+      // O componente será null pois o diagnóstico usará todos os componentes do tipo de motor
       const success = await mutations.createChecklist.mutateAsync({
         name: validatedData.name,
         description: validatedData.description,
-        component: validatedData.component,
+        component: null,
         engine_type_id: validatedData.engine_type_id,
         version: validatedData.version,
         is_active: validatedData.is_active,
@@ -456,35 +451,15 @@ export default function DiagnosticChecklistsConfig() {
                 />
               </div>
               <div>
-                <Label htmlFor="component">Componente *</Label>
-                <Select 
-                  value={checklistForm.component} 
-                  onValueChange={(value) => setChecklistForm(prev => ({ ...prev, component: value as unknown }))}
-                >
-                  <SelectTrigger className={validationErrors.component ? 'border-red-500' : ''}>
-                    <SelectValue placeholder="Selecionar componente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {componentsLoading ? (
-                      <SelectItem value="loading" disabled>Carregando componentes...</SelectItem>
-                    ) : (
-                      engineComponents.map((component) => (
-                        <SelectItem key={component.value} value={component.value}>
-                          {component.label}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                {validationErrors.component && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.component}</p>
-                )}
-              </div>
-              <div>
                 <Label htmlFor="engine_type">Tipo de Motor *</Label>
                 <Select 
                   value={checklistForm.engine_type_id} 
-                  onValueChange={(value) => setChecklistForm(prev => ({ ...prev, engine_type_id: value }))}
+                  onValueChange={(value) => {
+                    setChecklistForm(prev => ({ 
+                      ...prev, 
+                      engine_type_id: value
+                    }));
+                  }}
                 >
                   <SelectTrigger className={validationErrors.engine_type_id ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Selecionar tipo de motor" />
@@ -500,6 +475,9 @@ export default function DiagnosticChecklistsConfig() {
                 {validationErrors.engine_type_id && (
                   <p className="text-red-500 text-sm mt-1">{validationErrors.engine_type_id}</p>
                 )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  O checklist será aplicado a todos os componentes obrigatórios deste tipo de motor
+                </p>
               </div>
               <div className="flex items-center space-x-2">
                 <Switch

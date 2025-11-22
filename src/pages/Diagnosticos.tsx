@@ -54,6 +54,16 @@ import { useQuery } from "@tanstack/react-query";
 import { DiagnosticService } from "@/services/DiagnosticService";
 import { DIAGNOSTIC_STATUS, translateStatus, translateAction, translateMessage } from "@/utils/statusTranslations";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { useModuleGuard } from "@/hooks/useRoleGuard";
 
 interface DiagnosticResponse {
   id: string;
@@ -82,8 +92,14 @@ interface DiagnosticResponse {
 }
 
 const Diagnosticos = () => {
+  const { hasPermission, permissions } = useModuleGuard('production', 'read', { blockAccess: true });
+  
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
+  
+  const canEdit = permissions.canEditModule('production');
+  
+  const canEdit = permissions.canEditModule('production');
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [componentFilter, setComponentFilter] = useState<string>("todos");
@@ -93,6 +109,8 @@ const Diagnosticos = () => {
   const [showChecklistsConfig, setShowChecklistsConfig] = useState(false);
   const [selectedDiagnostic, setSelectedDiagnostic] = useState<DiagnosticResponse | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const checklistsFunctions = useDiagnosticChecklists();
   const ordersData = useOrders();
@@ -110,7 +128,7 @@ const Diagnosticos = () => {
   const diagnosticResponses = diagnosticResponsesData || [];
 
   const filteredResponses = useMemo(() => {
-    return diagnosticResponses.filter(response => {
+    const filtered = diagnosticResponses.filter(response => {
       const responseWithOrder = response as unknown;
       const matchesSearch = responseWithOrder.order?.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            responseWithOrder.order?.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -119,7 +137,25 @@ const Diagnosticos = () => {
       const matchesComponent = componentFilter === "todos" || response.component === componentFilter;
       return matchesSearch && matchesStatus && matchesComponent;
     });
+    
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.diagnosed_at).getTime();
+      const dateB = new Date(b.diagnosed_at).getTime();
+      return dateB - dateA;
+    });
   }, [diagnosticResponses, searchTerm, statusFilter, componentFilter]);
+
+  const paginatedResponses = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredResponses.slice(startIndex, endIndex);
+  }, [filteredResponses, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredResponses.length / pageSize);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, componentFilter]);
 
   const stats = {
     total: diagnosticResponses.length,
@@ -397,14 +433,16 @@ const Diagnosticos = () => {
         </div>
         
         <div className="flex gap-2">
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Diagnóstico
-              </Button>
-            </DialogTrigger>
-          </Dialog>
+          {canEdit && (
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Novo Diagnóstico
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+          )}
           
           <Button
             variant="outline"
@@ -535,11 +573,78 @@ const Diagnosticos = () => {
               <p className="text-muted-foreground">Carregando diagnósticos...</p>
             </div>
           ) : (
-            <DiagnosticResponsesTable
-              responses={filteredResponses as any}
-              onViewDetails={handleViewDetails as any}
-              onResumeDiagnostic={handleStartDiagnostic}
-            />
+            <>
+              <DiagnosticResponsesTable
+                responses={paginatedResponses as any}
+                onViewDetails={handleViewDetails as any}
+                onResumeDiagnostic={handleStartDiagnostic}
+              />
+              {totalPages > 1 && (
+                <div className="mt-4">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentPage > 1) {
+                              setCurrentPage(currentPage - 1);
+                            }
+                          }}
+                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                        if (
+                          page === 1 ||
+                          page === totalPages ||
+                          (page >= currentPage - 1 && page <= currentPage + 1)
+                        ) {
+                          return (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setCurrentPage(page);
+                                }}
+                                isActive={currentPage === page}
+                                className="cursor-pointer"
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        } else if (page === currentPage - 2 || page === currentPage + 2) {
+                          return (
+                            <PaginationItem key={page}>
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                        }
+                        return null;
+                      })}
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentPage < totalPages) {
+                              setCurrentPage(currentPage + 1);
+                            }
+                          }}
+                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                  <div className="text-center text-sm text-muted-foreground mt-2">
+                    Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, filteredResponses.length)} de {filteredResponses.length} diagnósticos
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

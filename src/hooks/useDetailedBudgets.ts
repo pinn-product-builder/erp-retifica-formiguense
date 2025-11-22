@@ -372,6 +372,28 @@ export function useDetailedBudgets() {
   // Alias para manter compatibilidade
   const duplicateBudget = getBudgetDataForDuplication;
 
+  // Excluir orçamento
+  const deleteDetailedBudget = async (id: string) => {
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('detailed_budgets')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      handleSuccess('Orçamento excluído com sucesso!');
+      return true;
+    } catch (error) {
+      handleError(error, 'Erro ao excluir orçamento');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     loading,
     getDetailedBudgets,
@@ -380,6 +402,7 @@ export function useDetailedBudgets() {
     approveBudget,
     getPendingBudgets,
     duplicateBudget,
-    checkBudgetExists
+    checkBudgetExists,
+    deleteDetailedBudget
   };
 }

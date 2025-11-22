@@ -58,6 +58,7 @@ const PAGE_MODULE_MAPPING: Record<string, ModuleName> = {
   '/pcp': 'production',
   '/ordens-servico': 'orders',
   '/orcamentos': 'orders',
+  '/diagnosticos': 'production',
   '/clientes': 'admin',
   '/consultores': 'admin',
   '/funcionarios': 'hr',

@@ -33,7 +33,8 @@ import {
   AlertTriangle,
   XCircle,
   Copy,
-  Download
+  Download,
+  Trash2
 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { useDetailedBudgets, type DetailedBudget } from "@/hooks/useDetailedBudgets";
@@ -48,6 +49,16 @@ import { BUDGET_STATUS, translateStatus, translateAction, translateMessage } fro
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { ResponsiveModalContent } from "@/components/ui/responsive-modal";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { useModuleGuard } from "@/hooks/useRoleGuard";
 
 // Função para formatar valores monetários
 const formatCurrency = (value: number): string => {
@@ -60,6 +71,8 @@ const formatCurrency = (value: number): string => {
 };
 
 const Orcamentos = () => {
+  const { hasPermission, permissions } = useModuleGuard('orders', 'read', { blockAccess: true });
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [componentFilter, setComponentFilter] = useState<string>("todos");
@@ -69,12 +82,18 @@ const Orcamentos = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<DetailedBudget | null>(null);
   const [duplicatedBudgetData, setDuplicatedBudgetData] = useState<Partial<DetailedBudget> | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const [budgetToDelete, setBudgetToDelete] = useState<DetailedBudget | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const { generateBudgetReport, printBudgetReport } = useBudgetReports();
   
-  const { getDetailedBudgets, createDetailedBudget, updateDetailedBudget, duplicateBudget, loading } = useDetailedBudgets();
+  const { getDetailedBudgets, createDetailedBudget, updateDetailedBudget, duplicateBudget, deleteDetailedBudget, loading } = useDetailedBudgets();
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
+  
+  const canEdit = permissions.canEditModule('orders');
 
   // Buscar orçamentos detalhados
   const { data: budgets = [], refetch, isLoading: queryLoading } = useQuery({
@@ -87,7 +106,7 @@ const Orcamentos = () => {
   });
 
   const filteredBudgets = React.useMemo(() => {
-    return budgets.filter(budget => {
+    const filtered = budgets.filter(budget => {
       // Se não há termo de busca, mostrar todos
       if (!searchTerm) return true;
       
@@ -99,7 +118,25 @@ const Orcamentos = () => {
       
       return matchesSearch;
     });
+    
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return dateB - dateA;
+    });
   }, [budgets, searchTerm]);
+
+  const paginatedBudgets = React.useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredBudgets.slice(startIndex, endIndex);
+  }, [filteredBudgets, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredBudgets.length / pageSize);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, componentFilter]);
 
   const stats = {
     total: budgets.length,
@@ -185,6 +222,17 @@ const Orcamentos = () => {
     setIsFormOpen(true);
   };
 
+  const handleDeleteBudget = async () => {
+    if (!budgetToDelete) return;
+    
+    const success = await deleteDetailedBudget(budgetToDelete.id);
+    if (success) {
+      refetch();
+      setIsDeleteDialogOpen(false);
+      setBudgetToDelete(null);
+    }
+  };
+
   const handleGenerateReport = async () => {
     const reportData = await generateBudgetReport();
     if (reportData) {
@@ -206,27 +254,29 @@ const Orcamentos = () => {
           </p>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <Button 
-            variant="outline"
-            onClick={handleGenerateReport}
-            disabled={isPageLoading}
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Relatório
-          </Button>
-          <Button 
-            onClick={() => {
-              setEditingBudget(null);
-              setDuplicatedBudgetData(null); // Clear duplicated data
-              setIsFormOpen(true);
-            }}
-            disabled={isPageLoading}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Orçamento
-          </Button>
-        </div>
+        {canEdit && (
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button 
+              variant="outline"
+              onClick={handleGenerateReport}
+              disabled={isPageLoading}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Relatório
+            </Button>
+            <Button 
+              onClick={() => {
+                setEditingBudget(null);
+                setDuplicatedBudgetData(null);
+                setIsFormOpen(true);
+              }}
+              disabled={isPageLoading}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Orçamento
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -321,7 +371,7 @@ const Orcamentos = () => {
         </CardHeader>
         <CardContent>
           <ResponsiveTable
-            data={filteredBudgets}
+            data={paginatedBudgets}
             keyExtractor={(budget) => budget.id}
             emptyMessage="Nenhum orçamento encontrado"
             columns={[
@@ -417,42 +467,124 @@ const Orcamentos = () => {
                     >
                       <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </Button>
-                    {budget.status === 'draft' && (
+                    {canEdit && (
                       <>
+                        {budget.status === 'draft' && (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                              onClick={() => handleEditBudget(budget)}
+                            >
+                              <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                              onClick={() => {
+                                setSelectedBudget(budget);
+                                setIsApprovalModalOpen(true);
+                              }}
+                            >
+                              <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            </Button>
+                          </>
+                        )}
                         <Button 
                           variant="ghost" 
                           size="sm"
                           className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                          onClick={() => handleEditBudget(budget)}
+                          onClick={() => handleDuplicate(budget)}
                         >
-                          <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                          onClick={() => {
-                            setSelectedBudget(budget);
-                            setIsApprovalModalOpen(true);
-                          }}
-                        >
-                          <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        </Button>
+                        {budget.status === 'draft' && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => {
+                              setBudgetToDelete(budget);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          </Button>
+                        )}
                       </>
                     )}
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                      onClick={() => handleDuplicate(budget)}
-                    >
-                      <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </Button>
                   </div>
                 )
               }
             ]}
           />
+          {totalPages > 1 && (
+            <div className="mt-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) {
+                          setCurrentPage(currentPage - 1);
+                        }
+                      }}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    if (
+                      page === 1 ||
+                      page === totalPages ||
+                      (page >= currentPage - 1 && page <= currentPage + 1)
+                    ) {
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(page);
+                            }}
+                            isActive={currentPage === page}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    } else if (page === currentPage - 2 || page === currentPage + 2) {
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      );
+                    }
+                    return null;
+                  })}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < totalPages) {
+                          setCurrentPage(currentPage + 1);
+                        }
+                      }}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+              <div className="text-center text-sm text-muted-foreground mt-2">
+                Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, filteredBudgets.length)} de {filteredBudgets.length} orçamentos
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -516,6 +648,39 @@ const Orcamentos = () => {
               setDuplicatedBudgetData(null);
             }}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir o orçamento <strong>{budgetToDelete?.budget_number || `#${budgetToDelete?.id.slice(-6)}`}</strong>?
+              <br />
+              <br />
+              Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setBudgetToDelete(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteBudget}
+              disabled={loading}
+            >
+              {loading ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
