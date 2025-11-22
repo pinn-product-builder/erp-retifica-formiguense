@@ -15,10 +15,12 @@ import { Camera, ClipboardList, Settings, AlertCircle, ArrowRight } from "lucide
 import { EngineTypeSelect } from "@/components/ui/EngineTypeSelect";
 import { useEngineTypes } from "@/hooks/useEngineTypes";
 import { useEngineComponents } from "@/hooks/useEngineComponents";
+import { useEmployees } from "@/hooks/useEmployees";
 
 export default function CheckIn() {
   const { engineTypes, fetchEngineTypes } = useEngineTypes();
   const { components: engineComponents } = useEngineComponents();
+  const { employees, loading: employeesLoading } = useEmployees();
   
   const [formData, setFormData] = useState({
     // Identificação do Motor
@@ -29,11 +31,15 @@ export default function CheckIn() {
     numeroSerie: "",
     
     // Checklist
-    motorCompleto: false,
+    estadoMotor: "",
     montado: "",
     selectedComponents: [] as string[],
     giraManualmente: false,
-    observacoes: ""
+    observacoes: "",
+    
+    // Remoção
+    removidoPorEmpresa: false,
+    removidoPorFuncionario: ""
   });
 
   const [fotos, setFotos] = useState({
@@ -83,19 +89,19 @@ export default function CheckIn() {
   }, [selectedEngineType, engineComponents]);
 
   useEffect(() => {
-    if (formData.motorCompleto && availableComponents.length > 0) {
+    if (formData.estadoMotor === 'completo' && availableComponents.length > 0) {
       const allComponentIds = availableComponents.map((c) => c.id);
       setFormData((prev) => ({
         ...prev,
         selectedComponents: allComponentIds
       }));
-    } else if (!formData.motorCompleto && formData.selectedComponents.length === availableComponents.length) {
+    } else if (formData.estadoMotor !== 'completo' && formData.selectedComponents.length === availableComponents.length) {
       setFormData((prev) => ({
         ...prev,
         selectedComponents: []
       }));
     }
-  }, [formData.motorCompleto, availableComponents.length]);
+  }, [formData.estadoMotor, availableComponents.length]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -130,6 +136,15 @@ export default function CheckIn() {
       return;
     }
 
+    if (!formData.estadoMotor) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Selecione o estado do motor",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!formData.montado) {
       toast({
         title: "Campo obrigatório",
@@ -158,7 +173,7 @@ export default function CheckIn() {
       model: formData.modelo,
       fuel_type: formData.combustivel,
       serial_number: formData.numeroSerie || undefined,
-      is_complete: formData.motorCompleto,
+      is_complete: formData.estadoMotor === 'completo',
       assembly_state: formData.montado,
       has_block: formData.selectedComponents.includes('bloco'),
       has_head: formData.selectedComponents.includes('cabecote'),
@@ -166,6 +181,8 @@ export default function CheckIn() {
       has_piston: formData.selectedComponents.includes('pistao'),
       has_connecting_rod: formData.selectedComponents.includes('biela'),
       turns_manually: formData.giraManualmente,
+      removed_by_company: formData.removidoPorEmpresa,
+      removed_by_employee_name: formData.removidoPorEmpresa ? formData.removidoPorFuncionario : undefined,
     };
 
     const engine = await createEngine(engineData);
@@ -293,7 +310,7 @@ export default function CheckIn() {
                     setFormData((prev) => ({
                       ...prev,
                       selectedComponents: [],
-                      motorCompleto: false
+                      estadoMotor: ''
                     }));
                   }
                 }}
@@ -389,39 +406,48 @@ export default function CheckIn() {
 
             {selectedEngineType && (
               <>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="motorCompleto"
-                    checked={formData.motorCompleto}
-                    onCheckedChange={(checked) => {
-                      handleInputChange('motorCompleto', !!checked);
-                      if (checked && availableComponents.length > 0) {
+                <div>
+                  <Label htmlFor="estadoMotor">Estado do Motor <span className="text-red-500">*</span></Label>
+                  <Select 
+                    value={formData.estadoMotor} 
+                    onValueChange={(value) => {
+                      handleInputChange('estadoMotor', value);
+                      if (value === 'completo' && availableComponents.length > 0) {
                         const allComponentIds = availableComponents.map((c) => c.id);
                         setFormData((prev) => ({
                           ...prev,
                           selectedComponents: allComponentIds
                         }));
-                      } else {
+                      } else if (value !== 'completo') {
                         setFormData((prev) => ({
                           ...prev,
                           selectedComponents: []
                         }));
                       }
-                    }}
-                  />
-                  <Label htmlFor="motorCompleto">Motor completo (seleciona todos os componentes)</Label>
+                    }} 
+                    required
+                  >
+                    <SelectTrigger id="estadoMotor">
+                      <SelectValue placeholder="Selecione o estado do motor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="completo">Motor Completo</SelectItem>
+                      <SelectItem value="parcial">Motor Parcial</SelectItem>
+                      <SelectItem value="avulsos">Componentes Avulsos</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
-                  <Label htmlFor="montado">Estado de montagem <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="montado">Estado de Montagem <span className="text-red-500">*</span></Label>
                   <Select value={formData.montado} onValueChange={(value) => handleInputChange('montado', value)} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
+                    <SelectTrigger id="montado">
+                      <SelectValue placeholder="Selecione o estado de montagem" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="montado">Montado</SelectItem>
+                      <SelectItem value="parcialmente_montado">Parcialmente Montado</SelectItem>
                       <SelectItem value="desmontado">Desmontado</SelectItem>
-                      <SelectItem value="parcial">Parcialmente montado</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -447,7 +473,7 @@ export default function CheckIn() {
                                   setFormData((prev) => ({
                                     ...prev,
                                     selectedComponents: prev.selectedComponents.filter((id) => id !== component.id),
-                                    motorCompleto: false
+                                    estadoMotor: formData.estadoMotor === 'completo' ? 'parcial' : formData.estadoMotor
                                   }));
                                 }
                               }}
@@ -469,6 +495,70 @@ export default function CheckIn() {
                     onCheckedChange={(checked) => handleInputChange('giraManualmente', !!checked)}
                   />
                   <Label htmlFor="giraManualmente">Gira Manualmente</Label>
+                </div>
+
+                <div className="space-y-3">
+                  <Label>Motor Removido por Mecânicos da Empresa?</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="removidoNao"
+                        name="removidoPorEmpresa"
+                        checked={!formData.removidoPorEmpresa}
+                        onChange={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            removidoPorEmpresa: false,
+                            removidoPorFuncionario: ""
+                          }));
+                        }}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="removidoNao" className="cursor-pointer">NÃO</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="removidoSim"
+                        name="removidoPorEmpresa"
+                        checked={formData.removidoPorEmpresa}
+                        onChange={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            removidoPorEmpresa: true
+                          }));
+                        }}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="removidoSim" className="cursor-pointer">SIM, quem?</Label>
+                    </div>
+                  </div>
+                  {formData.removidoPorEmpresa && (
+                    <Select
+                      value={formData.removidoPorFuncionario}
+                      onValueChange={(value) => handleInputChange('removidoPorFuncionario', value)}
+                    >
+                      <SelectTrigger className="mt-2">
+                        <SelectValue placeholder="Selecione o funcionário" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employeesLoading ? (
+                          <SelectItem value="loading" disabled>Carregando funcionários...</SelectItem>
+                        ) : employees.filter(emp => emp.is_active).length === 0 ? (
+                          <SelectItem value="empty" disabled>Nenhum funcionário ativo encontrado</SelectItem>
+                        ) : (
+                          employees
+                            .filter(emp => emp.is_active)
+                            .map((employee) => (
+                              <SelectItem key={employee.id} value={employee.full_name}>
+                                {employee.full_name} {employee.position ? `- ${employee.position}` : ''}
+                              </SelectItem>
+                            ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </>
             )}

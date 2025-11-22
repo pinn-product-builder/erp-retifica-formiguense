@@ -33,6 +33,8 @@ export interface Engine {
   has_piston?: boolean;
   has_connecting_rod?: boolean;
   turns_manually?: boolean;
+  removed_by_company?: boolean;
+  removed_by_employee_name?: string;
   org_id?: string;
 }
 
