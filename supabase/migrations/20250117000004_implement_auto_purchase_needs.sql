@@ -62,13 +62,13 @@ BEGIN
     END;
     
     -- Criar necessidade de compra
+    -- Nota: shortage_quantity é uma coluna gerada, não deve ser inserida manualmente
     INSERT INTO purchase_needs (
       org_id,
       part_code,
       part_name,
       required_quantity,
       available_quantity,
-      shortage_quantity,
       priority_level,
       need_type,
       suggested_suppliers,
@@ -82,7 +82,6 @@ BEGIN
       v_part.part_name,
       v_reorder_quantity,
       v_part.available_quantity,
-      v_reorder_quantity - v_part.available_quantity,
       v_priority,
       'auto_reorder',
       COALESCE(v_suggested_suppliers, '[]'::JSON),

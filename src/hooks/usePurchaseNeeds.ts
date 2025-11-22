@@ -140,8 +140,6 @@ export function usePurchaseNeeds() {
     try {
       setLoading(true);
 
-      const shortage_quantity = Math.max(0, needData.required_quantity - needData.available_quantity);
-
       // Buscar part_id baseado no part_code
       let part_id: string | null = null;
       if (needData.part_code) {
@@ -166,7 +164,6 @@ export function usePurchaseNeeds() {
           part_id: part_id,
           required_quantity: needData.required_quantity,
           available_quantity: needData.available_quantity,
-          shortage_quantity,
           priority_level: needData.priority_level,
           need_type: needData.need_type,
           related_orders: needData.related_orders || [],
