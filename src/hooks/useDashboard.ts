@@ -95,15 +95,15 @@ export const useDashboard = () => {
       case 'percentage':
         return new Intl.NumberFormat('pt-BR', {
           style: 'percent',
-          minimumFractionDigits: 1,
-          maximumFractionDigits: 1
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
         }).format(value / 100);
       
       case 'number':
       default:
         return new Intl.NumberFormat('pt-BR', {
           minimumFractionDigits: 0,
-          maximumFractionDigits: 0
+          maximumFractionDigits: 2
         }).format(value);
     }
   };

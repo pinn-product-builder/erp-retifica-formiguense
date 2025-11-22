@@ -37,14 +37,22 @@ export const EnhancedStatCard: React.FC<EnhancedStatCardProps> = ({
       case 'currency':
         return new Intl.NumberFormat('pt-BR', {
           style: 'currency',
-          currency: 'BRL'
+          currency: 'BRL',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
         }).format(value);
       case 'percentage':
-        return `${value.toFixed(1)}%`;
+        return `${Number(value.toFixed(2))}%`;
       case 'number':
-        return value.toLocaleString('pt-BR');
+        return new Intl.NumberFormat('pt-BR', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        }).format(value);
       default:
-        return value.toString();
+        return new Intl.NumberFormat('pt-BR', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        }).format(value);
     }
   };
 
@@ -119,7 +127,7 @@ export const EnhancedStatCard: React.FC<EnhancedStatCardProps> = ({
                   {getTrendIcon()}
                   <span className="ml-1">
                     {kpi.changePercentage > 0 ? '+' : ''}
-                    {kpi.changePercentage.toFixed(1)}%
+                    {Number(kpi.changePercentage.toFixed(2))}%
                   </span>
                 </Badge>
                 <span className="text-xs text-muted-foreground">

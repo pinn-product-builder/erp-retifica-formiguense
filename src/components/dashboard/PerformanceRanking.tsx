@@ -60,9 +60,12 @@ const getRankingPosition = (position: number): RankingPosition => {
 
 const formatPoints = (points: number): string => {
   if (points >= 1000) {
-    return `${(points / 1000).toFixed(1)}k`;
+    return `${Number((points / 1000).toFixed(2))}k`;
   }
-  return points.toString();
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  }).format(points);
 };
 
 const getLevelInfo = (level: number) => {
@@ -231,7 +234,7 @@ export function PerformanceRanking() {
                               </span>
                               <span className="flex items-center gap-1">
                                 <TrendingUp className="h-3 w-3" />
-                                {Number(user.metrics.level_progress)}% do nível
+                                {Number(Number(user.metrics.level_progress).toFixed(2))}% do nível
                               </span>
                             </div>
                           </div>

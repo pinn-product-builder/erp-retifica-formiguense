@@ -318,7 +318,7 @@ export function UserLevelProgress() {
           </div>
           <div className="text-center">
             <div className="text-xl font-bold text-primary">
-              {Math.round(levelInfo.progressPercentage)}%
+              {Number(levelInfo.progressPercentage.toFixed(2))}%
             </div>
             <div className="text-xs text-muted-foreground">
               Progresso

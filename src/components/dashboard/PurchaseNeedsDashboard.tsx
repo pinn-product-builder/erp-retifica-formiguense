@@ -253,7 +253,9 @@ export function PurchaseNeedsDashboard() {
                   <p className="text-2xl font-bold">
                     {new Intl.NumberFormat('pt-BR', { 
                       style: 'currency', 
-                      currency: 'BRL' 
+                      currency: 'BRL',
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
                     }).format(totalValue)}
                   </p>
                 </div>
@@ -332,7 +334,14 @@ export function PurchaseNeedsDashboard() {
                         <div className="flex items-center gap-1">
                           <DollarSign className="w-4 h-4 text-muted-foreground" />
                           <span className="text-muted-foreground">Estimado:</span>
-                          <span className="font-medium">R$ {need.estimated_cost.toFixed(2)}</span>
+                          <span className="font-medium">
+                            {new Intl.NumberFormat('pt-BR', { 
+                              style: 'currency', 
+                              currency: 'BRL',
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2
+                            }).format(need.estimated_cost)}
+                          </span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -364,7 +373,14 @@ export function PurchaseNeedsDashboard() {
                                 <div className="space-y-1 text-xs text-muted-foreground">
                                   <div className="flex justify-between">
                                     <span>Preço:</span>
-                                    <span>R$ {supplier.suggested_price.toFixed(2)}</span>
+                                    <span>
+                                      {new Intl.NumberFormat('pt-BR', { 
+                                        style: 'currency', 
+                                        currency: 'BRL',
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                      }).format(supplier.suggested_price)}
+                                    </span>
                                   </div>
                                   <div className="flex justify-between">
                                     <span>Prazo:</span>
@@ -372,7 +388,7 @@ export function PurchaseNeedsDashboard() {
                                   </div>
                                   <div className="flex justify-between">
                                     <span>Score:</span>
-                                    <span>{supplier.cost_benefit_score.toFixed(1)}/10</span>
+                                    <span>{Number(supplier.cost_benefit_score.toFixed(2))}/10</span>
                                   </div>
                                 </div>
                                 <Button 

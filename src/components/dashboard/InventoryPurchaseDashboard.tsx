@@ -320,7 +320,10 @@ export default function InventoryPurchaseDashboard() {
         id: 'total-items',
         name: 'Total de Itens',
         value: totalItems,
-        formattedValue: totalItems.toLocaleString('pt-BR'),
+        formattedValue: new Intl.NumberFormat('pt-BR', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        }).format(totalItems),
         previousValue: previousTotalItems,
         trend: totalItems > previousTotalItems ? 'up' : totalItems < previousTotalItems ? 'down' : 'stable',
         trendPercentage: previousTotalItems > 0 ? ((totalItems - previousTotalItems) / previousTotalItems) * 100 : 0,
@@ -333,7 +336,12 @@ export default function InventoryPurchaseDashboard() {
         id: 'total-value',
         name: 'Valor do Estoque',
         value: totalValue,
-        formattedValue: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalValue),
+        formattedValue: new Intl.NumberFormat('pt-BR', { 
+          style: 'currency', 
+          currency: 'BRL',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(totalValue),
         icon: DollarSign,
         color: 'green',
         description: 'Valor total investido em estoque',
@@ -353,7 +361,7 @@ export default function InventoryPurchaseDashboard() {
         id: 'turnover-rate',
         name: 'Giro de Estoque',
         value: turnoverRate,
-        formattedValue: turnoverRate.toFixed(2),
+        formattedValue: Number(turnoverRate.toFixed(2)).toString(),
         icon: RefreshCw,
         color: 'purple',
         description: 'Velocidade de rotação do estoque',
@@ -364,7 +372,7 @@ export default function InventoryPurchaseDashboard() {
         id: 'accuracy',
         name: 'Acurácia',
         value: accuracy,
-        formattedValue: `${accuracy.toFixed(1)}%`,
+        formattedValue: `${Number(accuracy.toFixed(2))}%`,
         icon: Target,
         color: accuracy >= 95 ? 'green' : accuracy >= 85 ? 'yellow' : 'red',
         description: 'Precisão do controle de estoque',
@@ -437,7 +445,7 @@ export default function InventoryPurchaseDashboard() {
         id: 'quotation-rate',
         name: 'Taxa de Aprovação',
         value: quotationApprovalRate,
-        formattedValue: `${quotationApprovalRate.toFixed(1)}%`,
+        formattedValue: `${Number(quotationApprovalRate.toFixed(2))}%`,
         icon: CheckCircle,
         color: quotationApprovalRate >= 70 ? 'green' : quotationApprovalRate >= 50 ? 'yellow' : 'red',
         description: 'Percentual de cotações aprovadas',
@@ -448,7 +456,7 @@ export default function InventoryPurchaseDashboard() {
         id: 'completion-rate',
         name: 'Taxa de Conclusão',
         value: requisitionCompletionRate,
-        formattedValue: `${requisitionCompletionRate.toFixed(1)}%`,
+        formattedValue: `${Number(requisitionCompletionRate.toFixed(2))}%`,
         icon: CheckCircle,
         color: requisitionCompletionRate >= 80 ? 'green' : requisitionCompletionRate >= 60 ? 'yellow' : 'red',
         description: 'Percentual de requisições concluídas',
@@ -459,7 +467,12 @@ export default function InventoryPurchaseDashboard() {
         id: 'needs-value',
         name: 'Valor das Necessidades',
         value: totalNeedsValue,
-        formattedValue: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalNeedsValue),
+        formattedValue: new Intl.NumberFormat('pt-BR', { 
+          style: 'currency', 
+          currency: 'BRL',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(totalNeedsValue),
         icon: DollarSign,
         color: 'blue',
         description: 'Valor total das necessidades de compra',
@@ -469,7 +482,7 @@ export default function InventoryPurchaseDashboard() {
         id: 'avg-quotation-time',
         name: 'Tempo Médio Cotação',
         value: avgQuotationTime,
-        formattedValue: `${avgQuotationTime.toFixed(1)} dias`,
+        formattedValue: `${Number(avgQuotationTime.toFixed(2))} dias`,
         icon: Clock,
         color: avgQuotationTime <= 3 ? 'green' : avgQuotationTime <= 5 ? 'yellow' : 'red',
         description: 'Tempo médio para obter cotações',
@@ -635,7 +648,7 @@ export default function InventoryPurchaseDashboard() {
                         </div>
                         {kpi.trendPercentage !== undefined && (
                           <p className="text-xs text-muted-foreground">
-                            {kpi.trendPercentage > 0 ? '+' : ''}{kpi.trendPercentage.toFixed(1)}% vs período anterior
+                            {kpi.trendPercentage > 0 ? '+' : ''}{Number(kpi.trendPercentage.toFixed(2))}% vs período anterior
                           </p>
                         )}
                         {kpi.target && (
@@ -647,7 +660,7 @@ export default function InventoryPurchaseDashboard() {
                               <div
                                 className="bg-blue-600 h-2 rounded-full"
                                 style={{
-                                  width: `${Math.min((kpi.value / kpi.target) * 100, 100)}%`,
+                                  width: `${Number(Math.min((kpi.value / kpi.target) * 100, 100).toFixed(2))}%`,
                                 }}
                               ></div>
                             </div>
@@ -729,7 +742,7 @@ export default function InventoryPurchaseDashboard() {
                         </div>
                         {kpi.trendPercentage !== undefined && (
                           <p className="text-xs text-muted-foreground">
-                            {kpi.trendPercentage > 0 ? '+' : ''}{kpi.trendPercentage.toFixed(1)}% vs período anterior
+                            {kpi.trendPercentage > 0 ? '+' : ''}{Number(kpi.trendPercentage.toFixed(2))}% vs período anterior
                           </p>
                         )}
                         {kpi.target && (
@@ -741,7 +754,7 @@ export default function InventoryPurchaseDashboard() {
                               <div
                                 className="bg-blue-600 h-2 rounded-full"
                                 style={{
-                                  width: `${Math.min((kpi.value / kpi.target) * 100, 100)}%`,
+                                  width: `${Number(Math.min((kpi.value / kpi.target) * 100, 100).toFixed(2))}%`,
                                 }}
                               ></div>
                             </div>

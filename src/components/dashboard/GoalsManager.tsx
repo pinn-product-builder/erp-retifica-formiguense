@@ -460,11 +460,19 @@ export function GoalsManager() {
   const formatValue = (value: number, unit: string) => {
     switch (unit) {
       case 'currency':
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        return new Intl.NumberFormat('pt-BR', { 
+          style: 'currency', 
+          currency: 'BRL',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(value);
       case 'percentage':
-        return `${value}%`;
+        return `${Number(value.toFixed(2))}%`;
       default:
-        return value.toLocaleString('pt-BR');
+        return new Intl.NumberFormat('pt-BR', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        }).format(value);
     }
   };
 
@@ -871,7 +879,7 @@ export function GoalsManager() {
                             <span className="text-muted-foreground">
                               {formatValue(goal.progress_current, goal.progress_unit)} / {formatValue(goal.target_value, goal.progress_unit)}
                             </span>
-                            <span className="font-medium">{progressPercentage.toFixed(0)}%</span>
+                            <span className="font-medium">{Number(progressPercentage.toFixed(2))}%</span>
                           </div>
                           <Progress value={progressPercentage} className="h-2" />
                         </div>

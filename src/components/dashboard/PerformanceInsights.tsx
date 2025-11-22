@@ -222,7 +222,7 @@ export function PerformanceInsights() {
       {
         id: '3',
         name: 'Tempo Médio de Conclusão',
-        value: Number(avgCompletionTime.toFixed(2)),
+        value: Number(Number(avgCompletionTime).toFixed(2)),
         target: 7,
         unit: 'dias',
         trend: avgCompletionTime <= 7 ? 'up' : avgCompletionTime <= 10 ? 'stable' : 'down',
@@ -352,14 +352,19 @@ export function PerformanceInsights() {
     if (unit === 'R$') {
       return new Intl.NumberFormat('pt-BR', { 
         style: 'currency', 
-        currency: 'BRL' 
+        currency: 'BRL',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
       }).format(value);
     }
     if (unit === '%') {
-      return `${value.toFixed(1)}%`;
+      return `${Number(value.toFixed(2))}%`;
     }
 
-    return `${value}`;
+    return new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(value);
   };
 
   const calculateProgress = (current: number, target: number) => {
@@ -421,7 +426,7 @@ export function PerformanceInsights() {
                           metric.trend === 'down' ? 'text-destructive' : 
                           'text-muted-foreground'
                         }`}>
-                          {metric.trendValue > 0 ? '+' : ''}{metric.trendValue}%
+                          {metric.trendValue > 0 ? '+' : ''}{Number(metric.trendValue.toFixed(2))}%
                         </span>
                       </div>
                     </div>
@@ -496,7 +501,7 @@ export function PerformanceInsights() {
                             <Progress value={progress} className="h-3" />
                             <div className="flex justify-between text-xs text-muted-foreground">
                               <span>0%</span>
-                              <span className="font-medium">{progress.toFixed(1)}%</span>
+                              <span className="font-medium">{Number(progress.toFixed(2))}%</span>
                               <span>100%</span>
                             </div>
                           </div>

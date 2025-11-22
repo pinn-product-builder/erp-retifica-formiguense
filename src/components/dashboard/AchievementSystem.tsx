@@ -286,7 +286,7 @@ export function AchievementSystem() {
                           </div>
                           <Progress value={achievement.progress} className="h-2" />
                           <p className="text-xs text-muted-foreground">
-                            {Math.round(achievement.progress)}% concluído
+                            {Number(achievement.progress.toFixed(2))}% concluído
                           </p>
                         </div>
                       </div>

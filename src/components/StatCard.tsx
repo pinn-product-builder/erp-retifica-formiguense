@@ -86,7 +86,7 @@ export function StatCard({
                   trend.isPositive ? "text-success" : "text-destructive",
                   variant === "primary" && "text-primary-foreground/70"
                 )}>
-                  {trend.isPositive ? "+" : ""}{trend.value}%
+                  {trend.isPositive ? "+" : ""}{Number(trend.value.toFixed(2))}%
                 </span>
               )}
             </div>
