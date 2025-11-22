@@ -15,7 +15,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import type { DetailedBudget } from '@/hooks/useDetailedBudgets';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
-import { EngineComponentSelect } from '@/components/ui/EngineComponentSelect';
 import { MaskedInput } from '@/components/ui/masked-input';
 
 interface BudgetFormProps {
@@ -194,6 +193,85 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     fetchOrders();
   }, [currentOrganization?.id, toast]);
 
+  // Buscar componentes da ordem selecionada
+  useEffect(() => {
+    const fetchOrderComponents = async () => {
+      if (!selectedOrderId || !currentOrganization?.id) {
+        setComponentsSelected([]);
+        setComponent('');
+        return;
+      }
+
+      try {
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .select(`
+            engine_id,
+            engines(
+              has_block,
+              has_head,
+              has_crankshaft,
+              has_piston,
+              has_connecting_rod,
+              reception_form_data
+            )
+          `)
+          .eq('id', selectedOrderId)
+          .eq('org_id', currentOrganization.id)
+          .single();
+
+        if (orderError) throw orderError;
+
+        const enginesData = orderData?.engines;
+        const engine = Array.isArray(enginesData) ? enginesData[0] : enginesData;
+        
+        const engineTyped = engine as {
+          has_block?: boolean;
+          has_head?: boolean;
+          has_crankshaft?: boolean;
+          has_piston?: boolean;
+          has_connecting_rod?: boolean;
+          reception_form_data?: { selectedComponents?: string[] };
+        } | null | undefined;
+
+        if (!engineTyped) {
+          setComponentsSelected([]);
+          setComponent('');
+          return;
+        }
+
+        const components: string[] = [];
+        
+        if (engineTyped.has_block) components.push('bloco');
+        if (engineTyped.has_head) components.push('cabecote');
+        if (engineTyped.has_crankshaft) components.push('virabrequim');
+        if (engineTyped.has_piston) components.push('pistao');
+        if (engineTyped.has_connecting_rod) components.push('biela');
+
+        if (engineTyped.reception_form_data?.selectedComponents) {
+          const receptionComponents = engineTyped.reception_form_data.selectedComponents;
+          receptionComponents.forEach((comp: string) => {
+            if (!components.includes(comp)) {
+              components.push(comp);
+            }
+          });
+        }
+
+        setComponentsSelected(components);
+        setComponent(components[0] || '');
+      } catch (error) {
+        console.error('Erro ao buscar componentes da ordem:', error);
+        toast({
+          title: 'Aviso',
+          description: 'Não foi possível carregar os componentes da ordem. Selecione manualmente.',
+          variant: 'default',
+        });
+      }
+    };
+
+    fetchOrderComponents();
+  }, [selectedOrderId, currentOrganization?.id, toast]);
+
   // Carregar peças do estoque
   useEffect(() => {
     const fetchParts = async () => {
@@ -309,6 +387,15 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
       return;
     }
 
+    if (componentsSelected.length === 0) {
+      toast({
+        title: 'Erro',
+        description: 'A ordem de serviço selecionada não possui componentes. Verifique a ordem de serviço.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (services.length === 0 && parts.length === 0 && laborHours === 0) {
       toast({
         title: 'Erro',
@@ -370,40 +457,41 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
           <CardTitle>Dados do Orçamento</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="order">Ordem de Serviço *</Label>
-              <Select value={selectedOrderId} onValueChange={setSelectedOrderId} disabled={!!orderId || !!budget}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a OS (O diagnóstico deve ter sido realizado)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {loadingOrders ? (
-                    <SelectItem value="loading" disabled>Carregando...</SelectItem>
-                  ) : orders.length === 0 ? (
-                    <SelectItem value="empty" disabled>Nenhuma OS disponível</SelectItem>
-                  ) : (
-                    orders.map(order => (
-                      <SelectItem key={order.id as string} value={order.id as string}>
-                        {order.order_number as string} - {(order.customers as { name: string } | undefined)?.name || 'Cliente não informado'}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="component">Componente(s) *</Label>
-              <EngineComponentSelect
-                multiple
-                value={componentsSelected}
-                onChange={(vals) => {
-                  setComponentsSelected(vals);
-                  setComponent(vals[0] || '');
-                }}
-              />
-            </div>
+          <div>
+            <Label htmlFor="order">Ordem de Serviço *</Label>
+            <Select value={selectedOrderId} onValueChange={setSelectedOrderId} disabled={!!orderId || !!budget}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a OS (O diagnóstico deve ter sido realizado)" />
+              </SelectTrigger>
+              <SelectContent>
+                {loadingOrders ? (
+                  <SelectItem value="loading" disabled>Carregando...</SelectItem>
+                ) : orders.length === 0 ? (
+                  <SelectItem value="empty" disabled>Nenhuma OS disponível</SelectItem>
+                ) : (
+                  orders.map(order => (
+                    <SelectItem key={order.id as string} value={order.id as string}>
+                      {order.order_number as string} - {(order.customers as { name: string } | undefined)?.name || 'Cliente não informado'}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            {componentsSelected.length > 0 && (
+              <div className="mt-3 p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium mb-2">Componentes da Ordem de Serviço:</p>
+                <div className="flex flex-wrap gap-2">
+                  {componentsSelected.map((compId) => {
+                    const comp = engineComponents.find(c => c.value === compId);
+                    return comp ? (
+                      <Badge key={compId} variant="secondary">
+                        {comp.label}
+                      </Badge>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
