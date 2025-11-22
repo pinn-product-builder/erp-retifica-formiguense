@@ -521,6 +521,17 @@ Deno.serve(async (req) => {
 
     console.log(`✅ Status da ordem atualizado de "${oldOrderStatus}" para "aprovada"`);
 
+    // Criar workflows para a ordem baseado no tipo de motor
+    const { error: workflowError } = await supabaseAdmin.rpc('create_workflow_from_engine_type', {
+      p_order_id: detailedBudget.order_id
+    });
+
+    if (workflowError) {
+      console.error('⚠️ Erro ao criar workflows:', workflowError);
+    } else {
+      console.log('✅ Workflows criados para a ordem');
+    }
+
     const { error: historyError } = await supabaseAdmin
       .from('order_status_history')
       .insert({
