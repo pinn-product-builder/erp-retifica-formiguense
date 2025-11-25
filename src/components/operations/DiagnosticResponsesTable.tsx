@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Eye, Edit, ClipboardList } from 'lucide-react';
 import { translateStatus } from '@/utils/statusTranslations';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
+import { Tooltip } from '@mui/material';
 
 export interface DiagnosticRow {
   id: string;
@@ -79,13 +80,45 @@ export function DiagnosticResponsesTable({ responses, onViewDetails, onResumeDia
         },
         {
           key: 'component',
-          header: 'Componente',
-          mobileLabel: 'Componente',
+          header: 'Componentes',
+          mobileLabel: 'Componentes',
           priority: 3,
           minWidth: 120,
-          render: (response) => (
-            <Badge variant="outline" className="text-xs">{response.component}</Badge>
-          )
+          render: (response) => {
+            const components = response.component?.split(', ') || [];
+            const visibleComponents = components.slice(0, 3);
+            const remainingComponents = components.slice(3);
+            
+            if (components.length === 0) {
+              return <Badge variant="outline" className="text-xs">{response.component || 'N/A'}</Badge>;
+            }
+
+            return (
+              <div className="flex flex-wrap gap-1">
+                {visibleComponents.map((comp: string, idx: number) => (
+                  <Badge key={idx} variant="outline" className="text-xs">{comp}</Badge>
+                ))}
+                {remainingComponents.length > 0 && (
+                  <Tooltip
+                    title={
+                      <div className="flex flex-col gap-1">
+                        <p className="font-semibold text-xs mb-1">Componentes restantes:</p>
+                        {remainingComponents.map((comp: string, idx: number) => (
+                          <span key={idx} className="text-xs">{comp}</span>
+                        ))}
+                      </div>
+                    }
+                    placement="top"
+                    arrow
+                  >
+                    <Badge variant="outline" className="text-xs cursor-help">
+                      +{remainingComponents.length}
+                    </Badge>
+                  </Tooltip>
+                )}
+              </div>
+            );
+          }
         },
         {
           key: 'checklist',

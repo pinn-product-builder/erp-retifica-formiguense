@@ -127,14 +127,54 @@ const Diagnosticos = () => {
 
   const diagnosticResponses = diagnosticResponsesData || [];
 
+  const groupedDiagnostics = useMemo(() => {
+    const grouped = new Map<string, DiagnosticResponse[]>();
+    
+    diagnosticResponses.forEach(response => {
+      const key = `${response.order_id}-${response.checklist_id}`;
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
+      grouped.get(key)!.push(response);
+    });
+
+    return Array.from(grouped.values()).map(responses => {
+      const firstResponse = responses[0];
+      const allComponents = responses.map(r => r.component).filter(Boolean);
+      const allStatuses = responses.map(r => r.status);
+      
+      const overallStatus = allStatuses.every(s => s === 'approved') ? 'approved' :
+                           allStatuses.every(s => s === 'completed') ? 'completed' :
+                           allStatuses.some(s => s === 'completed') ? 'completed' :
+                           'pending';
+
+      const latestDate = responses.reduce((latest, r) => {
+        const date = new Date(r.diagnosed_at).getTime();
+        return date > latest ? date : latest;
+      }, 0);
+
+      return {
+        ...firstResponse,
+        id: `${firstResponse.order_id}-${firstResponse.checklist_id}`,
+        component: allComponents.length > 0 ? allComponents.join(', ') : firstResponse.component || 'N/A',
+        status: overallStatus,
+        diagnosed_at: new Date(latestDate).toISOString(),
+        allComponents,
+        allResponses: responses
+      } as DiagnosticResponse & { allComponents: string[]; allResponses: DiagnosticResponse[] };
+    });
+  }, [diagnosticResponses]);
+
   const filteredResponses = useMemo(() => {
-    const filtered = diagnosticResponses.filter(response => {
-      const responseWithOrder = response as unknown;
+    const filtered = groupedDiagnostics.filter(diagnostic => {
+      const responseWithOrder = diagnostic as unknown;
       const matchesSearch = responseWithOrder.order?.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            responseWithOrder.order?.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            responseWithOrder.checklist?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === "todos" || response.status === statusFilter;
-      const matchesComponent = componentFilter === "todos" || response.component === componentFilter;
+      const matchesStatus = statusFilter === "todos" || diagnostic.status === statusFilter;
+      const matchesComponent = componentFilter === "todos" || 
+                              (diagnostic as any).allComponents?.some((c: string) => c === componentFilter) ||
+                              diagnostic.component === componentFilter;
       return matchesSearch && matchesStatus && matchesComponent;
     });
     
@@ -143,7 +183,7 @@ const Diagnosticos = () => {
       const dateB = new Date(b.diagnosed_at).getTime();
       return dateB - dateA;
     });
-  }, [diagnosticResponses, searchTerm, statusFilter, componentFilter]);
+  }, [groupedDiagnostics, searchTerm, statusFilter, componentFilter]);
 
   const paginatedResponses = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
@@ -158,10 +198,10 @@ const Diagnosticos = () => {
   }, [searchTerm, statusFilter, componentFilter]);
 
   const stats = {
-    total: diagnosticResponses.length,
-    pendentes: diagnosticResponses.filter(r => r.status === 'pending').length,
-    concluidos: diagnosticResponses.filter(r => r.status === 'completed').length,
-    aprovados: diagnosticResponses.filter(r => r.status === 'approved').length
+    total: groupedDiagnostics.length,
+    pendentes: groupedDiagnostics.filter(d => d.status === 'pending').length,
+    concluidos: groupedDiagnostics.filter(d => d.status === 'completed').length,
+    aprovados: groupedDiagnostics.filter(d => d.status === 'approved').length
   };
 
   const getStatusBadge = (status: string) => {
@@ -193,7 +233,8 @@ const Diagnosticos = () => {
     );
   };
 
-  const getComponentLabel = (component: string) => {
+  const getComponentLabel = (component: string | null | undefined) => {
+    if (!component) return 'N/A';
     const components = {
       bloco: "Bloco",
       eixo: "Eixo",
@@ -418,7 +459,7 @@ const Diagnosticos = () => {
     queryClient.invalidateQueries({ queryKey: ['diagnostic-responses', currentOrganization?.id] });
   };
 
-  const handleViewDetails = (diagnostic: DiagnosticResponse) => {
+  const handleViewDetails = (diagnostic: DiagnosticResponse & { allResponses?: DiagnosticResponse[] }) => {
     setSelectedDiagnostic(diagnostic);
     setIsDetailsModalOpen(true);
   };
@@ -692,15 +733,43 @@ const Diagnosticos = () => {
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">Componente</h4>
-                  <p className="font-medium">{getComponentLabel(selectedDiagnostic.component)}</p>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Componentes</h4>
+                  <p className="font-medium">
+                    {(selectedDiagnostic as any).allComponents?.length > 0 
+                      ? (selectedDiagnostic as any).allComponents.map((c: string) => getComponentLabel(c)).join(', ')
+                      : getComponentLabel(selectedDiagnostic.component)
+                    }
+                  </p>
                 </div>
               </div>
 
               {/* Respostas do Checklist */}
               <div>
                 <h4 className="font-semibold mb-4">Respostas do Checklist</h4>
-                {selectedDiagnostic.responses && Object.keys(selectedDiagnostic.responses).length > 0 ? (
+                {(selectedDiagnostic as any).allResponses && (selectedDiagnostic as any).allResponses.length > 0 ? (
+                  <div className="space-y-6">
+                    {(selectedDiagnostic as any).allResponses.map((response: DiagnosticResponse, idx: number) => (
+                      <div key={response.id || idx} className="border rounded-lg p-4 space-y-4">
+                        <div className="flex items-center justify-between pb-2 border-b">
+                          <h5 className="font-semibold text-sm">Componente: {getComponentLabel(response.component)}</h5>
+                          <Badge variant="outline" className="text-xs">
+                            {translateStatus(response.status, 'diagnostic')}
+                          </Badge>
+                        </div>
+                        {response.responses && Object.keys(response.responses).length > 0 ? (
+                          <ChecklistResponsesDisplay 
+                            responses={response.responses} 
+                            checklistId={response.checklist_id}
+                          />
+                        ) : (
+                          <div className="text-center py-4 text-muted-foreground">
+                            <p className="text-sm">Nenhuma resposta registrada para este componente</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : selectedDiagnostic.responses && Object.keys(selectedDiagnostic.responses).length > 0 ? (
                   <ChecklistResponsesDisplay 
                     responses={selectedDiagnostic.responses} 
                     checklistId={selectedDiagnostic.checklist_id}

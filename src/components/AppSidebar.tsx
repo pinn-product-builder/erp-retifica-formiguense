@@ -76,6 +76,11 @@ const operationsItems = [
     icon: ClipboardCheck,
   },
   {
+    title: "Ordens de Serviço",
+    url: "/ordens-servico",
+    icon: Wrench,
+  },
+  {
     title: "Diagnósticos",
     url: "/diagnosticos",
     icon: ClipboardList,
@@ -90,11 +95,7 @@ const operationsItems = [
     url: "/workflow",
     icon: Kanban,
   },
-  {
-    title: "Ordens de Serviço",
-    url: "/ordens-servico",
-    icon: Wrench,
-  },
+
   {
     title: "PCP - Produção",
     url: "/pcp",
