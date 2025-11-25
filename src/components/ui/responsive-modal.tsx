@@ -31,7 +31,7 @@ export const ResponsiveModalContent = React.forwardRef<
       ref={ref}
       className={cn(
         sizeClasses[size],
-        'max-h-[90vh]',
+        'max-h-[90vh] overflow-y-auto',
         (isMobile || isTablet) && 'mx-4',
         isResizable && 'resizable-modal',
         className
