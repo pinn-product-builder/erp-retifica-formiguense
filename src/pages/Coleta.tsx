@@ -18,27 +18,18 @@ import { MapPin, User, Building, Wrench, Search, Plus, UserPlus, Check } from "l
 
 export default function Coleta() {
   const [formData, setFormData] = useState({
-    // Dados da Coleta
     dataColeta: new Date().toISOString().split('T')[0],
     horaColeta: new Date().toTimeString().split(' ')[0].slice(0, 5),
     localColeta: "",
-    motorista: "",
-    tipoCliente: "",
     motivoFalha: "",
-    
-    // Cliente
     nomeCliente: "",
     documento: "",
     telefone: "",
     email: "",
     endereco: "",
-    
-    // Oficina (opcional)
     nomeOficina: "",
     cnpjOficina: "",
     contatoOficina: "",
-    
-    // Consultor
     consultor: ""
   });
 
@@ -126,7 +117,6 @@ export default function Coleta() {
       telefone: customer.phone || "",
       email: customer.email || "",
       endereco: customer.address || "",
-      tipoCliente: customer.type,
       nomeOficina: customer.workshop_name || "",
       cnpjOficina: customer.workshop_cnpj || "",
       contatoOficina: customer.workshop_contact || ""
@@ -235,6 +225,16 @@ export default function Coleta() {
       return;
     }
 
+    const consultantInfo = consultants.find((consultant) => consultant.id === formData.consultor);
+    if (!consultantInfo) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível identificar o consultor selecionado",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Salvar dados da coleta no sessionStorage para usar no check-in
     const coletaData = {
       customer_id: selectedCustomer.id,
@@ -242,7 +242,7 @@ export default function Coleta() {
       collection_date: formData.dataColeta,
       collection_time: formData.horaColeta,
       collection_location: formData.localColeta,
-      driver_name: formData.motorista,
+      driver_name: consultantInfo.name,
       failure_reason: formData.motivoFalha || undefined,
     };
     
@@ -305,28 +305,6 @@ export default function Coleta() {
                 onChange={(e) => handleInputChange('localColeta', e.target.value)}
                 required
               />
-            </div>
-            <div>
-              <Label htmlFor="motorista">Motorista/Coletor</Label>
-              <Input
-                id="motorista"
-                placeholder="Nome do responsável"
-                value={formData.motorista}
-                onChange={(e) => handleInputChange('motorista', e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="tipoCliente">Tipo de Cliente</Label>
-              <Select value={formData.tipoCliente} onValueChange={(value) => handleInputChange('tipoCliente', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="oficina">Oficina</SelectItem>
-                  <SelectItem value="direto">Cliente Direto</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <div className="md:col-span-2">
               <Label htmlFor="motivoFalha">Motivo da Falha</Label>
@@ -645,7 +623,7 @@ export default function Coleta() {
         </Card>
 
         {/* Oficina (Condicional - Apenas Visualização) */}
-        {selectedCustomer && formData.tipoCliente === "oficina" && (
+        {selectedCustomer && selectedCustomer.type === "oficina" && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

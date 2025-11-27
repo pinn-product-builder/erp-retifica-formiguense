@@ -112,6 +112,44 @@ export default function CheckIn() {
     setFotos(prev => ({ ...prev, [tipo]: file }));
   };
 
+  const validateFormFields = () => {
+    const requiredFields = [
+      { key: 'marca', label: 'Marca' },
+      { key: 'modelo', label: 'Modelo' },
+      { key: 'combustivel', label: 'Combustível' },
+    ];
+
+    const missingFields = requiredFields
+      .filter(({ key }) => {
+        const value = formData[key as keyof typeof formData];
+        if (typeof value === 'string') {
+          return value.trim() === '';
+        }
+        return !value;
+      })
+      .map(({ label }) => label);
+
+    if (missingFields.length > 0) {
+      toast({
+        title: "Campos obrigatórios",
+        description: `Preencha: ${missingFields.join(', ')}`,
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    if (formData.removidoPorEmpresa && !formData.removidoPorFuncionario.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Informe quem realizou a remoção do motor",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    return true;
+  };
+
   const handleGoToColeta = () => {
     navigate('/coleta');
   };
@@ -152,6 +190,10 @@ export default function CheckIn() {
         description: "Selecione o estado de montagem do motor",
         variant: "destructive"
       });
+      return;
+    }
+
+    if (!validateFormFields()) {
       return;
     }
 
