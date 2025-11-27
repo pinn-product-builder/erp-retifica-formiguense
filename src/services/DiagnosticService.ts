@@ -124,7 +124,7 @@ export class DiagnosticService {
     }
 
     if (component && component !== 'todos') {
-      query = query.eq('component', component);
+      query = query.eq('component', component as "bloco" | "eixo" | "biela" | "comando" | "cabecote" | "virabrequim" | "pistao");
     }
     if (searchTerm && searchTerm.trim()) {
       const term = searchTerm.trim();
@@ -183,6 +183,181 @@ export class DiagnosticService {
     }));
 
     return enrichedData as DiagnosticResponse[];
+  }
+
+  static async getOrderEngineType(orderId: string, orgId: string): Promise<string | null> {
+    const { data: orderData, error } = await supabase
+      .from('orders')
+      .select(`
+        engine_id,
+        engines(
+          engine_type_id
+        )
+      `)
+      .eq('id', orderId)
+      .eq('org_id', orgId)
+      .single();
+
+    if (error) {
+      console.error('Erro ao buscar tipo de motor da ordem:', error);
+      return null;
+    }
+
+    const enginesData = orderData?.engines;
+    const engine = Array.isArray(enginesData) ? enginesData[0] : enginesData;
+    
+    return engine?.engine_type_id || null;
+  }
+
+  static async getChecklistsByComponent(
+    orgId: string,
+    component: string,
+    engineTypeId?: string
+  ): Promise<any | null> {
+    let query = supabase
+      .from('diagnostic_checklists')
+      .select(`
+        *,
+        items:diagnostic_checklist_items(*)
+      `)
+      .eq('org_id', orgId)
+      .eq('component', component as "bloco" | "eixo" | "biela" | "comando" | "cabecote" | "virabrequim" | "pistao")
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (engineTypeId) {
+      query = query.or(`engine_type_id.is.null,engine_type_id.eq.${engineTypeId}`);
+    } else {
+      query = query.is('engine_type_id', null);
+    }
+
+    const { data, error } = await query.limit(1).maybeSingle();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error(`Erro ao buscar checklist para ${component}:`, error);
+      return null;
+    }
+
+    if (!data && engineTypeId) {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('diagnostic_checklists')
+        .select(`
+          *,
+          items:diagnostic_checklist_items(*)
+        `)
+        .eq('org_id', orgId)
+        .eq('component', component as "bloco" | "eixo" | "biela" | "comando" | "cabecote" | "virabrequim" | "pistao")
+        .eq('is_active', true)
+        .is('engine_type_id', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (fallbackError && fallbackError.code !== 'PGRST116') {
+        console.error(`Erro ao buscar checklist genérico para ${component}:`, fallbackError);
+        return null;
+      }
+
+      return fallbackData;
+    }
+
+    return data;
+  }
+
+  static async saveChecklistResponse(params: {
+    orderId: string;
+    checklistId: string;
+    component: string;
+    responses: Record<string, unknown>;
+    photos: Array<Record<string, unknown>>;
+    generatedServices: Array<Record<string, unknown>>;
+    diagnosedBy: string;
+    additionalParts?: unknown;
+    additionalServices?: unknown;
+  }): Promise<any> {
+    const { data, error } = await supabase
+      .from('diagnostic_checklist_responses')
+      .insert({
+        order_id: params.orderId,
+        checklist_id: params.checklistId,
+        component: params.component as "bloco" | "eixo" | "biela" | "comando" | "cabecote" | "virabrequim" | "pistao",
+        responses: params.responses,
+        photos: params.photos,
+        generated_services: params.generatedServices,
+        diagnosed_by: params.diagnosedBy,
+        status: 'completed',
+        additional_parts: params.additionalParts || null,
+        additional_services: params.additionalServices || null,
+      } as any)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async uploadChecklistPhoto(
+    file: File,
+    responseId: string,
+    itemId: string
+  ): Promise<{ url: string; name: string; size: number } | null> {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `checklist-photos/${responseId}/${itemId}_${Date.now()}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('diagnostic-photos')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('diagnostic-photos')
+        .getPublicUrl(fileName);
+
+      return {
+        url: publicUrl,
+        name: file.name,
+        size: file.size
+      };
+    } catch (error) {
+      console.error('Erro ao fazer upload da foto:', error);
+      throw error;
+    }
+  }
+
+  static async getDiagnosticDataForBudget(
+    orderId: string,
+    orgId: string
+  ): Promise<Array<{
+    additional_parts?: unknown;
+    additional_services?: unknown;
+    generated_services?: Array<Record<string, unknown>>;
+  }>> {
+    const { data: diagnosticResponses, error } = await supabase
+      .from('diagnostic_checklist_responses')
+      .select(`
+        additional_parts,
+        additional_services,
+        generated_services,
+        order:orders!inner(id, org_id)
+      `)
+      .eq('order.id', orderId)
+      .eq('order.org_id', orgId)
+      .eq('status', 'completed')
+      .order('diagnosed_at', { ascending: false });
+
+    if (error) throw error;
+    return (diagnosticResponses || []) as Array<{
+      additional_parts?: unknown;
+      additional_services?: unknown;
+      generated_services?: Array<Record<string, unknown>>;
+    }>;
+  }
+
+  static async getCurrentUser(): Promise<{ id: string } | null> {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user ? { id: user.id } : null;
   }
 }
 

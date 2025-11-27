@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -16,13 +17,14 @@ export interface TimelineEvent {
   color: string;
 }
 
-export function useOrderTimeline(orderId: string) {
+export function useOrderTimeline(orderId: string, enabled: boolean = true) {
   const { toast } = useToast();
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchTimeline = async () => {
-    if (!orderId) return;
+  const fetchTimeline = useCallback(async (overrideOrderId?: string) => {
+    const targetOrderId = overrideOrderId || orderId;
+    if (!targetOrderId) return;
 
     setLoading(true);
     try {
@@ -32,7 +34,7 @@ export function useOrderTimeline(orderId: string) {
       const { data: orderHistory } = await supabase
         .from('order_status_history')
         .select('*')
-        .eq('order_id', orderId)
+        .eq('order_id', targetOrderId)
         .order('changed_at', { ascending: false });
 
       orderHistory?.forEach(history => {
@@ -56,7 +58,7 @@ export function useOrderTimeline(orderId: string) {
           *,
           order_workflow!inner(component)
         `)
-        .eq('order_workflow.order_id', orderId)
+        .eq('order_workflow.order_id', targetOrderId)
         .order('changed_at', { ascending: false });
 
       workflowHistory?.forEach((history: unknown) => {
@@ -81,7 +83,7 @@ export function useOrderTimeline(orderId: string) {
       const { data: diagnostics } = await supabase
         .from('diagnostic_checklist_responses')
         .select('*')
-        .eq('order_id', orderId)
+        .eq('order_id', targetOrderId)
         .order('diagnosed_at', { ascending: false });
 
       diagnostics?.forEach(diagnostic => {
@@ -105,7 +107,7 @@ export function useOrderTimeline(orderId: string) {
           *,
           detailed_budgets!inner(order_id)
         `)
-        .eq('detailed_budgets.order_id', orderId)
+        .eq('detailed_budgets.order_id', targetOrderId)
         .order('approved_at', { ascending: false });
 
       budgetApprovals?.forEach((approval: unknown) => {
@@ -129,7 +131,7 @@ export function useOrderTimeline(orderId: string) {
       const { data: reservations } = await supabase
         .from('parts_reservations')
         .select('*')
-        .eq('order_id', orderId)
+        .eq('order_id', targetOrderId)
         .order('reserved_at', { ascending: false });
 
       reservations?.forEach(reservation => {
@@ -182,7 +184,7 @@ export function useOrderTimeline(orderId: string) {
       const { data: reports } = await supabase
         .from('technical_reports')
         .select('*')
-        .eq('order_id', orderId)
+        .eq('order_id', targetOrderId)
         .order('generated_at', { ascending: false });
 
       reports?.forEach(report => {
@@ -206,7 +208,7 @@ export function useOrderTimeline(orderId: string) {
       const { data: warranties } = await supabase
         .from('order_warranties')
         .select('*')
-        .eq('order_id', orderId)
+        .eq('order_id', targetOrderId)
         .order('created_at', { ascending: false });
 
       warranties?.forEach(warranty => {
@@ -262,11 +264,12 @@ export function useOrderTimeline(orderId: string) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orderId, toast]);
 
   useEffect(() => {
+    if (!enabled) return;
     fetchTimeline();
-  }, [orderId]);
+  }, [orderId, enabled, fetchTimeline]);
 
   return {
     events,

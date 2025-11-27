@@ -64,23 +64,23 @@ export function EngineTypeSelect({
 
   return (
     <>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
             className={`${className || 'w-full justify-between'} cursor-pointer`}
-            disabled={disabled || loading}
-          >
-            {selectedEngineType ? selectedEngineType.name : placeholder}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-96" align="start">
-          <Command>
-            <CommandInput placeholder="Buscar tipo de motor..." value={searchTerm} onValueChange={setSearchTerm} />
+          disabled={disabled || loading}
+        >
+          {selectedEngineType ? selectedEngineType.name : placeholder}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-96" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar tipo de motor..." value={searchTerm} onValueChange={setSearchTerm} />
             <CommandEmpty>
               <div className="flex flex-col items-center justify-center py-4 gap-2">
                 <p className="text-sm text-muted-foreground">Nenhum tipo de motor encontrado</p>
@@ -99,37 +99,37 @@ export function EngineTypeSelect({
                 </Button>
               </div>
             </CommandEmpty>
-            <ScrollArea className="h-64">
-              <CommandList>
-                <CommandGroup>
-                  {loading ? (
-                    <div className="px-3 py-2 text-sm text-muted-foreground flex items-center justify-center">
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Carregando tipos de motor...
-                    </div>
-                  ) : (
+          <ScrollArea className="h-64">
+            <CommandList>
+              <CommandGroup>
+                {loading ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground flex items-center justify-center">
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Carregando tipos de motor...
+                  </div>
+                ) : (
                     <>
                       {filtered.map((engineType) => {
-                        const checked = value === engineType.id;
-                        return (
-                          <CommandItem
-                            key={engineType.id}
-                            onSelect={() => {
-                              onChange(checked ? undefined : engineType.id);
-                              setOpen(false);
-                            }}
-                          >
-                            <div className="mr-2 flex h-4 w-4 items-center justify-center">
-                              <Check className={`h-4 w-4 ${checked ? 'opacity-100' : 'opacity-0'}`} />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="font-medium">{engineType.name}</span>
-                              {engineType.description && (
-                                <span className="text-xs text-muted-foreground">{engineType.description}</span>
-                              )}
-                            </div>
-                          </CommandItem>
-                        );
+                    const checked = value === engineType.id;
+                    return (
+                      <CommandItem
+                        key={engineType.id}
+                        onSelect={() => {
+                          onChange(checked ? undefined : engineType.id);
+                          setOpen(false);
+                        }}
+                      >
+                        <div className="mr-2 flex h-4 w-4 items-center justify-center">
+                          <Check className={`h-4 w-4 ${checked ? 'opacity-100' : 'opacity-0'}`} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{engineType.name}</span>
+                          {engineType.description && (
+                            <span className="text-xs text-muted-foreground">{engineType.description}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
                       })}
                       <CommandItem
                         onSelect={() => {
@@ -142,13 +142,13 @@ export function EngineTypeSelect({
                         <span className="font-medium">Criar novo tipo de motor</span>
                       </CommandItem>
                     </>
-                  )}
-                </CommandGroup>
-              </CommandList>
-            </ScrollArea>
-          </Command>
-        </PopoverContent>
-      </Popover>
+                )}
+              </CommandGroup>
+            </CommandList>
+          </ScrollArea>
+        </Command>
+      </PopoverContent>
+    </Popover>
 
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-5xl lg:max-w-6xl max-h-[90vh] overflow-y-auto">

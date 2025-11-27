@@ -520,19 +520,19 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
           </DialogHeader>
           
           <div className="flex justify-end mb-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setIsDetailsDialogOpen(false);
-                setContactForm({ ...contactForm });
-                setIsContactDialogOpen(true);
-              }}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar Contato
-            </Button>
-          </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsDetailsDialogOpen(false);
+                    setContactForm({ ...contactForm });
+                    setIsContactDialogOpen(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Contato
+                </Button>
+              </div>
           
           {selectedSupplier && (
             <div className="space-y-6">
@@ -675,78 +675,78 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
             {(() => {
               const supplierEvaluations = evaluations.filter(e => e.supplier_id === selectedSupplier.id);
               return supplierEvaluations.length > 0 ? (
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Avaliações Recentes</h3>
-                  <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Avaliações Recentes</h3>
+                <div className="space-y-4">
                     {supplierEvaluations.slice(0, 5).map((evaluation) => (
-                      <Card key={evaluation.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <p className="font-medium">
-                                PO: {evaluation.purchase_order?.po_number}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {format(new Date(evaluation.evaluated_at), 'dd/MM/yyyy', { locale: ptBR })}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {renderStars(evaluation.overall_rating)}
-                              <span className="text-sm font-medium">
-                                {evaluation.overall_rating.toFixed(1)}
-                              </span>
-                            </div>
+                    <Card key={evaluation.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <p className="font-medium">
+                              PO: {evaluation.purchase_order?.po_number}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(evaluation.evaluated_at), 'dd/MM/yyyy', { locale: ptBR })}
+                            </p>
                           </div>
-                          
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                            <div>
-                              <p className="text-xs text-muted-foreground">Entrega</p>
-                              {renderStars(evaluation.delivery_rating)}
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">Qualidade</p>
-                              {renderStars(evaluation.quality_rating)}
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">Preço</p>
-                              {renderStars(evaluation.price_rating)}
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">Atendimento</p>
-                              {renderStars(evaluation.service_rating)}
-                            </div>
+                          <div className="flex items-center gap-2">
+                            {renderStars(evaluation.overall_rating)}
+                            <span className="text-sm font-medium">
+                              {evaluation.overall_rating.toFixed(1)}
+                            </span>
                           </div>
-                          
-                          <div className="flex gap-4 text-sm">
-                            <div className="flex items-center gap-1">
-                              {evaluation.delivered_on_time ? (
-                                <CheckCircle className="w-3 h-3 text-green-500" />
-                              ) : (
-                                <AlertCircle className="w-3 h-3 text-red-500" />
-                              )}
-                              <span>
-                                {evaluation.delivered_on_time ? 'Entregue no prazo' : 'Entregue com atraso'}
-                              </span>
-                            </div>
-                            
-                            {evaluation.had_quality_issues && (
-                              <div className="flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3 text-yellow-500" />
-                                <span>Problemas de qualidade</span>
-                              </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Entrega</p>
+                            {renderStars(evaluation.delivery_rating)}
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Qualidade</p>
+                            {renderStars(evaluation.quality_rating)}
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Preço</p>
+                            {renderStars(evaluation.price_rating)}
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Atendimento</p>
+                            {renderStars(evaluation.service_rating)}
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-4 text-sm">
+                          <div className="flex items-center gap-1">
+                            {evaluation.delivered_on_time ? (
+                              <CheckCircle className="w-3 h-3 text-green-500" />
+                            ) : (
+                              <AlertCircle className="w-3 h-3 text-red-500" />
                             )}
+                            <span>
+                              {evaluation.delivered_on_time ? 'Entregue no prazo' : 'Entregue com atraso'}
+                            </span>
                           </div>
                           
-                          {evaluation.comments && (
-                            <div className="mt-3 p-2 bg-muted rounded text-sm">
-                              {evaluation.comments}
+                          {evaluation.had_quality_issues && (
+                            <div className="flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3 text-yellow-500" />
+                              <span>Problemas de qualidade</span>
                             </div>
                           )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                        </div>
+                        
+                        {evaluation.comments && (
+                          <div className="mt-3 p-2 bg-muted rounded text-sm">
+                            {evaluation.comments}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
+              </div>
               ) : null;
             })()}
             </div>

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,24 +13,25 @@ import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useDiagnosticChecklists, useDiagnosticChecklistsQuery, useDiagnosticChecklistMutations } from '@/hooks/useDiagnosticChecklists';
+import { useDiagnosticChecklists, useDiagnosticChecklistsQuery, useDiagnosticChecklistMutations, type DiagnosticChecklist } from '@/hooks/useDiagnosticChecklists';
 import { useEngineTypes } from '@/hooks/useEngineTypes';
-import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { z } from 'zod';
 
-// Valores do enum engine_component (todos os componentes disponíveis)
-const ENGINE_COMPONENT_VALUES = [
-  'bloco', 'eixo', 'biela', 'comando', 'cabecote', 'virabrequim', 'pistao',
-  'pistao_com_anel', 'anel', 'camisas', 'bucha_comando', 'retentores_dianteiro',
-  'retentores_traseiro', 'pista_virabrequim', 'selo_comando', 'gaxeta', 'selo_dagua',
-  'borrachas_camisa', 'calco_camisas', 'bujao_carter', 'tubo_bloco'
+const DIAGNOSTIC_COMPONENTS = [
+  { value: 'bloco', label: 'Bloco' },
+  { value: 'biela', label: 'Biela' },
+  { value: 'virabrequim', label: 'Virabrequim' },
+  { value: 'comando', label: 'Comando - Balanceiros' },
+  { value: 'volante', label: 'Volante' },
+  { value: 'montagem', label: 'Montagem Completa' }
 ] as const;
 
 // Schemas de validação
 const checklistSchema = z.object({
   name: z.string().trim().min(3, "Nome deve ter pelo menos 3 caracteres").max(100, "Nome deve ter no máximo 100 caracteres"),
   description: z.string().optional(),
-  engine_type_id: z.string().min(1, "Tipo de motor é obrigatório"),
+  engine_type_id: z.string().optional(),
+  component: z.string().min(1, "Componente é obrigatório"),
   version: z.number().min(1, "Versão deve ser maior que 0").default(1),
   is_active: z.boolean().default(true)
 });
@@ -52,11 +52,18 @@ const checklistItemSchema = z.object({
 type ChecklistFormData = z.infer<typeof checklistSchema>;
 type ChecklistItemFormData = z.infer<typeof checklistItemSchema>;
 
-export default function DiagnosticChecklistsConfig() {
+interface DiagnosticChecklistsConfigProps {
+  initialComponent?: string;
+  onChecklistCreated?: () => void;
+}
+
+export default function DiagnosticChecklistsConfig({ 
+  initialComponent, 
+  onChecklistCreated 
+}: DiagnosticChecklistsConfigProps = {}) {
   const { currentOrganization } = useOrganization();
   const { toast } = useToast();
   const { confirm } = useConfirmDialog();
-  const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
   const [selectedChecklistId, setSelectedChecklistId] = useState<string | null>(null);
@@ -81,9 +88,17 @@ export default function DiagnosticChecklistsConfig() {
     name: '',
     description: '',
     engine_type_id: '',
+    component: initialComponent || '',
     version: 1,
     is_active: true
   });
+
+  // Atualizar formulário quando props mudarem
+  useEffect(() => {
+    if (initialComponent) {
+      setChecklistForm(prev => ({ ...prev, component: initialComponent }));
+    }
+  }, [initialComponent]);
 
   const [itemForm, setItemForm] = useState<ChecklistItemFormData>({
     item_name: '',
@@ -101,6 +116,7 @@ export default function DiagnosticChecklistsConfig() {
       name: '',
       description: '',
       engine_type_id: '',
+      component: initialComponent || '',
       version: 1,
       is_active: true
     });
@@ -129,17 +145,17 @@ export default function DiagnosticChecklistsConfig() {
       // Validar dados do formulário
       const validatedData = checklistSchema.parse(checklistForm);
       
-      // Criar checklist
-      // O componente será null pois o diagnóstico usará todos os componentes do tipo de motor
-      const success = await mutations.createChecklist.mutateAsync({
+      // Criar checklist por componente
+      const checklistData = {
         name: validatedData.name,
         description: validatedData.description,
-        component: null,
-        engine_type_id: validatedData.engine_type_id,
+        component: validatedData.component as "bloco" | "eixo" | "biela" | "comando" | "cabecote",
+        engine_type_id: validatedData.engine_type_id || null,
         version: validatedData.version,
         is_active: validatedData.is_active,
         org_id: currentOrganization?.id || ''
-      } as unknown);
+      };
+      const success = await mutations.createChecklist.mutateAsync(checklistData as Omit<DiagnosticChecklist, 'id' | 'created_at' | 'updated_at'>);
 
       if (success) {
         toast({
@@ -148,6 +164,9 @@ export default function DiagnosticChecklistsConfig() {
         });
         clearForm();
         setIsDialogOpen(false);
+        if (onChecklistCreated) {
+          onChecklistCreated();
+        }
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -194,15 +213,15 @@ export default function DiagnosticChecklistsConfig() {
       
       // Criar item
       const success = await mutations.createItem.mutateAsync({
-        checklist_id: selectedChecklistId,
+        checklist_id: selectedChecklistId!,
         item_name: validatedData.item_name,
         item_description: validatedData.item_description,
         item_type: validatedData.item_type,
         is_required: validatedData.is_required,
         help_text: validatedData.help_text,
         display_order: validatedData.display_order,
-        item_options: validatedData.item_options
-      } as unknown);
+        item_options: validatedData.item_options as unknown as Record<string, unknown>[]
+      });
 
       if (success) {
         toast({
@@ -451,20 +470,53 @@ export default function DiagnosticChecklistsConfig() {
                 />
               </div>
               <div>
-                <Label htmlFor="engine_type">Tipo de Motor *</Label>
+                <Label htmlFor="component">Componente *</Label>
                 <Select 
-                  value={checklistForm.engine_type_id} 
+                  value={checklistForm.component} 
                   onValueChange={(value) => {
                     setChecklistForm(prev => ({ 
                       ...prev, 
-                      engine_type_id: value
+                      component: value
+                    }));
+                  }}
+                  disabled={!!initialComponent}
+                >
+                  <SelectTrigger className={validationErrors.component ? 'border-red-500' : ''}>
+                    <SelectValue placeholder="Selecionar componente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DIAGNOSTIC_COMPONENTS.map((comp) => (
+                      <SelectItem key={comp.value} value={comp.value}>
+                        {comp.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {validationErrors.component && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.component}</p>
+                )}
+                {initialComponent && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Componente definido pelo contexto do diagnóstico
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="engine_type">Tipo de Motor (Opcional)</Label>
+                <Select 
+                  value={checklistForm.engine_type_id || 'all'} 
+                  onValueChange={(value) => {
+                    setChecklistForm(prev => ({ 
+                      ...prev, 
+                      engine_type_id: value === 'all' ? '' : value
                     }));
                   }}
                 >
-                  <SelectTrigger className={validationErrors.engine_type_id ? 'border-red-500' : ''}>
-                    <SelectValue placeholder="Selecionar tipo de motor" />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar tipo de motor (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">Todos os tipos de motor</SelectItem>
                     {engineTypes.map((type) => (
                       <SelectItem key={type.id} value={type.id}>
                         {type.name}
@@ -472,11 +524,8 @@ export default function DiagnosticChecklistsConfig() {
                     ))}
                   </SelectContent>
                 </Select>
-                {validationErrors.engine_type_id && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.engine_type_id}</p>
-                )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  O checklist será aplicado a todos os componentes obrigatórios deste tipo de motor
+                  Se não selecionar, o checklist será aplicado a todos os tipos de motor
                 </p>
               </div>
               <div className="flex items-center space-x-2">
@@ -538,7 +587,7 @@ export default function DiagnosticChecklistsConfig() {
                 <Label htmlFor="item_type">Tipo *</Label>
                 <Select 
                   value={itemForm.item_type} 
-                  onValueChange={(value) => setItemForm(prev => ({ ...prev, item_type: value as unknown }))}
+                  onValueChange={(value) => setItemForm(prev => ({ ...prev, item_type: value as 'checkbox' | 'measurement' | 'photo' | 'text' | 'select' }))}
                 >
                   <SelectTrigger className={validationErrors.item_type ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Selecionar tipo" />

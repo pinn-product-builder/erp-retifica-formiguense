@@ -4,18 +4,21 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, User, Camera, MessageSquare } from 'lucide-react';
+import { Calendar, Clock, User, Camera, MessageSquare, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { WorkflowModal } from './WorkflowModal';
+import { EmployeeDirectoryEntry } from '@/hooks/useEmployeesDirectory';
 
 interface ComponentCardProps {
-  workflow: unknown;
+  workflow: Record<string, any>;
   componentColor: string;
   onUpdate?: () => void;
+  employeeOptions: EmployeeDirectoryEntry[];
+  employeesLoading: boolean;
 }
 
-export function ComponentCard({ workflow, componentColor, onUpdate }: ComponentCardProps) {
+export function ComponentCard({ workflow, componentColor, onUpdate, employeeOptions, employeesLoading }: ComponentCardProps) {
   const [showModal, setShowModal] = useState(false);
 
   const formatDate = (dateString: string) => {
@@ -26,55 +29,66 @@ export function ComponentCard({ workflow, componentColor, onUpdate }: ComponentC
     }
   };
 
-  const getDaysInStatus = () => {
-    // Para workflows concluídos, calcular tempo entre início e conclusão
-    // Para workflows em andamento, calcular tempo desde o início até agora
-    
+  const getElapsedMs = () => {
     const startDate = workflow.started_at ? new Date(workflow.started_at) : 
                      workflow.created_at ? new Date(workflow.created_at) : null;
-    
-    if (!startDate) return '0m';
-    
+    if (!startDate) return 0;
     const endDate = workflow.completed_at ? new Date(workflow.completed_at) : new Date();
-    
-    // Calcular diferença em milissegundos (endDate - startDate deve ser positivo)
     const diffMs = endDate.getTime() - startDate.getTime();
-    
-    // Se a diferença for negativa (dados inconsistentes), retornar 0
-    if (diffMs < 0) {
-      return '0m';
-    }
-    
-    // Calcular diferença em horas
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const days = Math.floor(diffHours / 24);
-    const hours = diffHours % 24;
-    
-    if (days > 0) {
-      return `${days}d ${hours}h`;
-    } else if (hours > 0) {
-      return `${hours}h`;
-    } else {
-      const minutes = Math.floor(diffMs / (1000 * 60));
-      return `${Math.max(0, minutes)}m`;
-    }
+    return diffMs < 0 ? 0 : diffMs;
   };
 
-  const getProgressColor = () => {
-    const timeString = getDaysInStatus();
-    if (typeof timeString === 'string') {
-      if (timeString.includes('d')) {
-        const days = parseInt(timeString.split('d')[0]);
-        if (days <= 2) return 'text-green-600';
-        if (days <= 5) return 'text-yellow-600';
-        return 'text-red-600';
-      } else if (timeString.includes('h')) {
-        const hours = parseInt(timeString.split('h')[0]);
-        if (hours <= 48) return 'text-green-600'; // 2 dias
-        if (hours <= 120) return 'text-yellow-600'; // 5 dias
-        return 'text-red-600';
-      }
+  const formatDuration = (ms: number) => {
+    if (ms <= 0) return '0m';
+    const totalMinutes = Math.floor(ms / (1000 * 60));
+    const totalHours = Math.floor(totalMinutes / 60);
+    const days = Math.floor(totalHours / 24);
+    const hours = totalHours % 24;
+    const minutes = totalMinutes % 60;
+
+    if (days > 0) {
+      return `${days}d ${hours}h`;
     }
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
+  const slaConfig = workflow.statusConfig?.sla_config as { max_hours?: number; warning_threshold?: number } | undefined;
+  const warningThreshold = slaConfig?.warning_threshold
+    ? Number(slaConfig.warning_threshold)
+    : 80;
+
+  const getEntrySlaState = (elapsedMs: number) => {
+    if (!slaConfig?.max_hours) return null;
+    const elapsedHours = elapsedMs / (1000 * 60 * 60);
+    const percent = (elapsedHours / Number(slaConfig.max_hours)) * 100;
+
+    if (!Number.isFinite(percent)) return null;
+
+    if (percent >= 100) {
+      return { status: 'breached', percent };
+    }
+    if (percent >= (warningThreshold || 80)) {
+      return { status: 'warning', percent };
+    }
+    return { status: 'ok', percent };
+  };
+
+  const elapsedMsValue = getElapsedMs();
+  const statusDuration = formatDuration(elapsedMsValue);
+  const entrySlaState = workflow.status === 'entrada' ? getEntrySlaState(elapsedMsValue) : null;
+  const entrySlaColor = entrySlaState?.status === 'breached'
+    ? 'text-red-600'
+    : entrySlaState?.status === 'warning'
+      ? 'text-amber-600'
+      : 'text-emerald-600';
+
+  const getProgressColor = () => {
+    const days = Math.floor(elapsedMsValue / (1000 * 60 * 60 * 24));
+    if (days > 5) return 'text-red-600';
+    if (days > 2) return 'text-yellow-600';
     return 'text-green-600';
   };
 
@@ -109,24 +123,45 @@ export function ComponentCard({ workflow, componentColor, onUpdate }: ComponentC
           </div>
 
           {/* Status Info */}
-          <div className="flex items-center justify-between text-xs gap-2">
-            <div className="flex items-center gap-1 text-muted-foreground min-w-0 flex-1">
-              <Calendar className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">{formatDate(workflow.collectionDate)}</span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between text-xs gap-2">
+              <div className="flex items-center gap-1 text-muted-foreground min-w-0 flex-1">
+                <Calendar className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">{formatDate(workflow.collectionDate)}</span>
+              </div>
+              {elapsedMsValue > 0 && (
+                <div className={`flex items-center gap-1 ${getProgressColor()} flex-shrink-0`}>
+                  <Clock className="w-3 h-3" />
+                  <span>{statusDuration}</span>
+                </div>
+              )}
             </div>
-            {workflow.started_at && (
-              <div className={`flex items-center gap-1 ${getProgressColor()} flex-shrink-0`}>
-                <Clock className="w-3 h-3" />
-                <span>{getDaysInStatus()}</span>
+
+            {entrySlaState && (
+              <div className={`flex items-center gap-1 text-xs ${entrySlaColor}`}>
+                {entrySlaState.status === 'ok' ? (
+                  <Clock className="w-3 h-3" />
+                ) : (
+                  <AlertTriangle className="w-3 h-3" />
+                )}
+                <span className="truncate">
+                  {entrySlaState.status === 'breached'
+                    ? 'SLA estourado'
+                    : entrySlaState.status === 'warning'
+                      ? 'SLA em risco'
+                      : 'Dentro do SLA'} • {Math.round(entrySlaState.percent)}%
+                </span>
               </div>
             )}
           </div>
 
           {/* Assigned To */}
-          {workflow.assigned_to && (
+          {(workflow.assignedEmployeeName || workflow.assigned_to) && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <User className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">{workflow.assigned_to}</span>
+              <span className="truncate">
+                {workflow.assignedEmployeeName || workflow.assigned_to}
+              </span>
             </div>
           )}
 
@@ -162,6 +197,8 @@ export function ComponentCard({ workflow, componentColor, onUpdate }: ComponentC
         open={showModal}
         onClose={() => setShowModal(false)}
         onUpdate={onUpdate}
+        employeeOptions={employeeOptions}
+        employeesLoading={employeesLoading}
       />
     </>
   );

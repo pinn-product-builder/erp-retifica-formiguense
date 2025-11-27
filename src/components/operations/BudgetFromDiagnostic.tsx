@@ -101,18 +101,77 @@ const BudgetFromDiagnostic = ({
   const total = subtotal - discount + tax;
 
   useEffect(() => {
-    if (diagnosticResponse?.generated_services) {
-      loadServicesWithPricing();
+    if (diagnosticResponse && isOpen) {
+      loadAllData();
     }
-  }, [diagnosticResponse]);
+  }, [diagnosticResponse, isOpen]);
 
-  const loadServicesWithPricing = async () => {
-    if (!diagnosticResponse?.generated_services) return;
+  const loadAllData = async () => {
+    if (!diagnosticResponse) return;
 
     setIsCalculating(true);
+    
     try {
-      // Converter serviços gerados pelo diagnóstico em itens de orçamento
-      const serviceItems: ServiceItem[] = diagnosticResponse.generated_services.map((service: unknown, index: number) => ({
+      let allAdditionalParts: unknown[] = [];
+      let allAdditionalServices: unknown[] = [];
+      let allGeneratedServices: unknown[] = [];
+
+      if (diagnosticResponse.additional_parts) {
+        allAdditionalParts = Array.isArray(diagnosticResponse.additional_parts) 
+          ? diagnosticResponse.additional_parts 
+          : [];
+      }
+
+      if (diagnosticResponse.additional_services) {
+        allAdditionalServices = Array.isArray(diagnosticResponse.additional_services) 
+          ? diagnosticResponse.additional_services 
+          : [];
+      }
+
+      if (diagnosticResponse.generated_services) {
+        allGeneratedServices = Array.isArray(diagnosticResponse.generated_services) 
+          ? diagnosticResponse.generated_services 
+          : [];
+      }
+
+      if (diagnosticResponse.all_responses && Array.isArray(diagnosticResponse.all_responses)) {
+        diagnosticResponse.all_responses.forEach((response: unknown) => {
+          if (response.additional_parts && Array.isArray(response.additional_parts)) {
+            allAdditionalParts = [...allAdditionalParts, ...response.additional_parts];
+          }
+          if (response.additional_services && Array.isArray(response.additional_services)) {
+            allAdditionalServices = [...allAdditionalServices, ...response.additional_services];
+          }
+          if (response.generated_services && Array.isArray(response.generated_services)) {
+            allGeneratedServices = [...allGeneratedServices, ...response.generated_services];
+          }
+        });
+      }
+
+      const partItems: PartItem[] = allAdditionalParts.map((part: unknown, index: number) => ({
+        id: `additional_part_${index}`,
+        name: part.part_name || part.name || '',
+        quantity: part.quantity || 1,
+        unit_price: part.unit_price || 0,
+        total: part.total || (part.quantity || 1) * (part.unit_price || 0),
+        selected: true
+      }));
+
+      const additionalServiceItems: ServiceItem[] = allAdditionalServices.map((service: unknown, index: number) => ({
+        id: `additional_service_${index}`,
+        name: service.description || service.name || `Serviço Adicional ${index + 1}`,
+        description: service.description || '',
+        labor_hours: service.quantity || 1,
+        labor_rate: service.unit_price || 0,
+        labor_total: (service.quantity || 1) * (service.unit_price || 0),
+        parts: [],
+        parts_total: 0,
+        total: (service.quantity || 1) * (service.unit_price || 0),
+        selected: true,
+        triggered_by: 'Diagnóstico - Serviço Adicional'
+      }));
+
+      const generatedServiceItems: ServiceItem[] = allGeneratedServices.map((service: unknown, index: number) => ({
         id: `service_${index}`,
         name: service.name || service,
         description: service.description || '',
@@ -126,25 +185,30 @@ const BudgetFromDiagnostic = ({
         triggered_by: service.triggered_by || 'Checklist'
       }));
 
-      setServices(serviceItems);
+      setParts(partItems);
 
-      // Calcular preços automaticamente usando a tabela de preços
-      const calculatedBudget = await calculateBudgetFromServices(serviceItems, []);
-      if (calculatedBudget) {
-        const updatedServices = serviceItems.map(service => {
-          const calculatedService = calculatedBudget.services.find(s => s.name === service.name);
-          return calculatedService ? {
-            ...service,
-            labor_hours: calculatedService.labor_hours,
-            labor_rate: calculatedService.labor_rate,
-            labor_total: calculatedService.labor_total,
-            total: calculatedService.labor_total
-          } : service;
-        });
-        setServices(updatedServices);
+      if (generatedServiceItems.length > 0) {
+        const calculatedBudget = await calculateBudgetFromServices(generatedServiceItems, []);
+        if (calculatedBudget) {
+          const updatedServices = generatedServiceItems.map(service => {
+            const calculatedService = calculatedBudget.services.find(s => s.name === service.name);
+            return calculatedService ? {
+              ...service,
+              labor_hours: calculatedService.labor_hours,
+              labor_rate: calculatedService.labor_rate,
+              labor_total: calculatedService.labor_total,
+              total: calculatedService.labor_total
+            } : service;
+          });
+          setServices([...updatedServices, ...additionalServiceItems]);
+        } else {
+          setServices([...generatedServiceItems, ...additionalServiceItems]);
+        }
+      } else {
+        setServices(additionalServiceItems);
       }
     } catch (error) {
-      console.error('Erro ao carregar preços:', error);
+      console.error('Erro ao carregar dados do diagnóstico:', error);
     } finally {
       setIsCalculating(false);
     }

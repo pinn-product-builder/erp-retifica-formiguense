@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Edit, Trash2, Save, X, Settings, Clock, Shield, ArrowRight } from 'lucide-react';
-import { useWorkflowStatusConfig, WorkflowStatusConfig, StatusPrerequisite } from '@/hooks/useWorkflowStatusConfig';
+import { useWorkflowStatusConfig, WorkflowStatusConfig, StatusPrerequisite, FIXED_WORKFLOW_STATUSES } from '@/hooks/useWorkflowStatusConfig';
 import { useWorkflowHistory } from '@/hooks/useWorkflowHistory';
 import { useToast } from '@/hooks/use-toast';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
@@ -32,6 +32,8 @@ interface VisualConfig {
   textColor: string;
 }
 
+const FIXED_STATUS_SET = new Set(FIXED_WORKFLOW_STATUSES);
+
 export const WorkflowStatusConfigAdmin = () => {
   const {
     workflowStatuses,
@@ -50,6 +52,7 @@ export const WorkflowStatusConfigAdmin = () => {
   const { toast } = useToast();
   const { confirm } = useConfirmDialog();
   const { currentOrganization } = useOrganization();
+  const isFixedStatusKey = (statusKey: string) => FIXED_STATUS_SET.has(statusKey);
   
   const [editingStatus, setEditingStatus] = useState<WorkflowStatusConfig | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -67,7 +70,7 @@ export const WorkflowStatusConfigAdmin = () => {
   const [notificationChanges, setNotificationChanges] = useState(true);
   const [loadingAuditConfig, setLoadingAuditConfig] = useState(false);
   
-  const { history, fetchHistory } = useWorkflowHistory(selectedWorkflowId);
+  const { history, fetchHistory } = useWorkflowHistory();
 
   const [formData, setFormData] = useState({
     status_key: '',
@@ -102,6 +105,13 @@ export const WorkflowStatusConfigAdmin = () => {
   });
 
   const statusColors = getStatusColors();
+  const isFixedFormStatus = !isCreating && isFixedStatusKey(formData.status_key);
+
+  useEffect(() => {
+    if (selectedWorkflowId) {
+      fetchHistory(selectedWorkflowId);
+    }
+  }, [selectedWorkflowId, fetchHistory]);
 
   // Debug: monitorar mudanças no estado isCreating
   useEffect(() => {
@@ -159,29 +169,32 @@ export const WorkflowStatusConfigAdmin = () => {
 
   const openEditDialog = (status: WorkflowStatusConfig) => {
     setIsCreating(false);
-    setEditingStatus(status);
+    const normalizedStatus = isFixedStatusKey(status.status_key)
+      ? { ...status, is_active: true }
+      : status;
+    setEditingStatus(normalizedStatus);
     setFormData({
-      status_key: status.status_key,
-      status_label: status.status_label,
-      badge_variant: status.badge_variant,
-      color: status.color || '',
-      icon: status.icon || '',
-      display_order: status.display_order || 0,
-      estimated_hours: status.estimated_hours || 0,
-      is_active: status.is_active,
-      visual_config: (status.visual_config as unknown as VisualConfig) || {
+      status_key: normalizedStatus.status_key,
+      status_label: normalizedStatus.status_label,
+      badge_variant: normalizedStatus.badge_variant,
+      color: normalizedStatus.color || '',
+      icon: normalizedStatus.icon || '',
+      display_order: normalizedStatus.display_order || 0,
+      estimated_hours: normalizedStatus.estimated_hours || 0,
+      is_active: normalizedStatus.is_active,
+      visual_config: (normalizedStatus.visual_config as unknown as VisualConfig) || {
         bgColor: '#f3f4f6',
         textColor: '#374151'
       },
-      notification_config: status.notification_config || {},
-      sla_config: (status.sla_config as unknown as SLAConfig) || {
+      notification_config: normalizedStatus.notification_config || {},
+      sla_config: (normalizedStatus.sla_config as unknown as SLAConfig) || {
         max_hours: 0,
         warning_threshold: 80,
         alerts_enabled: false,
         auto_escalation: false,
         business_hours_only: false
       },
-      automation_rules: (status.automation_rules as unknown[]) || []
+      automation_rules: (normalizedStatus.automation_rules as unknown[]) || []
     });
     setIsDialogOpen(true);
   };
@@ -204,6 +217,15 @@ export const WorkflowStatusConfigAdmin = () => {
         toast({
           title: "Erro",
           description: "Nome do status é obrigatório",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (isFixedStatusKey(formData.status_key)) {
+        toast({
+          title: "Status reservado",
+          description: "Entrada e Entregue já estão configurados automaticamente e não podem ser recriados.",
           variant: "destructive",
         });
         return;
@@ -232,10 +254,16 @@ export const WorkflowStatusConfigAdmin = () => {
     } else if (editingStatus) {
       console.log('Updating status with formData:', formData);
       
-      const success = await updateStatusConfig(editingStatus.id, {
+      const updates: Partial<WorkflowStatusConfig> = {
         ...formData,
         visual_config: formData.visual_config
-      });
+      };
+
+      if (isFixedStatusKey(formData.status_key)) {
+        updates.is_active = true;
+      }
+
+      const success = await updateStatusConfig(editingStatus.id, updates);
 
       if (success) {
         toast({
@@ -252,6 +280,15 @@ export const WorkflowStatusConfigAdmin = () => {
     const statusToDelete = workflowStatuses.find(status => status.id === statusId);
     const statusName = statusToDelete?.status_label || 'este status';
     const statusKey = statusToDelete?.status_key || '';
+
+    if (statusKey && isFixedStatusKey(statusKey)) {
+      toast({
+        title: "Status obrigatório",
+        description: "Entrada e Entregue são etapas fixas e não podem ser removidas.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     const confirmed = await confirm({
       title: 'Excluir Status de Workflow',
@@ -646,12 +683,17 @@ Tem certeza que deseja continuar?`,
                         Novo Status
                       </Button>
                     </div>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Os status <strong>Entrada</strong> e <strong>Entregue</strong> são fixos: aparecem no início e fim do fluxo, não podendo ser desativados ou excluídos.
+                    </p>
 
                     {loading ? (
                       <div className="text-center py-6 sm:py-8 text-sm sm:text-base">Carregando...</div>
                     ) : (
                       <div className="space-y-3">
-                        {workflowStatuses.map((status) => (
+                        {workflowStatuses.map((status) => {
+                          const isFixedStatus = isFixedStatusKey(status.status_key);
+                          return (
                           <div key={status.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg gap-3">
                             <div className="flex-1 min-w-0">
                               <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
@@ -663,6 +705,11 @@ Tem certeza que deseja continuar?`,
                                 <Badge variant={status.is_active ? "default" : "secondary"} className="text-xs">
                                   {status.is_active ? "Ativo" : "Inativo"}
                                 </Badge>
+                                {isFixedStatus && (
+                                  <Badge variant="outline" className="text-xs border-dashed">
+                                    Fixo
+                                  </Badge>
+                                )}
                                 <Badge variant="outline" className="text-xs">
                                   {status.estimated_hours}h estimado
                                 </Badge>
@@ -696,13 +743,14 @@ Tem certeza que deseja continuar?`,
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleDelete(status.id)}
-                                className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                                disabled={isFixedStatus}
+                                className={`text-destructive hover:text-destructive h-8 w-8 p-0 ${isFixedStatus ? 'opacity-40 cursor-not-allowed' : ''}`}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
                           </div>
-                        ))}
+                        )})}
                       </div>
                     )}
                   </div>
@@ -929,8 +977,14 @@ Tem certeza que deseja continuar?`,
                   type="number"
                   value={formData.display_order}
                   onChange={(e) => setFormData(prev => ({ ...prev, display_order: parseInt(e.target.value) }))}
+                  disabled={isFixedFormStatus}
                   className="h-9 sm:h-10"
                 />
+                {isFixedFormStatus && (
+                  <p className="text-xs text-muted-foreground">
+                    Entrada e Entregue têm posições fixas (início e fim).
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1065,9 +1119,15 @@ Tem certeza que deseja continuar?`,
                 id="is_active"
                 checked={formData.is_active}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+                disabled={isFixedFormStatus}
               />
               <Label htmlFor="is_active" className="text-sm font-medium">Status Ativo</Label>
             </div>
+            {isFixedFormStatus && (
+              <p className="text-xs text-muted-foreground -mt-2">
+                Entrada e Entregue são sempre ativos.
+              </p>
+            )}
 
             {/* Preview */}
             <div className="space-y-2">

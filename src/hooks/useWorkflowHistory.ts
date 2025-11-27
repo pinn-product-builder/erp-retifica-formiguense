@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -10,28 +10,24 @@ export interface WorkflowHistoryEntry {
   to_status: string;
   changed_by: string;
   change_reason?: string;
-  created_at: string;
+  changed_at: string;
   user_email?: string;
 }
 
-export function useWorkflowHistory(workflowId?: string) {
+export function useWorkflowHistory() {
   const { toast } = useToast();
   const [history, setHistory] = useState<WorkflowHistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchHistory = async (targetWorkflowId?: string) => {
-    const id = targetWorkflowId || workflowId;
-    if (!id) return;
+  const fetchHistory = useCallback(async (workflowId: string | undefined) => {
+    if (!workflowId) return;
 
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('workflow_status_history')
-        .select(`
-          *,
-          user_email:changed_by(email)
-        `)
-        .eq('order_workflow_id', id)
+        .select('*')
+        .eq('order_workflow_id', workflowId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -46,13 +42,15 @@ export function useWorkflowHistory(workflowId?: string) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  const clearHistory = useCallback(() => setHistory([]), []);
 
   const getStatusDuration = (entry: WorkflowHistoryEntry, nextEntry?: WorkflowHistoryEntry) => {
     if (!nextEntry) return null;
     
-    const current = new Date(entry.created_at);
-    const next = new Date(nextEntry.created_at);
+    const current = new Date(entry.changed_at);
+    const next = new Date(nextEntry.changed_at);
     const diffMs = current.getTime() - next.getTime();
     
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -73,7 +71,7 @@ export function useWorkflowHistory(workflowId?: string) {
     const lastEntry = history[0];
     
     const totalTime = firstEntry && lastEntry 
-      ? new Date(lastEntry.created_at).getTime() - new Date(firstEntry.created_at).getTime()
+      ? new Date(lastEntry.changed_at).getTime() - new Date(firstEntry.changed_at).getTime()
       : 0;
     
     const totalHours = Math.floor(totalTime / (1000 * 60 * 60));
@@ -86,21 +84,16 @@ export function useWorkflowHistory(workflowId?: string) {
         : `${totalHours}h`,
       firstStatus: firstEntry?.to_status,
       currentStatus: lastEntry?.to_status,
-      startDate: firstEntry?.created_at,
-      lastUpdate: lastEntry?.created_at
+      startDate: firstEntry?.changed_at,
+      lastUpdate: lastEntry?.changed_at
     };
   };
-
-  useEffect(() => {
-    if (workflowId) {
-      fetchHistory();
-    }
-  }, [workflowId]);
 
   return {
     history,
     loading,
     fetchHistory,
+    clearHistory,
     getStatusDuration,
     getHistorySummary
   };

@@ -4,6 +4,7 @@ import React from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { ComponentCard } from './ComponentCard';
 import { Badge } from '@/components/ui/badge';
+import { EmployeeDirectoryEntry } from '@/hooks/useEmployeesDirectory';
 
 const STATUS_LABELS: Record<string, string> = {
   entrada: 'Entrada',
@@ -31,9 +32,11 @@ interface KanbanColumnProps {
   componentColor: string;
   statusColors?: Record<string, { bgColor: string; textColor: string }>;
   onUpdate?: () => void;
+  employeeOptions: EmployeeDirectoryEntry[];
+  employeesLoading: boolean;
 }
 
-export function KanbanColumn({ status, workflows, componentColor, statusColors, onUpdate }: KanbanColumnProps) {
+export function KanbanColumn({ status, workflows, componentColor, statusColors, onUpdate, employeeOptions, employeesLoading }: KanbanColumnProps) {
   return (
     <div className="bg-muted/30 rounded-lg p-3 sm:p-4 h-full flex flex-col">
       {/* Column Header */}
@@ -86,6 +89,8 @@ export function KanbanColumn({ status, workflows, componentColor, statusColors, 
                         workflow={workflow}
                         componentColor={workflow.componentColor || componentColor}
                         onUpdate={onUpdate}
+                        employeeOptions={employeeOptions}
+                        employeesLoading={employeesLoading}
                       />
                     </div>
                   )}

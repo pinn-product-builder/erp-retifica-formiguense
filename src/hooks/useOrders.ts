@@ -60,12 +60,15 @@ export interface Order {
     name: string;
     phone?: string;
     email?: string;
+    address?: string;
+    type?: string;
   } | null;
   engine?: {
     id: string;
     type: string;
     brand: string;
     model: string;
+    engine_type_id?: string | null;
   } | null;
   consultant?: {
     id: string;
@@ -94,8 +97,8 @@ export function useOrders() {
         .from('orders')
         .select(`
           *,
-          customers!inner(id, name, phone, email),
-          engines(id, type, brand, model)
+          customers!inner(id, name, phone, email, address, type),
+          engines(id, type, brand, model, engine_type_id)
         `)
         .eq('org_id', currentOrganization.id)
         .order('created_at', { ascending: false });
@@ -149,8 +152,8 @@ export function useOrders() {
         .from('orders')
         .select(`
           *,
-          customers!inner(id, name, phone, email),
-          engines(id, type, brand, model)
+          customers!inner(id, name, phone, email, address, type),
+          engines(id, type, brand, model, engine_type_id)
         `)
         .eq('id', orderId)
         .eq('org_id', currentOrganization.id)
@@ -350,6 +353,85 @@ export function useOrders() {
     }
   }, [currentOrganization?.id, toast]);
 
+  const updateOrderCustomerData = useCallback(async (customerId: string, updates: {
+    name?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+  }) => {
+    if (!currentOrganization?.id) return false;
+
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', customerId)
+        .eq('org_id', currentOrganization.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Cliente atualizado",
+        description: "Dados do cliente atualizados com sucesso."
+      });
+
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar cliente';
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return false;
+    }
+  }, [currentOrganization?.id, toast]);
+
+  const updateOrderEngineType = useCallback(async (engineId: string, engineTypeId: string) => {
+    if (!currentOrganization?.id) return false;
+
+    try {
+      const { data: engineTypeData, error: engineTypeError } = await supabase
+        .from('engine_types')
+        .select('name')
+        .eq('id', engineTypeId)
+        .single();
+
+      if (engineTypeError) throw engineTypeError;
+
+      const { error } = await supabase
+        .from('engines')
+        .update({
+          engine_type_id: engineTypeId,
+          type: engineTypeData?.name || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', engineId)
+        .eq('org_id', currentOrganization.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Motor atualizado",
+        description: "Tipo de motor atualizado com sucesso."
+      });
+
+      fetchOrders();
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar motor';
+      toast({
+        title: "Erro",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return false;
+    }
+  }, [currentOrganization?.id, toast, fetchOrders]);
+
   const updateOrder = useCallback(async (orderId: string, updates: Partial<Order>) => {
     if (!currentOrganization?.id) return false;
 
@@ -398,6 +480,8 @@ export function useOrders() {
     updateOrderStatus,
     markOrderAsDelivered,
     addOrderMaterial,
-    updateOrder
+    updateOrder,
+    updateOrderCustomerData,
+    updateOrderEngineType
   };
 }

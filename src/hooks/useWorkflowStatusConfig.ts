@@ -4,6 +4,8 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
 import { Json } from '@/integrations/supabase/types';
 
+export const FIXED_WORKFLOW_STATUSES = ['entrada', 'entregue'] as const;
+
 export interface WorkflowStatusConfig {
   id: string;
   org_id?: string;

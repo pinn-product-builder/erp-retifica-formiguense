@@ -1,6 +1,5 @@
-// @ts-nocheck
-import React, { useState, useEffect } from 'react';
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState, useEffect, useCallback } from 'react';
+import { DiagnosticService } from "@/services/DiagnosticService";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,30 +20,28 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Camera, 
   CheckCircle, 
   AlertCircle, 
   Save, 
-  Send,
   Eye,
   Hash,
   Type,
   List,
-  Upload,
   X,
-  Calculator
+  Package,
+  Wrench
 } from "lucide-react";
-import { useDiagnosticChecklists, useDiagnosticChecklistsQuery, useDiagnosticChecklistMutations } from "@/hooks/useDiagnosticChecklists";
-import { useEngineTypes } from "@/hooks/useEngineTypes";
-import { useOrders } from "@/hooks/useOrders";
+import { useDiagnosticChecklistsQuery } from "@/hooks/useDiagnosticChecklists";
 import { useToast } from "@/hooks/use-toast";
 import { useOrganization } from "@/hooks/useOrganization";
 import BudgetFromDiagnostic from './BudgetFromDiagnostic';
 import DiagnosticValidation from './DiagnosticValidation';
-import { useEngineComponents } from '@/hooks/useEngineComponents';
+import { PartsServicesSelector } from './PartsServicesSelector';
+import type { DiagnosticChecklist, DiagnosticChecklistItem } from '@/hooks/useDiagnosticChecklists';
 
 interface DiagnosticInterfaceProps {
   orderId?: string;
@@ -59,79 +56,95 @@ interface ChecklistResponse {
   };
 }
 
+interface Part {
+  id: string;
+  part_code: string;
+  part_name: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+}
+
+interface Service {
+  id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+}
+
+const DEFAULT_COMPONENTS = [
+  { value: 'bloco', label: 'Bloco' },
+  { value: 'biela', label: 'Biela' },
+  { value: 'virabrequim', label: 'Virabrequim' },
+  { value: 'comando', label: 'Comando - Balanceiros' },
+  { value: 'volante', label: 'Volante' },
+  { value: 'montagem', label: 'Montagem Completa' }
+];
+
 const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) => {
   const { toast } = useToast();
-  const [selectedEngineType, setSelectedEngineType] = useState<string>('');
-  const [selectedComponent, setSelectedComponent] = useState<string>('');
-  const [selectedChecklist, setSelectedChecklist] = useState<unknown>(null);
-  const [responses, setResponses] = useState<ChecklistResponse>({});
+  const [activeTab, setActiveTab] = useState<string>('bloco');
+  const [componentChecklists, setComponentChecklists] = useState<Record<string, DiagnosticChecklist>>({});
+  const [componentResponses, setComponentResponses] = useState<Record<string, ChecklistResponse>>({});
+  const [componentParts, setComponentParts] = useState<Record<string, Part[]>>({});
+  const [componentServices, setComponentServices] = useState<Record<string, Service[]>>({});
+  const [technicalObservations, setTechnicalObservations] = useState<string>('');
+  const [extraServices, setExtraServices] = useState<string>('');
+  const [finalOpinion, setFinalOpinion] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [diagnosticResponse, setDiagnosticResponse] = useState<unknown>(null);
   const [isValid, setIsValid] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
-  const [engineTypeLoaded, setEngineTypeLoaded] = useState(false);
 
-  const { engineTypes, fetchEngineTypes } = useEngineTypes();
-  const { data: checklists } = useDiagnosticChecklistsQuery(selectedEngineType, selectedComponent);
-  const { orders } = useOrders();
-  const mutations = useDiagnosticChecklistMutations();
-  const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
   const { currentOrganization } = useOrganization();
 
-  const getComponentLabel = (value: string) => {
-    return engineComponents.find(c => c.value === value)?.label || value;
-  };
+  const loadChecklists = useCallback(async () => {
+    if (!currentOrganization?.id) return;
 
-  useEffect(() => {
-    const fetchOrderEngineType = async () => {
-      if (!orderId || !currentOrganization?.id) {
-        setSelectedEngineType('');
-        setEngineTypeLoaded(false);
-        return;
-      }
-
+    const checklistsMap: Record<string, DiagnosticChecklist> = {};
+    
+    for (const component of DEFAULT_COMPONENTS) {
       try {
-        await fetchEngineTypes();
-        
-        const { data: orderData, error: orderError } = await supabase
-          .from('orders')
-          .select(`
-            engine_id,
-            engines(
-              engine_type_id
-            )
-          `)
-          .eq('id', orderId)
-          .eq('org_id', currentOrganization.id)
-          .single();
+        const data = await DiagnosticService.getChecklistsByComponent(
+          currentOrganization.id,
+          component.value,
+          undefined
+        );
 
-        if (orderError) {
-          console.error('Erro na query:', orderError);
-          setEngineTypeLoaded(true);
-          return;
-        }
-
-        const enginesData = orderData?.engines;
-        const engine = Array.isArray(enginesData) ? enginesData[0] : enginesData;
-        
-        if (engine?.engine_type_id) {
-          setSelectedEngineType(engine.engine_type_id);
-          setEngineTypeLoaded(true);
-        } else {
-          setSelectedEngineType('');
-          setEngineTypeLoaded(true);
+        if (data) {
+          checklistsMap[component.value] = data;
+          setComponentResponses(prev => {
+            if (!prev[component.value]) {
+              const initialResponses: ChecklistResponse = {};
+              data.items?.forEach((item: DiagnosticChecklistItem) => {
+                initialResponses[item.id] = {
+                  value: item.item_type === 'checkbox' ? false : '',
+                  photos: [],
+                  notes: ''
+                };
+              });
+              return {
+                ...prev,
+                [component.value]: initialResponses
+              };
+            }
+            return prev;
+          });
         }
       } catch (error) {
-        console.error('Erro ao buscar tipo de motor da ordem:', error);
-        setEngineTypeLoaded(true);
+        console.error(`Erro ao carregar checklist para ${component.value}:`, error);
       }
-    };
+    }
 
-    setEngineTypeLoaded(false);
-    fetchOrderEngineType();
-  }, [orderId, currentOrganization?.id, toast, fetchEngineTypes]);
+    setComponentChecklists(checklistsMap);
+  }, [currentOrganization?.id]);
+
+  useEffect(() => {
+    loadChecklists();
+  }, [loadChecklists]);
 
   const itemTypeIcons = {
     checkbox: CheckCircle,
@@ -141,82 +154,83 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
     select: List
   };
 
-  const handleChecklistSelect = (checklist: unknown) => {
-    setSelectedChecklist(checklist);
-    // Initialize responses for all items
-    const initialResponses: ChecklistResponse = {};
-    checklist.items?.forEach((item: unknown) => {
-      initialResponses[item.id] = {
-        value: item.item_type === 'checkbox' ? false : '',
-        photos: [],
-        notes: ''
-      };
-    });
-    setResponses(initialResponses);
-  };
-
-  const handleResponseChange = (itemId: string, value: unknown) => {
-    setResponses(prev => ({
+  const handleResponseChange = (component: string, itemId: string, value: unknown) => {
+    setComponentResponses(prev => ({
       ...prev,
-      [itemId]: {
-        ...prev[itemId],
-        value
+      [component]: {
+        ...prev[component] || {},
+        [itemId]: {
+          ...(prev[component]?.[itemId] || { photos: [], notes: '' }),
+          value
+        }
       }
     }));
   };
 
-  const handlePhotoUpload = async (itemId: string, file: File) => {
+  const handlePhotoUpload = async (component: string, itemId: string, file: File) => {
     try {
       const responseId = `temp_${Date.now()}`;
-      const photoData = await mutations.uploadPhoto.mutateAsync({
-        file,
-        responseId,
-        itemId
-      });
+      const photoData = await DiagnosticService.uploadChecklistPhoto(file, responseId, itemId);
 
       if (photoData) {
-        setResponses(prev => ({
+        setComponentResponses(prev => ({
           ...prev,
-          [itemId]: {
-            ...prev[itemId],
-            photos: [...(prev[itemId]?.photos || []), photoData]
+          [component]: {
+            ...prev[component] || {},
+            [itemId]: {
+              ...(prev[component]?.[itemId] || { value: '', notes: '' }),
+              photos: [...(prev[component]?.[itemId]?.photos || []), photoData]
+            }
           }
         }));
       }
     } catch (error) {
       console.error('Erro ao fazer upload da foto:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao fazer upload da foto",
+        variant: "destructive"
+      });
     }
   };
 
-  const handleNotesChange = (itemId: string, notes: string) => {
-    setResponses(prev => ({
+  const handleNotesChange = (component: string, itemId: string, notes: string) => {
+    setComponentResponses(prev => ({
       ...prev,
-      [itemId]: {
-        ...prev[itemId],
-        notes
+      [component]: {
+        ...prev[component] || {},
+        [itemId]: {
+          ...(prev[component]?.[itemId] || { value: '', photos: [] }),
+          notes
+        }
       }
     }));
   };
 
-  const removePhoto = (itemId: string, photoIndex: number) => {
-    setResponses(prev => ({
+  const removePhoto = (component: string, itemId: string, photoIndex: number) => {
+    setComponentResponses(prev => ({
       ...prev,
-      [itemId]: {
-        ...prev[itemId],
-        photos: prev[itemId]?.photos.filter((_, index) => index !== photoIndex) || []
+      [component]: {
+        ...prev[component] || {},
+        [itemId]: {
+          ...prev[component]?.[itemId],
+          photos: prev[component]?.[itemId]?.photos.filter((_, index) => index !== photoIndex) || []
+        }
       }
     }));
   };
 
-  const generateServices = () => {
-    if (!selectedChecklist) return [];
+  const generateServices = (component: string) => {
+    const checklist = componentChecklists[component];
+    if (!checklist) return [];
 
     const services: Array<Record<string, unknown>> = [];
+    const responses = componentResponses[component] || {};
     
-    selectedChecklist.items?.forEach((item: unknown) => {
+    checklist.items?.forEach((item: DiagnosticChecklistItem) => {
       const response = responses[item.id];
       if (response?.value && item.triggers_service) {
-        item.triggers_service.forEach((service: unknown) => {
+        item.triggers_service.forEach((service: Record<string, unknown>) => {
           services.push({
             ...service,
             triggered_by: item.item_name,
@@ -236,19 +250,10 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
   };
 
   const handleSubmit = async () => {
-    if (!selectedChecklist || !orderId) {
+    if (!orderId) {
       toast({
         title: "Erro",
-        description: "Checklist e ordem de serviço são obrigatórios",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!isValid) {
-      toast({
-        title: "Erro",
-        description: "Corrija os erros de validação antes de salvar",
+        description: "Ordem de serviço é obrigatória",
         variant: "destructive"
       });
       return;
@@ -257,59 +262,90 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
     setIsSubmitting(true);
 
     try {
-      const generatedServices = generateServices();
-      const user = (await supabase.auth.getUser()).data.user;
-      
-      let componentsToSave: string[] = [];
-      
-      if (selectedChecklist.component) {
-        componentsToSave = [selectedChecklist.component];
-      } else {
-        const selectedEngineTypeData = engineTypes.find(et => et.id === selectedEngineType);
-        if (selectedEngineTypeData?.required_components && selectedEngineTypeData.required_components.length > 0) {
-          componentsToSave = selectedEngineTypeData.required_components;
-        } else {
-          toast({
-            title: "Erro",
-            description: "Não foi possível determinar os componentes para o diagnóstico. Verifique se o tipo de motor tem componentes obrigatórios definidos.",
-            variant: "destructive"
-          });
-          setIsSubmitting(false);
-          return;
-        }
+      const user = await DiagnosticService.getCurrentUser();
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Usuário não autenticado",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
       }
 
-      const responsePromises = componentsToSave.map(component =>
-        mutations.saveResponse.mutateAsync({
-          order_id: orderId,
-          checklist_id: selectedChecklist.id,
-          component: component,
-          responses,
-          photos: Object.values(responses).flatMap(r => r.photos),
-          generated_services: generatedServices,
-          diagnosed_by: user?.id,
-          status: 'completed'
-        })
-      );
+      const savedResponses = [];
+      const lastComponent = DEFAULT_COMPONENTS[DEFAULT_COMPONENTS.length - 1];
+      
+      for (const component of DEFAULT_COMPONENTS) {
+        const checklist = componentChecklists[component.value];
+        const responses = componentResponses[component.value] || {};
+        const parts = componentParts[component.value] || [];
+        const services = componentServices[component.value] || [];
 
-      const savedResponses = await Promise.all(responsePromises);
-      const firstResponse = savedResponses[0];
+        if (!checklist || Object.keys(responses).length === 0) {
+          continue;
+        }
+
+        const generatedServices = generateServices(component.value);
+        const allPhotos = Object.values(responses).flatMap(r => r.photos || []);
+
+        const isLastComponent = component.value === lastComponent.value;
+        const enrichedResponses = isLastComponent && (technicalObservations || extraServices || finalOpinion)
+          ? {
+              ...responses,
+              technical_observations: technicalObservations,
+              extra_services: extraServices,
+              final_opinion: finalOpinion
+            }
+          : responses;
+
+        const response = await DiagnosticService.saveChecklistResponse({
+          orderId,
+          checklistId: checklist.id,
+          component: component.value,
+          responses: enrichedResponses,
+          photos: allPhotos,
+          generatedServices,
+          diagnosedBy: user.id,
+          additionalParts: parts.length > 0 ? parts : undefined,
+          additionalServices: services.length > 0 ? services : undefined
+        });
+
+        savedResponses.push(response);
+      }
+
+
+      if (savedResponses.length === 0) {
+        toast({
+          title: "Atenção",
+          description: "Nenhum checklist foi preenchido",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
 
       toast({
         title: "Sucesso",
-        description: `Diagnóstico salvo com sucesso para ${componentsToSave.length} componente(s)`
+        description: `Diagnóstico salvo com sucesso para ${savedResponses.length} componente(s)`
       });
 
+      const allParts = Object.values(componentParts).flat();
+      const allServices = Object.values(componentServices).flat();
+
       setDiagnosticResponse({
-        ...firstResponse,
-        generated_services: generatedServices,
-        component: componentsToSave.length === 1 ? componentsToSave[0] : null,
-        checklist: selectedChecklist,
+        ...savedResponses[0],
+        all_responses: savedResponses,
+        additional_parts: allParts,
+        additional_services: allServices,
+        technical_observations: technicalObservations,
+        extra_services: extraServices,
+        final_opinion: finalOpinion,
         diagnosed_at: new Date().toISOString()
       });
 
       if (onComplete) {
-        onComplete(firstResponse);
+        onComplete(savedResponses[0]);
       }
     } catch (error) {
       console.error('Erro ao salvar diagnóstico:', error);
@@ -323,7 +359,8 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
     }
   };
 
-  const renderItem = (item: unknown) => {
+  const renderItem = (component: string, item: DiagnosticChecklistItem) => {
+    const responses = componentResponses[component] || {};
     const response = responses[item.id] || { value: '', photos: [], notes: '' };
     const IconComponent = itemTypeIcons[item.item_type as keyof typeof itemTypeIcons] || CheckCircle;
 
@@ -356,13 +393,12 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
         </CardHeader>
         
         <CardContent className="space-y-4">
-          {/* Render based on item type */}
           {item.item_type === 'checkbox' && (
             <div className="flex items-center space-x-2">
               <Checkbox
                 id={`item_${item.id}`}
-                checked={response.value}
-                onCheckedChange={(checked) => handleResponseChange(item.id, checked)}
+                checked={Boolean(response.value)}
+                onCheckedChange={(checked) => handleResponseChange(component, item.id, checked)}
               />
               <Label htmlFor={`item_${item.id}`} className="text-sm">
                 Marcar como verificado
@@ -374,9 +410,9 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
             <div className="space-y-2">
               <Label htmlFor={`measurement_${item.id}`}>
                 Medição (mm)
-                {item.expected_values && (
+                {item.expected_values && typeof item.expected_values === 'object' && 'min' in item.expected_values && 'max' in item.expected_values && (
                   <span className="text-sm text-muted-foreground ml-2">
-                    (Esperado: {item.expected_values.min} - {item.expected_values.max})
+                    (Esperado: {String(item.expected_values.min)} - {String(item.expected_values.max)})
                   </span>
                 )}
               </Label>
@@ -384,8 +420,8 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
                 id={`measurement_${item.id}`}
                 type="number"
                 step="0.01"
-                value={response.value}
-                onChange={(e) => handleResponseChange(item.id, parseFloat(e.target.value) || 0)}
+                value={typeof response.value === 'number' ? response.value : ''}
+                onChange={(e) => handleResponseChange(component, item.id, parseFloat(e.target.value) || 0)}
                 placeholder="Digite a medição..."
               />
             </div>
@@ -396,8 +432,8 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
               <Label htmlFor={`text_${item.id}`}>Observações</Label>
               <Textarea
                 id={`text_${item.id}`}
-                value={response.value}
-                onChange={(e) => handleResponseChange(item.id, e.target.value)}
+                value={typeof response.value === 'string' ? response.value : ''}
+                onChange={(e) => handleResponseChange(component, item.id, e.target.value)}
                 placeholder="Digite suas observações..."
                 rows={3}
               />
@@ -408,18 +444,26 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
             <div className="space-y-2">
               <Label htmlFor={`select_${item.id}`}>Seleção</Label>
               <Select
-                value={response.value}
-                onValueChange={(value) => handleResponseChange(item.id, value)}
+                value={String(response.value || '')}
+                onValueChange={(value) => handleResponseChange(component, item.id, value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma opção" />
                 </SelectTrigger>
                 <SelectContent>
-                  {item.item_options?.map((option: unknown, index: number) => (
-                    <SelectItem key={index} value={option.value || option}>
-                      {option.label || option}
-                    </SelectItem>
-                  ))}
+                  {item.item_options?.map((option: Record<string, unknown> | string, index: number) => {
+                    const optionValue = typeof option === 'object' && option !== null && 'value' in option 
+                      ? String(option.value) 
+                      : String(option);
+                    const optionLabel = typeof option === 'object' && option !== null && 'label' in option
+                      ? String(option.label)
+                      : String(option);
+                    return (
+                      <SelectItem key={index} value={optionValue}>
+                        {optionLabel}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -435,7 +479,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
                     accept="image/*"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) handlePhotoUpload(item.id, file);
+                      if (file) handlePhotoUpload(component, item.id, file);
                     }}
                     className="hidden"
                     id={`photo_${item.id}`}
@@ -456,7 +500,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
                   {response.photos.map((photo, index) => (
                     <div key={index} className="relative group">
                       <img
-                        src={photo.url}
+                        src={String(photo.url || '')}
                         alt={`Foto ${index + 1}`}
                         className="w-full h-24 object-cover rounded border"
                       />
@@ -464,7 +508,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
                         variant="destructive"
                         size="sm"
                         className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removePhoto(item.id, index)}
+                        onClick={() => removePhoto(component, item.id, index)}
                       >
                         <X className="w-3 h-3" />
                       </Button>
@@ -475,19 +519,17 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
             </div>
           )}
 
-          {/* Notes field for all item types */}
           <div className="space-y-2">
             <Label htmlFor={`notes_${item.id}`}>Observações Adicionais</Label>
             <Textarea
               id={`notes_${item.id}`}
               value={response.notes || ''}
-              onChange={(e) => handleNotesChange(item.id, e.target.value)}
+              onChange={(e) => handleNotesChange(component, item.id, e.target.value)}
               placeholder="Observações adicionais sobre este item..."
               rows={2}
             />
           </div>
 
-          {/* Help text */}
           {item.help_text && (
             <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded">
               <AlertCircle className="w-4 h-4 inline mr-2" />
@@ -499,301 +541,340 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
     );
   };
 
-  const generatedServices = generateServices();
+  const renderComponentTab = (component: { value: string; label: string }) => {
+    const checklist = componentChecklists[component.value];
+    const responses = componentResponses[component.value] || {};
+
+    if (!checklist) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p>Nenhum checklist encontrado para {component.label}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle>{checklist.name}</CardTitle>
+              <CardDescription>
+                {checklist.description || "Checklist de diagnóstico"}
+              </CardDescription>
+              <Badge variant="secondary" className="mt-2">
+                {checklist.items?.length || 0} itens
+              </Badge>
+            </div>
+          </CardHeader>
+        </Card>
+
+        <DiagnosticValidation
+          responses={responses}
+          checklist={{
+            items: checklist.items?.map(item => ({
+              id: item.id,
+              item_name: item.item_name,
+              item_type: item.item_type,
+              is_required: item.is_required,
+              expected_values: item.expected_values as { min: number; max: number } | undefined
+            }))
+          }}
+          onValidationChange={handleValidationChange}
+        />
+
+        <div className="space-y-4">
+          {checklist.items
+            ?.sort((a: DiagnosticChecklistItem, b: DiagnosticChecklistItem) => a.display_order - b.display_order)
+            .map((item: DiagnosticChecklistItem) => renderItem(component.value, item))}
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Peças e Serviços Adicionais - {component.label}
+            </CardTitle>
+            <CardDescription>
+              Adicione peças e serviços adicionais específicos deste componente
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PartsServicesSelector
+              selectedParts={componentParts[component.value] || []}
+              selectedServices={componentServices[component.value] || []}
+              onPartsChange={(parts) => {
+                setComponentParts(prev => ({
+                  ...prev,
+                  [component.value]: parts
+                }));
+              }}
+              onServicesChange={(services) => {
+                setComponentServices(prev => ({
+                  ...prev,
+                  [component.value]: services
+                }));
+              }}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold">Diagnóstico com Checklist</h2>
           <p className="text-muted-foreground">
-            Execute diagnóstico padronizado usando checklists configurados
+            Execute diagnóstico padronizado usando checklists por componente
           </p>
         </div>
         
-        {selectedChecklist && (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsPreviewOpen(true)}
-            >
-              <Eye className="w-4 h-4 mr-2" />
-              Visualizar
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting || !isValid}
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Salvar Diagnóstico
-                </>
-              )}
-            </Button>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsPreviewOpen(true)}
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            Visualizar
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Salvar Diagnóstico
+              </>
+            )}
+          </Button>
+        </div>
 
         {diagnosticResponse && orderId && (
-          <div className="flex gap-2">
-            <BudgetFromDiagnostic
-              diagnosticResponse={diagnosticResponse}
-              orderId={orderId}
-              onBudgetCreated={(budget) => {
-                toast({
-                  title: "Sucesso",
-                  description: "Orçamento criado com sucesso a partir do diagnóstico"
-                });
-                setDiagnosticResponse(null); // Reset after budget creation
-              }}
-            />
-          </div>
+          <BudgetFromDiagnostic
+            diagnosticResponse={diagnosticResponse}
+            orderId={orderId}
+            onBudgetCreated={(budget) => {
+              toast({
+                title: "Sucesso",
+                description: "Orçamento criado com sucesso a partir do diagnóstico"
+              });
+              setDiagnosticResponse(null);
+            }}
+          />
         )}
       </div>
 
-      {/* Checklist Selection */}
-      {!selectedChecklist && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Selecionar Checklist</CardTitle>
-            <CardDescription>
-              Escolha o tipo de motor para carregar os checklists disponíveis
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="engine_type">Tipo de Motor</Label>
-              <Select 
-                value={selectedEngineType} 
-                onValueChange={setSelectedEngineType}
-                disabled={!!orderId && engineTypeLoaded && !!selectedEngineType}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={
-                    orderId && !engineTypeLoaded 
-                      ? "Carregando tipo de motor..." 
-                      : "Selecione o tipo de motor"
-                  } />
-                </SelectTrigger>
-                <SelectContent>
-                  {engineTypes?.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {orderId && selectedEngineType && engineTypeLoaded && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Tipo de motor carregado automaticamente da ordem de serviço
-                </p>
-              )}
-              {orderId && engineTypeLoaded && !selectedEngineType && (
-                <p className="text-xs text-yellow-600 mt-1">
-                  A ordem não possui tipo de motor associado. Selecione manualmente.
-                </p>
-              )}
-            </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-8 gap-2 h-auto">
+          {DEFAULT_COMPONENTS.map((component) => (
+            <TabsTrigger 
+              key={component.value} 
+              value={component.value}
+              className="text-xs sm:text-sm"
+            >
+              {component.label}
+            </TabsTrigger>
+          ))}
+          <TabsTrigger value="observations" className="text-xs sm:text-sm">
+            <Wrench className="w-4 h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Observações</span>
+            <span className="sm:hidden">Obs</span>
+          </TabsTrigger>
+        </TabsList>
 
-            {checklists && checklists.length > 0 && (
-              <div className="space-y-2">
-                <Label>Checklists Disponíveis</Label>
-                <div className="grid gap-2">
-                  {checklists.map((checklist) => (
-                    <Card
-                      key={checklist.id}
-                      className="cursor-pointer hover:bg-muted/50 transition-colors"
-                      onClick={() => handleChecklistSelect(checklist)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium">{checklist.name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {checklist.description || "Sem descrição"}
-                            </p>
-                            <div className="flex gap-2 mt-2">
-                              <Badge variant="outline">{getComponentLabel(checklist.component)}</Badge>
-                              <Badge variant="secondary">
-                                {checklist.items?.length || 0} itens
-                              </Badge>
-                            </div>
-                          </div>
-                          <Button variant="outline" size="sm">
-                            Selecionar
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
+        {DEFAULT_COMPONENTS.map((component) => (
+          <TabsContent key={component.value} value={component.value} className="mt-4">
+            {renderComponentTab(component)}
+          </TabsContent>
+        ))}
 
-            {checklists && checklists.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Nenhum checklist encontrado para os critérios selecionados</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Checklist Execution */}
-      {selectedChecklist && (
-        <div className="space-y-6">
-          {/* Checklist Info */}
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle>{selectedChecklist.name}</CardTitle>
-                  <CardDescription>
-                    {selectedChecklist.description || "Checklist de diagnóstico"}
-                  </CardDescription>
-                  <div className="flex gap-2 mt-2">
-                    <Badge variant="outline">{getComponentLabel(selectedChecklist.component)}</Badge>
-                    <Badge variant="secondary">
-                      {selectedChecklist.items?.length || 0} itens
-                    </Badge>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedChecklist(null)}
-                >
-                  Trocar Checklist
-                </Button>
-              </div>
-            </CardHeader>
-          </Card>
-
-          {/* Generated Services Preview */}
-          {generatedServices.length > 0 && (
+        <TabsContent value="observations" className="mt-4">
+          <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  Serviços Identificados
-                </CardTitle>
+                <CardTitle>Observações Técnicas</CardTitle>
                 <CardDescription>
-                  Baseado nas respostas do checklist, os seguintes serviços foram identificados:
+                  Registre observações técnicas relevantes sobre o diagnóstico
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {generatedServices.map((service, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 bg-green-50 rounded border">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <span className="text-sm">{service.name || service}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {service.triggered_by}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
+                <Textarea
+                  value={technicalObservations}
+                  onChange={(e) => setTechnicalObservations(e.target.value)}
+                  placeholder="Digite as observações técnicas..."
+                  className="min-h-[150px]"
+                />
               </CardContent>
             </Card>
-          )}
 
-          {/* Validação */}
-          <DiagnosticValidation
-            responses={responses}
-            checklist={selectedChecklist}
-            onValidationChange={handleValidationChange}
-          />
+            <Card>
+              <CardHeader>
+                <CardTitle>Serviços Extras</CardTitle>
+                <CardDescription>
+                  Descreva serviços extras identificados durante o diagnóstico
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={extraServices}
+                  onChange={(e) => setExtraServices(e.target.value)}
+                  placeholder="Descreva os serviços extras..."
+                  className="min-h-[150px]"
+                />
+              </CardContent>
+            </Card>
 
-          {/* Checklist Items */}
-          <div className="space-y-4">
-            {selectedChecklist.items
-              ?.sort((a: unknown, b: unknown) => a.display_order - b.display_order)
-              .map((item: unknown) => renderItem(item))}
+            <Card>
+              <CardHeader>
+                <CardTitle>Parecer Final</CardTitle>
+                <CardDescription>
+                  Forneça o parecer final sobre o diagnóstico realizado
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={finalOpinion}
+                  onChange={(e) => setFinalOpinion(e.target.value)}
+                  placeholder="Digite o parecer final..."
+                  className="min-h-[200px]"
+                />
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
 
-      {/* Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Visualização do Diagnóstico</DialogTitle>
             <DialogDescription>
-              Resumo das respostas e serviços identificados
+              Resumo das respostas por componente
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6">
-            {/* Responses Summary */}
-            <div>
-              <h3 className="font-medium mb-3">Respostas</h3>
-              <div className="space-y-2">
-                {selectedChecklist?.items?.map((item: unknown) => {
-                  const response = responses[item.id];
-                  return (
-                    <div key={item.id} className="flex justify-between items-center p-2 bg-muted/50 rounded">
-                      <span className="text-sm">{item.item_name}</span>
-                      <div className="flex items-center gap-2">
-                        {item.item_type === 'checkbox' && (
-                          <Badge variant={response?.value ? "default" : "secondary"}>
-                            {response?.value ? "Sim" : "Não"}
-                          </Badge>
-                        )}
-                        {item.item_type === 'measurement' && (
-                          <Badge variant="outline">
-                            {response?.value}mm
-                          </Badge>
-                        )}
-                        {item.item_type === 'text' && (
-                          <span className="text-sm text-muted-foreground">
-                            {response?.value || "Sem observação"}
-                          </span>
-                        )}
-                        {item.item_type === 'select' && (
-                          <Badge variant="outline">
-                            {response?.value || "Não selecionado"}
-                          </Badge>
-                        )}
-                        {item.item_type === 'photo' && (
-                          <Badge variant="outline">
-                            {response?.photos?.length || 0} foto(s)
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            {DEFAULT_COMPONENTS.map((component) => {
+              const checklist = componentChecklists[component.value];
+              const responses = componentResponses[component.value] || {};
+              
+              if (!checklist || Object.keys(responses).length === 0) return null;
 
-            {/* Generated Services */}
-            {generatedServices.length > 0 && (
-              <div>
-                <h3 className="font-medium mb-3">Serviços Identificados</h3>
-                <div className="space-y-2">
-                  {generatedServices.map((service, index) => (
-                    <div key={index} className="p-2 bg-green-50 rounded border">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        <span className="text-sm">{service.name || service}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {service.triggered_by}
-                        </Badge>
+              return (
+                <div key={component.value}>
+                  <h3 className="font-medium mb-3">{component.label}</h3>
+                  <div className="space-y-2">
+                    {checklist.items?.map((item: DiagnosticChecklistItem) => {
+                      const response = responses[item.id];
+                      if (!response) return null;
+
+                      return (
+                        <div key={item.id} className="flex justify-between items-center p-2 bg-muted/50 rounded">
+                          <span className="text-sm">{item.item_name}</span>
+                          <div className="flex items-center gap-2">
+                            {item.item_type === 'checkbox' && (
+                              <Badge variant={response?.value ? "default" : "secondary"}>
+                                {String(response?.value ? "Sim" : "Não")}
+                              </Badge>
+                            )}
+                            {item.item_type === 'measurement' && (
+                              <Badge variant="outline">
+                                {String(response?.value)}mm
+                              </Badge>
+                            )}
+                            {item.item_type === 'text' && (
+                              <span className="text-sm text-muted-foreground">
+                                {String(response?.value || "Sem observação")}
+                              </span>
+                            )}
+                            {item.item_type === 'photo' && (
+                              <Badge variant="outline">
+                                {response?.photos?.length || 0} foto(s)
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+
+            {DEFAULT_COMPONENTS.map((component) => {
+              const parts = componentParts[component.value] || [];
+              const services = componentServices[component.value] || [];
+              
+              if (parts.length === 0 && services.length === 0) return null;
+
+              return (
+                <div key={`parts-${component.value}`}>
+                  <h3 className="font-medium mb-3">Peças e Serviços - {component.label}</h3>
+                  {parts.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium mb-2">Peças ({parts.length})</h4>
+                      <div className="space-y-1">
+                        {parts.map((part) => (
+                          <div key={part.id} className="text-sm p-2 bg-muted/50 rounded">
+                            {part.part_name} - Qtd: {part.quantity} - Total: R$ {part.total.toFixed(2)}
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  )}
+                  {services.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Serviços ({services.length})</h4>
+                      <div className="space-y-1">
+                        {services.map((service) => (
+                          <div key={service.id} className="text-sm p-2 bg-muted/50 rounded">
+                            {service.description} - Qtd: {service.quantity} - Total: R$ {service.total.toFixed(2)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
+              );
+            })}
+
+            {(technicalObservations || extraServices || finalOpinion) && (
+              <div>
+                <h3 className="font-medium mb-3">Observações e Parecer</h3>
+                {technicalObservations && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium mb-2">Observações Técnicas</h4>
+                    <p className="text-sm p-2 bg-muted/50 rounded whitespace-pre-wrap">{technicalObservations}</p>
+                  </div>
+                )}
+                {extraServices && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium mb-2">Serviços Extras</h4>
+                    <p className="text-sm p-2 bg-muted/50 rounded whitespace-pre-wrap">{extraServices}</p>
+                  </div>
+                )}
+                {finalOpinion && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Parecer Final</h4>
+                    <p className="text-sm p-2 bg-muted/50 rounded whitespace-pre-wrap">{finalOpinion}</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };

@@ -477,14 +477,14 @@ const Diagnosticos = () => {
         
         <div className="flex gap-2">
           {canEdit && (
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Novo Diagnóstico
-                </Button>
-              </DialogTrigger>
-            </Dialog>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Diagnóstico
+              </Button>
+            </DialogTrigger>
+          </Dialog>
           )}
           
           <Button
@@ -499,7 +499,7 @@ const Diagnosticos = () => {
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Iniciar Novo Diagnóstico</DialogTitle>
+              <DialogTitle>Diagnósticos</DialogTitle>
               <DialogDescription>
                 Selecione uma ordem de serviço para iniciar o diagnóstico
               </DialogDescription>
@@ -617,11 +617,11 @@ const Diagnosticos = () => {
             </div>
           ) : (
             <>
-              <DiagnosticResponsesTable
+            <DiagnosticResponsesTable
                 responses={paginatedResponses as any}
-                onViewDetails={handleViewDetails as any}
-                onResumeDiagnostic={handleStartDiagnostic}
-              />
+              onViewDetails={handleViewDetails as any}
+              onResumeDiagnostic={handleStartDiagnostic}
+            />
               {totalPages > 1 && (
                 <div className="mt-4">
                   <Pagination>

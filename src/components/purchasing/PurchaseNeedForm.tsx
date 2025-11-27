@@ -365,12 +365,12 @@ export default function PurchaseNeedForm({ onSuccess }: PurchaseNeedFormProps) {
 
             <div>
               <Label htmlFor="delivery_urgency_date">Data Limite (Opcional)</Label>
-              <Input
-                id="delivery_urgency_date"
-                type="date"
-                value={formData.delivery_urgency_date}
-                onChange={(e) => handleInputChange('delivery_urgency_date', e.target.value)}
-              />
+                <Input
+                  id="delivery_urgency_date"
+                  type="date"
+                  value={formData.delivery_urgency_date}
+                  onChange={(e) => handleInputChange('delivery_urgency_date', e.target.value)}
+                />
             </div>
 
             <div>

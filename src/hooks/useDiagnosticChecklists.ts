@@ -348,12 +348,17 @@ export function useDiagnosticChecklists() {
   };
 
   // Salvar resposta do checklist
-  const saveChecklistResponse = async (response: Omit<DiagnosticChecklistResponse, 'id' | 'diagnosed_at'>) => {
+  const saveChecklistResponse = async (response: Omit<DiagnosticChecklistResponse, 'id' | 'diagnosed_at'> & {
+    additional_parts?: unknown;
+    additional_services?: unknown;
+  }) => {
     try {
       const { data, error } = await supabase
         .from('diagnostic_checklist_responses')
         .insert([{
           ...response,
+          additional_parts: response.additional_parts || null,
+          additional_services: response.additional_services || null,
         }] as any)
         .select()
         .single();

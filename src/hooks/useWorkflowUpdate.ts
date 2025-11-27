@@ -15,7 +15,7 @@ export function useWorkflowUpdate() {
       // Primeiro, buscar o status atual para o histórico
       const { data: currentWorkflow, error: fetchError } = await supabase
         .from('order_workflow')
-        .select('status, component, order_id')
+        .select('status, component, order_id, started_at, completed_at')
         .eq('id', workflowId)
         .single();
 
@@ -27,36 +27,9 @@ export function useWorkflowUpdate() {
         updated_at: currentTime
       };
 
-      // Buscar dados completos do workflow atual
-      const { data: fullWorkflow, error: fullFetchError } = await supabase
-        .from('order_workflow')
-        .select('*')
-        .eq('id', workflowId)
-        .single();
-
-      if (fullFetchError) throw fullFetchError;
-
-      // Lógica corrigida para timestamps
-      if (newStatus === 'entrada') {
-        // Entrada: apenas marcar como iniciado se não foi iniciado antes
-        if (!fullWorkflow.started_at) {
-          updateData.started_at = currentTime;
-        }
-        // Limpar completed_at se estava concluído
-        updateData.completed_at = null;
-      } else if (['pronto', 'garantia', 'entregue'].includes(newStatus)) {
-        // Status finais: marcar como concluído
-        updateData.completed_at = currentTime;
-        // Garantir que tem started_at
-        if (!fullWorkflow.started_at) {
-          updateData.started_at = currentTime;
-        }
-      } else {
-        // Status intermediários: marcar como iniciado se não foi iniciado
-        if (!fullWorkflow.started_at) {
-          updateData.started_at = currentTime;
-        }
-        // Limpar completed_at se estava concluído
+      if (currentWorkflow.status !== newStatus) {
+        // Reset timestamps so the new etapa can be iniciated/pausada novamente
+        updateData.started_at = null;
         updateData.completed_at = null;
       }
 
@@ -145,6 +118,7 @@ export function useWorkflowUpdate() {
         .from('order_workflow')
         .update({
           started_at: new Date().toISOString(),
+          completed_at: null,
           updated_at: new Date().toISOString()
         })
         .eq('id', workflowId);
@@ -302,6 +276,14 @@ export function useWorkflowUpdate() {
       );
 
       if (success) {
+        await supabase
+          .from('order_workflow')
+          .update({
+            started_at: null,
+            completed_at: null,
+          })
+          .eq('id', currentWorkflow.id);
+
         toast({
           title: "✅ Etapa avançada!",
           description: `Workflow movido para: ${nextStatusData.to_status_key}`,

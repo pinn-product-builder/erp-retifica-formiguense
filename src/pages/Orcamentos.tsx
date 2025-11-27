@@ -255,27 +255,27 @@ const Orcamentos = () => {
         </div>
         
         {canEdit && (
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            <Button 
-              variant="outline"
-              onClick={handleGenerateReport}
-              disabled={isPageLoading}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Relatório
-            </Button>
-            <Button 
-              onClick={() => {
-                setEditingBudget(null);
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button 
+            variant="outline"
+            onClick={handleGenerateReport}
+            disabled={isPageLoading}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Relatório
+          </Button>
+          <Button 
+            onClick={() => {
+              setEditingBudget(null);
                 setDuplicatedBudgetData(null);
-                setIsFormOpen(true);
-              }}
-              disabled={isPageLoading}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Orçamento
-            </Button>
-          </div>
+              setIsFormOpen(true);
+            }}
+            disabled={isPageLoading}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Orçamento
+          </Button>
+        </div>
         )}
       </div>
 
@@ -469,37 +469,37 @@ const Orcamentos = () => {
                     </Button>
                     {canEdit && (
                       <>
-                        {budget.status === 'draft' && (
-                          <>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                              onClick={() => handleEditBudget(budget)}
-                            >
-                              <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                              onClick={() => {
-                                setSelectedBudget(budget);
-                                setIsApprovalModalOpen(true);
-                              }}
-                            >
-                              <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                            </Button>
-                          </>
-                        )}
+                    {budget.status === 'draft' && (
+                      <>
                         <Button 
                           variant="ghost" 
                           size="sm"
                           className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                          onClick={() => handleDuplicate(budget)}
+                          onClick={() => handleEditBudget(budget)}
                         >
-                          <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                          onClick={() => {
+                            setSelectedBudget(budget);
+                            setIsApprovalModalOpen(true);
+                          }}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </Button>
+                      </>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                      onClick={() => handleDuplicate(budget)}
+                    >
+                      <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </Button>
                         {budget.status === 'draft' && (
                           <Button 
                             variant="ghost" 

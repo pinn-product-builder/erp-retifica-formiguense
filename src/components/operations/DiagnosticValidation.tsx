@@ -1,7 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, XCircle, AlertTriangle, Info } from "lucide-react";
 
 interface ValidationRule {
@@ -115,13 +114,13 @@ const DiagnosticValidation = ({
   const getIcon = (type: string) => {
     switch (type) {
       case 'required':
-        return <XCircle className="w-4 h-4 text-red-500" />;
+        return <XCircle className="w-3.5 h-3.5 text-red-500" />;
       case 'warning':
-        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+        return <AlertTriangle className="w-3.5 h-3.5 text-yellow-500" />;
       case 'info':
-        return <Info className="w-4 h-4 text-blue-500" />;
+        return <Info className="w-3.5 h-3.5 text-blue-500" />;
       default:
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+        return <CheckCircle className="w-3.5 h-3.5 text-green-500" />;
     }
   };
 
@@ -154,137 +153,75 @@ const DiagnosticValidation = ({
   if (validationRules.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-green-600">
-            <CheckCircle className="w-5 h-5" />
-            Validação Completa
-          </CardTitle>
-          <CardDescription>
-            Todas as validações foram aprovadas
-          </CardDescription>
-        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-2 text-sm text-green-600">
+            <CheckCircle className="w-4 h-4" />
+            <span>Validação completa - Todas as validações foram aprovadas</span>
+          </div>
+        </CardContent>
       </Card>
     );
   }
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          {isValid ? (
-            <CheckCircle className="w-5 h-5 text-green-600" />
-          ) : (
-            <XCircle className="w-5 h-5 text-red-600" />
-          )}
-          Validação do Diagnóstico
-        </CardTitle>
-        <CardDescription>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base">
+            {isValid ? (
+              <CheckCircle className="w-4 h-4 text-green-600" />
+            ) : (
+              <XCircle className="w-4 h-4 text-red-600" />
+            )}
+            <span>Validação do Diagnóstico</span>
+          </CardTitle>
+          <div className="flex gap-2">
+            {errors.length > 0 && (
+              <Badge variant="destructive" className="text-xs">
+                {errors.length} erro{errors.length > 1 ? 's' : ''}
+              </Badge>
+            )}
+            {warnings.length > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {warnings.length} aviso{warnings.length > 1 ? 's' : ''}
+              </Badge>
+            )}
+          </div>
+        </div>
+        <CardDescription className="text-xs mt-1">
           {isValid 
             ? "Diagnóstico válido e pronto para ser salvo"
-            : "Corrija os erros abaixo antes de salvar o diagnóstico"
+            : "Corrija os erros abaixo antes de salvar"
           }
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Resumo */}
-        <div className="flex gap-2 flex-wrap">
-          {errors.length > 0 && (
-            <Badge variant="destructive">
-              {errors.length} erro{errors.length > 1 ? 's' : ''}
-            </Badge>
-          )}
-          {warnings.length > 0 && (
-            <Badge variant="secondary">
-              {warnings.length} aviso{warnings.length > 1 ? 's' : ''}
-            </Badge>
-          )}
-          {info.length > 0 && (
-            <Badge variant="outline">
-              {info.length} informação{info.length > 1 ? 'ões' : ''}
-            </Badge>
-          )}
-        </div>
-
-        {/* Erros */}
-        {errors.length > 0 && (
-          <Alert variant="destructive">
-            <XCircle className="h-4 w-4" />
-            <AlertDescription>
-              <div className="space-y-1">
-                <p className="font-medium">Erros que impedem o salvamento:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  {errors.map((error) => (
-                    <li key={error.id} className="text-sm">
-                      {error.message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Avisos */}
-        {warnings.length > 0 && (
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              <div className="space-y-1">
-                <p className="font-medium">Avisos importantes:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  {warnings.map((warning) => (
-                    <li key={warning.id} className="text-sm">
-                      {warning.message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Informações */}
-        {info.length > 0 && (
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              <div className="space-y-1">
-                <p className="font-medium">Informações adicionais:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  {info.map((infoItem) => (
-                    <li key={infoItem.id} className="text-sm">
-                      {infoItem.message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Lista detalhada de validações */}
-        <div className="space-y-2">
-          <h4 className="font-medium text-sm">Detalhes das Validações:</h4>
-          <div className="space-y-1">
-            {validationRules.map((rule) => (
-              <div 
-                key={rule.id} 
-                className={`flex items-center gap-2 p-2 rounded text-sm ${
-                  rule.condition 
-                    ? 'bg-green-50 text-green-700' 
-                    : rule.type === 'required'
-                    ? 'bg-red-50 text-red-700'
-                    : 'bg-yellow-50 text-yellow-700'
-                }`}
-              >
+      <CardContent className="pt-0">
+        <div className="space-y-1">
+          {validationRules.map((rule) => (
+            <div 
+              key={rule.id} 
+              className={`flex items-center gap-2 py-1.5 px-2 rounded text-xs ${
+                rule.condition 
+                  ? 'bg-green-50/50 dark:bg-green-950/20 text-green-700 dark:text-green-400' 
+                  : rule.type === 'required'
+                  ? 'bg-red-50/50 dark:bg-red-950/20 text-red-700 dark:text-red-400'
+                  : 'bg-yellow-50/50 dark:bg-yellow-950/20 text-yellow-700 dark:text-yellow-400'
+              }`}
+            >
+              <div className="flex-shrink-0">
                 {getIcon(rule.condition ? 'success' : rule.type)}
-                <span className="flex-1">{rule.message}</span>
-                <Badge variant={rule.condition ? 'default' : getBadgeVariant(rule.type)}>
-                  {rule.condition ? 'OK' : translateValidationType(rule.type)}
-                </Badge>
               </div>
-            ))}
-          </div>
+              <span className="flex-1 min-w-0 truncate">{rule.message}</span>
+              {!rule.condition && (
+                <Badge 
+                  variant={getBadgeVariant(rule.type)} 
+                  className="text-xs px-1.5 py-0 h-5 flex-shrink-0"
+                >
+                  {translateValidationType(rule.type)}
+                </Badge>
+              )}
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>

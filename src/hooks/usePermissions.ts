@@ -141,6 +141,7 @@ export const usePermissions = () => {
   const canEditFiscal = () => canEditModule('fiscal');
   const canAccessFinancial = () => canAccessModule('financial');
   const canEditFinancial = () => canEditModule('financial');
+  const canEditOrderIdentity = () => hasModulePermission('orders', 'admin');
 
   // Verificação genérica de role
   const hasRole = (requiredRole: AppRole | AppRole[]): boolean => {
@@ -212,6 +213,7 @@ export const usePermissions = () => {
     canEditFiscal,
     canAccessFinancial,
     canEditFinancial,
+    canEditOrderIdentity,
 
     // Utilitários
     getModulePermission: (module: ModuleName) => {

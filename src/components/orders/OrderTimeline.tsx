@@ -9,6 +9,7 @@ import { useOrderTimeline } from '@/hooks/useOrderTimeline';
 
 interface OrderTimelineProps {
   orderId: string;
+  enabled?: boolean;
 }
 
 const ICON_MAP = {
@@ -52,8 +53,8 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   'warranty': 'Garantia'
 };
 
-export function OrderTimeline({ orderId }: OrderTimelineProps) {
-  const { events, loading } = useOrderTimeline(orderId);
+export function OrderTimeline({ orderId, enabled = true }: OrderTimelineProps) {
+  const { events, loading } = useOrderTimeline(orderId, enabled);
 
   if (loading) {
     return (

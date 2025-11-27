@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
@@ -24,14 +24,18 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 import { Order, useOrders } from '@/hooks/useOrders';
 import { usePrintOrder } from '@/hooks/usePrintOrder';
 import { OrderTimeline } from './OrderTimeline';
 import { OrderPhotosTab } from './OrderPhotosTab';
 import { OrderMaterialsTab } from './OrderMaterialsTab';
 import { OrderWarrantyTab } from './OrderWarrantyTab';
+import { OrderDocumentsTab } from './OrderDocumentsTab';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { usePermissions } from '@/hooks/usePermissions';
+import { EngineTypeSelect } from '@/components/ui/EngineTypeSelect';
 import {
   Dialog,
   DialogContent,
@@ -78,12 +82,26 @@ const PRIORITY_LABELS = {
 export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
   const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [markingAsDelivered, setMarkingAsDelivered] = useState(false);
-  const { fetchOrderDetails, markOrderAsDelivered } = useOrders();
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [engineDialogOpen, setEngineDialogOpen] = useState(false);
+  const [customerForm, setCustomerForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: ''
+  });
+  const [selectedEngineTypeId, setSelectedEngineTypeId] = useState<string | undefined>(undefined);
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [savingEngine, setSavingEngine] = useState(false);
+  const { fetchOrderDetails, markOrderAsDelivered, updateOrderCustomerData, updateOrderEngineType } = useOrders();
   const { printOrder } = usePrintOrder();
   const { toast } = useToast();
+  const permissions = usePermissions();
+  const canEditSensitiveData = permissions.canEditOrderIdentity();
 
   useEffect(() => {
     const loadOrderDetails = async () => {
@@ -95,6 +113,25 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
 
     loadOrderDetails();
   }, [orderId, fetchOrderDetails]);
+
+  useEffect(() => {
+    if (order?.customer) {
+      setCustomerForm({
+        name: order.customer.name || '',
+        phone: order.customer.phone || '',
+        email: order.customer.email || '',
+        address: order.customer.address || ''
+      });
+    }
+    if (order?.engine) {
+      setSelectedEngineTypeId(order.engine.engine_type_id || undefined);
+    }
+  }, [order?.customer, order?.engine]);
+
+  const refreshOrderDetails = useCallback(async () => {
+    const updated = await fetchOrderDetails(orderId);
+    setOrder(updated);
+  }, [fetchOrderDetails, orderId]);
 
   const handleMarkAsDelivered = async () => {
     if (!order) return;
@@ -120,6 +157,44 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
     order.status !== 'entregue' && 
     order.status !== 'cancelada' &&
     (order.status === 'concluida' || order.status === 'em_producao' || order.status === 'aprovada');
+
+  const handleSaveCustomer = async () => {
+    if (!order?.customer?.id) return;
+
+    setSavingCustomer(true);
+    const success = await updateOrderCustomerData(order.customer.id, {
+      name: customerForm.name.trim(),
+      phone: customerForm.phone.trim(),
+      email: customerForm.email.trim(),
+      address: customerForm.address.trim(),
+    });
+    setSavingCustomer(false);
+
+    if (success) {
+      await refreshOrderDetails();
+      setCustomerDialogOpen(false);
+    }
+  };
+
+  const handleSaveEngineType = async () => {
+    if (!order?.engine?.id || !selectedEngineTypeId) {
+      toast({
+        title: "Selecione um tipo",
+        description: "Escolha um tipo de motor antes de salvar.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setSavingEngine(true);
+    const success = await updateOrderEngineType(order.engine.id, selectedEngineTypeId);
+    setSavingEngine(false);
+
+    if (success) {
+      await refreshOrderDetails();
+      setEngineDialogOpen(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -214,24 +289,35 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="timeline">Linha do Tempo</TabsTrigger>
-          <TabsTrigger value="materials">Materiais</TabsTrigger>
-          <TabsTrigger value="warranties">Garantias</TabsTrigger>
-          <TabsTrigger value="photos">Fotos</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 h-auto">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
+          <TabsTrigger value="timeline" className="text-xs sm:text-sm">Linha do Tempo</TabsTrigger>
+          <TabsTrigger value="materials" className="text-xs sm:text-sm">Materiais</TabsTrigger>
+          <TabsTrigger value="warranties" className="text-xs sm:text-sm">Garantias</TabsTrigger>
+          <TabsTrigger value="photos" className="text-xs sm:text-sm">Fotos</TabsTrigger>
+          <TabsTrigger value="documents" className="text-xs sm:text-sm">Documentos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Customer Information */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5" />
                   Informações do Cliente
                 </CardTitle>
+                {canEditSensitiveData && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCustomerDialogOpen(true)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
+                  </Button>
+                )}
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
@@ -250,16 +336,33 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
                     <span>{order.customer.email}</span>
                   </div>
                 )}
+                {order.customer?.address && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span>{order.customer.address}</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             {/* Engine Information */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Wrench className="h-5 w-5" />
                   Informações do Motor
                 </CardTitle>
+                {canEditSensitiveData && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEngineDialogOpen(true)}
+                    disabled={!order.engine}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Alterar Tipo
+                  </Button>
+                )}
               </CardHeader>
               <CardContent className="space-y-3">
                 {order.engine ? (
@@ -346,7 +449,7 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
         </TabsContent>
 
         <TabsContent value="timeline">
-          <OrderTimeline orderId={orderId} />
+          <OrderTimeline orderId={orderId} enabled={activeTab === 'timeline'} />
         </TabsContent>
 
         <TabsContent value="materials">
@@ -355,51 +458,6 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
 
         <TabsContent value="warranties">
           <OrderWarrantyTab orderId={orderId} />
-        </TabsContent>
-
-        <TabsContent value="warranties-old">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Garantias
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {order.warranties && order.warranties.length > 0 ? (
-                <div className="space-y-4">
-                  {order.warranties.map((warranty) => (
-                    <div key={warranty.id} className="p-3 border rounded-lg">
-                      <div className="flex justify-between items-center mb-2">
-                        <Badge variant={warranty.is_active ? "default" : "secondary"}>
-                          {warranty.warranty_type === 'total' ? 'Garantia Total' : 
-                           warranty.warranty_type === 'pecas' ? 'Garantia de Peças' : 
-                           'Garantia de Serviço'}
-                        </Badge>
-                        <Badge variant={warranty.is_active ? "default" : "secondary"}>
-                          {warranty.is_active ? 'Ativa' : 'Inativa'}
-                        </Badge>
-                      </div>
-                      <div className="space-y-1 text-sm">
-                        <p>
-                          <strong>Período:</strong> {format(new Date(warranty.start_date), 'dd/MM/yyyy', { locale: ptBR })} até {format(new Date(warranty.end_date), 'dd/MM/yyyy', { locale: ptBR })}
-                        </p>
-                        {warranty.terms && (
-                          <p>
-                            <strong>Termos:</strong> {warranty.terms}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-4">
-                  Nenhuma garantia registrada.
-                </p>
-              )}
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="photos">
@@ -415,7 +473,114 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="documents">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Documentos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <OrderDocumentsTab orderId={orderId} />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* Edit Customer Dialog */}
+      <Dialog open={customerDialogOpen} onOpenChange={(open) => setCustomerDialogOpen(open)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar dados do cliente</DialogTitle>
+            <DialogDescription>
+              Atualize as informações principais do cliente desta ordem.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="customer-name">Nome</Label>
+              <Input
+                id="customer-name"
+                value={customerForm.name}
+                onChange={(e) => setCustomerForm((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Nome completo"
+              />
+            </div>
+            <div>
+              <Label htmlFor="customer-phone">Telefone</Label>
+              <Input
+                id="customer-phone"
+                value={customerForm.phone}
+                onChange={(e) => setCustomerForm((prev) => ({ ...prev, phone: e.target.value }))}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            <div>
+              <Label htmlFor="customer-email">E-mail</Label>
+              <Input
+                id="customer-email"
+                type="email"
+                value={customerForm.email}
+                onChange={(e) => setCustomerForm((prev) => ({ ...prev, email: e.target.value }))}
+                placeholder="cliente@email.com"
+              />
+            </div>
+            <div>
+              <Label htmlFor="customer-address">Endereço</Label>
+              <Textarea
+                id="customer-address"
+                value={customerForm.address}
+                onChange={(e) => setCustomerForm((prev) => ({ ...prev, address: e.target.value }))}
+                placeholder="Endereço completo"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCustomerDialogOpen(false)} disabled={savingCustomer}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveCustomer} disabled={savingCustomer}>
+              {savingCustomer ? 'Salvando...' : 'Salvar alterações'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Engine Type Dialog */}
+      <Dialog open={engineDialogOpen} onOpenChange={(open) => setEngineDialogOpen(open)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Alterar tipo de motor</DialogTitle>
+            <DialogDescription>
+              Selecione o tipo de motor correto para esta OS.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Tipo de motor</Label>
+              <EngineTypeSelect
+                value={selectedEngineTypeId}
+                onChange={setSelectedEngineTypeId}
+                placeholder="Selecione um tipo de motor"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEngineDialogOpen(false)} disabled={savingEngine}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveEngineType} disabled={savingEngine}>
+              {savingEngine ? 'Salvando...' : 'Salvar alterações'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de Confirmação de Entrega */}
       <Dialog open={showDeliveryDialog} onOpenChange={setShowDeliveryDialog}>

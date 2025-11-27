@@ -163,14 +163,14 @@ export default function PCP() {
         </div>
         
         {canEdit && (
-          <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                {translateAction('new')} Cronograma
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              {translateAction('new')} Cronograma
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>{translateAction('create')} Cronograma</DialogTitle>
             </DialogHeader>
@@ -245,7 +245,7 @@ export default function PCP() {
               </Button>
             </div>
           </DialogContent>
-          </Dialog>
+        </Dialog>
         )}
       </div>
 
@@ -382,30 +382,30 @@ export default function PCP() {
                     </div>
                     
                     {canEdit && (
-                      <div className="flex gap-1">
-                        {schedule.status === 'planned' && (
-                          <Button 
-                            size="sm" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUpdateStatus(schedule.id, 'in_progress');
-                            }}
-                          >
-                            {translateAction('start')}
-                          </Button>
-                        )}
-                        {schedule.status === 'in_progress' && (
-                          <Button 
-                            size="sm" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUpdateStatus(schedule.id, 'completed');
-                            }}
-                          >
-                            {translateAction('complete')}
-                          </Button>
-                        )}
-                      </div>
+                    <div className="flex gap-1">
+                      {schedule.status === 'planned' && (
+                        <Button 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUpdateStatus(schedule.id, 'in_progress');
+                          }}
+                        >
+                          {translateAction('start')}
+                        </Button>
+                      )}
+                      {schedule.status === 'in_progress' && (
+                        <Button 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUpdateStatus(schedule.id, 'completed');
+                          }}
+                        >
+                          {translateAction('complete')}
+                        </Button>
+                      )}
+                    </div>
                     )}
                   </div>
                 </div>

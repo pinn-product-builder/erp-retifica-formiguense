@@ -13,6 +13,7 @@ import { Plus, Trash2, Search, AlertCircle, Loader2, Check, ChevronsUpDown } fro
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
+import { DiagnosticService } from '@/services/DiagnosticService';
 import type { DetailedBudget } from '@/hooks/useDetailedBudgets';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { MaskedInput } from '@/components/ui/masked-input';
@@ -271,6 +272,104 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
 
     fetchOrderComponents();
   }, [selectedOrderId, currentOrganization?.id, toast]);
+
+  // Buscar dados do diagnóstico quando ordem for selecionada
+  useEffect(() => {
+    const fetchDiagnosticData = async () => {
+      if (!selectedOrderId || !currentOrganization?.id || budget) return;
+
+      try {
+        const diagnosticResponses = await DiagnosticService.getDiagnosticDataForBudget(
+          selectedOrderId,
+          currentOrganization.id
+        );
+
+        if (diagnosticResponses && diagnosticResponses.length > 0) {
+          const latestResponse = diagnosticResponses[0] as Record<string, unknown>;
+          
+          const diagnosticParts = (latestResponse.additional_parts as Part[]) || [];
+          const diagnosticServices = (latestResponse.additional_services as Array<Record<string, unknown>>) || [];
+          const generatedServices = (latestResponse.generated_services as Array<Record<string, unknown>>) || [];
+
+          if (diagnosticParts.length > 0 || diagnosticServices.length > 0 || generatedServices.length > 0) {
+            const loadedParts: Part[] = [];
+            const loadedServices: Service[] = [];
+
+            if (diagnosticParts.length > 0) {
+              diagnosticParts.forEach((part: Part) => {
+                loadedParts.push({
+                  id: part.id || `part_${Date.now()}_${Math.random()}`,
+                  part_code: part.part_code,
+                  part_name: part.part_name,
+                  quantity: part.quantity,
+                  unit_price: part.unit_price,
+                  total: part.total
+                });
+              });
+            }
+
+            if (diagnosticServices.length > 0) {
+              diagnosticServices.forEach((service: Record<string, unknown>) => {
+                const serviceName = service.name || service.description || 'Serviço do diagnóstico';
+                const serviceTotal = (service.total as number) || 0;
+                const laborHours = (service.labor_hours as number) || 1;
+                
+                loadedServices.push({
+                  id: (service.id as string) || `service_${Date.now()}_${Math.random()}`,
+                  description: String(serviceName),
+                  quantity: 1,
+                  unit_price: serviceTotal / laborHours,
+                  total: serviceTotal
+                });
+              });
+            }
+
+            if (generatedServices.length > 0) {
+              generatedServices.forEach((service: Record<string, unknown>, index: number) => {
+                const serviceName = service.name || service.description || 'Serviço do diagnóstico';
+                const serviceTotal = (service.labor_hours as number || 1) * (service.labor_rate as number || 50);
+                
+                loadedServices.push({
+                  id: `generated_service_${index}`,
+                  description: String(serviceName),
+                  quantity: 1,
+                  unit_price: serviceTotal,
+                  total: serviceTotal
+                });
+              });
+            }
+
+            if (loadedParts.length > 0) {
+              setParts(prev => {
+                const existingCodes = new Set(prev.map(p => p.part_code));
+                const newParts = loadedParts.filter(p => !existingCodes.has(p.part_code));
+                return [...prev, ...newParts];
+              });
+            }
+
+            if (loadedServices.length > 0) {
+              setServices(prev => {
+                const existingDescriptions = new Set(prev.map(s => s.description));
+                const newServices = loadedServices.filter(s => !existingDescriptions.has(s.description));
+                return [...prev, ...newServices];
+              });
+            }
+
+            if (loadedParts.length > 0 || loadedServices.length > 0) {
+              toast({
+                title: 'Dados carregados',
+                description: `Foram carregados ${loadedParts.length} peça(s) e ${loadedServices.length} serviço(s) do diagnóstico`,
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados do diagnóstico:', error);
+      }
+    };
+
+    fetchDiagnosticData();
+  }, [selectedOrderId, currentOrganization?.id, budget, toast]);
 
   // Carregar peças do estoque
   useEffect(() => {

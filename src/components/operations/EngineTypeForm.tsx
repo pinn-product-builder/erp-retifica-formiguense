@@ -199,52 +199,52 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base sm:text-lg">Informações Básicas</CardTitle>
-            <CardDescription className="text-sm">
-              Dados fundamentais do tipo de motor
-            </CardDescription>
-          </CardHeader>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base sm:text-lg">Informações Básicas</CardTitle>
+              <CardDescription className="text-sm">
+                Dados fundamentais do tipo de motor
+              </CardDescription>
+            </CardHeader>
             <CardContent className="space-y-3 sm:space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome do Tipo</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Geral, Bosch, Linha Pesada..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome do Tipo</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Geral, Bosch, Linha Pesada..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Categoria</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma categoria" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {CATEGORIES.map((category) => (
-                            <SelectItem key={category.value} value={category.value}>
-                              {category.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Categoria</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma categoria" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CATEGORIES.map((category) => (
+                          <SelectItem key={category.value} value={category.value}>
+                            {category.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               </div>
 
               <FormField
@@ -326,16 +326,16 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
                   </FormItem>
                 )}
               />
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base sm:text-lg">Componentes Obrigatórios</CardTitle>
-            <CardDescription className="text-sm">
-              Selecione os componentes que fazem parte deste tipo de motor
-            </CardDescription>
-          </CardHeader>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base sm:text-lg">Componentes Obrigatórios</CardTitle>
+              <CardDescription className="text-sm">
+                Selecione os componentes que fazem parte deste tipo de motor
+              </CardDescription>
+            </CardHeader>
             <CardContent>
               <FormField
                 control={form.control}
@@ -391,7 +391,7 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
                 )}
               />
             </CardContent>
-        </Card>
+          </Card>
 
         <Card>
           <CardHeader>

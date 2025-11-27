@@ -2,15 +2,17 @@
 
 import React, { useState, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Autocomplete, Chip, TextField } from '@mui/material';
+import { Autocomplete, Chip, TextField, Stack, InputAdornment, IconButton } from '@mui/material';
 import { KanbanColumn } from './KanbanColumn';
 import { ComponentCard } from './ComponentCard';
 import { useWorkflowUpdate } from '@/hooks/useWorkflowUpdate';
-import { useWorkflowStatusConfig } from '@/hooks/useWorkflowStatusConfig';
+import { useWorkflowStatusConfig, WorkflowStatusConfig, FIXED_WORKFLOW_STATUSES } from '@/hooks/useWorkflowStatusConfig';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { Badge } from '@/components/ui/badge';
 import { useMuiTheme } from '@/config/muiTheme';
+import { useEmployeesDirectory } from '@/hooks/useEmployeesDirectory';
+import { Search, X } from 'lucide-react';
 
 // Função para obter cor do componente
 const getComponentColor = (componentId: string): string => {
@@ -53,8 +55,10 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
   const { workflowStatuses, getStatusColors, getNextAllowedStatuses, loading } = useWorkflowStatusConfig();
   const { isMobile, isTablet } = useBreakpoint();
   const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
+  const { employees: employeeDirectory, loading: employeesLoading } = useEmployeesDirectory();
   const theme = useMuiTheme();
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
+  const [orderSearch, setOrderSearch] = useState('');
   
   // Função para converter cor Tailwind para hex (simplificada - usa cores Material UI)
   const getColorHex = (tailwindColor: string): string => {
@@ -103,13 +107,64 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
     }));
   }, [COMPONENTS]);
 
-  // Obter ordem dos status das configurações
-  const statusOrder = workflowStatuses
-    .filter(status => status.is_active)
-    .sort((a, b) => a.display_order - b.display_order)
-    .map(status => status.status_key);
+  const orderOptions = useMemo(() => {
+    const uniqueOrders = new Set<string>();
+    orders.forEach(order => {
+      if (order.order_number) {
+        uniqueOrders.add(String(order.order_number));
+      }
+    });
+    return Array.from(uniqueOrders);
+  }, [orders]);
+
+  const statusConfigMap = useMemo(() => {
+    return workflowStatuses.reduce((acc, status) => {
+      acc[status.status_key] = status;
+      return acc;
+    }, {} as Record<string, WorkflowStatusConfig>);
+  }, [workflowStatuses]);
+
+  const statusOrder = useMemo(() => {
+    const activeStatuses = workflowStatuses
+      .filter(status => status.is_active)
+      .sort((a, b) => a.display_order - b.display_order);
+
+    const entryStatus = activeStatuses.find(status => status.status_key === 'entrada');
+    const deliveredStatus = activeStatuses.find(status => status.status_key === 'entregue');
+    const middleStatuses = activeStatuses
+      .filter(status => !FIXED_WORKFLOW_STATUSES.includes(status.status_key as (typeof FIXED_WORKFLOW_STATUSES)[number]))
+      .map(status => status.status_key);
+
+    const orderedKeys: string[] = [];
+    if (entryStatus) {
+      orderedKeys.push(entryStatus.status_key);
+    } else {
+      orderedKeys.push('entrada');
+    }
+
+    middleStatuses.forEach(statusKey => {
+      if (!orderedKeys.includes(statusKey)) {
+        orderedKeys.push(statusKey);
+      }
+    });
+
+    if (deliveredStatus) {
+      orderedKeys.push(deliveredStatus.status_key);
+    } else {
+      orderedKeys.push('entregue');
+    }
+
+    return orderedKeys;
+  }, [workflowStatuses]);
 
   const statusColors = getStatusColors();
+
+  const employeeMap = useMemo(() => {
+    return employeeDirectory.reduce<Record<string, string>>((acc, employee) => {
+      acc[employee.id] = employee.full_name;
+      return acc;
+    }, {});
+  }, [employeeDirectory]);
 
   // Função para obter cor do componente
   const getComponentColorById = (component: string) => {
@@ -120,6 +175,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
   // Organizar workflows por status para os componentes selecionados
   const organizeWorkflowsByStatus = () => {
     const workflowsByStatus: Record<string, Array<Record<string, unknown>>> = {};
+    const normalizedOrderSearch = orderSearch.trim().toLowerCase();
     
     statusOrder.forEach(status => {
       workflowsByStatus[status] = [];
@@ -128,6 +184,13 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
     const hasSelections = selectedComponents.length > 0;
 
     orders.forEach(order => {
+      const matchesOrderFilter = !normalizedOrderSearch
+        || String(order.order_number || '').toLowerCase().includes(normalizedOrderSearch);
+
+      if (!matchesOrderFilter) {
+        return;
+      }
+
       if (order.order_workflow) {
         if (!hasSelections) {
           // Nenhum componente selecionado = mostrar todos
@@ -139,7 +202,9 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
               customerName: order.customers?.name,
               engineModel: order.engines ? `${order.engines.brand || ''} ${order.engines.model || ''}`.trim() : 'Motor não informado',
               collectionDate: order.collection_date,
-              componentColor: getComponentColorById(workflow.component)
+              componentColor: getComponentColorById(workflow.component),
+              statusConfig: statusConfigMap[workflow.status],
+              assignedEmployeeName: workflow.assignedEmployeeName || employeeMap[workflow.assigned_to] || workflow.assigned_to || null
             };
             
             workflowsByStatus[workflow.status]?.push(workflowItem);
@@ -147,7 +212,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
         } else {
           // Filtrar pelos componentes selecionados
           order.order_workflow.forEach((workflow: unknown) => {
-            if (selectedComponents.includes(workflow.component)) {
+              if (selectedComponents.includes(workflow.component)) {
               const workflowItem = {
                 ...workflow,
                 order: order,
@@ -155,7 +220,9 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
                 customerName: order.customers?.name,
                 engineModel: order.engines ? `${order.engines.brand || ''} ${order.engines.model || ''}`.trim() : 'Motor não informado',
                 collectionDate: order.collection_date,
-                componentColor: getComponentColorById(workflow.component)
+                  componentColor: getComponentColorById(workflow.component),
+                  statusConfig: statusConfigMap[workflow.status],
+                  assignedEmployeeName: workflow.assignedEmployeeName || employeeMap[workflow.assigned_to] || workflow.assigned_to || null
               };
               
               workflowsByStatus[workflow.status]?.push(workflowItem);
@@ -163,6 +230,16 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
           });
         }
       }
+    });
+
+    Object.keys(workflowsByStatus).forEach(statusKey => {
+      workflowsByStatus[statusKey].sort((a, b) => {
+        const getTimestamp = (workflowItem: Record<string, unknown>) => {
+          const updated = workflowItem.updated_at || workflowItem.started_at || workflowItem.created_at;
+          return updated ? new Date(updated as string).getTime() : 0;
+        };
+        return getTimestamp(b) - getTimestamp(a);
+      });
     });
 
     return workflowsByStatus;
@@ -235,14 +312,18 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
     <div className="h-full flex flex-col">
       {/* Header Section - Fixed */}
       <div className="flex-shrink-0 space-y-4 mb-6">
-        {/* Component Selector - Material UI Autocomplete */}
-        <div className="w-full">
+        {/* Filters */}
+        <Stack
+          direction={isMobile ? 'column' : 'row'}
+          spacing={2}
+          sx={{ width: '100%' }}
+        >
           <Autocomplete
             multiple
             options={componentOptions}
             getOptionLabel={(option) => option.label}
             value={componentOptions.filter(opt => selectedComponents.includes(opt.value))}
-            onChange={(event, newValue) => {
+            onChange={(_, newValue) => {
               setSelectedComponents(newValue.map(v => v.value));
             }}
             loading={componentsLoading}
@@ -274,6 +355,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
               })
             }
             sx={{
+              flex: 1,
               '& .MuiOutlinedInput-root': {
                 backgroundColor: theme.palette.mode === 'dark' 
                   ? theme.palette.grey[900] 
@@ -281,7 +363,59 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
               }
             }}
           />
-        </div>
+
+          <Autocomplete
+            freeSolo
+            options={orderOptions}
+            value={orderSearch}
+            onChange={(_, newValue) => setOrderSearch(newValue || '')}
+            inputValue={orderSearch}
+            onInputChange={(_, newInputValue, reason) => {
+              if (reason === 'reset') return;
+              setOrderSearch(newInputValue);
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Buscar OS"
+                placeholder="Digite o número da OS"
+                variant="outlined"
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: (
+                    <>
+                      <InputAdornment position="start">
+                        <Search className="w-4 h-4 text-muted-foreground" />
+                      </InputAdornment>
+                      {params.InputProps.startAdornment}
+                    </>
+                  ),
+                  endAdornment: (
+                    <>
+                      {orderSearch && (
+                        <InputAdornment position="end">
+                          <IconButton size="small" onClick={() => setOrderSearch('')}>
+                            <X className="w-4 h-4" />
+                          </IconButton>
+                        </InputAdornment>
+                      )}
+                      {params.InputProps.endAdornment}
+                    </>
+                  )
+                }}
+              />
+            )}
+            sx={{
+              flex: 1,
+              minWidth: isMobile ? '100%' : 260,
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: theme.palette.mode === 'dark' 
+                  ? theme.palette.grey[900] 
+                  : theme.palette.background.paper,
+              }
+            }}
+          />
+        </Stack>
 
         {/* Component Header */}
         <div className="flex items-center gap-3 flex-wrap">
@@ -320,6 +454,8 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
                     componentColor="bg-gray-500"
                     statusColors={statusColors}
                     onUpdate={onOrderUpdate}
+                    employeeOptions={employeeDirectory}
+                    employeesLoading={employeesLoading}
                   />
                 </div>
               ))}
