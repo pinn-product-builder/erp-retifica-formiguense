@@ -17,6 +17,17 @@ import { useEngineTypes } from '@/hooks/useEngineTypes';
 import { useMacroComponents } from '@/hooks/useMacroComponents';
 import { z } from 'zod';
 
+const translateItemType = (type: string): string => {
+  const translations: Record<string, string> = {
+    'checkbox': 'Checkbox',
+    'measurement': 'Medição',
+    'photo': 'Foto',
+    'text': 'Texto',
+    'select': 'Seleção'
+  };
+  return translations[type] || type;
+};
+
 const mapMacroComponentToEnum = (macroComponentName: string): string => {
   const mapping: Record<string, string> = {
     'Bloco': 'bloco',
@@ -429,7 +440,7 @@ export default function DiagnosticChecklistsConfig({
                           <div>
                             <p className="font-medium text-sm">{item.item_name}</p>
                             <div className="flex gap-2 text-xs text-muted-foreground">
-                              <span>Tipo: {item.item_type}</span>
+                              <span>Tipo: {translateItemType(item.item_type)}</span>
                               {item.is_required && <Badge variant="outline" className="text-xs">Obrigatório</Badge>}
                             </div>
                           </div>
