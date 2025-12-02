@@ -131,12 +131,32 @@ export function OrderTimeline({ orderId, enabled = true }: OrderTimelineProps) {
                     <div className="mt-3 p-3 bg-muted rounded-md">
                       <p className="text-xs font-medium text-muted-foreground mb-2">Detalhes:</p>
                       <div className="grid grid-cols-2 gap-2">
-                        {Object.entries(event.details).map(([key, value]) => (
-                          <div key={key} className="text-xs">
-                            <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span>{' '}
-                            <span className="text-muted-foreground">{String(value)}</span>
-                          </div>
-                        ))}
+                        {Object.entries(event.details).map(([key, value]) => {
+                          const fieldLabels: Record<string, string> = {
+                            'old_status': 'Status Anterior',
+                            'new_status': 'Novo Status',
+                            'component': 'Componente',
+                            'budget_number': 'Número do Orçamento',
+                            'status': 'Status',
+                            'total_amount': 'Valor Total',
+                            'approval_type': 'Tipo de Aprovação',
+                            'approved_amount': 'Valor Aprovado',
+                            'part_code': 'Código da Peça',
+                            'quantity': 'Quantidade',
+                            'report_type': 'Tipo de Relatório',
+                            'conformity_status': 'Status de Conformidade',
+                            'warranty_type': 'Tipo de Garantia',
+                            'start_date': 'Data de Início',
+                            'end_date': 'Data de Término'
+                          };
+                          const label = fieldLabels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                          return (
+                            <div key={key} className="text-xs">
+                              <span className="font-medium">{label}:</span>{' '}
+                              <span className="text-muted-foreground">{String(value)}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

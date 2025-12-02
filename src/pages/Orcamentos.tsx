@@ -198,9 +198,8 @@ const Orcamentos = () => {
     const result = await duplicateBudget(budget.id);
     if (result) {
       // Guardar os dados duplicados e abrir formulário
-      // Remover order_id para permitir selecionar nova ordem de serviço
-      const { order_id, ...duplicatedData } = result as Partial<DetailedBudget>;
-      setDuplicatedBudgetData(duplicatedData);
+      // Manter order_id para pré-selecionar, mas permitir alteração
+      setDuplicatedBudgetData({ ...result, order_id: budget.order_id } as Partial<DetailedBudget>);
       setEditingBudget(null); // Modo criar novo, não editar
       setIsFormOpen(true);
       
@@ -518,12 +517,14 @@ const Orcamentos = () => {
                       
                       {canEdit && (
                         <>
-                          <DropdownMenuItem
-                            onClick={() => handleEditBudget(budget)}
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
+                          {budget.status !== 'approved' && (
+                            <DropdownMenuItem
+                              onClick={() => handleEditBudget(budget)}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                          )}
                           
                           {/* Rascunho: enviar ao cliente */}
                           {budget.status === 'draft' && (
@@ -577,16 +578,18 @@ const Orcamentos = () => {
                             Duplicar
                           </DropdownMenuItem>
                           
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setBudgetToDelete(budget);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                            className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Excluir
-                          </DropdownMenuItem>
+                          {budget.status !== 'approved' && (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setBudgetToDelete(budget);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          )}
                         </>
                       )}
                     </DropdownMenuContent>

@@ -145,6 +145,14 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     textSetter(limitedValue.toString());
   };
 
+  // Sincronizar selectedOrderId quando budget ou orderId mudarem
+  useEffect(() => {
+    const newOrderId = orderId || budget?.order_id || '';
+    if (newOrderId !== selectedOrderId) {
+      setSelectedOrderId(newOrderId);
+    }
+  }, [budget?.order_id, orderId]);
+
   // Inicializar campos de texto com valores dos números
   useEffect(() => {
     setLaborHoursText(laborHours.toString());
@@ -156,11 +164,17 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
 
   // Carregar dados do diagnóstico quando ordem for selecionada
   useEffect(() => {
+    let isMounted = true;
+    
     const loadDiagnosticData = async () => {
-      if (!selectedOrderId || !currentOrganization?.id || budget) return;
+      if (!selectedOrderId || !currentOrganization?.id || budget) {
+        if (!isMounted) return;
+        return;
+      }
       
       // Se a ordem mudou, limpar dados anteriores
       if (selectedOrderId !== lastLoadedOrderId) {
+        if (!isMounted) return;
         setParts([]);
         setServices([]);
         setLastLoadedOrderId(selectedOrderId);
@@ -169,12 +183,16 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
         return;
       }
       
+      if (!isMounted) return;
       setLoadingDiagnostic(true);
       try {
         const diagnosticData = await DiagnosticService.getResponsesWithOrderData(currentOrganization.id);
+        if (!isMounted) return;
+        
         const orderDiagnostics = diagnosticData.filter(d => d.order_id === selectedOrderId);
         
         if (orderDiagnostics.length === 0) {
+          if (!isMounted) return;
           setLoadingDiagnostic(false);
           return;
         }
@@ -221,6 +239,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
           }
         });
         
+        if (!isMounted) return;
+        
         if (allParts.length > 0) {
           setParts(allParts);
           toast({
@@ -237,6 +257,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
           });
         }
       } catch (error) {
+        if (!isMounted) return;
         console.error('Erro ao carregar dados do diagnóstico:', error);
         toast({
           title: 'Erro',
@@ -244,11 +265,17 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
           variant: 'destructive',
         });
       } finally {
-        setLoadingDiagnostic(false);
+        if (isMounted) {
+          setLoadingDiagnostic(false);
+        }
       }
     };
     
     loadDiagnosticData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [selectedOrderId, currentOrganization?.id, budget, lastLoadedOrderId, toast]);
 
   // Carregar ordens disponíveis
@@ -258,7 +285,9 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
       
       setLoadingOrders(true);
       try {
-        const { data, error } = await supabase
+        const orderIdToInclude = budget?.order_id || selectedOrderId;
+        
+        const { data: activeOrders, error: activeError } = await supabase
           .from('orders')
           .select(`
             id,
@@ -271,14 +300,35 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
           .eq('status', 'ativa')
           .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Erro na query de ordens:', error);
-          throw error;
+        if (activeError) {
+          console.error('Erro na query de ordens ativas:', activeError);
+          throw activeError;
+        }
+
+        let allOrders = activeOrders || [];
+
+        if (orderIdToInclude && !allOrders.find((o: any) => o.id === orderIdToInclude)) {
+          const { data: specificOrder, error: specificError } = await supabase
+            .from('orders')
+            .select(`
+              id,
+              order_number,
+              customer_id,
+              customers!inner(name),
+              diagnostic_checklist_responses!inner(id)
+            `)
+            .eq('id', orderIdToInclude)
+            .eq('org_id', currentOrganization.id)
+            .single();
+
+          if (!specificError && specificOrder) {
+            allOrders = [specificOrder, ...allOrders];
+          }
         }
         
-        console.log('Ordens carregadas:', data);
-        console.log('Quantidade de ordens:', data?.length || 0);
-        setOrders(data || []);
+        console.log('Ordens carregadas:', allOrders);
+        console.log('Quantidade de ordens:', allOrders?.length || 0);
+        setOrders(allOrders);
       } catch (error) {
         console.error('Erro ao carregar ordens:', error);
         toast({
@@ -292,7 +342,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     };
 
     fetchOrders();
-  }, [currentOrganization?.id, toast]);
+  }, [currentOrganization?.id, budget?.order_id, selectedOrderId, toast]);
 
   // Buscar componentes da ordem selecionada
   useEffect(() => {
@@ -717,7 +767,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="order">Ordem de Serviço *</Label>
-            <Select value={selectedOrderId} onValueChange={setSelectedOrderId} disabled={!!orderId || (!!budget && !!budget.order_id)}>
+            <Select value={selectedOrderId} onValueChange={setSelectedOrderId} disabled={!!orderId || (!!budget && !!budget.order_id && !!budget.id)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a OS (O diagnóstico deve ter sido realizado)" />
               </SelectTrigger>
