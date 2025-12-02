@@ -9,22 +9,27 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, Save, X, ClipboardList, FileText } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useDiagnosticChecklists, useDiagnosticChecklistsQuery, useDiagnosticChecklistMutations, type DiagnosticChecklist } from '@/hooks/useDiagnosticChecklists';
 import { useEngineTypes } from '@/hooks/useEngineTypes';
+import { useMacroComponents } from '@/hooks/useMacroComponents';
 import { z } from 'zod';
 
-const DIAGNOSTIC_COMPONENTS = [
-  { value: 'bloco', label: 'Bloco' },
-  { value: 'biela', label: 'Biela' },
-  { value: 'virabrequim', label: 'Virabrequim' },
-  { value: 'comando', label: 'Comando - Balanceiros' },
-  { value: 'volante', label: 'Volante' },
-  { value: 'montagem', label: 'Montagem Completa' }
-] as const;
+const mapMacroComponentToEnum = (macroComponentName: string): string => {
+  const mapping: Record<string, string> = {
+    'Bloco': 'bloco',
+    'Biela': 'biela',
+    'Virabrequim': 'virabrequim',
+    'Comando': 'comando',
+    'Volante': 'volante',
+    'Cabecote': 'cabecote',
+    'Montagem Completa': 'montagem'
+  };
+  
+  return mapping[macroComponentName] || macroComponentName.toLowerCase().replace(/\s+/g, '_');
+};
 
 // Schemas de validação
 const checklistSchema = z.object({
@@ -74,7 +79,18 @@ export default function DiagnosticChecklistsConfig({
   // Hooks para dados
   const { data: checklists = [], isLoading } = useDiagnosticChecklistsQuery();
   const { engineTypes } = useEngineTypes();
+  const { macroComponents } = useMacroComponents();
   const mutations = useDiagnosticChecklistMutations();
+
+  const activeMacroComponents = macroComponents
+    .filter(mc => mc.is_active)
+    .sort((a, b) => a.display_order - b.display_order)
+    .map(mc => ({
+      id: mc.id,
+      name: mc.name,
+      value: mapMacroComponentToEnum(mc.name),
+      label: mc.name
+    }));
 
   // Debug: Log dos dados carregados
   React.useEffect(() => {
@@ -485,7 +501,7 @@ export default function DiagnosticChecklistsConfig({
                     <SelectValue placeholder="Selecionar componente" />
                   </SelectTrigger>
                   <SelectContent>
-                    {DIAGNOSTIC_COMPONENTS.map((comp) => (
+                    {activeMacroComponents.map((comp) => (
                       <SelectItem key={comp.value} value={comp.value}>
                         {comp.label}
                       </SelectItem>

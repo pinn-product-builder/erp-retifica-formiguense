@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, User, Shield, Database, Bell, Mail, Cog } from "lucide-react";
+import { Settings, User, Shield, Database, Bell, Mail, Cog, Wrench, List } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import SystemConfigAdmin from "@/components/admin/SystemConfigAdmin";
 import { WorkflowStatusConfigAdmin } from "@/components/admin/WorkflowStatusConfigAdmin";
+import { MacroComponentsAdmin } from "@/components/admin/MacroComponentsAdmin";
+import { AdditionalServicesAdmin } from "@/components/admin/AdditionalServicesAdmin";
 import { Badge } from '@/components/ui/badge';
 
 const Configuracoes = () => {
@@ -50,7 +52,7 @@ const Configuracoes = () => {
 
       <Tabs defaultValue="geral" className="w-full">
         {/* Tabs responsivas */}
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 h-auto">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 h-auto">
           <TabsTrigger value="geral" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
             <Settings className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             <span className="hidden sm:inline">Geral</span>
@@ -66,6 +68,18 @@ const Configuracoes = () => {
           <TabsTrigger value="relatorios" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
             <Mail className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             <span className="hidden sm:inline">Relat.</span>
+          </TabsTrigger>
+          <TabsTrigger value="workflow" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+            <List className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Workflow</span>
+          </TabsTrigger>
+          <TabsTrigger value="componentes" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+            <Wrench className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Componentes</span>
+          </TabsTrigger>
+          <TabsTrigger value="servicos" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
+            <Wrench className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Serviços</span>
           </TabsTrigger>
           <TabsTrigger value="sistema" className="text-xs sm:text-sm py-2 px-1 sm:px-3">
             <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -314,6 +328,40 @@ const Configuracoes = () => {
 
         <TabsContent value="workflow" className="space-y-4 sm:space-y-6">
           <WorkflowStatusConfigAdmin />
+        </TabsContent>
+
+        <TabsContent value="componentes" className="space-y-4 sm:space-y-6">
+          <Card>
+            <CardHeader className="pb-3 sm:pb-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Wrench className="w-4 h-4 sm:w-5 sm:h-5" />
+                Componentes Macro
+              </CardTitle>
+              <CardDescription className="text-sm sm:text-base">
+                Gerencie os componentes macro do sistema (Bloco, Biela, Comando, etc)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MacroComponentsAdmin />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="servicos" className="space-y-4 sm:space-y-6">
+          <Card>
+            <CardHeader className="pb-3 sm:pb-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Wrench className="w-4 h-4 sm:w-5 sm:h-5" />
+                Serviços Adicionais
+              </CardTitle>
+              <CardDescription className="text-sm sm:text-base">
+                Gerencie os serviços adicionais disponíveis para diagnósticos
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AdditionalServicesAdmin />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="sistema" className="space-y-4 sm:space-y-6">

@@ -217,6 +217,14 @@ export function useDetailedBudgets() {
   const updateDetailedBudget = async (id: string, updates: Partial<DetailedBudget>) => {
     try {
       setLoading(true);
+      
+      // Buscar orçamento atual para verificar se tem aprovações anteriores
+      const { data: currentBudget } = await supabase
+        .from('detailed_budgets')
+        .select('status, budget_approvals(id)')
+        .eq('id', id)
+        .single();
+      
       const { data, error } = await supabase
         .from('detailed_budgets')
         .update(updates as any)
@@ -233,7 +241,16 @@ export function useDetailedBudgets() {
 
       if (error) throw error;
       
-      handleSuccess('Orçamento atualizado com sucesso!');
+      // Se tinha status 'reopened' e ainda está 'reopened', informar que pode enviar ao cliente
+      const wasReopened = currentBudget?.status === 'reopened';
+      const isStillReopened = updates.status === 'reopened';
+      
+      if (wasReopened && isStillReopened) {
+        handleSuccess('Orçamento atualizado com sucesso! Você pode enviar para aprovação do cliente quando estiver pronto.');
+      } else {
+        handleSuccess('Orçamento atualizado com sucesso!');
+      }
+      
       return data;
     } catch (error) {
       handleError(error, 'Erro ao atualizar orçamento');
@@ -372,6 +389,72 @@ export function useDetailedBudgets() {
   // Alias para manter compatibilidade
   const duplicateBudget = getBudgetDataForDuplication;
 
+  // Enviar orçamento para aprovação do cliente
+  const sendToCustomer = async (id: string) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('detailed_budgets')
+        .update({ 
+          status: 'pending_customer',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select(`
+          *,
+          orders(
+            order_number,
+            customers(name, document, phone, email)
+          ),
+          budget_approvals(*)
+        `)
+        .single();
+
+      if (error) throw error;
+      
+      handleSuccess('Orçamento enviado para aprovação do cliente com sucesso!');
+      return data;
+    } catch (error) {
+      handleError(error, 'Erro ao enviar orçamento para cliente');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Reabrir orçamento aprovado
+  const reopenBudget = async (id: string) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('detailed_budgets')
+        .update({ 
+          status: 'reopened',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select(`
+          *,
+          orders(
+            order_number,
+            customers(name, document, phone, email)
+          ),
+          budget_approvals(*)
+        `)
+        .single();
+
+      if (error) throw error;
+      
+      handleSuccess('Orçamento reaberto com sucesso! Agora você pode editá-lo.');
+      return data;
+    } catch (error) {
+      handleError(error, 'Erro ao reabrir orçamento');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Excluir orçamento
   const deleteDetailedBudget = async (id: string) => {
     try {
@@ -403,6 +486,8 @@ export function useDetailedBudgets() {
     getPendingBudgets,
     duplicateBudget,
     checkBudgetExists,
-    deleteDetailedBudget
+    deleteDetailedBudget,
+    reopenBudget,
+    sendToCustomer
   };
 }

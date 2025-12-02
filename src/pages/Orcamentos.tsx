@@ -11,6 +11,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Select, 
   SelectContent, 
@@ -34,7 +42,10 @@ import {
   XCircle,
   Copy,
   Download,
-  Trash2
+  Trash2,
+  RotateCcw,
+  Send,
+  MoreVertical
 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { useDetailedBudgets, type DetailedBudget } from "@/hooks/useDetailedBudgets";
@@ -89,7 +100,7 @@ const Orcamentos = () => {
   
   const { generateBudgetReport, printBudgetReport } = useBudgetReports();
   
-  const { getDetailedBudgets, createDetailedBudget, updateDetailedBudget, duplicateBudget, deleteDetailedBudget, loading } = useDetailedBudgets();
+  const { getDetailedBudgets, createDetailedBudget, updateDetailedBudget, duplicateBudget, deleteDetailedBudget, reopenBudget, sendToCustomer, loading } = useDetailedBudgets();
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
   
@@ -150,23 +161,29 @@ const Orcamentos = () => {
   const getStatusBadge = (status: string) => {
     const colors = {
       draft: "bg-gray-100 text-gray-800",
+      pending_customer: "bg-yellow-100 text-yellow-800",
       approved: "bg-green-100 text-green-800", 
       partially_approved: "bg-yellow-100 text-yellow-800",
-      rejected: "bg-red-100 text-red-800"
+      rejected: "bg-red-100 text-red-800",
+      reopened: "bg-blue-100 text-blue-800"
     };
 
     const labels = {
       draft: translateStatus('draft', 'budget'),
+      pending_customer: translateStatus('pending_customer', 'budget'),
       approved: translateStatus('approved', 'budget'),
       partially_approved: translateStatus('partial', 'budget'),
-      rejected: translateStatus('rejected', 'budget')
+      rejected: translateStatus('rejected', 'budget'),
+      reopened: translateStatus('reopened', 'budget')
     };
 
     const icons = {
       draft: <Clock className="w-3 h-3 mr-1" />,
+      pending_customer: <AlertTriangle className="w-3 h-3 mr-1" />,
       approved: <CheckCircle className="w-3 h-3 mr-1" />,
       partially_approved: <AlertTriangle className="w-3 h-3 mr-1" />,
-      rejected: <XCircle className="w-3 h-3 mr-1" />
+      rejected: <XCircle className="w-3 h-3 mr-1" />,
+      reopened: <RotateCcw className="w-3 h-3 mr-1" />
     };
 
     return (
@@ -181,7 +198,9 @@ const Orcamentos = () => {
     const result = await duplicateBudget(budget.id);
     if (result) {
       // Guardar os dados duplicados e abrir formulário
-      setDuplicatedBudgetData(result as Partial<DetailedBudget>);
+      // Remover order_id para permitir selecionar nova ordem de serviço
+      const { order_id, ...duplicatedData } = result as Partial<DetailedBudget>;
+      setDuplicatedBudgetData(duplicatedData);
       setEditingBudget(null); // Modo criar novo, não editar
       setIsFormOpen(true);
       
@@ -230,6 +249,22 @@ const Orcamentos = () => {
       refetch();
       setIsDeleteDialogOpen(false);
       setBudgetToDelete(null);
+    }
+  };
+
+  const handleSendToCustomer = async (budget: DetailedBudget) => {
+    const result = await sendToCustomer(budget.id);
+    if (result) {
+      refetch();
+    }
+  };
+
+  const handleReopenBudget = async (budget: DetailedBudget) => {
+    const result = await reopenBudget(budget.id);
+    if (result) {
+      refetch();
+      setEditingBudget(result);
+      setIsFormOpen(true);
     }
   };
 
@@ -341,9 +376,11 @@ const Orcamentos = () => {
               <SelectContent>
                 <SelectItem value="todos">Todos os Status</SelectItem>
                 <SelectItem value="draft">{translateStatus('draft', 'budget')}</SelectItem>
+                <SelectItem value="pending_customer">{translateStatus('pending_customer', 'budget')}</SelectItem>
                 <SelectItem value="approved">{translateStatus('approved', 'budget')}</SelectItem>
                 <SelectItem value="partially_approved">{translateStatus('partial', 'budget')}</SelectItem>
                 <SelectItem value="rejected">{translateStatus('rejected', 'budget')}</SelectItem>
+                <SelectItem value="reopened">{translateStatus('reopened', 'budget')}</SelectItem>
               </SelectContent>
             </Select>
             
@@ -455,67 +492,105 @@ const Orcamentos = () => {
                 priority: 1,
                 minWidth: 150,
                 render: (budget) => (
-                  <div className="flex gap-0.5 sm:gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                      onClick={() => {
-                        setSelectedBudget(budget);
-                        setIsDetailsModalOpen(true);
-                      }}
-                    >
-                      <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </Button>
-                    {canEdit && (
-                      <>
-                    {budget.status === 'draft' && (
-                      <>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                          onClick={() => handleEditBudget(budget)}
-                        >
-                          <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                          onClick={() => {
-                            setSelectedBudget(budget);
-                            setIsApprovalModalOpen(true);
-                          }}
-                        >
-                          <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        </Button>
-                      </>
-                    )}
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-7 w-7 sm:h-8 sm:w-8 p-0"
-                      onClick={() => handleDuplicate(budget)}
-                    >
-                      <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </Button>
-                        {budget.status === 'draft' && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                      >
+                        <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setSelectedBudget(budget);
+                          setIsDetailsModalOpen(true);
+                        }}
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        Visualizar
+                      </DropdownMenuItem>
+                      
+                      {canEdit && (
+                        <>
+                          <DropdownMenuItem
+                            onClick={() => handleEditBudget(budget)}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          
+                          {/* Rascunho: enviar ao cliente */}
+                          {budget.status === 'draft' && (
+                            <DropdownMenuItem
+                              onClick={() => handleSendToCustomer(budget)}
+                            >
+                              <Send className="mr-2 h-4 w-4" />
+                              Enviar para Aprovação
+                            </DropdownMenuItem>
+                          )}
+                          
+                          {/* Em aprovação: aprovar */}
+                          {budget.status === 'pending_customer' && (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedBudget(budget);
+                                setIsApprovalModalOpen(true);
+                              }}
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Aprovar Orçamento
+                            </DropdownMenuItem>
+                          )}
+                          
+                          {/* Aprovado: reabrir */}
+                          {budget.status === 'approved' && (
+                            <DropdownMenuItem
+                              onClick={() => handleReopenBudget(budget)}
+                            >
+                              <RotateCcw className="mr-2 h-4 w-4" />
+                              Reabrir para Edição
+                            </DropdownMenuItem>
+                          )}
+                          
+                          {/* Reaberto: enviar ao cliente */}
+                          {budget.status === 'reopened' && (
+                            <DropdownMenuItem
+                              onClick={() => handleSendToCustomer(budget)}
+                            >
+                              <Send className="mr-2 h-4 w-4" />
+                              Enviar para Aprovação
+                            </DropdownMenuItem>
+                          )}
+                          
+                          <DropdownMenuSeparator />
+                          
+                          <DropdownMenuItem
+                            onClick={() => handleDuplicate(budget)}
+                          >
+                            <Copy className="mr-2 h-4 w-4" />
+                            Duplicar
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem
                             onClick={() => {
                               setBudgetToDelete(budget);
                               setIsDeleteDialogOpen(true);
                             }}
+                            className="text-red-600 focus:text-red-600 focus:bg-red-50"
                           >
-                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          </Button>
-                        )}
-                      </>
-                    )}
-                  </div>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )
               }
             ]}

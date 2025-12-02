@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "populate-services": "node scripts/populate-additional-services.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

@@ -27,6 +27,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Plus, 
   Search, 
@@ -444,8 +445,36 @@ const Diagnosticos = () => {
   };
 
   const handleStartDiagnostic = (orderId: string) => {
+    // Validar se orderId é um UUID válido
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    if (!orderId || orderId === "none" || !uuidRegex.test(orderId)) {
+      toast({
+        title: "Erro",
+        description: "Ordem de serviço inválida. Por favor, selecione uma ordem válida.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Verificar se já existe diagnóstico para esta ordem
+    const existingDiagnostic = diagnosticResponses.find(d => d.order_id === orderId);
+    
+    if (existingDiagnostic) {
+      toast({
+        title: "Diagnóstico já existe",
+        description: "Já existe um diagnóstico realizado para esta ordem de serviço. Você pode visualizá-lo na listagem.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Garantir que o estado seja atualizado em sequência
     setSelectedOrder(orderId);
-    setIsDiagnosticOpen(true);
+    // Usar setTimeout para garantir que o estado seja atualizado antes de abrir o modal
+    setTimeout(() => {
+      setIsDiagnosticOpen(true);
+    }, 50);
   };
 
   const handleDiagnosticComplete = (response: DiagnosticResponse) => {
@@ -454,7 +483,7 @@ const Diagnosticos = () => {
       description: "Diagnóstico concluído com sucesso"
     });
     setIsDiagnosticOpen(false);
-    setSelectedOrder("");
+    setTimeout(() => setSelectedOrder("none"), 100);
     
     queryClient.invalidateQueries({ queryKey: ['diagnostic-responses', currentOrganization?.id] });
   };
@@ -512,20 +541,38 @@ const Diagnosticos = () => {
                     <SelectValue placeholder="Selecione uma ordem" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ordersData.orders?.map((order) => (
-                      <SelectItem key={order.id} value={order.id}>
-                        {order.order_number} - {order.customer?.name}
-                      </SelectItem>
-                    ))}
+                    {ordersData.orders?.map((order) => {
+                      const hasDiagnostic = diagnosticResponses.some(d => d.order_id === order.id);
+                      return (
+                        <SelectItem 
+                          key={order.id} 
+                          value={order.id}
+                          disabled={hasDiagnostic}
+                        >
+                          {order.order_number} - {order.customer?.name}
+                          {hasDiagnostic && ' (Diagnóstico já realizado)'}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
+              {selectedOrder && selectedOrder !== "none" && diagnosticResponses.some(d => d.order_id === selectedOrder) && (
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    ⚠️ Esta ordem de serviço já possui um diagnóstico realizado.
+                  </p>
+                </div>
+              )}
               
               <div className="flex gap-2">
                 <Button 
                   variant="outline" 
                   className="flex-1"
-                  onClick={() => setIsCreateDialogOpen(false)}
+                  onClick={() => {
+                    setIsCreateDialogOpen(false);
+                    setTimeout(() => setSelectedOrder("none"), 100);
+                  }}
                 >
                   Cancelar
                 </Button>
@@ -533,11 +580,11 @@ const Diagnosticos = () => {
                   className="flex-1"
                   onClick={() => {
                     if (selectedOrder && selectedOrder !== "none") {
-                      handleStartDiagnostic(selectedOrder);
                       setIsCreateDialogOpen(false);
+                      handleStartDiagnostic(selectedOrder);
                     }
                   }}
-                  disabled={!selectedOrder || selectedOrder === "none"}
+                  disabled={!selectedOrder || selectedOrder === "none" || diagnosticResponses.some(d => d.order_id === selectedOrder)}
                 >
                   Iniciar Diagnóstico
                 </Button>
@@ -693,18 +740,25 @@ const Diagnosticos = () => {
       </Card>
 
       {/* Diagnostic Interface Dialog */}
-      <Dialog open={isDiagnosticOpen} onOpenChange={setIsDiagnosticOpen}>
+      <Dialog open={isDiagnosticOpen && selectedOrder !== "none" && selectedOrder !== ""} onOpenChange={(open) => {
+        setIsDiagnosticOpen(open);
+        if (!open) {
+          setTimeout(() => setSelectedOrder("none"), 100);
+        }
+      }}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DiagnosticInterface
-            orderId={selectedOrder}
-            onComplete={handleDiagnosticComplete}
-          />
+          {selectedOrder && selectedOrder !== "none" && selectedOrder !== "" && (
+            <DiagnosticInterface
+              orderId={selectedOrder}
+              onComplete={handleDiagnosticComplete}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
       {/* Details Modal */}
       <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes do Diagnóstico</DialogTitle>
             <DialogDescription>
@@ -733,66 +787,156 @@ const Diagnosticos = () => {
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">Componentes</h4>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Data</h4>
                   <p className="font-medium">
-                    {(selectedDiagnostic as any).allComponents?.length > 0 
-                      ? (selectedDiagnostic as any).allComponents.map((c: string) => getComponentLabel(c)).join(', ')
-                      : getComponentLabel(selectedDiagnostic.component)
-                    }
+                    {new Date(selectedDiagnostic.diagnosed_at).toLocaleString('pt-BR')}
                   </p>
                 </div>
               </div>
 
-              {/* Respostas do Checklist */}
-              <div>
-                <h4 className="font-semibold mb-4">Respostas do Checklist</h4>
-                {(selectedDiagnostic as any).allResponses && (selectedDiagnostic as any).allResponses.length > 0 ? (
-                  <div className="space-y-6">
-                    {(selectedDiagnostic as any).allResponses.map((response: DiagnosticResponse, idx: number) => (
-                      <div key={response.id || idx} className="border rounded-lg p-4 space-y-4">
-                        <div className="flex items-center justify-between pb-2 border-b">
-                          <h5 className="font-semibold text-sm">Componente: {getComponentLabel(response.component)}</h5>
-                          <Badge variant="outline" className="text-xs">
-                            {translateStatus(response.status, 'diagnostic')}
-                          </Badge>
-                        </div>
-                        {response.responses && Object.keys(response.responses).length > 0 ? (
-                          <ChecklistResponsesDisplay 
-                            responses={response.responses} 
-                            checklistId={response.checklist_id}
-                          />
-                        ) : (
-                          <div className="text-center py-4 text-muted-foreground">
-                            <p className="text-sm">Nenhuma resposta registrada para este componente</p>
-                          </div>
-                        )}
-                      </div>
+              {/* Tabs por Componente */}
+              {(selectedDiagnostic as any).allResponses && (selectedDiagnostic as any).allResponses.length > 0 ? (
+                <Tabs defaultValue={(selectedDiagnostic as any).allResponses[0]?.component || 'observacoes'} className="w-full">
+                  <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${(selectedDiagnostic as any).allResponses.length + 1}, minmax(0, 1fr))` }}>
+                    {(selectedDiagnostic as any).allResponses.map((response: DiagnosticResponse) => (
+                      <TabsTrigger key={response.component} value={response.component}>
+                        {getComponentLabel(response.component)}
+                      </TabsTrigger>
                     ))}
-                  </div>
-                ) : selectedDiagnostic.responses && Object.keys(selectedDiagnostic.responses).length > 0 ? (
-                  <ChecklistResponsesDisplay 
-                    responses={selectedDiagnostic.responses} 
-                    checklistId={selectedDiagnostic.checklist_id}
-                  />
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>Nenhuma resposta registrada</p>
-                  </div>
-                )}
-              </div>
+                    <TabsTrigger value="observacoes">Observações</TabsTrigger>
+                  </TabsList>
 
-              {/* Status e Data */}
-              <div className="flex justify-between items-center pt-4 border-t">
-                <div>
-                  <span className="text-sm text-muted-foreground">Status: </span>
-                  <Badge variant={selectedDiagnostic.status === 'completed' ? 'default' : 'secondary'}>
-                    {translateStatus(selectedDiagnostic.status, 'diagnostic')}
-                  </Badge>
+                  {(selectedDiagnostic as any).allResponses.map((response: DiagnosticResponse) => (
+                    <TabsContent key={response.component} value={response.component} className="space-y-6">
+                      {/* Status */}
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-semibold">Componente: {getComponentLabel(response.component)}</h4>
+                        <Badge variant={response.status === 'completed' ? 'default' : 'secondary'}>
+                          {translateStatus(response.status, 'diagnostic')}
+                        </Badge>
+                      </div>
+
+                      {/* Respostas do Checklist */}
+                      {response.responses && Object.keys(response.responses).length > 0 && (
+                        <div>
+                          <h5 className="font-semibold mb-3">Checklist</h5>
+                          <div className="border rounded-lg p-4">
+                            <ChecklistResponsesDisplay 
+                              responses={response.responses} 
+                              checklistId={response.checklist_id}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Peças Adicionais */}
+                      {(response as any).additional_parts && (response as any).additional_parts.length > 0 && (
+                        <div>
+                          <h5 className="font-semibold mb-3">Peças Adicionais</h5>
+                          <div className="border rounded-lg overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Código</TableHead>
+                                  <TableHead>Peça</TableHead>
+                                  <TableHead className="text-right">Qtd</TableHead>
+                                  <TableHead className="text-right">Preço Unit.</TableHead>
+                                  <TableHead className="text-right">Total</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {(response as any).additional_parts.map((part: any, idx: number) => (
+                                  <TableRow key={idx}>
+                                    <TableCell className="font-mono text-xs">{part.part_code}</TableCell>
+                                    <TableCell>{part.part_name}</TableCell>
+                                    <TableCell className="text-right">{part.quantity}</TableCell>
+                                    <TableCell className="text-right">R$ {part.unit_price?.toFixed(2) || '0.00'}</TableCell>
+                                    <TableCell className="text-right font-medium">R$ {part.total?.toFixed(2) || '0.00'}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Serviços Adicionais */}
+                      {(response as any).additional_services && (response as any).additional_services.length > 0 && (
+                        <div>
+                          <h5 className="font-semibold mb-3">Serviços Adicionais</h5>
+                          <div className="border rounded-lg overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Descrição</TableHead>
+                                  <TableHead className="text-right">Qtd</TableHead>
+                                  <TableHead className="text-right">Valor Unit.</TableHead>
+                                  <TableHead className="text-right">Total</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {(response as any).additional_services.map((service: any, idx: number) => (
+                                  <TableRow key={idx}>
+                                    <TableCell>{service.description}</TableCell>
+                                    <TableCell className="text-right">{service.quantity}</TableCell>
+                                    <TableCell className="text-right">R$ {service.unit_price?.toFixed(2) || '0.00'}</TableCell>
+                                    <TableCell className="text-right font-medium">R$ {service.total?.toFixed(2) || '0.00'}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+                  ))}
+
+                  {/* Tab de Observações */}
+                  <TabsContent value="observacoes" className="space-y-6">
+                    {(() => {
+                      const observations = (selectedDiagnostic as any).technical_observations || 
+                        (selectedDiagnostic as any).allResponses?.find((r: any) => r.technical_observations)?.technical_observations;
+                      const extraServices = (selectedDiagnostic as any).extra_services || 
+                        (selectedDiagnostic as any).allResponses?.find((r: any) => r.extra_services)?.extra_services;
+                      const finalOpinion = (selectedDiagnostic as any).final_opinion || 
+                        (selectedDiagnostic as any).allResponses?.find((r: any) => r.final_opinion)?.final_opinion;
+                      
+                      return (
+                        <>
+                          {observations && (
+                            <div>
+                              <h5 className="font-semibold mb-2">Observações Técnicas</h5>
+                              <p className="text-sm p-3 bg-muted/50 rounded whitespace-pre-wrap">{observations}</p>
+                            </div>
+                          )}
+                          {extraServices && (
+                            <div>
+                              <h5 className="font-semibold mb-2">Serviços Extras</h5>
+                              <p className="text-sm p-3 bg-muted/50 rounded whitespace-pre-wrap">{extraServices}</p>
+                            </div>
+                          )}
+                          {finalOpinion && (
+                            <div>
+                              <h5 className="font-semibold mb-2">Parecer Final</h5>
+                              <p className="text-sm p-3 bg-muted/50 rounded whitespace-pre-wrap">{finalOpinion}</p>
+                            </div>
+                          )}
+                          {!observations && !extraServices && !finalOpinion && (
+                            <div className="text-center py-8 text-muted-foreground">
+                              <p>Nenhuma observação registrada</p>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </TabsContent>
+                </Tabs>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Nenhum diagnóstico registrado</p>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Realizado em: {new Date(selectedDiagnostic.diagnosed_at).toLocaleString('pt-BR')}
-                </div>
-              </div>
+              )}
+
             </div>
           )}
         </DialogContent>

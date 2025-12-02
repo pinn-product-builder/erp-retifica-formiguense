@@ -13,6 +13,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { usePartsInventory, type PartInventory, type ComponentType, type PartStatus } from "@/hooks/usePartsInventory";
 import { useEngineComponents } from '@/hooks/useEngineComponents';
+import { useMacroComponents } from '@/hooks/useMacroComponents';
 
 // Função para formatar valores monetários
 const formatCurrency = (value: number): string => {
@@ -35,6 +36,7 @@ export const PartForm: React.FC<PartFormProps> = ({
 }) => {
   const { createPart, updatePart, loading } = usePartsInventory();
   const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
+  const { macroComponents, loading: macroComponentsLoading } = useMacroComponents();
   
   const isEditing = !!part;
   
@@ -45,6 +47,7 @@ export const PartForm: React.FC<PartFormProps> = ({
     unit_cost: 0,
     supplier: '',
     component: undefined as ComponentType | undefined,
+    macro_component_id: '',
     status: 'disponivel' as PartStatus,
     notes: '',
   });
@@ -60,6 +63,7 @@ export const PartForm: React.FC<PartFormProps> = ({
         unit_cost: part.unit_cost,
         supplier: part.supplier || '',
         component: part.component || undefined,
+        macro_component_id: (part as any).macro_component_id || '',
         status: part.status,
         notes: part.notes || '',
       });
@@ -97,6 +101,7 @@ export const PartForm: React.FC<PartFormProps> = ({
       unit_cost: formData.unit_cost,
       supplier: isEditing ? (formData.supplier || undefined) : undefined,
       component: formData.component || undefined,
+      macro_component_id: formData.macro_component_id || undefined,
       status: formData.status,
       notes: formData.notes || undefined,
     };
@@ -163,6 +168,36 @@ export const PartForm: React.FC<PartFormProps> = ({
                     {component.label}
                   </SelectItem>
                 ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Componente Macro */}
+        <div>
+          <Label htmlFor="macro_component_id">Componente Macro</Label>
+          <Select
+            value={formData.macro_component_id || 'none'}
+            onValueChange={(value: string) => setFormData({ 
+              ...formData, 
+              macro_component_id: value === 'none' ? '' : value
+            })}
+          >
+            <SelectTrigger id="macro_component_id">
+              <SelectValue placeholder="Selecione um componente macro..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nenhum</SelectItem>
+              {macroComponentsLoading ? (
+                <SelectItem value="loading" disabled>Carregando componentes macro...</SelectItem>
+              ) : (
+                macroComponents
+                  .filter(mc => mc.is_active)
+                  .map((macroComponent) => (
+                    <SelectItem key={macroComponent.id} value={macroComponent.id}>
+                      {macroComponent.name}
+                    </SelectItem>
+                  ))
               )}
             </SelectContent>
           </Select>

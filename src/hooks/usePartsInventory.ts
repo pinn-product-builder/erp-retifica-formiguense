@@ -16,6 +16,7 @@ export interface PartInventory {
   unit_cost: number;
   supplier?: string | null;
   component?: ComponentType | null;
+  macro_component_id?: string | null;
   status: PartStatus;
   separated_at?: string | null;
   applied_at?: string | null;
@@ -31,6 +32,7 @@ export interface CreatePartData {
   unit_cost: number;
   supplier?: string;
   component?: ComponentType;
+  macro_component_id?: string;
   status?: PartStatus;
   notes?: string;
 }
@@ -225,7 +227,7 @@ export function usePartsInventory() {
     }
   };
 
-  const getAvailableParts = useCallback(async (component?: string): Promise<PartInventory[]> => {
+  const getAvailableParts = useCallback(async (component?: string, macroComponentId?: string): Promise<PartInventory[]> => {
     if (!currentOrganization?.id) return [];
 
     try {
@@ -239,6 +241,10 @@ export function usePartsInventory() {
 
       if (component) {
         query = query.eq('component', component as unknown);
+      }
+
+      if (macroComponentId) {
+        query = query.eq('macro_component_id', macroComponentId);
       }
 
       const { data, error } = await query;

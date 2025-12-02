@@ -12,18 +12,11 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { 
-  Command, 
-  CommandEmpty, 
-  CommandGroup, 
-  CommandInput, 
-  CommandItem, 
-  CommandList 
-} from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, Search, Package, Wrench, Check, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { InfiniteAutocomplete } from '@/components/ui/infinite-autocomplete';
+import { Typography, Box } from '@mui/material';
+import { Trash2, Package, Wrench } from 'lucide-react';
 import { usePartsInventory } from '@/hooks/usePartsInventory';
+import { useAdditionalServices } from '@/hooks/useAdditionalServices';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -51,42 +44,40 @@ interface PartsServicesSelectorProps {
   selectedServices: Service[];
   onPartsChange: (parts: Part[]) => void;
   onServicesChange: (services: Service[]) => void;
+  macroComponentId?: string;
+  engineTypeId?: string;
 }
 
 export function PartsServicesSelector({
   selectedParts,
   selectedServices,
   onPartsChange,
-  onServicesChange
+  onServicesChange,
+  macroComponentId,
+  engineTypeId
 }: PartsServicesSelectorProps) {
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
   const { getAvailableParts, loading: loadingParts } = usePartsInventory();
-  const [partsInventory, setPartsInventory] = useState<Array<{ part_code: string; part_name: string; unit_cost: number; quantity: number }>>([]);
-  const [partSelectOpen, setPartSelectOpen] = useState(false);
-  const [selectedPartValue, setSelectedPartValue] = useState<string>('');
-  
-  const [newService, setNewService] = useState<{
-    description?: string;
-    quantity?: number;
-    unit_price?: number;
-  }>({
-    description: '',
-    quantity: 1,
-    unit_price: 0
-  });
+  const { additionalServices, loading: loadingServices, getServicesByComponent } = useAdditionalServices();
+  const [partsInventory, setPartsInventory] = useState<Array<{ id: string; part_code: string; part_name: string; unit_cost: number; quantity: number; label: string }>>([]);
+  const [selectedPartValue, setSelectedPartValue] = useState<{ id: string; part_code: string; part_name: string; unit_cost: number; quantity: number; label: string } | null>(null);
+  const [selectedServiceValue, setSelectedServiceValue] = useState<{ id: string; description: string; value: number; label: string } | null>(null);
+  const [filteredServices, setFilteredServices] = useState(additionalServices.filter(s => s.is_active));
 
   useEffect(() => {
     const loadParts = async () => {
       if (!currentOrganization?.id) return;
       
       try {
-        const parts = await getAvailableParts();
+        const parts = await getAvailableParts(undefined, macroComponentId);
         setPartsInventory(parts.map(p => ({
+          id: p.id,
           part_code: p.part_code || '',
           part_name: p.part_name,
           unit_cost: p.unit_cost,
-          quantity: p.quantity
+          quantity: p.quantity,
+          label: `${p.part_code || ''} - ${p.part_name}`
         })));
       } catch (error) {
         console.error('Erro ao carregar peças:', error);
@@ -99,9 +90,41 @@ export function PartsServicesSelector({
     };
 
     loadParts();
-  }, [currentOrganization?.id, getAvailableParts, toast]);
+  }, [currentOrganization?.id, macroComponentId, getAvailableParts, toast]);
 
-  const addPart = (partInventory: { part_code: string; part_name: string; unit_cost: number; quantity: number }) => {
+  useEffect(() => {
+    const filtered = additionalServices.filter(s => {
+      if (!s.is_active) return false;
+      
+      if (macroComponentId) {
+        if (s.macro_component_id && s.macro_component_id !== macroComponentId) return false;
+      }
+      
+      if (engineTypeId) {
+        if (s.engine_type_id && s.engine_type_id !== engineTypeId) return false;
+      }
+      
+      return true;
+    });
+    
+    setFilteredServices(filtered);
+    console.log('Serviços filtrados para componente:', {
+      macroComponentId,
+      engineTypeId,
+      total: filtered.length,
+      services: filtered.map(s => ({ id: s.id, description: s.description, value: s.value }))
+    });
+  }, [additionalServices, macroComponentId, engineTypeId]);
+
+  const servicesOptions = filteredServices.map(s => ({
+    id: s.id,
+    label: `${s.description} - R$ ${s.value.toFixed(2)}`,
+    description: s.description,
+    value: s.value,
+    macro_component: s.macro_component
+  }));
+
+  const addPart = (partInventory: { id: string; part_code: string; part_name: string; unit_cost: number; quantity: number; label: string }) => {
     const existingPart = selectedParts.find(p => p.part_code === partInventory.part_code);
     if (existingPart) {
       toast({
@@ -109,11 +132,12 @@ export function PartsServicesSelector({
         description: 'Esta peça já foi adicionada',
         variant: 'destructive'
       });
+      setSelectedPartValue(null);
       return;
     }
 
     const newPart: Part = {
-      id: `part_${Date.now()}`,
+      id: partInventory.id || `part_${Date.now()}`,
       part_code: partInventory.part_code,
       part_name: partInventory.part_name,
       quantity: 1,
@@ -122,8 +146,7 @@ export function PartsServicesSelector({
     };
 
     onPartsChange([...selectedParts, newPart]);
-    setSelectedPartValue('');
-    setPartSelectOpen(false);
+    setSelectedPartValue(null);
   };
 
   const removePart = (partId: string) => {
@@ -146,26 +169,28 @@ export function PartsServicesSelector({
     ));
   };
 
-  const addService = () => {
-    if (!newService.description || !newService.quantity || !newService.unit_price) {
+  const addService = (additionalService: { id: string; description: string; value: number; label: string }) => {
+    const existingService = selectedServices.find(s => s.id === additionalService.id);
+    if (existingService) {
       toast({
-        title: 'Erro',
-        description: 'Preencha todos os campos do serviço',
-        variant: 'destructive',
+        title: 'Atenção',
+        description: 'Este serviço já foi adicionado',
+        variant: 'destructive'
       });
+      setSelectedServiceValue(null);
       return;
     }
 
     const service: Service = {
-      id: `service_${Date.now()}`,
-      description: newService.description!,
-      quantity: newService.quantity!,
-      unit_price: newService.unit_price!,
-      total: newService.quantity! * newService.unit_price!,
+      id: additionalService.id,
+      description: additionalService.description,
+      quantity: 1,
+      unit_price: additionalService.value,
+      total: additionalService.value,
     };
 
     onServicesChange([...selectedServices, service]);
-    setNewService({ description: '', quantity: 1, unit_price: 0 });
+    setSelectedServiceValue(null);
   };
 
   const removeService = (serviceId: string) => {
@@ -205,62 +230,51 @@ export function PartsServicesSelector({
           {/* Seleção de Peças */}
           <div className="space-y-2">
             <Label>Selecionar Peça</Label>
-            <Popover open={partSelectOpen} onOpenChange={setPartSelectOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={partSelectOpen}
-                  className="w-full justify-between"
-                  disabled={loadingParts}
-                >
-                  {selectedPartValue
-                    ? partsInventory.find(p => `${p.part_code} - ${p.part_name}` === selectedPartValue)?.part_name
-                    : "Selecione uma peça..."}
-                  {loadingParts ? (
-                    <Loader2 className="ml-2 h-4 w-4 shrink-0 opacity-50 animate-spin" />
-                  ) : (
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-96" align="start">
-                <Command>
-                  <CommandInput placeholder="Buscar peça..." />
-                  <CommandEmpty>Nenhuma peça encontrada.</CommandEmpty>
-                  <ScrollArea className="h-64">
-                    <CommandList>
-                      <CommandGroup>
-                        {partsInventory.map((part) => (
-                          <CommandItem
-                            key={part.part_code}
-                            value={`${part.part_code} - ${part.part_name}`}
-                            onSelect={() => {
-                              addPart(part);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedParts.find(p => p.part_code === part.part_code)
-                                  ? "opacity-100"
-                                  : "opacity-0"
-                              )}
-                            />
-                            <div className="flex-1">
-                              <p className="font-medium">{part.part_name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Código: {part.part_code} | Estoque: {part.quantity} | Preço: R$ {part.unit_cost.toFixed(2)}
-                              </p>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </ScrollArea>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <InfiniteAutocomplete
+              options={partsInventory}
+              loading={loadingParts}
+              label="Buscar peça..."
+              placeholder="Digite para buscar ou selecione"
+              getOptionLabel={(option) => option.label}
+              value={selectedPartValue}
+              onChange={(_, newValue) => {
+                if (newValue) {
+                  addPart(newValue);
+                } else {
+                  setSelectedPartValue(null);
+                }
+              }}
+              renderOption={(props, option) => {
+                const isSelected = selectedParts.some(p => p.part_code === option.part_code);
+                return (
+                  <li {...props} key={option.id}>
+                    <Box sx={{ width: '100%' }}>
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          fontWeight: 500,
+                          textDecoration: isSelected ? 'line-through' : 'none',
+                          color: isSelected ? 'text.secondary' : 'text.primary'
+                        }}
+                      >
+                        {option.part_name}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+                        Código: {option.part_code} | Estoque: {option.quantity} | Preço: R$ {option.unit_cost.toFixed(2)}
+                        {isSelected && ' (já adicionado)'}
+                      </Typography>
+                    </Box>
+                  </li>
+                );
+              }}
+              filterOptions={(options, { inputValue }) => {
+                return options.filter(option =>
+                  option.part_name.toLowerCase().includes(inputValue.toLowerCase()) ||
+                  option.part_code.toLowerCase().includes(inputValue.toLowerCase())
+                );
+              }}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+            />
           </div>
 
           {/* Peças Selecionadas */}
@@ -341,45 +355,60 @@ export function PartsServicesSelector({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Formulário para Adicionar Serviço */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-            <div className="md:col-span-6">
-              <Label>Descrição do Serviço</Label>
-              <Input
-                placeholder="Descrição do serviço"
-                value={newService.description || ''}
-                onChange={(e) => setNewService({ ...newService, description: e.target.value })}
-              />
-            </div>
-            <div className="md:col-span-2">
-              <Label>Quantidade</Label>
-              <Input
-                type="text"
-                placeholder="Qtd"
-                value={(newService.quantity || 1).toString()}
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/[^\d]/g, '');
-                  const quantity = numericValue ? parseInt(numericValue) : 1;
-                  setNewService({ ...newService, quantity: Math.max(1, quantity) });
-                }}
-              />
-            </div>
-            <div className="md:col-span-3">
-              <Label>Valor Unitário</Label>
-              <MaskedInput
-                mask="currency"
-                placeholder="Valor unitário"
-                value={''}
-                onChange={(maskedValue, rawValue) => {
-                  setNewService({ ...newService, unit_price: parseFloat(rawValue) || 0 });
-                }}
-              />
-            </div>
-            <div className="md:col-span-1">
-              <Button onClick={addService} className="w-full">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
+          {/* Seleção de Serviços */}
+          <div className="space-y-2">
+            <Label>Selecionar Serviço Adicional</Label>
+            <InfiniteAutocomplete
+              options={filteredServices.map(s => ({
+                id: s.id,
+                label: `${s.description} - R$ ${s.value.toFixed(2)}`,
+                description: s.description,
+                value: s.value,
+                macro_component: s.macro_component
+              }))}
+              loading={loadingServices}
+              label="Buscar serviço..."
+              placeholder="Digite para buscar ou selecione"
+              getOptionLabel={(option) => option.label}
+              value={selectedServiceValue}
+              onChange={(_, newValue) => {
+                if (newValue) {
+                  addService(newValue);
+                } else {
+                  setSelectedServiceValue(null);
+                }
+              }}
+              renderOption={(props, option) => {
+                const isSelected = selectedServices.some(s => s.id === option.id);
+                return (
+                  <li {...props} key={option.id}>
+                    <Box sx={{ width: '100%' }}>
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          fontWeight: 500,
+                          textDecoration: isSelected ? 'line-through' : 'none',
+                          color: isSelected ? 'text.secondary' : 'text.primary'
+                        }}
+                      >
+                        {option.description}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+                        Valor: R$ {option.value.toFixed(2)}
+                        {option.macro_component && ` | ${option.macro_component.name}`}
+                        {isSelected && ' (já adicionado)'}
+                      </Typography>
+                    </Box>
+                  </li>
+                );
+              }}
+              filterOptions={(options, { inputValue }) => {
+                return options.filter(option =>
+                  option.description.toLowerCase().includes(inputValue.toLowerCase())
+                );
+              }}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+            />
           </div>
 
           {/* Serviços Selecionados */}

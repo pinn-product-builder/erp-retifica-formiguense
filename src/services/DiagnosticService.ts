@@ -27,7 +27,7 @@ export interface DiagnosticResponse {
 
 export class DiagnosticService {
   static async getResponsesWithOrderData(orgId: string): Promise<DiagnosticResponse[]> {
-    const { data: responses, error } = await supabase
+    const { data: responses, error} = await supabase
       .from('diagnostic_checklist_responses')
       .select('*')
       .eq('org_id', orgId);
@@ -65,7 +65,18 @@ export class DiagnosticService {
             .eq('org_id', orgId)
             .single();
 
-          // Adicionar nome do usuário que diagnosticou
+          const { data: additionalParts } = await supabase
+            .from('diagnostic_additional_parts' as any)
+            .select('*')
+            .eq('diagnostic_response_id', response.id)
+            .eq('org_id', orgId);
+
+          const { data: additionalServices } = await supabase
+            .from('diagnostic_additional_services' as any)
+            .select('*')
+            .eq('diagnostic_response_id', response.id)
+            .eq('org_id', orgId);
+
           const diagnosedByName = response.diagnosed_by 
             ? (userNames[response.diagnosed_by] || response.diagnosed_by || 'Usuário não identificado')
             : 'N/A';
@@ -73,17 +84,20 @@ export class DiagnosticService {
           return { 
             ...response, 
             order: orderData as any,
-            diagnosed_by_name: diagnosedByName
+            diagnosed_by_name: diagnosedByName,
+            additional_parts: additionalParts || [],
+            additional_services: additionalServices || []
           } as DiagnosticResponse;
         } catch (_e) {
-          // Mesmo em caso de erro, adicionar o nome do usuário se disponível
           const diagnosedByName = response.diagnosed_by 
             ? (userNames[response.diagnosed_by] || response.diagnosed_by || 'Usuário não identificado')
             : 'N/A';
           
           return { 
             ...response,
-            diagnosed_by_name: diagnosedByName
+            diagnosed_by_name: diagnosedByName,
+            additional_parts: [],
+            additional_services: []
           } as DiagnosticResponse;
         }
       })
@@ -272,10 +286,26 @@ export class DiagnosticService {
     photos: Array<Record<string, unknown>>;
     generatedServices: Array<Record<string, unknown>>;
     diagnosedBy: string;
-    additionalParts?: unknown;
-    additionalServices?: unknown;
+    additionalParts?: Array<{
+      id?: string;
+      part_code: string;
+      part_name: string;
+      quantity: number;
+      unit_price: number;
+      total: number;
+    }>;
+    additionalServices?: Array<{
+      id?: string;
+      description: string;
+      quantity: number;
+      unit_price: number;
+      total: number;
+    }>;
+    technicalObservations?: string;
+    extraServices?: string;
+    finalOpinion?: string;
   }): Promise<any> {
-    const { data, error } = await supabase
+    const { data: diagnosticResponse, error: diagnosticError } = await supabase
       .from('diagnostic_checklist_responses')
       .insert({
         order_id: params.orderId,
@@ -286,14 +316,59 @@ export class DiagnosticService {
         generated_services: params.generatedServices,
         diagnosed_by: params.diagnosedBy,
         status: 'completed',
-        additional_parts: params.additionalParts || null,
-        additional_services: params.additionalServices || null,
+        technical_observations: params.technicalObservations || null,
+        extra_services: params.extraServices || null,
+        final_opinion: params.finalOpinion || null,
       } as any)
       .select()
       .single();
 
-    if (error) throw error;
-    return data;
+    if (diagnosticError) throw diagnosticError;
+    if (!diagnosticResponse) throw new Error('Failed to create diagnostic response');
+
+    const diagnosticResponseId = diagnosticResponse.id;
+
+    if (params.additionalParts && params.additionalParts.length > 0) {
+      const partsToInsert = params.additionalParts.map(part => ({
+        diagnostic_response_id: diagnosticResponseId,
+        part_code: part.part_code,
+        part_name: part.part_name,
+        quantity: part.quantity,
+        unit_price: part.unit_price,
+        total: part.total,
+      }));
+
+      const { error: partsError } = await supabase
+        .from('diagnostic_additional_parts' as any)
+        .insert(partsToInsert as any);
+
+      if (partsError) {
+        console.error('Error inserting additional parts:', partsError);
+      }
+    }
+
+    if (params.additionalServices && params.additionalServices.length > 0) {
+      const servicesToInsert = params.additionalServices.map(service => ({
+        diagnostic_response_id: diagnosticResponseId,
+        service_id: service.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service.id) 
+          ? service.id 
+          : null,
+        description: service.description,
+        quantity: service.quantity,
+        unit_price: service.unit_price,
+        total: service.total,
+      }));
+
+      const { error: servicesError } = await supabase
+        .from('diagnostic_additional_services' as any)
+        .insert(servicesToInsert as any);
+
+      if (servicesError) {
+        console.error('Error inserting additional services:', servicesError);
+      }
+    }
+
+    return diagnosticResponse;
   }
 
   static async uploadChecklistPhoto(
@@ -360,5 +435,3 @@ export class DiagnosticService {
     return user ? { id: user.id } : null;
   }
 }
-
-

@@ -5,17 +5,17 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { InfiniteAutocomplete } from '@/components/ui/infinite-autocomplete';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Search, AlertCircle, Loader2, Check, ChevronsUpDown } from 'lucide-react';
+import { Plus, Trash2, Search, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { DiagnosticService } from '@/services/DiagnosticService';
 import type { DetailedBudget } from '@/hooks/useDetailedBudgets';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
+import { useAdditionalServices } from '@/hooks/useAdditionalServices';
 import { MaskedInput } from '@/components/ui/masked-input';
 
 interface BudgetFormProps {
@@ -47,6 +47,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
   const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
+  const { additionalServices, loading: loadingServices } = useAdditionalServices();
 
   // Estados do formulário
   const [selectedOrderId, setSelectedOrderId] = useState<string>(orderId || budget?.order_id || '');
@@ -67,6 +68,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   const [partsInventory, setPartsInventory] = useState<Array<Record<string, unknown>>>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingParts, setLoadingParts] = useState(false);
+  const [loadingDiagnostic, setLoadingDiagnostic] = useState(false);
+  const [lastLoadedOrderId, setLastLoadedOrderId] = useState<string>('');
   const [saving, setSaving] = useState(false);
 
   // Estados para campos de texto
@@ -78,8 +81,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
 
   // Novo serviço/peça temporário
   const [newService, setNewService] = useState<Partial<Service>>({ description: '', quantity: 1, unit_price: 0 });
-  const [searchPartTerm, setSearchPartTerm] = useState('');
-  const [partSelectOpen, setPartSelectOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState<{ id: string; label: string; description: string; value: number } | null>(null);
+  const [selectedPart, setSelectedPart] = useState<{ id: string; label: string; part_code: string; part_name: string; unit_cost: number; quantity: number } | null>(null);
 
   // Função para formatar valores monetários
   const formatCurrency = (value: number): string => {
@@ -150,6 +153,103 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     setWarrantyText(warrantyMonths.toString());
     setDeliveryText(estimatedDeliveryDays.toString());
   }, [laborHours, discount, taxPercentage, warrantyMonths, estimatedDeliveryDays]);
+
+  // Carregar dados do diagnóstico quando ordem for selecionada
+  useEffect(() => {
+    const loadDiagnosticData = async () => {
+      if (!selectedOrderId || !currentOrganization?.id || budget) return;
+      
+      // Se a ordem mudou, limpar dados anteriores
+      if (selectedOrderId !== lastLoadedOrderId) {
+        setParts([]);
+        setServices([]);
+        setLastLoadedOrderId(selectedOrderId);
+      } else {
+        // Se é a mesma ordem e já tem dados, não recarregar
+        return;
+      }
+      
+      setLoadingDiagnostic(true);
+      try {
+        const diagnosticData = await DiagnosticService.getResponsesWithOrderData(currentOrganization.id);
+        const orderDiagnostics = diagnosticData.filter(d => d.order_id === selectedOrderId);
+        
+        if (orderDiagnostics.length === 0) {
+          setLoadingDiagnostic(false);
+          return;
+        }
+        
+        const allParts: Part[] = [];
+        const allServices: Service[] = [];
+        
+        orderDiagnostics.forEach((diagnostic: any) => {
+          if (diagnostic.additional_parts && Array.isArray(diagnostic.additional_parts)) {
+            diagnostic.additional_parts.forEach((part: any) => {
+              const existingPart = allParts.find(p => p.part_code === part.part_code);
+              if (!existingPart) {
+                allParts.push({
+                  id: part.id || `diag-part-${Date.now()}-${Math.random()}`,
+                  part_code: part.part_code,
+                  part_name: part.part_name,
+                  quantity: part.quantity || 1,
+                  unit_price: part.unit_price || 0,
+                  total: part.total || (part.quantity * part.unit_price),
+                });
+              } else {
+                existingPart.quantity += (part.quantity || 1);
+                existingPart.total = existingPart.quantity * existingPart.unit_price;
+              }
+            });
+          }
+          
+          if (diagnostic.additional_services && Array.isArray(diagnostic.additional_services)) {
+            diagnostic.additional_services.forEach((service: any) => {
+              const existingService = allServices.find(s => s.description === service.description);
+              if (!existingService) {
+                allServices.push({
+                  id: service.id || `diag-service-${Date.now()}-${Math.random()}`,
+                  description: service.description,
+                  quantity: service.quantity || 1,
+                  unit_price: service.unit_price || 0,
+                  total: service.total || (service.quantity * service.unit_price),
+                });
+              } else {
+                existingService.quantity += (service.quantity || 1);
+                existingService.total = existingService.quantity * existingService.unit_price;
+              }
+            });
+          }
+        });
+        
+        if (allParts.length > 0) {
+          setParts(allParts);
+          toast({
+            title: 'Peças carregadas',
+            description: `${allParts.length} peça(s) do diagnóstico foram adicionadas`,
+          });
+        }
+        
+        if (allServices.length > 0) {
+          setServices(allServices);
+          toast({
+            title: 'Serviços carregados',
+            description: `${allServices.length} serviço(s) do diagnóstico foram adicionados`,
+          });
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados do diagnóstico:', error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível carregar dados do diagnóstico',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoadingDiagnostic(false);
+      }
+    };
+    
+    loadDiagnosticData();
+  }, [selectedOrderId, currentOrganization?.id, budget, lastLoadedOrderId, toast]);
 
   // Carregar ordens disponíveis
   useEffect(() => {
@@ -429,6 +529,51 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     setNewService({ description: '', quantity: 1, unit_price: 0 });
   };
 
+  // Adicionar serviço do catálogo
+  const addServiceFromCatalog = (catalogService: { id: string; description: string; value: number }) => {
+    if (!catalogService) return;
+    
+    const existingService = services.find(s => s.description === catalogService.description);
+    if (existingService) {
+      toast({
+        title: 'Atenção',
+        description: 'Este serviço já foi adicionado',
+        variant: 'destructive',
+      });
+      setSelectedService(null);
+      return;
+    }
+
+    const service: Service = {
+      id: `catalog-${Date.now()}`,
+      description: catalogService.description,
+      quantity: 1,
+      unit_price: catalogService.value || 0,
+      total: 1 * (catalogService.value || 0),
+    };
+
+    setServices([...services, service]);
+    setSelectedService(null);
+  };
+
+  // Atualizar quantidade do serviço
+  const updateServiceQuantity = (id: string, quantity: number) => {
+    setServices(services.map(s => 
+      s.id === id 
+        ? { ...s, quantity, total: quantity * s.unit_price } 
+        : s
+    ));
+  };
+
+  // Atualizar valor unitário do serviço
+  const updateServiceUnitPrice = (id: string, unitPrice: number) => {
+    setServices(services.map(s => 
+      s.id === id 
+        ? { ...s, unit_price: unitPrice, total: s.quantity * unitPrice } 
+        : s
+    ));
+  };
+
   // Remover serviço
   const removeService = (id: string) => {
     setServices(services.filter(s => s.id !== id));
@@ -436,6 +581,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
 
   // Adicionar peça
   const addPart = (partInventory: { part_code: string; part_name: string; unit_cost: number; quantity: number }) => {
+    if (!partInventory) return;
+    
     const existingPart = parts.find(p => p.part_code === partInventory.part_code);
     if (existingPart) {
       toast({
@@ -443,6 +590,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
         description: 'Esta peça já foi adicionada',
         variant: 'destructive',
       });
+      setSelectedPart(null);
       return;
     }
 
@@ -457,8 +605,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     };
 
     setParts([...parts, part]);
-    setSearchPartTerm('');
-    setPartSelectOpen(false);
+    setSelectedPart(null);
   };
 
   // Atualizar quantidade da peça
@@ -522,7 +669,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
         total_amount: totalAmount,
         warranty_months: warrantyMonths,
         estimated_delivery_days: estimatedDeliveryDays,
-        status: 'draft',
+        status: budget?.status === 'reopened' ? 'reopened' : 'draft',
       };
 
       await onSave(budgetData);
@@ -533,20 +680,32 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     }
   };
 
-  // Filtrar peças baseado no termo de busca
-  const filteredParts = useMemo(() => {
-    if (!searchPartTerm || searchPartTerm.length === 0) {
-      return partsInventory;
-    }
-    const term = searchPartTerm.toLowerCase();
-    return partsInventory.filter(p => {
-      const partData = p as { part_code: string; part_name: string };
-      return (
-        partData.part_code?.toLowerCase().includes(term) ||
-        partData.part_name?.toLowerCase().includes(term)
-      );
+  // Preparar serviços para o autocomplete
+  const servicesOptions = useMemo(() => {
+    return additionalServices
+      .filter((s: any) => s.is_active)
+      .map((s: any) => ({
+        id: s.id,
+        label: s.description,
+        description: s.description,
+        value: s.value,
+      }));
+  }, [additionalServices]);
+
+  // Preparar peças para o autocomplete
+  const partsOptions = useMemo(() => {
+    return partsInventory.map(p => {
+      const partData = p as { id: string; part_code: string; part_name: string; unit_cost: number; quantity: number };
+      return {
+        id: partData.id,
+        label: `${partData.part_code} - ${partData.part_name}`,
+        part_code: partData.part_code,
+        part_name: partData.part_name,
+        unit_cost: partData.unit_cost,
+        quantity: partData.quantity,
+      };
     });
-  }, [partsInventory, searchPartTerm]);
+  }, [partsInventory]);
 
   return (
     <div className="space-y-6">
@@ -558,7 +717,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="order">Ordem de Serviço *</Label>
-            <Select value={selectedOrderId} onValueChange={setSelectedOrderId} disabled={!!orderId || !!budget}>
+            <Select value={selectedOrderId} onValueChange={setSelectedOrderId} disabled={!!orderId || (!!budget && !!budget.order_id)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a OS (O diagnóstico deve ter sido realizado)" />
               </SelectTrigger>
@@ -576,21 +735,21 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                 )}
               </SelectContent>
             </Select>
-            {/* {componentsSelected.length > 0 && (
-              <div className="mt-3 p-3 bg-muted rounded-lg">
-                <p className="text-sm font-medium mb-2">Componentes da Ordem de Serviço:</p>
-                <div className="flex flex-wrap gap-2">
-                  {componentsSelected.map((compId) => {
-                    const comp = engineComponents.find(c => c.value === compId);
-                    return comp ? (
-                      <Badge key={compId} variant="secondary">
-                        {comp.label}
-                      </Badge>
-                    ) : null;
-                  })}
+            {loadingDiagnostic && (
+              <div className="mt-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin text-blue-600 dark:text-blue-400" />
+                  <div>
+                    <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                      Carregando dados do diagnóstico...
+                    </p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                      Buscando peças e serviços adicionais
+                    </p>
+                  </div>
                 </div>
               </div>
-            )} */}
+            )}
           </div>
         </CardContent>
       </Card>
@@ -647,42 +806,45 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
           <CardTitle>Serviços Adicionais</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
-            <div className="md:col-span-6">
-              <Input
-                placeholder="Descrição do serviço"
-                value={newService.description || ''}
-                onChange={(e) => setNewService({ ...newService, description: e.target.value })}
-              />
+          {loadingDiagnostic && (
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin mr-2" />
+              <span>Carregando serviços do diagnóstico...</span>
             </div>
-            <div className="md:col-span-2">
-              <Input
-                type="text"
-                placeholder="Qtd"
-                value={(newService.quantity || 1).toString()}
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/[^\d]/g, '');
-                  const quantity = numericValue ? parseInt(numericValue) : 1;
-                  setNewService({ ...newService, quantity: Math.max(1, quantity) });
-                }}
-              />
-            </div>
-            <div className="md:col-span-3">
-              <MaskedInput
-                mask="currency"
-                placeholder="Valor unitário"
-                value={''}
-                onChange={(maskedValue, rawValue) => {
-                  setNewService({ ...newService, unit_price: parseFloat(rawValue) || 0 });
-                }}
-              />
-            </div>
-            <div className="md:col-span-1">
-              <Button onClick={addService} className="w-full">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          )}
+          <InfiniteAutocomplete
+            options={servicesOptions}
+            loading={loadingServices}
+            label="Serviço Adicional"
+            placeholder="Buscar serviço por descrição..."
+            value={selectedService}
+            onChange={(_, newValue) => {
+              if (newValue) {
+                addServiceFromCatalog(newValue as any);
+              }
+            }}
+            getOptionLabel={(option) => option.label || ''}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            filterOptions={(options, { inputValue }) => {
+              if (!inputValue) return options;
+              const term = inputValue.toLowerCase();
+              return options.filter(opt => 
+                opt.description?.toLowerCase().includes(term)
+              );
+            }}
+            renderOption={(props, option) => (
+              <li {...props} key={option.id}>
+                <div className="flex flex-col w-full py-2">
+                  <div className="font-medium text-sm">
+                    {option.description}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {formatCurrency((option as any).value || 0)}
+                  </div>
+                </div>
+              </li>
+            )}
+          />
 
           {services.length > 0 && (
             <Table>
@@ -699,8 +861,29 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                 {services.map(service => (
                   <TableRow key={service.id}>
                     <TableCell>{service.description}</TableCell>
-                    <TableCell>{service.quantity}</TableCell>
-                    <TableCell>{formatCurrency(service.unit_price)}</TableCell>
+                    <TableCell>
+                      <Input
+                        type="text"
+                        value={service.quantity.toString()}
+                        onChange={(e) => {
+                          const numericValue = e.target.value.replace(/[^\d]/g, '');
+                          const quantity = numericValue ? parseInt(numericValue) : 1;
+                          updateServiceQuantity(service.id, Math.max(1, quantity));
+                        }}
+                        className="w-20"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <MaskedInput
+                        mask="currency"
+                        value={service.unit_price.toString()}
+                        onChange={(maskedValue, rawValue) => {
+                          const unitPrice = parseFloat(rawValue) || 0;
+                          updateServiceUnitPrice(service.id, unitPrice);
+                        }}
+                        className="w-32"
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{formatCurrency(service.total)}</TableCell>
                     <TableCell>
                       <Button
@@ -725,71 +908,46 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
           <CardTitle>Peças e Materiais</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Popover open={partSelectOpen} onOpenChange={setPartSelectOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={partSelectOpen}
-                className="w-full justify-between"
-              >
-                <span className="text-muted-foreground">Buscar peça por código ou nome...</span>
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-96" align="start">
-              <Command className="rounded-lg">
-                <CommandInput
-                  placeholder="Buscar peça por código ou nome..."
-                  value={searchPartTerm}
-                  onValueChange={setSearchPartTerm}
-                />
-                <CommandEmpty>
-                  {searchPartTerm.length > 0
-                    ? "Nenhuma peça encontrada"
-                    : loadingParts
-                      ? "Carregando peças..."
-                      : "Digite para buscar peças ou comece a digitar"}
-                </CommandEmpty>
-                <CommandList className="max-h-64 overflow-auto">
-                  <CommandGroup className="p-1">
-                      {filteredParts.length > 0 && filteredParts.map(part => {
-                        const partData = part as { id: string; part_code: string; part_name: string; unit_cost: number; quantity: number };
-                        const isAlreadyAdded = parts.some(p => p.part_code === partData.part_code);
-                        
-                        return (
-                          <CommandItem
-                            key={partData.id}
-                            value={`${partData.part_code} ${partData.part_name}`}
-                            onSelect={() => !isAlreadyAdded && addPart(partData)}
-                            className="cursor-pointer"
-                            disabled={isAlreadyAdded}
-                          >
-                            <div className="flex flex-col w-full">
-                              <div className="flex items-center justify-between">
-                                <div className="flex flex-col">
-                                  <div className="font-medium">
-                                    {partData.part_code} - {partData.part_name}
-                                  </div>
-                                  <div className="text-sm text-muted-foreground mt-1">
-                                    Estoque: {partData.quantity} | {formatCurrency(partData.unit_cost || 0)}
-                                  </div>
-                                </div>
-                                {isAlreadyAdded ? (
-                                  <Badge variant="secondary" className="ml-2">Já adicionada</Badge>
-                                ) : (
-                                  <Plus className="h-4 w-4 text-primary ml-2" />
-                                )}
-                              </div>
-                            </div>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          {loadingDiagnostic && (
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin mr-2" />
+              <span>Carregando peças do diagnóstico...</span>
+            </div>
+          )}
+          <InfiniteAutocomplete
+            options={partsOptions}
+            loading={loadingParts}
+            label="Peça ou Material"
+            placeholder="Buscar peça por código ou nome..."
+            value={selectedPart}
+            onChange={(_, newValue) => {
+              if (newValue) {
+                addPart(newValue as any);
+              }
+            }}
+            getOptionLabel={(option) => option.label || ''}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            filterOptions={(options, { inputValue }) => {
+              if (!inputValue) return options;
+              const term = inputValue.toLowerCase();
+              return options.filter(opt => 
+                opt.part_code?.toLowerCase().includes(term) ||
+                opt.part_name?.toLowerCase().includes(term)
+              );
+            }}
+            renderOption={(props, option) => (
+              <li {...props} key={option.id}>
+                <div className="flex flex-col w-full py-2">
+                  <div className="font-medium text-sm">
+                    {option.part_code} - {option.part_name}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Estoque: {(option as any).quantity} | {formatCurrency((option as any).unit_cost || 0)}
+                  </div>
+                </div>
+              </li>
+            )}
+          />
 
           {parts.length > 0 && (
             <Table>

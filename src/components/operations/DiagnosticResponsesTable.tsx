@@ -121,17 +121,6 @@ export function DiagnosticResponsesTable({ responses, onViewDetails, onResumeDia
           }
         },
         {
-          key: 'checklist',
-          header: 'Checklist',
-          mobileLabel: 'Checklist',
-          priority: 5,
-          minWidth: 150,
-          hideInMobile: true,
-          render: (response) => (
-            <span className="text-xs sm:text-sm max-w-xs truncate block">{response.checklist?.name || 'N/A'}</span>
-          )
-        },
-        {
           key: 'status',
           header: 'Status',
           mobileLabel: 'Status',

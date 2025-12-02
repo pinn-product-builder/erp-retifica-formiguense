@@ -9,12 +9,15 @@
 export const BUDGET_STATUS: Record<string, string> = {
   draft: 'Rascunho',
   pending: 'Pendente',
+  pending_customer: 'Em Aprovação do Cliente',
   approved: 'Aprovado',
   rejected: 'Rejeitado',
   partial: 'Parcial',
+  partially_approved: 'Parcialmente Aprovado',
   cancelled: 'Cancelado',
   active: 'Ativo',
-  inactive: 'Inativo'
+  inactive: 'Inativo',
+  reopened: 'Reaberto'
 };
 
 // Status de Diagnósticos
