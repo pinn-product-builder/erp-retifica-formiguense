@@ -216,6 +216,18 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
             const loadedServices: Service[] = [];
 
             if (diagnosticParts.length > 0) {
+              // Buscar estoque disponível para cada peça
+              const partCodes = diagnosticParts.map(p => p.part_code);
+              const { data: inventoryData } = await supabase
+                .from('parts_inventory')
+                .select('part_code, quantity')
+                .eq('org_id', currentOrganization.id)
+                .in('part_code', partCodes);
+
+              const inventoryMap = new Map(
+                (inventoryData || []).map((inv: any) => [inv.part_code, inv.quantity])
+              );
+
               diagnosticParts.forEach((part: Part) => {
                 loadedParts.push({
                   id: part.id || `part_${Date.now()}_${Math.random()}`,
@@ -223,7 +235,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                   part_name: part.part_name,
                   quantity: part.quantity,
                   unit_price: part.unit_price,
-                  total: part.total
+                  total: part.total,
+                  available_stock: inventoryMap.get(part.part_code) || 0
                 });
               });
             }
