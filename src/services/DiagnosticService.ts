@@ -409,11 +409,11 @@ export class DiagnosticService {
     additional_services?: unknown;
     generated_services?: Array<Record<string, unknown>>;
   }>> {
+    // Buscar as respostas de diagnóstico
     const { data: diagnosticResponses, error } = await supabase
       .from('diagnostic_checklist_responses')
       .select(`
-        additional_parts,
-        additional_services,
+        id,
         generated_services,
         order:orders!inner(id, org_id)
       `)
@@ -423,11 +423,34 @@ export class DiagnosticService {
       .order('diagnosed_at', { ascending: false });
 
     if (error) throw error;
-    return (diagnosticResponses || []) as Array<{
-      additional_parts?: unknown;
-      additional_services?: unknown;
-      generated_services?: Array<Record<string, unknown>>;
-    }>;
+    if (!diagnosticResponses || diagnosticResponses.length === 0) return [];
+
+    // Para cada resposta, buscar as peças e serviços adicionais das tabelas relacionadas
+    const enrichedResponses = await Promise.all(
+      diagnosticResponses.map(async (response: any) => {
+        // Buscar peças adicionais
+        const { data: additionalParts } = await supabase
+          .from('diagnostic_additional_parts' as any)
+          .select('*')
+          .eq('diagnostic_response_id', response.id)
+          .eq('org_id', orgId);
+
+        // Buscar serviços adicionais
+        const { data: additionalServices } = await supabase
+          .from('diagnostic_additional_services' as any)
+          .select('*')
+          .eq('diagnostic_response_id', response.id)
+          .eq('org_id', orgId);
+
+        return {
+          additional_parts: additionalParts || [],
+          additional_services: additionalServices || [],
+          generated_services: response.generated_services || []
+        };
+      })
+    );
+
+    return enrichedResponses;
   }
 
   static async getCurrentUser(): Promise<{ id: string } | null> {

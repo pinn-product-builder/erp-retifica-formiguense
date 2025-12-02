@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -69,7 +69,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingParts, setLoadingParts] = useState(false);
   const [loadingDiagnostic, setLoadingDiagnostic] = useState(false);
-  const [lastLoadedOrderId, setLastLoadedOrderId] = useState<string>('');
+  const lastLoadedOrderIdRef = useRef<string>('');
   const [saving, setSaving] = useState(false);
 
   // Estados para campos de texto
@@ -145,12 +145,14 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     textSetter(limitedValue.toString());
   };
 
-  // Sincronizar selectedOrderId quando budget ou orderId mudarem
+  // Sincronizar selectedOrderId quando budget ou orderId mudarem (apenas ao montar/mudar props)
   useEffect(() => {
     const newOrderId = orderId || budget?.order_id || '';
-    if (newOrderId !== selectedOrderId) {
+    if (newOrderId && newOrderId !== selectedOrderId) {
+      console.log('🔄 Sincronizando selectedOrderId:', { newOrderId, selectedOrderId });
       setSelectedOrderId(newOrderId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [budget?.order_id, orderId]);
 
   // Inicializar campos de texto com valores dos números
@@ -167,94 +169,120 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     let isMounted = true;
     
     const loadDiagnosticData = async () => {
-      if (!selectedOrderId || !currentOrganization?.id || budget) {
+      console.log('🔍 Verificando carregamento:', { selectedOrderId, orgId: currentOrganization?.id, budgetId: budget?.id, lastLoaded: lastLoadedOrderIdRef.current });
+      
+      if (!selectedOrderId || !currentOrganization?.id) {
+        console.log('❌ Saindo: sem ordem ou org');
         if (!isMounted) return;
+        setLoadingDiagnostic(false);
         return;
       }
       
-      // Se a ordem mudou, limpar dados anteriores
-      if (selectedOrderId !== lastLoadedOrderId) {
-        if (!isMounted) return;
-        setParts([]);
-        setServices([]);
-        setLastLoadedOrderId(selectedOrderId);
-      } else {
-        // Se é a mesma ordem e já tem dados, não recarregar
+      // Se já tem budget com ID (editando), não recarregar
+      if (budget?.id) {
+        console.log('❌ Saindo: editando budget existente');
         return;
       }
+      
+      // Verificar se já carregou esta ordem usando ref (não causa re-render)
+      if (selectedOrderId === lastLoadedOrderIdRef.current) {
+        console.log('❌ Saindo: ordem já carregada');
+        return;
+      }
+      
+      console.log('✅ Carregando diagnóstico...');
+      lastLoadedOrderIdRef.current = selectedOrderId;
       
       if (!isMounted) return;
       setLoadingDiagnostic(true);
+      
       try {
-        const diagnosticData = await DiagnosticService.getResponsesWithOrderData(currentOrganization.id);
+        const diagnosticResponses = await DiagnosticService.getDiagnosticDataForBudget(
+          selectedOrderId,
+          currentOrganization.id
+        );
+
         if (!isMounted) return;
-        
-        const orderDiagnostics = diagnosticData.filter(d => d.order_id === selectedOrderId);
-        
-        if (orderDiagnostics.length === 0) {
-          if (!isMounted) return;
-          setLoadingDiagnostic(false);
-          return;
-        }
-        
-        const allParts: Part[] = [];
-        const allServices: Service[] = [];
-        
-        orderDiagnostics.forEach((diagnostic: any) => {
-          if (diagnostic.additional_parts && Array.isArray(diagnostic.additional_parts)) {
-            diagnostic.additional_parts.forEach((part: any) => {
-              const existingPart = allParts.find(p => p.part_code === part.part_code);
-              if (!existingPart) {
-                allParts.push({
-                  id: part.id || `diag-part-${Date.now()}-${Math.random()}`,
+
+        if (diagnosticResponses && diagnosticResponses.length > 0) {
+          const latestResponse = diagnosticResponses[0] as Record<string, unknown>;
+          
+          const diagnosticParts = (latestResponse.additional_parts as Part[]) || [];
+          const diagnosticServices = (latestResponse.additional_services as Array<Record<string, unknown>>) || [];
+          const generatedServices = (latestResponse.generated_services as Array<Record<string, unknown>>) || [];
+
+          if (diagnosticParts.length > 0 || diagnosticServices.length > 0 || generatedServices.length > 0) {
+            const loadedParts: Part[] = [];
+            const loadedServices: Service[] = [];
+
+            if (diagnosticParts.length > 0) {
+              diagnosticParts.forEach((part: Part) => {
+                loadedParts.push({
+                  id: part.id || `part_${Date.now()}_${Math.random()}`,
                   part_code: part.part_code,
                   part_name: part.part_name,
-                  quantity: part.quantity || 1,
-                  unit_price: part.unit_price || 0,
-                  total: part.total || (part.quantity * part.unit_price),
+                  quantity: part.quantity,
+                  unit_price: part.unit_price,
+                  total: part.total
                 });
-              } else {
-                existingPart.quantity += (part.quantity || 1);
-                existingPart.total = existingPart.quantity * existingPart.unit_price;
-              }
-            });
-          }
-          
-          if (diagnostic.additional_services && Array.isArray(diagnostic.additional_services)) {
-            diagnostic.additional_services.forEach((service: any) => {
-              const existingService = allServices.find(s => s.description === service.description);
-              if (!existingService) {
-                allServices.push({
-                  id: service.id || `diag-service-${Date.now()}-${Math.random()}`,
-                  description: service.description,
-                  quantity: service.quantity || 1,
-                  unit_price: service.unit_price || 0,
-                  total: service.total || (service.quantity * service.unit_price),
+              });
+            }
+
+            if (diagnosticServices.length > 0) {
+              diagnosticServices.forEach((service: Record<string, unknown>) => {
+                const serviceName = service.name || service.description || 'Serviço do diagnóstico';
+                const serviceTotal = (service.total as number) || 0;
+                const laborHours = (service.labor_hours as number) || 1;
+                
+                loadedServices.push({
+                  id: (service.id as string) || `service_${Date.now()}_${Math.random()}`,
+                  description: String(serviceName),
+                  quantity: 1,
+                  unit_price: serviceTotal / laborHours,
+                  total: serviceTotal
                 });
-              } else {
-                existingService.quantity += (service.quantity || 1);
-                existingService.total = existingService.quantity * existingService.unit_price;
-              }
-            });
+              });
+            }
+
+            if (generatedServices.length > 0) {
+              generatedServices.forEach((service: Record<string, unknown>, index: number) => {
+                const serviceName = service.name || service.description || 'Serviço do diagnóstico';
+                const serviceTotal = (service.labor_hours as number || 1) * (service.labor_rate as number || 50);
+                
+                loadedServices.push({
+                  id: `generated_service_${index}`,
+                  description: String(serviceName),
+                  quantity: 1,
+                  unit_price: serviceTotal,
+                  total: serviceTotal
+                });
+              });
+            }
+
+            if (!isMounted) return;
+
+            console.log('💾 Salvando:', { parts: loadedParts.length, services: loadedServices.length });
+
+            if (loadedParts.length > 0) {
+              setParts(loadedParts);
+              toast({
+                title: 'Peças carregadas',
+                description: `${loadedParts.length} peça(s) do diagnóstico foram adicionadas`,
+              });
+            }
+
+            if (loadedServices.length > 0) {
+              setServices(loadedServices);
+              toast({
+                title: 'Serviços carregados',
+                description: `${loadedServices.length} serviço(s) do diagnóstico foram adicionados`,
+              });
+            }
+          } else {
+            console.log('⚠️ Nenhum dado encontrado');
           }
-        });
-        
-        if (!isMounted) return;
-        
-        if (allParts.length > 0) {
-          setParts(allParts);
-          toast({
-            title: 'Peças carregadas',
-            description: `${allParts.length} peça(s) do diagnóstico foram adicionadas`,
-          });
-        }
-        
-        if (allServices.length > 0) {
-          setServices(allServices);
-          toast({
-            title: 'Serviços carregados',
-            description: `${allServices.length} serviço(s) do diagnóstico foram adicionados`,
-          });
+        } else {
+          console.log('⚠️ Sem respostas de diagnóstico');
         }
       } catch (error) {
         if (!isMounted) return;
@@ -276,7 +304,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     return () => {
       isMounted = false;
     };
-  }, [selectedOrderId, currentOrganization?.id, budget, lastLoadedOrderId, toast]);
+  }, [selectedOrderId, currentOrganization?.id, budget?.id, toast]);
 
   // Carregar ordens disponíveis
   useEffect(() => {
@@ -423,103 +451,6 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     fetchOrderComponents();
   }, [selectedOrderId, currentOrganization?.id, toast]);
 
-  // Buscar dados do diagnóstico quando ordem for selecionada
-  useEffect(() => {
-    const fetchDiagnosticData = async () => {
-      if (!selectedOrderId || !currentOrganization?.id || budget) return;
-
-      try {
-        const diagnosticResponses = await DiagnosticService.getDiagnosticDataForBudget(
-          selectedOrderId,
-          currentOrganization.id
-        );
-
-        if (diagnosticResponses && diagnosticResponses.length > 0) {
-          const latestResponse = diagnosticResponses[0] as Record<string, unknown>;
-          
-          const diagnosticParts = (latestResponse.additional_parts as Part[]) || [];
-          const diagnosticServices = (latestResponse.additional_services as Array<Record<string, unknown>>) || [];
-          const generatedServices = (latestResponse.generated_services as Array<Record<string, unknown>>) || [];
-
-          if (diagnosticParts.length > 0 || diagnosticServices.length > 0 || generatedServices.length > 0) {
-            const loadedParts: Part[] = [];
-            const loadedServices: Service[] = [];
-
-            if (diagnosticParts.length > 0) {
-              diagnosticParts.forEach((part: Part) => {
-                loadedParts.push({
-                  id: part.id || `part_${Date.now()}_${Math.random()}`,
-                  part_code: part.part_code,
-                  part_name: part.part_name,
-                  quantity: part.quantity,
-                  unit_price: part.unit_price,
-                  total: part.total
-                });
-              });
-            }
-
-            if (diagnosticServices.length > 0) {
-              diagnosticServices.forEach((service: Record<string, unknown>) => {
-                const serviceName = service.name || service.description || 'Serviço do diagnóstico';
-                const serviceTotal = (service.total as number) || 0;
-                const laborHours = (service.labor_hours as number) || 1;
-                
-                loadedServices.push({
-                  id: (service.id as string) || `service_${Date.now()}_${Math.random()}`,
-                  description: String(serviceName),
-                  quantity: 1,
-                  unit_price: serviceTotal / laborHours,
-                  total: serviceTotal
-                });
-              });
-            }
-
-            if (generatedServices.length > 0) {
-              generatedServices.forEach((service: Record<string, unknown>, index: number) => {
-                const serviceName = service.name || service.description || 'Serviço do diagnóstico';
-                const serviceTotal = (service.labor_hours as number || 1) * (service.labor_rate as number || 50);
-                
-                loadedServices.push({
-                  id: `generated_service_${index}`,
-                  description: String(serviceName),
-                  quantity: 1,
-                  unit_price: serviceTotal,
-                  total: serviceTotal
-                });
-              });
-            }
-
-            if (loadedParts.length > 0) {
-              setParts(prev => {
-                const existingCodes = new Set(prev.map(p => p.part_code));
-                const newParts = loadedParts.filter(p => !existingCodes.has(p.part_code));
-                return [...prev, ...newParts];
-              });
-            }
-
-            if (loadedServices.length > 0) {
-              setServices(prev => {
-                const existingDescriptions = new Set(prev.map(s => s.description));
-                const newServices = loadedServices.filter(s => !existingDescriptions.has(s.description));
-                return [...prev, ...newServices];
-              });
-            }
-
-            if (loadedParts.length > 0 || loadedServices.length > 0) {
-              toast({
-                title: 'Dados carregados',
-                description: `Foram carregados ${loadedParts.length} peça(s) e ${loadedServices.length} serviço(s) do diagnóstico`,
-              });
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao buscar dados do diagnóstico:', error);
-      }
-    };
-
-    fetchDiagnosticData();
-  }, [selectedOrderId, currentOrganization?.id, budget, toast]);
 
   // Carregar peças do estoque
   useEffect(() => {

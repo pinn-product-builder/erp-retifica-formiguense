@@ -112,7 +112,7 @@ export const useSupplierEvaluation = () => {
   const { toast } = useToast();
 
   // Buscar todas as avaliações
-  const fetchEvaluations = async (supplierId?: string) => {
+  const fetchEvaluations = useCallback(async (supplierId?: string) => {
     if (!currentOrganization?.id) return [];
 
     try {
@@ -157,10 +157,10 @@ export const useSupplierEvaluation = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentOrganization?.id, toast]);
 
   // Buscar fornecedores com dados completos
-  const fetchEnhancedSuppliers = async () => {
+  const fetchEnhancedSuppliers = useCallback(async () => {
     if (!currentOrganization?.id) return [];
 
     try {
@@ -200,7 +200,7 @@ export const useSupplierEvaluation = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentOrganization?.id, toast]);
 
   // Criar avaliação de fornecedor
   const createEvaluation = async (
@@ -448,7 +448,7 @@ export const useSupplierEvaluation = () => {
   }, [currentOrganization?.id, toast]);
 
   // Obter estatísticas de fornecedor
-  const getSupplierStats = async (supplierId: string) => {
+  const getSupplierStats = useCallback(async (supplierId: string) => {
     if (!currentOrganization?.id) return null;
 
     try {
@@ -486,10 +486,10 @@ export const useSupplierEvaluation = () => {
       console.error('Erro ao calcular estatísticas:', error);
       return null;
     }
-  };
+  }, [currentOrganization?.id]);
 
   // Obter histórico de compras do fornecedor
-  const getSupplierPurchaseHistory = async (supplierId: string) => {
+  const getSupplierPurchaseHistory = useCallback(async (supplierId: string) => {
     if (!currentOrganization?.id) return [];
 
     try {
@@ -514,7 +514,7 @@ export const useSupplierEvaluation = () => {
       console.error('Erro ao buscar histórico:', error);
       return [];
     }
-  };
+  }, [currentOrganization?.id]);
 
   // Marcar/desmarcar fornecedor como preferencial
   const togglePreferredSupplier = async (supplierId: string, isPreferred: boolean): Promise<boolean> => {
@@ -557,7 +557,7 @@ export const useSupplierEvaluation = () => {
       fetchEvaluations();
       fetchEnhancedSuppliers();
     }
-  }, [currentOrganization?.id]);
+  }, [currentOrganization?.id, fetchEvaluations, fetchEnhancedSuppliers]);
 
   return {
     evaluations,
