@@ -63,19 +63,11 @@ export function DiagnosticComponentTab({
   engineTypeId,
   validateItem
 }: DiagnosticComponentTabProps) {
-  if (!checklist) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-        <p>Nenhum checklist encontrado para {component.label}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        {checklist.items
+        {checklist && checklist.items
           ?.sort((a: DiagnosticChecklistItem, b: DiagnosticChecklistItem) => a.display_order - b.display_order)
           .map((item: DiagnosticChecklistItem) => {
             const response = responses[item.id] || { value: '', photos: [], notes: '' };
