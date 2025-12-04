@@ -43,7 +43,7 @@ export default function Coleta() {
     telefone: "",
     email: "",
     endereco: "",
-    tipoCliente: "",
+    has_workshop: false,
     nomeOficina: "",
     cnpjOficina: "",
     contatoOficina: ""
@@ -157,10 +157,10 @@ export default function Coleta() {
       phone: newCustomerForm.telefone || undefined,
       email: newCustomerForm.email || undefined,
       address: newCustomerForm.endereco || undefined,
-      type: (newCustomerForm.tipoCliente || 'direto') as 'direto' | 'oficina',
-      workshop_name: newCustomerForm.tipoCliente === 'oficina' ? newCustomerForm.nomeOficina || undefined : undefined,
-      workshop_cnpj: newCustomerForm.tipoCliente === 'oficina' ? newCustomerForm.cnpjOficina || undefined : undefined,
-      workshop_contact: newCustomerForm.tipoCliente === 'oficina' ? newCustomerForm.contatoOficina || undefined : undefined
+      type: (newCustomerForm.has_workshop ? 'oficina' : 'direto') as 'direto' | 'oficina',
+      workshop_name: newCustomerForm.has_workshop ? newCustomerForm.nomeOficina || undefined : undefined,
+      workshop_cnpj: newCustomerForm.has_workshop ? newCustomerForm.cnpjOficina || undefined : undefined,
+      workshop_contact: newCustomerForm.has_workshop ? newCustomerForm.contatoOficina || undefined : undefined
     };
 
     const newCustomer = await createNewCustomer(customerData);
@@ -411,10 +411,10 @@ export default function Coleta() {
                         telefone: "",
                         email: "",
                         endereco: "",
+                        has_workshop: false,
                         nomeOficina: "",
                         cnpjOficina: "",
-                        contatoOficina: "",
-                        tipoCliente: ""
+                        contatoOficina: ""
                       });
                       setNewCustomerDocumentType('auto');
                     }
@@ -434,22 +434,6 @@ export default function Coleta() {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="newClientType">Tipo de Cliente</Label>
-                        <Select 
-                          value={newCustomerForm.tipoCliente} 
-                          onValueChange={(value) => setNewCustomerForm(prev => ({ ...prev, tipoCliente: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o tipo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="oficina">Oficina</SelectItem>
-                            <SelectItem value="direto">Cliente Direto</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div></div>
                       <div>
                         <Label htmlFor="newClientName">Nome Completo / Razão Social *</Label>
                         <Input
@@ -501,7 +485,29 @@ export default function Coleta() {
                           placeholder="Endereço completo"
                         />
                       </div>
-                      {newCustomerForm.tipoCliente === "oficina" && (
+                      <div className="sm:col-span-2 flex items-center space-x-2 pt-2 pb-2">
+                        <input
+                          type="checkbox"
+                          id="newClientHasWorkshop"
+                          checked={newCustomerForm.has_workshop}
+                          onChange={(e) => {
+                            setNewCustomerForm(prev => ({ ...prev, has_workshop: e.target.checked }));
+                            if (!e.target.checked) {
+                              setNewCustomerForm(prev => ({
+                                ...prev,
+                                nomeOficina: '',
+                                cnpjOficina: '',
+                                contatoOficina: ''
+                              }));
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <Label htmlFor="newClientHasWorkshop" className="text-sm font-normal cursor-pointer">
+                          Cliente tem oficina
+                        </Label>
+                      </div>
+                      {newCustomerForm.has_workshop && (
                         <>
                           <div>
                             <Label htmlFor="newClientWorkshopName">Nome da Oficina</Label>

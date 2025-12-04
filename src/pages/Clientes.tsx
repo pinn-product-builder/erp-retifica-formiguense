@@ -28,6 +28,7 @@ const Clientes = () => {
     email: '',
     address: '',
     type: 'direto' as 'direto' | 'oficina',
+    has_workshop: false,
     workshop_name: '',
     workshop_cnpj: '',
     workshop_contact: ''
@@ -72,6 +73,7 @@ const Clientes = () => {
       email: '',
       address: '',
       type: 'direto',
+      has_workshop: false,
       workshop_name: '',
       workshop_cnpj: '',
       workshop_contact: ''
@@ -98,6 +100,7 @@ const Clientes = () => {
 
   const handleEdit = (client: Customer) => {
     setEditingClient(client);
+    const hasWorkshop = !!(client.workshop_name || client.workshop_cnpj || client.workshop_contact);
     setFormData({
       name: client.name,
       document: client.document,
@@ -105,6 +108,7 @@ const Clientes = () => {
       email: client.email || '',
       address: client.address || '',
       type: client.type,
+      has_workshop: hasWorkshop,
       workshop_name: client.workshop_name || '',
       workshop_cnpj: client.workshop_cnpj || '',
       workshop_contact: client.workshop_contact || ''
@@ -135,7 +139,12 @@ const Clientes = () => {
 
     // Validar documento
     if (!formData.document.trim()) {
-      newErrors.document = 'Documento é obrigatório';
+      newErrors.document = 'CPF ou CNPJ é obrigatório';
+    } else {
+      const documentNumbers = formData.document.replace(/\D/g, '');
+      if (documentNumbers.length !== 11 && documentNumbers.length !== 14) {
+        newErrors.document = 'CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos';
+      }
     }
 
     // Validar telefone (se preenchido)
@@ -192,10 +201,16 @@ const Clientes = () => {
     }
 
     try {
+      const { has_workshop, ...customerData } = formData;
+      const dataToSave = {
+        ...customerData,
+        type: has_workshop ? 'oficina' : 'direto'
+      };
+      
       if (editingClient) {
-        await updateCustomer(editingClient.id, formData);
+        await updateCustomer(editingClient.id, dataToSave);
       } else {
-        await createCustomer(formData);
+        await createCustomer(dataToSave);
       }
       
       setIsDialogOpen(false);
@@ -281,38 +296,18 @@ const Clientes = () => {
                 )}
               </div>
               <div>
-                <Label htmlFor="type">Tipo de Cliente *</Label>
-                <Select 
-                  value={formData.type} 
-                  onValueChange={(value: 'direto' | 'oficina') => 
-                    setFormData(prev => ({ ...prev, type: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="direto">Cliente Direto</SelectItem>
-                    <SelectItem value="oficina">Oficina</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="document">
-                  {formData.type === 'direto' ? 'CPF' : 'CNPJ'} *
-                </Label>
+                <Label htmlFor="document">CPF ou CNPJ *</Label>
                 <MaskedInput
                   id="document"
-                  mask={formData.type === 'direto' ? 'cpf' : 'cnpj'}
+                  mask="cpfcnpj"
                   value={formData.document}
                   onChange={(maskedValue, rawValue) => {
                     setFormData(prev => ({ ...prev, document: rawValue }));
-                    // Limpar erro ao digitar
                     if (errors.document) {
                       setErrors(prev => ({ ...prev, document: '' }));
                     }
                   }}
-                  placeholder={formData.type === 'direto' ? '000.000.000-00' : '00.000.000/0000-00'}
+                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
                   required
                 />
                 {errors.document && (
@@ -380,8 +375,31 @@ const Clientes = () => {
                 )}
               </div>
               
+              <div className="flex items-center space-x-2 pt-2 pb-2">
+                <input
+                  type="checkbox"
+                  id="has_workshop"
+                  checked={formData.has_workshop}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, has_workshop: e.target.checked }));
+                    if (!e.target.checked) {
+                      setFormData(prev => ({
+                        ...prev,
+                        workshop_name: '',
+                        workshop_cnpj: '',
+                        workshop_contact: ''
+                      }));
+                    }
+                  }}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <Label htmlFor="has_workshop" className="text-sm font-normal cursor-pointer">
+                  Tem oficina?
+                </Label>
+              </div>
+              
               {/* Campos específicos para oficina */}
-              {formData.type === 'oficina' && (
+              {formData.has_workshop && (
                 <>
                   <div>
                     <Label htmlFor="workshop_name">Nome da Oficina</Label>

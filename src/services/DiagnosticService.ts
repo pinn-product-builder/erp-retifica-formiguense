@@ -409,7 +409,6 @@ export class DiagnosticService {
     additional_services?: unknown;
     generated_services?: Array<Record<string, unknown>>;
   }>> {
-    // Buscar as respostas de diagnóstico
     const { data: diagnosticResponses, error } = await supabase
       .from('diagnostic_checklist_responses')
       .select(`
@@ -425,30 +424,48 @@ export class DiagnosticService {
     if (error) throw error;
     if (!diagnosticResponses || diagnosticResponses.length === 0) return [];
 
-    // Para cada resposta, buscar as peças e serviços adicionais das tabelas relacionadas
-    const enrichedResponses = await Promise.all(
-      diagnosticResponses.map(async (response: any) => {
-        // Buscar peças adicionais
-        const { data: additionalParts } = await supabase
-          .from('diagnostic_additional_parts' as any)
-          .select('*')
-          .eq('diagnostic_response_id', response.id)
-          .eq('org_id', orgId);
+    const responseIds = diagnosticResponses.map((r: any) => r.id);
 
-        // Buscar serviços adicionais
-        const { data: additionalServices } = await supabase
-          .from('diagnostic_additional_services' as any)
-          .select('*')
-          .eq('diagnostic_response_id', response.id)
-          .eq('org_id', orgId);
+    const [partsResult, servicesResult] = await Promise.all([
+      supabase
+        .from('diagnostic_additional_parts' as any)
+        .select('*')
+        .in('diagnostic_response_id', responseIds)
+        .eq('org_id', orgId),
+      supabase
+        .from('diagnostic_additional_services' as any)
+        .select('*')
+        .in('diagnostic_response_id', responseIds)
+        .eq('org_id', orgId)
+    ]);
 
-        return {
-          additional_parts: additionalParts || [],
-          additional_services: additionalServices || [],
-          generated_services: response.generated_services || []
-        };
-      })
-    );
+    const allParts = partsResult.data || [];
+    const allServices = servicesResult.data || [];
+
+    const partsByResponseId = new Map<string, unknown[]>();
+    const servicesByResponseId = new Map<string, unknown[]>();
+
+    allParts.forEach((part: any) => {
+      const responseId = part.diagnostic_response_id;
+      if (!partsByResponseId.has(responseId)) {
+        partsByResponseId.set(responseId, []);
+      }
+      partsByResponseId.get(responseId)!.push(part);
+    });
+
+    allServices.forEach((service: any) => {
+      const responseId = service.diagnostic_response_id;
+      if (!servicesByResponseId.has(responseId)) {
+        servicesByResponseId.set(responseId, []);
+      }
+      servicesByResponseId.get(responseId)!.push(service);
+    });
+
+    const enrichedResponses = diagnosticResponses.map((response: any) => ({
+      additional_parts: partsByResponseId.get(response.id) || [],
+      additional_services: servicesByResponseId.get(response.id) || [],
+      generated_services: response.generated_services || []
+    }));
 
     return enrichedResponses;
   }

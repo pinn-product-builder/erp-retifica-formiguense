@@ -128,20 +128,34 @@ const Diagnosticos = () => {
 
   const diagnosticResponses = diagnosticResponsesData || [];
 
+  const getComponentLabel = (component: string | null | undefined) => {
+    if (!component) return 'N/A';
+    const components: Record<string, string> = {
+      bloco: "Bloco",
+      eixo: "Eixo",
+      biela: "Biela",
+      comando: "Comando",
+      cabecote: "Cabeçote",
+      virabrequim: "Virabrequim",
+      pistao: "Pistão"
+    };
+    return components[component] || component;
+  };
+
   const groupedDiagnostics = useMemo(() => {
     const grouped = new Map<string, DiagnosticResponse[]>();
     
     diagnosticResponses.forEach(response => {
-      const key = `${response.order_id}-${response.checklist_id}`;
+      const key = response.order_id;
       if (!grouped.has(key)) {
         grouped.set(key, []);
       }
       grouped.get(key)!.push(response);
     });
 
-    return Array.from(grouped.values()).map(responses => {
+    return Array.from(grouped.entries()).map(([orderId, responses]) => {
       const firstResponse = responses[0];
-      const allComponents = responses.map(r => r.component).filter(Boolean);
+      const allComponents = [...new Set(responses.map(r => r.component).filter(Boolean))];
       const allStatuses = responses.map(r => r.status);
       
       const overallStatus = allStatuses.every(s => s === 'approved') ? 'approved' :
@@ -154,10 +168,12 @@ const Diagnosticos = () => {
         return date > latest ? date : latest;
       }, 0);
 
+      const componentLabels = allComponents.map(comp => getComponentLabel(comp));
+
       return {
         ...firstResponse,
-        id: `${firstResponse.order_id}-${firstResponse.checklist_id}`,
-        component: allComponents.length > 0 ? allComponents.join(', ') : firstResponse.component || 'N/A',
+        id: orderId,
+        component: componentLabels.length > 0 ? componentLabels.join(', ') : firstResponse.component || 'N/A',
         status: overallStatus,
         diagnosed_at: new Date(latestDate).toISOString(),
         allComponents,
@@ -234,17 +250,6 @@ const Diagnosticos = () => {
     );
   };
 
-  const getComponentLabel = (component: string | null | undefined) => {
-    if (!component) return 'N/A';
-    const components = {
-      bloco: "Bloco",
-      eixo: "Eixo",
-      biela: "Biela",
-      comando: "Comando",
-      cabecote: "Cabeçote"
-    };
-    return components[component as keyof typeof components] || component;
-  };
 
   // Componente para exibir respostas do checklist
   const ChecklistResponsesDisplay = ({ responses, checklistId }: { responses: Record<string, any>, checklistId?: string | null }) => {

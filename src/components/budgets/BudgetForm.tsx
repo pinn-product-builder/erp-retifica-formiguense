@@ -205,19 +205,26 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
         if (!isMounted) return;
 
         if (diagnosticResponses && diagnosticResponses.length > 0) {
-          const latestResponse = diagnosticResponses[0] as Record<string, unknown>;
-          
-          const diagnosticParts = (latestResponse.additional_parts as Part[]) || [];
-          const diagnosticServices = (latestResponse.additional_services as Array<Record<string, unknown>>) || [];
-          const generatedServices = (latestResponse.generated_services as Array<Record<string, unknown>>) || [];
+          const allParts: Part[] = [];
+          const allServices: Array<Record<string, unknown>> = [];
+          const allGeneratedServices: Array<Record<string, unknown>> = [];
 
-          if (diagnosticParts.length > 0 || diagnosticServices.length > 0 || generatedServices.length > 0) {
+          diagnosticResponses.forEach((response: Record<string, unknown>) => {
+            const diagnosticParts = (response.additional_parts as Part[]) || [];
+            const diagnosticServices = (response.additional_services as Array<Record<string, unknown>>) || [];
+            const generatedServices = (response.generated_services as Array<Record<string, unknown>>) || [];
+
+            allParts.push(...diagnosticParts);
+            allServices.push(...diagnosticServices);
+            allGeneratedServices.push(...generatedServices);
+          });
+
+          if (allParts.length > 0 || allServices.length > 0 || allGeneratedServices.length > 0) {
             const loadedParts: Part[] = [];
             const loadedServices: Service[] = [];
 
-            if (diagnosticParts.length > 0) {
-              // Buscar estoque disponível para cada peça
-              const partCodes = diagnosticParts.map(p => p.part_code);
+            if (allParts.length > 0) {
+              const partCodes = allParts.map(p => p.part_code);
               const { data: inventoryData } = await supabase
                 .from('parts_inventory')
                 .select('part_code, quantity')
@@ -228,7 +235,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                 (inventoryData || []).map((inv: any) => [inv.part_code, inv.quantity])
               );
 
-              diagnosticParts.forEach((part: Part) => {
+              allParts.forEach((part: Part) => {
                 loadedParts.push({
                   id: part.id || `part_${Date.now()}_${Math.random()}`,
                   part_code: part.part_code,
@@ -241,8 +248,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
               });
             }
 
-            if (diagnosticServices.length > 0) {
-              diagnosticServices.forEach((service: Record<string, unknown>) => {
+            if (allServices.length > 0) {
+              allServices.forEach((service: Record<string, unknown>) => {
                 const serviceName = service.name || service.description || 'Serviço do diagnóstico';
                 const serviceTotal = (service.total as number) || 0;
                 const laborHours = (service.labor_hours as number) || 1;
@@ -251,19 +258,19 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                   id: (service.id as string) || `service_${Date.now()}_${Math.random()}`,
                   description: String(serviceName),
                   quantity: 1,
-                  unit_price: serviceTotal / laborHours,
+                  unit_price: laborHours > 0 ? serviceTotal / laborHours : serviceTotal,
                   total: serviceTotal
                 });
               });
             }
 
-            if (generatedServices.length > 0) {
-              generatedServices.forEach((service: Record<string, unknown>, index: number) => {
+            if (allGeneratedServices.length > 0) {
+              allGeneratedServices.forEach((service: Record<string, unknown>, index: number) => {
                 const serviceName = service.name || service.description || 'Serviço do diagnóstico';
                 const serviceTotal = (service.labor_hours as number || 1) * (service.labor_rate as number || 50);
                 
                 loadedServices.push({
-                  id: `generated_service_${index}`,
+                  id: `generated_service_${Date.now()}_${index}`,
                   description: String(serviceName),
                   quantity: 1,
                   unit_price: serviceTotal,
