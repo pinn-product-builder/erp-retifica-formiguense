@@ -453,6 +453,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
                     workflows={workflowsByStatus[status] || []}
                     componentColor="bg-gray-500"
                     statusColors={statusColors}
+                    statusConfig={statusConfigMap[status]}
                     onUpdate={onOrderUpdate}
                     employeeOptions={employeeDirectory}
                     employeesLoading={employeesLoading}
