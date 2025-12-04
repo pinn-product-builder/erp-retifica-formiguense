@@ -37,7 +37,9 @@ export function useEngineComponents() {
     'tucho': 'Tucho',
     'vareta_valvula': 'Vareta de Válvula',
     'volante_motor': 'Volante do Motor',
+    'volante': 'Volante',
     'prensa_motor': 'Prensa do Motor',
+    'prensa': 'Prensa',
     'disco_embreagem': 'Disco de Embreagem',
     'carcaca_embreagem': 'Carcaça/Lata de Embreagem',
     'rolamento_embreagem': 'Rolamento de Embreagem',
@@ -98,7 +100,13 @@ export function useEngineComponents() {
     'borrachas_camisa': 'Borrachas de Camisa',
     'calco_camisas': 'Calço das camisas',
     'bujao_carter': 'Bujão do Cárter',
-    'tubo_bloco': 'Tubo do Bloco'
+    'tubo_bloco': 'Tubo do Bloco',
+    'compressor': 'Compressor',
+    'modulo': 'Módulo',
+    'bomba_injetora': 'Bomba Injetora',
+    'bomba_alta': 'Bomba de Alta',
+    'unidades_eletronicas': 'Unidades Eletrônicas',
+    'bicos_eletronicos': 'Bicos Eletrônicos'
   };
 
   // Lista completa padrão (usada sempre como base)
@@ -106,7 +114,7 @@ export function useEngineComponents() {
     'bloco', 'tampa_bloco', 'parafusos_bloco', 'eixo', 'virabrequim', 'engrenagem_virabrequim',
     'polia_motor', 'comando', 'engrenagem_comando', 'biela', 'pistao', 'cabecote',
     'molas_cabecote', 'valvulas', 'chapeletas', 'alca_icamento', 'tampa_valvulas',
-    'tampa_oleo', 'balancim', 'tucho', 'vareta_valvula', 'volante_motor', 'prensa_motor',
+    'tampa_oleo', 'balancim', 'tucho', 'vareta_valvula', 'volante_motor', 'volante', 'prensa_motor', 'prensa',
     'disco_embreagem', 'carcaca_embreagem', 'rolamento_embreagem', 'suporte_motor',
     'suporte_alternador', 'suporte_bomba_hidraulica', 'alternador', 'motor_arranque',
     'bomba_hidraulica', 'radiador_oleo', 'filtro_lubrificante', 'correia', 'tensor_correia',
@@ -119,7 +127,8 @@ export function useEngineComponents() {
     'cabos_velas', 'bomba_gasolina', 'corpo_borboleta', 'carburador', 'protecao',
     'pistao_com_anel', 'anel', 'camisas', 'bucha_comando', 'retentores_dianteiro',
     'retentores_traseiro', 'pista_virabrequim', 'selo_comando', 'gaxeta', 'selo_dagua',
-    'borrachas_camisa', 'calco_camisas', 'bujao_carter', 'tubo_bloco'
+    'borrachas_camisa', 'calco_camisas', 'bujao_carter', 'tubo_bloco',
+    'compressor', 'modulo', 'bomba_injetora', 'bomba_alta', 'unidades_eletronicas', 'bicos_eletronicos'
   ] as EngineComponent[];
 
   // Buscar componentes da tabela engine_types

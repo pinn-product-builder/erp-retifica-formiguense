@@ -30,6 +30,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, X, Save, Loader2 } from 'lucide-react';
 import { useEngineTypes, EngineType } from '@/hooks/useEngineTypes';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
+import { InfiniteAutocomplete } from '@/components/ui/infinite-autocomplete';
 import { Json , Database} from '@/integrations/supabase/types';
 
 const CATEGORIES = [
@@ -83,6 +84,7 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
   const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
   const [customStandard, setCustomStandard] = useState('');
   const [customEquipment, setCustomEquipment] = useState('');
+  const [selectedComponent, setSelectedComponent] = useState<{ id: string; label: string } | null>(null);
 
   const form = useForm<EngineTypeFormData>({
     resolver: zodResolver(engineTypeSchema),
@@ -227,7 +229,7 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Categoria</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione uma categoria" />
@@ -340,55 +342,111 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
               <FormField
                 control={form.control}
                 name="required_components"
-                render={() => (
-                  <FormItem>
-                    {componentsLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                        <span className="ml-2 text-sm text-muted-foreground">
-                          Carregando componentes...
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {engineComponents.map((component) => (
-                        <FormField
-                          key={component.value}
-                          control={form.control}
-                          name="required_components"
-                          render={({ field }) => {
-                            return (
-                              <FormItem
-                                key={component.value}
-                                className="flex flex-row items-start space-x-3 space-y-0"
-                              >
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(component.value)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...field.value, component.value])
-                                        : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== component.value
-                                            )
-                                          )
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  {component.label}
-                                </FormLabel>
-                              </FormItem>
-                            )
-                          }}
-                        />
-                      ))}
-                    </div>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const selectedComponents = field.value || [];
+                  
+                  const componentOptions = engineComponents.map(comp => ({
+                    id: comp.value,
+                    label: comp.label,
+                    value: comp.value
+                  }));
+
+                  const availableComponents = componentOptions.filter(
+                    comp => !selectedComponents.includes(comp.value)
+                  );
+
+                  const handleAddComponent = (component: { id: string; label: string; value: string } | null) => {
+                    if (component && !selectedComponents.includes(component.value)) {
+                      field.onChange([...selectedComponents, component.value]);
+                      setSelectedComponent(null);
+                    }
+                  };
+
+                  const handleRemoveComponent = (componentValue: string) => {
+                    field.onChange(selectedComponents.filter((v: string) => v !== componentValue));
+                  };
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Componentes Obrigatórios</FormLabel>
+                      <FormControl>
+                        {componentsLoading ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                            <span className="ml-2 text-sm text-muted-foreground">
+                              Carregando componentes...
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <InfiniteAutocomplete
+                              options={availableComponents}
+                              loading={componentsLoading}
+                              label="Buscar Componente"
+                              placeholder="Digite para buscar componente..."
+                              value={selectedComponent}
+                              onChange={(_, newValue) => {
+                                handleAddComponent(newValue);
+                              }}
+                              getOptionLabel={(option) => option.label || ''}
+                              isOptionEqualToValue={(option, value) => option.id === value.id}
+                              filterOptions={(options, { inputValue }) => {
+                                if (!inputValue) return options;
+                                const term = inputValue.toLowerCase();
+                                return options.filter(opt => 
+                                  opt.label?.toLowerCase().includes(term) ||
+                                  opt.value?.toLowerCase().includes(term)
+                                );
+                              }}
+                              renderOption={(props, option) => (
+                                <li {...props} key={option.id}>
+                                  <div className="flex flex-col w-full py-2">
+                                    <div className="font-medium text-sm">
+                                      {option.label}
+                                    </div>
+                                  </div>
+                                </li>
+                              )}
+                            />
+                            
+                            {selectedComponents.length > 0 && (
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">Componentes Selecionados</Label>
+                                <div className="flex flex-wrap gap-2">
+                                  {selectedComponents.map((componentValue: string) => {
+                                    const component = engineComponents.find(c => c.value === componentValue);
+                                    return (
+                                      <Badge
+                                        key={componentValue}
+                                        variant="secondary"
+                                        className="gap-1 px-2 py-1 text-sm"
+                                      >
+                                        {component?.label || componentValue}
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-auto p-0 ml-1 hover:bg-transparent"
+                                          onClick={() => handleRemoveComponent(componentValue)}
+                                        >
+                                          <X className="w-3 h-3" />
+                                        </Button>
+                                      </Badge>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </FormControl>
+                      <FormDescription>
+                        Busque e adicione os componentes que fazem parte deste tipo de motor. Eles aparecerão no checkin.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             </CardContent>
           </Card>

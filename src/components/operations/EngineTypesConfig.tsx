@@ -64,7 +64,8 @@ export function EngineTypesConfig() {
   const { 
     engineTypes, 
     loading, 
-    deleteEngineType 
+    deleteEngineType,
+    fetchEngineTypes
   } = useEngineTypes();
   
   const [selectedEngineType, setSelectedEngineType] = useState<EngineType | null>(null);
@@ -375,7 +376,10 @@ export function EngineTypesConfig() {
           <EngineTypeForm
             engineType={selectedEngineType}
             mode={formMode}
-            onSuccess={() => setIsFormOpen(false)}
+            onSuccess={async () => {
+              await fetchEngineTypes();
+              setIsFormOpen(false);
+            }}
             onCancel={() => setIsFormOpen(false)}
           />
         </DialogContent>
