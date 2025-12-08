@@ -28,6 +28,8 @@ import {
   AlertCircle,
   Truck,
   Calendar,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
@@ -586,16 +588,36 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
                       />
                     </TableCell>
                     <TableCell>
-                      <Input
-                        type="text"
-                        value={item.quantity.toString()}
-                        onChange={(e) => {
-                          const numericValue = e.target.value.replace(/[^\d]/g, '');
-                          const quantity = numericValue ? parseInt(numericValue) : 0;
-                          handleItemChange(index, 'quantity', Math.max(1, quantity));
-                        }}
-                        className={`w-20 ${errors[`item_${index}_quantity`] ? 'border-red-500' : ''}`}
-                      />
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 sm:h-8 sm:w-8"
+                          onClick={() => handleItemChange(index, 'quantity', Math.max(1, item.quantity - 1))}
+                        >
+                          <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                        <Input
+                          type="text"
+                          value={item.quantity.toString()}
+                          onChange={(e) => {
+                            const numericValue = e.target.value.replace(/[^\d]/g, '');
+                            const quantity = numericValue ? parseInt(numericValue) : 0;
+                            handleItemChange(index, 'quantity', Math.max(1, quantity));
+                          }}
+                          className={`w-16 sm:w-20 text-center ${errors[`item_${index}_quantity`] ? 'border-red-500' : ''}`}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 sm:h-8 sm:w-8"
+                          onClick={() => handleItemChange(index, 'quantity', item.quantity + 1)}
+                        >
+                          <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                      </div>
                       {errors[`item_${index}_quantity`] && (
                         <p className="text-xs text-red-500 mt-1">{errors[`item_${index}_quantity`]}</p>
                       )}

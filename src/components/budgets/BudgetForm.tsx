@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { InfiniteAutocomplete } from '@/components/ui/infinite-autocomplete';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Search, AlertCircle, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Search, AlertCircle, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -863,16 +863,36 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                   <TableRow key={service.id}>
                     <TableCell>{service.description}</TableCell>
                     <TableCell>
-                      <Input
-                        type="text"
-                        value={service.quantity.toString()}
-                        onChange={(e) => {
-                          const numericValue = e.target.value.replace(/[^\d]/g, '');
-                          const quantity = numericValue ? parseInt(numericValue) : 1;
-                          updateServiceQuantity(service.id, Math.max(1, quantity));
-                        }}
-                        className="w-20"
-                      />
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 sm:h-8 sm:w-8"
+                          onClick={() => updateServiceQuantity(service.id, Math.max(1, service.quantity - 1))}
+                        >
+                          <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                        <Input
+                          type="text"
+                          value={service.quantity.toString()}
+                          onChange={(e) => {
+                            const numericValue = e.target.value.replace(/[^\d]/g, '');
+                            const quantity = numericValue ? parseInt(numericValue) : 1;
+                            updateServiceQuantity(service.id, Math.max(1, quantity));
+                          }}
+                          className="w-16 sm:w-20 text-center"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 sm:h-8 sm:w-8"
+                          onClick={() => updateServiceQuantity(service.id, service.quantity + 1)}
+                        >
+                          <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <MaskedInput
@@ -976,16 +996,36 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                       )}
                     </TableCell>
                     <TableCell>
-                      <Input
-                        type="text"
-                        value={part.quantity.toString()}
-                        onChange={(e) => {
-                          const numericValue = e.target.value.replace(/[^\d]/g, '');
-                          const quantity = numericValue ? parseInt(numericValue) : 1;
-                          updatePartQuantity(part.id, Math.max(1, quantity));
-                        }}
-                        className="w-20"
-                      />
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 sm:h-8 sm:w-8"
+                          onClick={() => updatePartQuantity(part.id, Math.max(1, part.quantity - 1))}
+                        >
+                          <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                        <Input
+                          type="text"
+                          value={part.quantity.toString()}
+                          onChange={(e) => {
+                            const numericValue = e.target.value.replace(/[^\d]/g, '');
+                            const quantity = numericValue ? parseInt(numericValue) : 1;
+                            updatePartQuantity(part.id, Math.max(1, quantity));
+                          }}
+                          className="w-16 sm:w-20 text-center"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7 sm:h-8 sm:w-8"
+                          onClick={() => updatePartQuantity(part.id, part.quantity + 1)}
+                        >
+                          <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell>{formatCurrency(part.unit_price)}</TableCell>
                     <TableCell className="font-medium">{formatCurrency(part.total)}</TableCell>

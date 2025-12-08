@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Package, Upload, Star } from 'lucide-react';
+import { AlertCircle, Package, Upload, Star, ChevronUp, ChevronDown } from 'lucide-react';
 import { usePurchaseReceipts } from '@/hooks/usePurchaseReceipts';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -641,14 +641,41 @@ export function ReceiveOrderModal({
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
                           <Label className="text-xs">Quantidade Recebida *</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            max={remaining}
-                            value={receiptItem?.received_quantity || 0}
-                            onChange={(e) => updateReceiptItem(item.id, 'received_quantity', Number(e.target.value))}
-                            className={receiptItem?.received_quantity > remaining ? 'border-red-300' : ''}
-                          />
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7 sm:h-8 sm:w-8"
+                              onClick={() => {
+                                const newValue = Math.max(0, (receiptItem?.received_quantity || 0) - 1);
+                                updateReceiptItem(item.id, 'received_quantity', newValue);
+                              }}
+                            >
+                              <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                            <Input
+                              type="number"
+                              min="0"
+                              max={remaining}
+                              value={receiptItem?.received_quantity || 0}
+                              onChange={(e) => updateReceiptItem(item.id, 'received_quantity', Number(e.target.value))}
+                              className={`w-16 sm:w-20 text-center ${receiptItem?.received_quantity > remaining ? 'border-red-300' : ''}`}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7 sm:h-8 sm:w-8"
+                              onClick={() => {
+                                const newValue = Math.min(remaining, (receiptItem?.received_quantity || 0) + 1);
+                                updateReceiptItem(item.id, 'received_quantity', newValue);
+                              }}
+                              disabled={(receiptItem?.received_quantity || 0) >= remaining}
+                            >
+                              <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                          </div>
                           {receiptItem?.received_quantity > remaining && (
                             <p className="text-xs text-red-600 mt-1">
                               Quantidade não pode ser maior que o restante ({remaining})
@@ -658,22 +685,76 @@ export function ReceiveOrderModal({
                         
                         <div>
                           <Label className="text-xs">Quantidade Aprovada</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={receiptItem?.approved_quantity || 0}
-                            onChange={(e) => updateReceiptItem(item.id, 'approved_quantity', Number(e.target.value))}
-                          />
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7 sm:h-8 sm:w-8"
+                              onClick={() => {
+                                const newValue = Math.max(0, (receiptItem?.approved_quantity || 0) - 1);
+                                updateReceiptItem(item.id, 'approved_quantity', newValue);
+                              }}
+                            >
+                              <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={receiptItem?.approved_quantity || 0}
+                              onChange={(e) => updateReceiptItem(item.id, 'approved_quantity', Number(e.target.value))}
+                              className="w-16 sm:w-20 text-center"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7 sm:h-8 sm:w-8"
+                              onClick={() => {
+                                const newValue = (receiptItem?.approved_quantity || 0) + 1;
+                                updateReceiptItem(item.id, 'approved_quantity', newValue);
+                              }}
+                            >
+                              <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                          </div>
                         </div>
                         
                         <div>
                           <Label className="text-xs">Quantidade Rejeitada</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={receiptItem?.rejected_quantity || 0}
-                            onChange={(e) => updateReceiptItem(item.id, 'rejected_quantity', Number(e.target.value))}
-                          />
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7 sm:h-8 sm:w-8"
+                              onClick={() => {
+                                const newValue = Math.max(0, (receiptItem?.rejected_quantity || 0) - 1);
+                                updateReceiptItem(item.id, 'rejected_quantity', newValue);
+                              }}
+                            >
+                              <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                            <Input
+                              type="number"
+                              min="0"
+                              value={receiptItem?.rejected_quantity || 0}
+                              onChange={(e) => updateReceiptItem(item.id, 'rejected_quantity', Number(e.target.value))}
+                              className="w-16 sm:w-20 text-center"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7 sm:h-8 sm:w-8"
+                              onClick={() => {
+                                const newValue = (receiptItem?.rejected_quantity || 0) + 1;
+                                updateReceiptItem(item.id, 'rejected_quantity', newValue);
+                              }}
+                            >
+                              <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </Button>
+                          </div>
                         </div>
                         
                         <div>

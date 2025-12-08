@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/table';
 import { InfiniteAutocomplete } from '@/components/ui/infinite-autocomplete';
 import { Typography, Box } from '@mui/material';
-import { Trash2, Package, Wrench } from 'lucide-react';
+import { Trash2, Package, Wrench, ChevronUp, ChevronDown } from 'lucide-react';
 import { usePartsInventory } from '@/hooks/usePartsInventory';
 import { useAdditionalServices } from '@/hooks/useAdditionalServices';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -301,13 +301,33 @@ export function PartsServicesSelector({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={part.quantity}
-                          onChange={(e) => updatePartQuantity(part.id, parseInt(e.target.value) || 1)}
-                          className="w-20"
-                        />
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7 sm:h-8 sm:w-8"
+                            onClick={() => updatePartQuantity(part.id, Math.max(1, part.quantity - 1))}
+                          >
+                            <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={part.quantity}
+                            onChange={(e) => updatePartQuantity(part.id, parseInt(e.target.value) || 1)}
+                            className="w-16 sm:w-20 text-center"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7 sm:h-8 sm:w-8"
+                            onClick={() => updatePartQuantity(part.id, part.quantity + 1)}
+                          >
+                            <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Input
@@ -432,13 +452,33 @@ export function PartsServicesSelector({
                         <p className="font-medium text-sm">{service.description}</p>
                       </TableCell>
                       <TableCell>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={service.quantity}
-                          onChange={(e) => updateServiceQuantity(service.id, parseInt(e.target.value) || 1)}
-                          className="w-20"
-                        />
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7 sm:h-8 sm:w-8"
+                            onClick={() => updateServiceQuantity(service.id, Math.max(1, service.quantity - 1))}
+                          >
+                            <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={service.quantity}
+                            onChange={(e) => updateServiceQuantity(service.id, parseInt(e.target.value) || 1)}
+                            className="w-16 sm:w-20 text-center"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7 sm:h-8 sm:w-8"
+                            onClick={() => updateServiceQuantity(service.id, service.quantity + 1)}
+                          >
+                            <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Input

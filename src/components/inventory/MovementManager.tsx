@@ -19,7 +19,9 @@ import {
   AlertTriangle,
   Clock,
   CheckCircle2,
-  XCircle
+  XCircle,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { useInventoryMovements, MovementType, InventoryMovement } from '@/hooks/useInventoryMovements';
 import { usePartsInventory } from '@/hooks/usePartsInventory';
@@ -444,15 +446,36 @@ export default function MovementManager() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Quantidade *</Label>
-                  <Input
-                    type="text"
-                    value={formData.quantity.toString()}
-                    onChange={(e) => {
-                      const numericValue = e.target.value.replace(/[^\d]/g, '');
-                      const quantity = numericValue ? parseInt(numericValue) : 1;
-                      handleInputChange('quantity', Math.max(1, quantity));
-                    }}
-                  />
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 sm:h-8 sm:w-8"
+                      onClick={() => handleInputChange('quantity', Math.max(1, formData.quantity - 1))}
+                    >
+                      <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
+                    <Input
+                      type="text"
+                      value={formData.quantity.toString()}
+                      onChange={(e) => {
+                        const numericValue = e.target.value.replace(/[^\d]/g, '');
+                        const quantity = numericValue ? parseInt(numericValue) : 1;
+                        handleInputChange('quantity', Math.max(1, quantity));
+                      }}
+                      className="w-16 sm:w-20 text-center"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 sm:h-8 sm:w-8"
+                      onClick={() => handleInputChange('quantity', formData.quantity + 1)}
+                    >
+                      <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
+                  </div>
                 </div>
                 
                 <div>
