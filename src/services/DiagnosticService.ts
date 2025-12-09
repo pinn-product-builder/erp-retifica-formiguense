@@ -375,7 +375,7 @@ export class DiagnosticService {
     file: File,
     responseId: string,
     itemId: string
-  ): Promise<{ url: string; name: string; size: number } | null> {
+  ): Promise<{ url: string; name: string; size: number; path: string } | null> {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `checklist-photos/${responseId}/${itemId}_${Date.now()}.${fileExt}`;
@@ -386,18 +386,32 @@ export class DiagnosticService {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      const { data: signedUrl } = await supabase.storage
         .from('diagnostic-photos')
-        .getPublicUrl(fileName);
+        .createSignedUrl(fileName, 3600);
 
       return {
-        url: publicUrl,
+        url: signedUrl?.signedUrl || fileName,
+        path: fileName,
         name: file.name,
         size: file.size
       };
     } catch (error) {
       console.error('Erro ao fazer upload da foto:', error);
       throw error;
+    }
+  }
+
+  static async getDiagnosticPhotoUrl(path: string): Promise<string | null> {
+    try {
+      const { data: signedUrl } = await supabase.storage
+        .from('diagnostic-photos')
+        .createSignedUrl(path, 3600);
+      
+      return signedUrl?.signedUrl || null;
+    } catch (error) {
+      console.error('Erro ao gerar URL assinada da foto:', error);
+      return null;
     }
   }
 

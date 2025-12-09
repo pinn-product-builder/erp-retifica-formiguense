@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -27,20 +27,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, X, Save, Loader2 } from 'lucide-react';
+import { Plus, X, Save, Loader2, Search } from 'lucide-react';
 import { useEngineTypes, EngineType } from '@/hooks/useEngineTypes';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
-import { InfiniteAutocomplete } from '@/components/ui/infinite-autocomplete';
+import { useEngineCategories } from '@/hooks/useEngineCategories';
 import { Json , Database} from '@/integrations/supabase/types';
-
-const CATEGORIES = [
-  { value: 'geral', label: 'Geral' },
-  { value: 'linha_pesada', label: 'Linha Pesada' },
-  { value: 'linha_leve', label: 'Linha Leve' },
-  { value: 'bosch', label: 'Bosch' },
-  { value: 'bosch_specialized', label: 'Bosch 14 Etapas' },
-  { value: 'garantia', label: 'Garantia' },
-];
 
 const TECHNICAL_STANDARDS = [
   'NBR 13032',
@@ -52,7 +43,7 @@ const TECHNICAL_STANDARDS = [
 
 const engineTypeSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
-  category: z.string().min(1, 'Categoria é obrigatória'),
+  category_id: z.string().min(1, 'Categoria é obrigatória'),
   description: z.string().optional(),
   technical_standards: z.array(z.string()),
   required_components: z.array(z.string()).min(1, 'Pelo menos um componente é obrigatório'),
@@ -82,18 +73,43 @@ interface EngineTypeFormProps {
 export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: EngineTypeFormProps) {
   const { createEngineType, updateEngineType, loading } = useEngineTypes();
   const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
+  const { fetchAllCategories } = useEngineCategories();
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; components?: string[] }>>([]);
   const [customStandard, setCustomStandard] = useState('');
   const [customEquipment, setCustomEquipment] = useState('');
-  const [selectedComponent, setSelectedComponent] = useState<{ id: string; label: string } | null>(null);
+  const [componentSearchTerm, setComponentSearchTerm] = useState('');
+  const [categoryChanged, setCategoryChanged] = useState(false);
+
+  const filteredComponents = useMemo(() => {
+    if (!componentSearchTerm) return engineComponents;
+    
+    const term = componentSearchTerm.toLowerCase();
+    return engineComponents.filter(comp => 
+      comp.label.toLowerCase().includes(term) ||
+      comp.value.toLowerCase().includes(term)
+    );
+  }, [engineComponents, componentSearchTerm]);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      const cats = await fetchAllCategories();
+      setCategories(cats.map(c => ({ 
+        id: c.id, 
+        name: c.name,
+        components: Array.isArray(c.components) ? c.components as string[] : []
+      })));
+    };
+    loadCategories();
+  }, [fetchAllCategories]);
 
   const form = useForm<EngineTypeFormData>({
     resolver: zodResolver(engineTypeSchema),
     defaultValues: {
       name: '',
-      category: '',
+      category_id: '',
       description: '',
       technical_standards: [],
-      required_components: ['bloco', 'eixo', 'biela', 'comando', 'cabecote'], // Valores padrão iniciais
+      required_components: [],
       default_warranty_months: 3,
       is_active: true,
       display_order: 0,
@@ -111,9 +127,10 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
 
   useEffect(() => {
     if (engineType && mode === 'edit') {
+      const categoryId = (engineType as any).category_id;
       form.reset({
         name: engineType.name,
-        category: engineType.category,
+        category_id: categoryId || '',
         description: engineType.description || '',
         technical_standards: Array.isArray(engineType.technical_standards) ? engineType.technical_standards as string[] : [],
         required_components: Array.isArray(engineType.required_components) ? engineType.required_components as string[] : [],
@@ -133,12 +150,45 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
     }
   }, [engineType, mode, form]);
 
+  useEffect(() => {
+    if (mode === 'edit' && engineType && categories.length > 0) {
+      const categoryId = (engineType as any).category_id;
+      if (categoryId) {
+        const currentCategoryId = form.getValues('category_id');
+        if (currentCategoryId !== categoryId) {
+          form.setValue('category_id', categoryId);
+        }
+      }
+    }
+  }, [categories, mode, engineType, form]);
+
+  useEffect(() => {
+    if (mode === 'edit' && engineType && categories.length > 0) {
+      const categoryId = form.getValues('category_id');
+      const currentComponents = form.getValues('required_components');
+      
+      if (categoryId) {
+        const selectedCategory = categories.find(c => c.id === categoryId);
+        
+        if (categoryChanged && selectedCategory) {
+          if (selectedCategory.components && selectedCategory.components.length > 0) {
+            const combinedComponents = [...new Set([...currentComponents, ...selectedCategory.components])];
+            form.setValue('required_components', combinedComponents);
+          }
+          setCategoryChanged(false);
+        } else if (currentComponents.length === 0 && selectedCategory && selectedCategory.components && selectedCategory.components.length > 0) {
+          form.setValue('required_components', [...selectedCategory.components]);
+        }
+      }
+    }
+  }, [categories, mode, engineType, form, categoryChanged]);
+
   const onSubmit = async (data: EngineTypeFormData) => {
     try {
       if (mode === 'create') {
         const created = await createEngineType({
           name: data.name!,
-          category: data.category!,
+          category_id: data.category_id!,
           description: data.description,
           is_active: data.is_active,
           display_order: data.display_order,
@@ -151,7 +201,7 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
       } else if (engineType) {
         await updateEngineType(engineType.id, {
           name: data.name,
-          category: data.category,
+          category_id: data.category_id,
           description: data.description,
           is_active: data.is_active,
           display_order: data.display_order,
@@ -225,20 +275,42 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
 
               <FormField
                 control={form.control}
-                name="category"
+                name="category_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Categoria</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormLabel>Categoria *</FormLabel>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setCategoryChanged(true);
+                        
+                        const selectedCategory = categories.find(c => c.id === value);
+                        if (selectedCategory) {
+                          const currentComponents = form.getValues('required_components');
+                          
+                          if (selectedCategory.components && selectedCategory.components.length > 0) {
+                            if (mode === 'create') {
+                              form.setValue('required_components', [...selectedCategory.components]);
+                            } else {
+                              const combinedComponents = [...new Set([...currentComponents, ...selectedCategory.components])];
+                              form.setValue('required_components', combinedComponents);
+                            }
+                          } else if (mode === 'create') {
+                            form.setValue('required_components', []);
+                          }
+                        }
+                      }} 
+                      value={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione uma categoria" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {CATEGORIES.map((category) => (
-                          <SelectItem key={category.value} value={category.value}>
-                            {category.label}
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -344,31 +416,20 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
                 name="required_components"
                 render={({ field }) => {
                   const selectedComponents = field.value || [];
-                  
-                  const componentOptions = engineComponents.map(comp => ({
-                    id: comp.value,
-                    label: comp.label,
-                    value: comp.value
-                  }));
 
-                  const availableComponents = componentOptions.filter(
-                    comp => !selectedComponents.includes(comp.value)
-                  );
-
-                  const handleAddComponent = (component: { id: string; label: string; value: string } | null) => {
-                    if (component && !selectedComponents.includes(component.value)) {
-                      field.onChange([...selectedComponents, component.value]);
-                      setSelectedComponent(null);
+                  const handleToggleComponent = (componentValue: string, checked: boolean) => {
+                    if (checked) {
+                      if (!selectedComponents.includes(componentValue)) {
+                        field.onChange([...selectedComponents, componentValue]);
+                      }
+                    } else {
+                      field.onChange(selectedComponents.filter((v: string) => v !== componentValue));
                     }
-                  };
-
-                  const handleRemoveComponent = (componentValue: string) => {
-                    field.onChange(selectedComponents.filter((v: string) => v !== componentValue));
                   };
 
                   return (
                     <FormItem>
-                      <FormLabel>Componentes Obrigatórios</FormLabel>
+                      <FormLabel>Componentes Obrigatórios *</FormLabel>
                       <FormControl>
                         {componentsLoading ? (
                           <div className="flex items-center justify-center py-8">
@@ -378,70 +439,58 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
                             </span>
                           </div>
                         ) : (
-                          <div className="space-y-4">
-                            <InfiniteAutocomplete
-                              options={availableComponents}
-                              loading={componentsLoading}
-                              label="Buscar Componente"
-                              placeholder="Digite para buscar componente..."
-                              value={selectedComponent}
-                              onChange={(_, newValue) => {
-                                handleAddComponent(newValue);
-                              }}
-                              getOptionLabel={(option) => option.label || ''}
-                              isOptionEqualToValue={(option, value) => option.id === value.id}
-                              filterOptions={(options, { inputValue }) => {
-                                if (!inputValue) return options;
-                                const term = inputValue.toLowerCase();
-                                return options.filter(opt => 
-                                  opt.label?.toLowerCase().includes(term) ||
-                                  opt.value?.toLowerCase().includes(term)
-                                );
-                              }}
-                              renderOption={(props, option) => (
-                                <li {...props} key={option.id}>
-                                  <div className="flex flex-col w-full py-2">
-                                    <div className="font-medium text-sm">
-                                      {option.label}
-                                    </div>
-                                  </div>
-                                </li>
-                              )}
-                            />
+                          <div className="space-y-3">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                placeholder="Buscar componente..."
+                                value={componentSearchTerm}
+                                onChange={(e) => setComponentSearchTerm(e.target.value)}
+                                className="pl-9"
+                              />
+                            </div>
                             
-                            {selectedComponents.length > 0 && (
-                              <div className="space-y-2">
-                                <Label className="text-sm font-medium">Componentes Selecionados</Label>
-                                <div className="flex flex-wrap gap-2">
-                                  {selectedComponents.map((componentValue: string) => {
-                                    const component = engineComponents.find(c => c.value === componentValue);
+                            <div className="border rounded-lg p-4 max-h-[400px] overflow-y-auto">
+                              {filteredComponents.length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center py-4">
+                                  Nenhum componente encontrado
+                                </p>
+                              ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  {filteredComponents.map((component) => {
+                                    const isChecked = selectedComponents.includes(component.value);
                                     return (
-                                      <Badge
-                                        key={componentValue}
-                                        variant="secondary"
-                                        className="gap-1 px-2 py-1 text-sm"
-                                      >
-                                        {component?.label || componentValue}
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-auto p-0 ml-1 hover:bg-transparent"
-                                          onClick={() => handleRemoveComponent(componentValue)}
+                                      <div key={component.value} className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id={`component-${component.value}`}
+                                          checked={isChecked}
+                                          onCheckedChange={(checked) => {
+                                            handleToggleComponent(component.value, checked as boolean);
+                                          }}
+                                        />
+                                        <Label
+                                          htmlFor={`component-${component.value}`}
+                                          className="text-sm font-normal cursor-pointer flex-1"
                                         >
-                                          <X className="w-3 h-3" />
-                                        </Button>
-                                      </Badge>
+                                          {component.label}
+                                        </Label>
+                                      </div>
                                     );
                                   })}
                                 </div>
+                              )}
+                            </div>
+
+                            {selectedComponents.length > 0 && (
+                              <div className="text-sm text-muted-foreground">
+                                {selectedComponents.length} componente(s) selecionado(s)
                               </div>
                             )}
                           </div>
                         )}
                       </FormControl>
                       <FormDescription>
-                        Busque e adicione os componentes que fazem parte deste tipo de motor. Eles aparecerão no checkin.
+                        Selecione os componentes que fazem parte deste tipo de motor. Eles aparecerão no checkin.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

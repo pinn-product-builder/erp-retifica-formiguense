@@ -47,31 +47,55 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useEngineTypes, EngineType } from '@/hooks/useEngineTypes';
+import { useEngineCategories } from '@/hooks/useEngineCategories';
 import { EngineTypeForm } from './EngineTypeForm';
 import { WorkflowStepsManager } from './WorkflowStepsManager';
-import { Loader2 } from 'lucide-react';
-
-const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
-  geral: { label: 'Geral', color: 'bg-blue-500' },
-  linha_pesada: { label: 'Linha Pesada', color: 'bg-green-500' },
-  linha_leve: { label: 'Linha Leve', color: 'bg-yellow-500' },
-  bosch: { label: 'Bosch', color: 'bg-red-500' },
-  bosch_specialized: { label: 'Bosch 14 Etapas', color: 'bg-purple-500' },
-  garantia: { label: 'Garantia', color: 'bg-orange-500' },
-};
+import { Loader2, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 
 export function EngineTypesConfig() {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const pageSize = 10;
+  
   const { 
-    engineTypes, 
+    engineTypes,
+    total,
+    totalPages,
     loading, 
     deleteEngineType,
     fetchEngineTypes
-  } = useEngineTypes();
+  } = useEngineTypes({ page, pageSize, search });
+  
+  const { fetchAllCategories } = useEngineCategories();
+  const [categories, setCategories] = useState<Record<string, { name: string; color: string }>>({});
   
   const [selectedEngineType, setSelectedEngineType] = useState<EngineType | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isWorkflowOpen, setIsWorkflowOpen] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+
+  React.useEffect(() => {
+    const loadCategories = async () => {
+      const cats = await fetchAllCategories();
+      const colors = ['bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-red-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500', 'bg-indigo-500'];
+      const catsMap: Record<string, { name: string; color: string }> = {};
+      cats.forEach((cat, index) => {
+        catsMap[cat.id] = { name: cat.name, color: colors[index % colors.length] };
+      });
+      setCategories(catsMap);
+    };
+    loadCategories();
+  }, []);
+
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setPage(1);
+      fetchEngineTypes();
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [search]);
 
   const handleCreate = () => {
     setSelectedEngineType(null);
@@ -94,8 +118,10 @@ export function EngineTypesConfig() {
     await deleteEngineType(id);
   };
 
-  const getCategoryInfo = (category: string) => {
-    return CATEGORY_LABELS[category] || { label: category, color: 'bg-gray-500' };
+  const getCategoryInfo = (categoryId: string | null) => {
+    if (!categoryId) return { label: 'Sem categoria', color: 'bg-gray-500' };
+    const cat = categories[categoryId];
+    return cat ? { label: cat.name, color: cat.color } : { label: 'Categoria não encontrada', color: 'bg-gray-500' };
   };
 
   if (loading && engineTypes.length === 0) {
@@ -135,6 +161,16 @@ export function EngineTypesConfig() {
             </TabsList>
             
             <TabsContent value="list" className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar tipo de motor..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
               {engineTypes.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground mb-4">
@@ -161,7 +197,8 @@ export function EngineTypesConfig() {
                     </TableHeader>
                     <TableBody>
                       {engineTypes.map((engineType) => {
-                        const categoryInfo = getCategoryInfo(engineType.category);
+                        const categoryId = (engineType as any).category_id;
+                        const categoryInfo = getCategoryInfo(categoryId);
                         return (
                           <TableRow key={engineType.id}>
                             <TableCell className="font-medium">
@@ -278,12 +315,64 @@ export function EngineTypesConfig() {
                   </Table>
                 </div>
               )}
+
+              {totalPages > 1 && (
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        className={page === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
+                      if (
+                        pageNum === 1 ||
+                        pageNum === totalPages ||
+                        (pageNum >= page - 1 && pageNum <= page + 1)
+                      ) {
+                        return (
+                          <PaginationItem key={pageNum}>
+                            <PaginationLink
+                              onClick={() => setPage(pageNum)}
+                              isActive={page === pageNum}
+                              className="cursor-pointer"
+                            >
+                              {pageNum}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      } else if (pageNum === page - 2 || pageNum === page + 2) {
+                        return (
+                          <PaginationItem key={pageNum}>
+                            <span className="px-2">...</span>
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    })}
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        className={page === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+
+              {engineTypes.length > 0 && (
+                <div className="text-sm text-muted-foreground text-center">
+                  Mostrando {engineTypes.length} de {total} tipo(s) de motor
+                </div>
+              )}
             </TabsContent>
             
             <TabsContent value="overview" className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {engineTypes.map((engineType) => {
-                  const categoryInfo = getCategoryInfo(engineType.category);
+                  const categoryId = (engineType as any).category_id;
+                  const categoryInfo = getCategoryInfo(categoryId);
                   return (
                     <Card key={engineType.id} className="relative">
                       <CardHeader className="pb-3">

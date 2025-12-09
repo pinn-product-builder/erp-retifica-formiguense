@@ -1,9 +1,10 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Wrench, ClipboardList, GitBranch, CheckCircle, Cog } from "lucide-react";
+import { Settings, Wrench, ClipboardList, GitBranch, CheckCircle, Cog, FolderTree } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 import { EngineTypesConfig } from "@/components/operations/EngineTypesConfig";
+import { EngineCategoriesConfig } from "@/components/operations/EngineCategoriesConfig";
 import DiagnosticChecklistsConfig from "@/components/operations/DiagnosticChecklistsConfig";
 import { WorkflowStatusConfigAdmin } from "@/components/admin/WorkflowStatusConfigAdmin";
 import { usePermissions } from '@/hooks/usePermissions';
@@ -70,9 +71,14 @@ const ConfiguracoesOperacoes = () => {
       </div>
 
       {/* Tabs de configurações */}
-      <Tabs defaultValue="tipos-motor" className="space-y-4 sm:space-y-6">
+      <Tabs defaultValue="categorias" className="space-y-4 sm:space-y-6">
         <div className="overflow-x-auto">
-          <TabsList className="grid grid-cols-3 w-full min-w-[600px] sm:min-w-0">
+          <TabsList className="grid grid-cols-4 w-full min-w-[800px] sm:min-w-0">
+            <TabsTrigger value="categorias" className="flex items-center gap-2 text-xs sm:text-sm">
+              <FolderTree className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Categorias</span>
+              <span className="sm:hidden">Categorias</span>
+            </TabsTrigger>
             <TabsTrigger value="tipos-motor" className="flex items-center gap-2 text-xs sm:text-sm">
               <Cog className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Tipos de Motor</span>
@@ -90,6 +96,34 @@ const ConfiguracoesOperacoes = () => {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        {/* Aba Categorias */}
+        <TabsContent value="categorias" className="space-y-4 sm:space-y-6">
+          <Card>
+            <CardHeader className="pb-3 sm:pb-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <FolderTree className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+                Categorias de Tipos de Motor
+              </CardTitle>
+              <CardDescription className="text-sm sm:text-base">
+                Gerencie as categorias de tipos de motor e seus componentes associados
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PermissionGate 
+                module="settings" 
+                level="admin"
+                fallback={
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">Você não tem permissão para gerenciar categorias.</p>
+                  </div>
+                }
+              >
+                <EngineCategoriesConfig />
+              </PermissionGate>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Aba Tipos de Motor */}
         <TabsContent value="tipos-motor" className="space-y-4 sm:space-y-6">
@@ -189,6 +223,7 @@ const ConfiguracoesOperacoes = () => {
             <div className="space-y-2">
               <h3 className="font-semibold text-sm">Sobre as Configurações do Módulo</h3>
               <div className="text-sm text-muted-foreground space-y-1">
+                <p>• <strong>Categorias:</strong> Gerencie categorias de tipos de motor e seus componentes</p>
                 <p>• <strong>Tipos de Motor:</strong> Configure os tipos de motor suportados e seus componentes</p>
                 <p>• <strong>Checklists:</strong> Defina checklists personalizados para diagnóstico por componente</p>
                 <p>• <strong>Status de Workflow:</strong> Personalize os status do fluxo operacional</p>

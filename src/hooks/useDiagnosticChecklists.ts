@@ -455,8 +455,13 @@ export function useDiagnosticChecklists() {
 
       if (uploadError) throw uploadError;
 
+      const { data: signedUrl } = await supabase.storage
+        .from('diagnostic-photos')
+        .createSignedUrl(fileName, 3600);
+
       return {
-        url: uploadData.path,
+        url: signedUrl?.signedUrl || fileName,
+        path: fileName,
         name: file.name,
         size: file.size
       };

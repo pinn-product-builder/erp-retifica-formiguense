@@ -12,8 +12,17 @@ export type WorkflowStep = Database['public']['Tables']['workflow_steps']['Row']
 export type WorkflowStepInsert = Database['public']['Tables']['workflow_steps']['Insert'];
 export type WorkflowStepUpdate = Database['public']['Tables']['workflow_steps']['Update'];
 
-export function useEngineTypes() {
+interface UseEngineTypesOptions {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}
+
+export function useEngineTypes(options: UseEngineTypesOptions = {}) {
+  const { page, pageSize, search = '' } = options;
+  const usePagination = page !== undefined && pageSize !== undefined;
   const [engineTypes, setEngineTypes] = useState<EngineType[]>([]);
+  const [total, setTotal] = useState(0);
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -24,14 +33,32 @@ export function useEngineTypes() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('engine_types')
-        .select('*')
-        .eq('org_id', currentOrganization.id)
-        .order('display_order', { ascending: true });
+        .select('*', { count: 'exact' })
+        .eq('org_id', currentOrganization.id);
+
+      if (search) {
+        query = query.ilike('name', `%${search}%`);
+      }
+
+      if (usePagination && page && pageSize) {
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize - 1;
+        query = query.range(from, to);
+      }
+
+      const { data, error, count } = await query
+        .order('name', { ascending: true });
 
       if (error) throw error;
       setEngineTypes(data || []);
+      if (usePagination && count !== null) {
+        setTotal(count);
+      } else {
+        setTotal(data?.length || 0);
+      }
     } catch (error) {
       console.error('Erro ao carregar tipos de motor:', error);
       toast({
@@ -42,7 +69,7 @@ export function useEngineTypes() {
     } finally {
       setLoading(false);
     }
-  }, [currentOrganization?.id, toast]);
+  }, [currentOrganization?.id, page, pageSize, search, toast]);
 
   const fetchWorkflowSteps = async (engineTypeId: string) => {
     try {
@@ -334,8 +361,14 @@ export function useEngineTypes() {
     }
   }, [currentOrganization?.id, fetchEngineTypes]);
 
+  const totalPages = page && pageSize ? Math.ceil(total / pageSize) : 1;
+
   return {
     engineTypes,
+    total,
+    page: page || 1,
+    pageSize: pageSize || engineTypes.length,
+    totalPages,
     workflowSteps,
     loading,
     fetchEngineTypes,
