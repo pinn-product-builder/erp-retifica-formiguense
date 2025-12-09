@@ -368,12 +368,98 @@ export function useWorkflowUpdate() {
     }
   };
 
+  const checkAndAdvanceOrderWorkflows = async (orderId: string, currentStatus: string) => {
+    try {
+      // Buscar todos os workflows da OS no status atual
+      const { data: workflows, error: fetchError } = await supabase
+        .from('order_workflow')
+        .select('id, status, component, completed_at')
+        .eq('order_id', orderId)
+        .eq('status', currentStatus);
+
+      if (fetchError || !workflows || workflows.length === 0) {
+        return false;
+      }
+
+      // Verificar se todos os workflows estão finalizados (completed_at não é null)
+      const allCompleted = workflows.every(w => w.completed_at !== null);
+
+      if (!allCompleted) {
+        return false; // Ainda há componentes não finalizados
+      }
+
+      // Buscar configuração do status atual
+      const { data: statusConfig } = await supabase
+        .from('status_config')
+        .select('allow_component_split')
+        .eq('status_key', currentStatus)
+        .eq('entity_type', 'workflow')
+        .maybeSingle();
+
+      // Se o status atual não permite split, não precisa verificar componentes
+      if (!statusConfig?.allow_component_split) {
+        return false;
+      }
+
+      // Buscar próximo status permitido
+      const { data: nextStatusData, error: nextStatusError } = await supabase
+        .from('status_prerequisites')
+        .select('to_status_key, transition_type')
+        .eq('from_status_key', currentStatus)
+        .eq('entity_type', 'workflow')
+        .eq('is_active', true)
+        .order('id')
+        .limit(1)
+        .maybeSingle();
+
+      if (nextStatusError || !nextStatusData) {
+        return false; // Não há próximo status
+      }
+
+      // Verificar se o próximo status também permite split ou se aceita todos os componentes
+      const { data: nextStatusConfig } = await supabase
+        .from('status_config')
+        .select('allow_component_split')
+        .eq('status_key', nextStatusData.to_status_key)
+        .eq('entity_type', 'workflow')
+        .maybeSingle();
+
+      // Se o próximo status não permite split, só avança se todos estiverem finalizados
+      // Se permite split, pode avançar individualmente
+      if (!nextStatusConfig?.allow_component_split && allCompleted) {
+        // Avançar todos os workflows para o próximo status
+        const updatePromises = workflows.map(workflow =>
+          updateWorkflowStatus(
+            workflow.id,
+            nextStatusData.to_status_key,
+            'Avanço automático: todos os componentes finalizados'
+          )
+        );
+
+        await Promise.all(updatePromises);
+
+        toast({
+          title: "✅ OS avançada automaticamente!",
+          description: `Todos os componentes foram movidos para: ${nextStatusData.to_status_key}`,
+        });
+
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Erro ao verificar avanço automático:', error);
+      return false;
+    }
+  };
+
   return {
     loading,
     updateWorkflowStatus,
     updateWorkflowDetails,
     startWorkflow,
     completeWorkflow,
-    advanceToNextStatus
+    advanceToNextStatus,
+    checkAndAdvanceOrderWorkflows
   };
 }

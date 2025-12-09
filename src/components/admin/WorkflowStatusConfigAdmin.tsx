@@ -81,6 +81,7 @@ export const WorkflowStatusConfigAdmin = () => {
     display_order: 0,
     estimated_hours: 0,
     is_active: true,
+    allow_component_split: false,
     visual_config: {
       bgColor: '#f3f4f6',
       textColor: '#374151'
@@ -133,6 +134,7 @@ export const WorkflowStatusConfigAdmin = () => {
       display_order: 0,
       estimated_hours: 0,
       is_active: true,
+      allow_component_split: false,
       visual_config: {
         bgColor: '#f3f4f6',
         textColor: '#374151'
@@ -182,6 +184,7 @@ export const WorkflowStatusConfigAdmin = () => {
       display_order: normalizedStatus.display_order || 0,
       estimated_hours: normalizedStatus.estimated_hours || 0,
       is_active: normalizedStatus.is_active,
+      allow_component_split: normalizedStatus.allow_component_split || false,
       visual_config: (normalizedStatus.visual_config as unknown as VisualConfig) || {
         bgColor: '#f3f4f6',
         textColor: '#374151'
@@ -723,6 +726,11 @@ Tem certeza que deseja continuar?`,
                                     Alertas
                                   </Badge>
                                 )}
+                                {status.allow_component_split && (
+                                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                    Por Componente
+                                  </Badge>
+                                )}
                               </div>
                               <p className="text-xs sm:text-sm text-muted-foreground break-words">
                                 Chave: {status.status_key} • Ordem: {status.display_order}
@@ -1128,6 +1136,20 @@ Tem certeza que deseja continuar?`,
                 Entrada e Entregue são sempre ativos.
               </p>
             )}
+
+            <div className="flex items-center space-x-2 p-3 sm:p-4 bg-muted/30 rounded-lg">
+              <Switch
+                id="allow_component_split"
+                checked={formData.allow_component_split}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, allow_component_split: checked }))}
+              />
+              <div className="flex-1">
+                <Label htmlFor="allow_component_split" className="text-sm font-medium">Permitir Desmembramento por Componente</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Se ativado, este status permitirá que os componentes sejam exibidos separadamente no workflow. Se desativado, mostrará apenas a OS completa.
+                </p>
+              </div>
+            </div>
 
             {/* Preview */}
             <div className="space-y-2">

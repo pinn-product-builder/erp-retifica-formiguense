@@ -3,6 +3,7 @@
 import React from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { ComponentCard } from './ComponentCard';
+import { OrderCard } from './OrderCard';
 import { Badge } from '@/components/ui/badge';
 import { EmployeeDirectoryEntry } from '@/hooks/useEmployeesDirectory';
 import { WorkflowStatusConfig } from '@/hooks/useWorkflowStatusConfig';
@@ -54,32 +55,49 @@ export function KanbanColumn({ status, workflows, componentColor, statusColors, 
                 snapshot.isDraggingOver ? 'bg-primary/10 border-2 border-primary/30 border-dashed rounded-lg' : ''
               }`}
             >
-              {workflows.map((workflow, index) => (
-                <Draggable 
-                  key={workflow.id} 
-                  draggableId={workflow.id} 
-                  index={index}
-                >
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                      className={`${
-                        snapshot.isDragging ? 'rotate-3 scale-105' : ''
-                      } transition-transform`}
-                    >
-                      <ComponentCard 
-                        workflow={workflow}
-                        componentColor={workflow.componentColor || componentColor}
-                        onUpdate={onUpdate}
-                        employeeOptions={employeeOptions}
-                        employeesLoading={employeesLoading}
-                      />
-                    </div>
-                  )}
-                </Draggable>
-              ))}
+              {workflows.map((item, index) => {
+                const draggableId = item.type === 'order' 
+                  ? `order-${item.orderId || item.order?.id || index}` 
+                  : item.id;
+                
+                return (
+                  <Draggable 
+                    key={draggableId} 
+                    draggableId={draggableId} 
+                    index={index}
+                  >
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        className={`${
+                          snapshot.isDragging ? 'rotate-3 scale-105' : ''
+                        } transition-transform`}
+                      >
+                        {item.type === 'order' ? (
+                          <OrderCard 
+                            order={item.order}
+                            workflows={item.workflows || []}
+                            statusConfig={item.statusConfig || statusConfig}
+                            onUpdate={onUpdate}
+                            employeeOptions={employeeOptions}
+                            employeesLoading={employeesLoading}
+                          />
+                        ) : (
+                          <ComponentCard 
+                            workflow={item}
+                            componentColor={item.componentColor || componentColor}
+                            onUpdate={onUpdate}
+                            employeeOptions={employeeOptions}
+                            employeesLoading={employeesLoading}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </Draggable>
+                );
+              })}
               {provided.placeholder}
             </div>
           )}

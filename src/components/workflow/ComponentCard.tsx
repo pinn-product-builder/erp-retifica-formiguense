@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { WorkflowModal } from './WorkflowModal';
 import { EmployeeDirectoryEntry } from '@/hooks/useEmployeesDirectory';
+import { useEngineComponents } from '@/hooks/useEngineComponents';
 
 interface ComponentCardProps {
   workflow: Record<string, any>;
@@ -20,6 +21,43 @@ interface ComponentCardProps {
 
 export function ComponentCard({ workflow, componentColor, onUpdate, employeeOptions, employeesLoading }: ComponentCardProps) {
   const [showModal, setShowModal] = useState(false);
+  const { components: engineComponents } = useEngineComponents();
+
+  const getComponentLabel = (componentValue: string) => {
+    const component = engineComponents.find(c => c.value === componentValue);
+    return component?.label || componentValue;
+  };
+
+  const getComponentColorHex = (tailwindColor: string): string => {
+    const colorMap: Record<string, string> = {
+      'bg-blue-500': '#3b82f6',
+      'bg-green-500': '#22c55e',
+      'bg-orange-500': '#f97316',
+      'bg-yellow-500': '#eab308',
+      'bg-purple-500': '#a855f7',
+      'bg-red-500': '#ef4444',
+      'bg-cyan-500': '#06b6d4',
+      'bg-pink-500': '#ec4899',
+      'bg-rose-500': '#f43f5e',
+      'bg-indigo-500': '#6366f1',
+      'bg-teal-500': '#14b8a6',
+      'bg-violet-500': '#8b5cf6',
+      'bg-blue-600': '#2563eb',
+      'bg-blue-700': '#1d4ed8',
+      'bg-sky-500': '#0ea5e9',
+      'bg-fuchsia-500': '#d946ef',
+      'bg-emerald-500': '#10b981',
+      'bg-amber-500': '#f59e0b',
+      'bg-lime-500': '#84cc16',
+      'bg-green-600': '#16a34a',
+      'bg-stone-500': '#78716c',
+      'bg-gray-500': '#6b7280'
+    };
+    return colorMap[tailwindColor] || '#6b7280';
+  };
+
+  const componentLabel = workflow.component ? getComponentLabel(workflow.component) : '';
+  const componentColorHex = getComponentColorHex(componentColor);
 
   const formatDate = (dateString: string) => {
     try {
@@ -107,9 +145,19 @@ export function ComponentCard({ workflow, componentColor, onUpdate, employeeOpti
                 {workflow.orderNumber}
               </span>
             </div>
-            <Badge variant="outline" className="text-xs px-1.5 py-0.5 flex-shrink-0">
-              OS #{workflow.order.id.slice(-4)}
-            </Badge>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {componentLabel && (
+                <Badge 
+                  className="text-xs px-1.5 py-0.5 text-white border-0 font-medium"
+                  style={{ backgroundColor: componentColorHex }}
+                >
+                  {componentLabel}
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+                OS #{workflow.order?.id?.slice(-4) || workflow.order_id?.slice(-4) || 'N/A'}
+              </Badge>
+            </div>
           </div>
 
           {/* Customer & Engine */}

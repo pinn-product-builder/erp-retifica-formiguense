@@ -18,6 +18,7 @@ export interface WorkflowStatusConfig {
   is_active: boolean;
   display_order: number;
   estimated_hours: number;
+  allow_component_split?: boolean;
   visual_config?: Json;
   notification_config?: Json;
   sla_config?: Json;
@@ -137,6 +138,11 @@ export function useWorkflowStatusConfig() {
         title: "Sucesso",
         description: "Configuração de status criada com sucesso",
       });
+
+      // Criar pré-requisitos automaticamente para o novo status
+      if (data && data[0]) {
+        await createDefaultPrerequisitesForStatus(data[0].status_key);
+      }
 
       fetchWorkflowStatuses();
       return true;
@@ -309,6 +315,75 @@ export function useWorkflowStatusConfig() {
         variant: "destructive",
       });
       return false;
+    }
+  };
+
+  const createDefaultPrerequisitesForStatus = async (newStatusKey: string) => {
+    try {
+      if (!currentOrganization) return;
+
+      // Buscar todos os status ativos ordenados
+      const { data: allStatuses, error: fetchError } = await supabase
+        .from('status_config')
+        .select('status_key, display_order')
+        .eq('org_id', currentOrganization.id)
+        .eq('entity_type', 'workflow')
+        .eq('is_active', true)
+        .order('display_order');
+
+      if (fetchError || !allStatuses) {
+        console.error('Error fetching statuses for prerequisites:', fetchError);
+        return;
+      }
+
+      const statusKeys = allStatuses.map(s => s.status_key);
+      const newStatusIndex = statusKeys.indexOf(newStatusKey);
+
+      if (newStatusIndex === -1) return;
+
+      const prerequisitesToCreate = [];
+
+      // Criar pré-requisito do status anterior para o novo status
+      if (newStatusIndex > 0) {
+        const previousStatusKey = statusKeys[newStatusIndex - 1];
+        prerequisitesToCreate.push({
+          org_id: currentOrganization.id,
+          entity_type: 'workflow',
+          from_status_key: previousStatusKey,
+          to_status_key: newStatusKey,
+          transition_type: 'manual',
+          is_active: true
+        });
+      }
+
+      // Criar pré-requisito do novo status para o próximo status
+      if (newStatusIndex < statusKeys.length - 1) {
+        const nextStatusKey = statusKeys[newStatusIndex + 1];
+        prerequisitesToCreate.push({
+          org_id: currentOrganization.id,
+          entity_type: 'workflow',
+          from_status_key: newStatusKey,
+          to_status_key: nextStatusKey,
+          transition_type: 'manual',
+          is_active: true
+        });
+      }
+
+      // Inserir pré-requisitos se houver algum para criar
+      if (prerequisitesToCreate.length > 0) {
+        const { error: insertError } = await supabase
+          .from('status_prerequisites')
+          .insert(prerequisitesToCreate);
+
+        if (insertError) {
+          console.error('Error creating default prerequisites:', insertError);
+        } else {
+          console.log('Default prerequisites created successfully');
+          fetchPrerequisites();
+        }
+      }
+    } catch (error) {
+      console.error('Error in createDefaultPrerequisitesForStatus:', error);
     }
   };
 
