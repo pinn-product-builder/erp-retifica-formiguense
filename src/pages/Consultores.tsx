@@ -28,6 +28,8 @@ const Consultores = () => {
     is_active: true
   });
   
+  const [commissionInputValue, setCommissionInputValue] = useState('');
+  
   const [errors, setErrors] = useState({
     name: '',
     phone: '',
@@ -62,6 +64,7 @@ const Consultores = () => {
       commission_rate: 0,
       is_active: true
     });
+    setCommissionInputValue('');
     setErrors({
       name: '',
       phone: '',
@@ -86,6 +89,15 @@ const Consultores = () => {
       commission_rate: consultant.commission_rate,
       is_active: consultant.is_active
     });
+    if (consultant.commission_rate === 0) {
+      setCommissionInputValue('');
+    } else {
+      const percentageValue = consultant.commission_rate * 100;
+      const formattedValue = percentageValue % 1 === 0 
+        ? percentageValue.toString() 
+        : percentageValue.toFixed(2).replace(/\.?0+$/, '');
+      setCommissionInputValue(formattedValue);
+    }
     setIsDialogOpen(true);
   };
 
@@ -297,11 +309,42 @@ const Consultores = () => {
                   min="0"
                   max="100"
                   step="0.01"
-                  value={formData.commission_rate * 100}
-                  onChange={(e) => setFormData(prev => ({ 
-                    ...prev, 
-                    commission_rate: parseFloat(e.target.value) / 100 
-                  }))}
+                  value={commissionInputValue}
+                  onChange={(e) => {
+                    const inputValue = e.target.value;
+                    setCommissionInputValue(inputValue);
+                    
+                    if (inputValue === '' || inputValue === '.') {
+                      setFormData(prev => ({ ...prev, commission_rate: 0 }));
+                      return;
+                    }
+                    
+                    const numValue = parseFloat(inputValue);
+                    if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
+                      const rate = numValue / 100;
+                      setFormData(prev => ({ ...prev, commission_rate: rate }));
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const inputValue = e.target.value.trim();
+                    if (inputValue === '') {
+                      setCommissionInputValue('');
+                      setFormData(prev => ({ ...prev, commission_rate: 0 }));
+                      return;
+                    }
+                    
+                    const numValue = parseFloat(inputValue);
+                    if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
+                      const rate = numValue / 100;
+                      setFormData(prev => ({ ...prev, commission_rate: rate }));
+                      const formattedValue = numValue % 1 === 0 ? numValue.toString() : numValue.toFixed(2).replace(/\.?0+$/, '');
+                      setCommissionInputValue(formattedValue);
+                    } else {
+                      const currentValue = formData.commission_rate * 100;
+                      const formattedValue = currentValue % 1 === 0 ? currentValue.toString() : currentValue.toFixed(2).replace(/\.?0+$/, '');
+                      setCommissionInputValue(formattedValue);
+                    }
+                  }}
                   placeholder="5.00"
                 />
               </div>
