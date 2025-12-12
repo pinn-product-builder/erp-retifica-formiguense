@@ -361,7 +361,7 @@ const Diagnosticos = () => {
     }
 
     return (
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {responseEntries.map(([itemId, responseData]) => {
           const item = checklistItems[itemId];
           const itemName = item?.item_name || itemId;
@@ -380,15 +380,15 @@ const Diagnosticos = () => {
           const photos = getItemPhotos(responseData);
           
           return (
-            <div key={itemId} className="border rounded-lg p-4 space-y-2">
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <h5 className="font-semibold text-sm">{itemName}</h5>
+            <div key={itemId} className="border rounded-lg p-2 sm:p-4 space-y-2">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <h5 className="font-semibold text-xs sm:text-sm truncate">{itemName}</h5>
                   {itemDescription && (
-                    <p className="text-xs text-muted-foreground mt-1">{itemDescription}</p>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{itemDescription}</p>
                   )}
                 </div>
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs flex-shrink-0">
                   {itemType === 'checkbox' ? 'Checkbox' :
                    itemType === 'measurement' ? 'Medição' :
                    itemType === 'photo' ? 'Foto' :
@@ -399,9 +399,9 @@ const Diagnosticos = () => {
               </div>
               
               <div className="pt-2 border-t">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-muted-foreground">Resposta:</span>
-                  <span className="text-sm font-semibold">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-2">
+                  <span className="text-xs sm:text-sm font-medium text-muted-foreground">Resposta:</span>
+                  <span className="text-xs sm:text-sm font-semibold break-words">
                     {formatValue(actualValue, itemType)}
                   </span>
                 </div>
@@ -409,7 +409,7 @@ const Diagnosticos = () => {
                 {notes && (
                   <div className="mt-2 pt-2 border-t">
                     <span className="text-xs font-medium text-muted-foreground">Observações:</span>
-                    <p className="text-sm mt-1">{notes}</p>
+                    <p className="text-xs sm:text-sm mt-1 break-words">{notes}</p>
                   </div>
                 )}
                 
@@ -419,7 +419,7 @@ const Diagnosticos = () => {
                       <Image className="w-3 h-3" />
                       Fotos ({photos.length})
                     </span>
-                    <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                       {photos.map((photoUrl, idx) => (
                         <a
                           key={idx}
@@ -499,22 +499,22 @@ const Diagnosticos = () => {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Diagnósticos</h1>
-          <p className="text-muted-foreground">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold truncate">Diagnósticos</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Execute diagnósticos padronizados usando checklists configurados
           </p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
           {canEdit && (
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
+              <Button className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-9">
+                <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                 Novo Diagnóstico
               </Button>
             </DialogTrigger>
@@ -524,28 +524,34 @@ const Diagnosticos = () => {
           <Button
             variant="outline"
             onClick={() => setShowChecklistsConfig(!showChecklistsConfig)}
+            className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-9"
           >
-            <ClipboardList className="w-4 h-4 mr-2" />
-            {showChecklistsConfig ? 'Ocultar' : 'Configurar'} Checklists
+            <ClipboardList className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+            <span className="hidden sm:inline">{showChecklistsConfig ? 'Ocultar' : 'Configurar'} Checklists</span>
+            <span className="sm:hidden">Checklists</span>
           </Button>
         </div>
         
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Diagnósticos</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-lg sm:text-xl">Diagnósticos</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm">
                 Selecione uma ordem de serviço para iniciar o diagnóstico
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Ordem de Serviço</label>
+              <div className="space-y-2">
+                <label className="text-xs sm:text-sm font-medium">Ordem de Serviço</label>
                 <Select value={selectedOrder} onValueChange={setSelectedOrder}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecione uma ordem" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent 
+                    position="popper"
+                    className="max-h-[200px] sm:max-h-[300px] w-[var(--radix-select-trigger-width)]"
+                    sideOffset={5}
+                  >
                     {ordersData.orders?.map((order) => {
                       const hasDiagnostic = diagnosticResponses.some(d => d.order_id === order.id);
                       return (
@@ -553,6 +559,7 @@ const Diagnosticos = () => {
                           key={order.id} 
                           value={order.id}
                           disabled={hasDiagnostic}
+                          className="text-xs sm:text-sm"
                         >
                           {order.order_number} - {order.customer?.name}
                           {hasDiagnostic && ' (Diagnóstico já realizado)'}
@@ -563,17 +570,17 @@ const Diagnosticos = () => {
                 </Select>
               </div>
               {selectedOrder && selectedOrder !== "none" && diagnosticResponses.some(d => d.order_id === selectedOrder) && (
-                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                <div className="p-2 sm:p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                  <p className="text-xs sm:text-sm text-yellow-800 dark:text-yellow-200">
                     ⚠️ Esta ordem de serviço já possui um diagnóstico realizado.
                   </p>
                 </div>
               )}
               
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button 
                   variant="outline" 
-                  className="flex-1"
+                  className="flex-1 text-xs sm:text-sm h-8 sm:h-9"
                   onClick={() => {
                     setIsCreateDialogOpen(false);
                     setTimeout(() => setSelectedOrder("none"), 100);
@@ -582,7 +589,7 @@ const Diagnosticos = () => {
                   Cancelar
                 </Button>
                 <Button 
-                  className="flex-1"
+                  className="flex-1 text-xs sm:text-sm h-8 sm:h-9"
                   onClick={() => {
                     if (selectedOrder && selectedOrder !== "none") {
                       setIsCreateDialogOpen(false);
@@ -751,7 +758,7 @@ const Diagnosticos = () => {
           setTimeout(() => setSelectedOrder("none"), 100);
         }
       }}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[98vw] sm:max-w-[95vw] md:max-w-4xl lg:max-w-6xl max-h-[95vh] overflow-y-auto p-3 sm:p-4 md:p-6">
           {selectedOrder && selectedOrder !== "none" && selectedOrder !== "" && (
             <DiagnosticInterface
               orderId={selectedOrder}
@@ -763,28 +770,28 @@ const Diagnosticos = () => {
 
       {/* Details Modal */}
       <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[98vw] sm:max-w-[95vw] md:max-w-4xl lg:max-w-6xl max-h-[95vh] overflow-y-auto p-3 sm:p-4 md:p-6">
           <DialogHeader>
-            <DialogTitle>Detalhes do Diagnóstico</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl md:text-2xl">Detalhes do Diagnóstico</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Visualize os detalhes completos do diagnóstico realizado
             </DialogDescription>
           </DialogHeader>
           {selectedDiagnostic && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Informações da Ordem */}
-              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3 sm:p-4 bg-muted/50 rounded-lg">
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">Ordem de Serviço</h4>
-                  <p className="font-medium">{selectedDiagnostic.order?.order_number || 'N/A'}</p>
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">Ordem de Serviço</h4>
+                  <p className="font-medium text-sm sm:text-base truncate">{selectedDiagnostic.order?.order_number || 'N/A'}</p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">Cliente</h4>
-                  <p className="font-medium">{selectedDiagnostic.order?.customer?.name || 'N/A'}</p>
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">Cliente</h4>
+                  <p className="font-medium text-sm sm:text-base truncate">{selectedDiagnostic.order?.customer?.name || 'N/A'}</p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">Motor</h4>
-                  <p className="font-medium">
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">Motor</h4>
+                  <p className="font-medium text-sm sm:text-base truncate">
                     {selectedDiagnostic.order?.engine ? 
                       `${selectedDiagnostic.order.engine.brand} ${selectedDiagnostic.order.engine.model} - ${selectedDiagnostic.order.engine.type}` 
                       : 'N/A'
@@ -792,8 +799,8 @@ const Diagnosticos = () => {
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-muted-foreground">Data</h4>
-                  <p className="font-medium">
+                  <h4 className="font-semibold text-xs sm:text-sm text-muted-foreground">Data</h4>
+                  <p className="font-medium text-sm sm:text-base">
                     {new Date(selectedDiagnostic.diagnosed_at).toLocaleString('pt-BR')}
                   </p>
                 </div>
@@ -802,21 +809,21 @@ const Diagnosticos = () => {
               {/* Tabs por Componente */}
               {(selectedDiagnostic as any).allResponses && (selectedDiagnostic as any).allResponses.length > 0 ? (
                 <Tabs defaultValue={(selectedDiagnostic as any).allResponses[0]?.component || 'observacoes'} className="w-full">
-                  <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${(selectedDiagnostic as any).allResponses.length + 1}, minmax(0, 1fr))` }}>
+                  <TabsList className="flex lg:grid w-full overflow-x-auto flex-shrink-0" style={{ gridTemplateColumns: `repeat(${(selectedDiagnostic as any).allResponses.length + 1}, minmax(0, 1fr))` }}>
                     {(selectedDiagnostic as any).allResponses.map((response: DiagnosticResponse) => (
-                      <TabsTrigger key={response.component} value={response.component}>
+                      <TabsTrigger key={response.component} value={response.component} className="text-xs sm:text-sm flex-shrink-0 whitespace-nowrap">
                         {getComponentLabel(response.component)}
                       </TabsTrigger>
                     ))}
-                    <TabsTrigger value="observacoes">Observações</TabsTrigger>
+                    <TabsTrigger value="observacoes" className="text-xs sm:text-sm flex-shrink-0 whitespace-nowrap">Observações</TabsTrigger>
                   </TabsList>
 
                   {(selectedDiagnostic as any).allResponses.map((response: DiagnosticResponse) => (
-                    <TabsContent key={response.component} value={response.component} className="space-y-6">
+                    <TabsContent key={response.component} value={response.component} className="space-y-4 sm:space-y-6">
                       {/* Status */}
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold">Componente: {getComponentLabel(response.component)}</h4>
-                        <Badge variant={response.status === 'completed' ? 'default' : 'secondary'}>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                        <h4 className="font-semibold text-sm sm:text-base">Componente: {getComponentLabel(response.component)}</h4>
+                        <Badge variant={response.status === 'completed' ? 'default' : 'secondary'} className="text-xs sm:text-sm">
                           {translateStatus(response.status, 'diagnostic')}
                         </Badge>
                       </div>
@@ -824,8 +831,8 @@ const Diagnosticos = () => {
                       {/* Respostas do Checklist */}
                       {response.responses && Object.keys(response.responses).length > 0 && (
                         <div>
-                          <h5 className="font-semibold mb-3">Checklist</h5>
-                          <div className="border rounded-lg p-4">
+                          <h5 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Checklist</h5>
+                          <div className="border rounded-lg p-2 sm:p-4">
                             <ChecklistResponsesDisplay 
                               responses={response.responses} 
                               checklistId={response.checklist_id}
@@ -837,26 +844,26 @@ const Diagnosticos = () => {
                       {/* Peças Adicionais */}
                       {(response as any).additional_parts && (response as any).additional_parts.length > 0 && (
                         <div>
-                          <h5 className="font-semibold mb-3">Peças Adicionais</h5>
-                          <div className="border rounded-lg overflow-hidden">
+                          <h5 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Peças Adicionais</h5>
+                          <div className="border rounded-lg overflow-x-auto">
                             <Table>
                               <TableHeader>
                                 <TableRow>
-                                  <TableHead>Código</TableHead>
-                                  <TableHead>Peça</TableHead>
-                                  <TableHead className="text-right">Qtd</TableHead>
-                                  <TableHead className="text-right">Preço Unit.</TableHead>
-                                  <TableHead className="text-right">Total</TableHead>
+                                  <TableHead className="text-xs sm:text-sm">Código</TableHead>
+                                  <TableHead className="text-xs sm:text-sm">Peça</TableHead>
+                                  <TableHead className="text-right text-xs sm:text-sm">Qtd</TableHead>
+                                  <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">Preço Unit.</TableHead>
+                                  <TableHead className="text-right text-xs sm:text-sm">Total</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {(response as any).additional_parts.map((part: any, idx: number) => (
                                   <TableRow key={idx}>
-                                    <TableCell className="font-mono text-xs">{part.part_code}</TableCell>
-                                    <TableCell>{part.part_name}</TableCell>
-                                    <TableCell className="text-right">{part.quantity}</TableCell>
-                                    <TableCell className="text-right">R$ {part.unit_price?.toFixed(2) || '0.00'}</TableCell>
-                                    <TableCell className="text-right font-medium">R$ {part.total?.toFixed(2) || '0.00'}</TableCell>
+                                    <TableCell className="font-mono text-xs whitespace-nowrap">{part.part_code}</TableCell>
+                                    <TableCell className="text-xs sm:text-sm">{part.part_name}</TableCell>
+                                    <TableCell className="text-right text-xs sm:text-sm">{part.quantity}</TableCell>
+                                    <TableCell className="text-right text-xs sm:text-sm whitespace-nowrap">R$ {part.unit_price?.toFixed(2) || '0.00'}</TableCell>
+                                    <TableCell className="text-right font-medium text-xs sm:text-sm whitespace-nowrap">R$ {part.total?.toFixed(2) || '0.00'}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -868,24 +875,24 @@ const Diagnosticos = () => {
                       {/* Serviços Adicionais */}
                       {(response as any).additional_services && (response as any).additional_services.length > 0 && (
                         <div>
-                          <h5 className="font-semibold mb-3">Serviços Adicionais</h5>
-                          <div className="border rounded-lg overflow-hidden">
+                          <h5 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Serviços Adicionais</h5>
+                          <div className="border rounded-lg overflow-x-auto">
                             <Table>
                               <TableHeader>
                                 <TableRow>
-                                  <TableHead>Descrição</TableHead>
-                                  <TableHead className="text-right">Qtd</TableHead>
-                                  <TableHead className="text-right">Valor Unit.</TableHead>
-                                  <TableHead className="text-right">Total</TableHead>
+                                  <TableHead className="text-xs sm:text-sm">Descrição</TableHead>
+                                  <TableHead className="text-right text-xs sm:text-sm">Qtd</TableHead>
+                                  <TableHead className="text-right text-xs sm:text-sm whitespace-nowrap">Valor Unit.</TableHead>
+                                  <TableHead className="text-right text-xs sm:text-sm">Total</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {(response as any).additional_services.map((service: any, idx: number) => (
                                   <TableRow key={idx}>
-                                    <TableCell>{service.description}</TableCell>
-                                    <TableCell className="text-right">{service.quantity}</TableCell>
-                                    <TableCell className="text-right">R$ {service.unit_price?.toFixed(2) || '0.00'}</TableCell>
-                                    <TableCell className="text-right font-medium">R$ {service.total?.toFixed(2) || '0.00'}</TableCell>
+                                    <TableCell className="text-xs sm:text-sm">{service.description}</TableCell>
+                                    <TableCell className="text-right text-xs sm:text-sm">{service.quantity}</TableCell>
+                                    <TableCell className="text-right text-xs sm:text-sm whitespace-nowrap">R$ {service.unit_price?.toFixed(2) || '0.00'}</TableCell>
+                                    <TableCell className="text-right font-medium text-xs sm:text-sm whitespace-nowrap">R$ {service.total?.toFixed(2) || '0.00'}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -897,7 +904,7 @@ const Diagnosticos = () => {
                   ))}
 
                   {/* Tab de Observações */}
-                  <TabsContent value="observacoes" className="space-y-6">
+                  <TabsContent value="observacoes" className="space-y-4 sm:space-y-6">
                     {(() => {
                       const observations = (selectedDiagnostic as any).technical_observations || 
                         (selectedDiagnostic as any).allResponses?.find((r: any) => r.technical_observations)?.technical_observations;
@@ -910,25 +917,25 @@ const Diagnosticos = () => {
                         <>
                           {observations && (
                             <div>
-                              <h5 className="font-semibold mb-2">Observações Técnicas</h5>
-                              <p className="text-sm p-3 bg-muted/50 rounded whitespace-pre-wrap">{observations}</p>
+                              <h5 className="font-semibold mb-2 text-sm sm:text-base">Observações Técnicas</h5>
+                              <p className="text-xs sm:text-sm p-2 sm:p-3 bg-muted/50 rounded whitespace-pre-wrap">{observations}</p>
                             </div>
                           )}
                           {extraServices && (
                             <div>
-                              <h5 className="font-semibold mb-2">Serviços Extras</h5>
-                              <p className="text-sm p-3 bg-muted/50 rounded whitespace-pre-wrap">{extraServices}</p>
+                              <h5 className="font-semibold mb-2 text-sm sm:text-base">Serviços Extras</h5>
+                              <p className="text-xs sm:text-sm p-2 sm:p-3 bg-muted/50 rounded whitespace-pre-wrap">{extraServices}</p>
                             </div>
                           )}
                           {finalOpinion && (
                             <div>
-                              <h5 className="font-semibold mb-2">Parecer Final</h5>
-                              <p className="text-sm p-3 bg-muted/50 rounded whitespace-pre-wrap">{finalOpinion}</p>
+                              <h5 className="font-semibold mb-2 text-sm sm:text-base">Parecer Final</h5>
+                              <p className="text-xs sm:text-sm p-2 sm:p-3 bg-muted/50 rounded whitespace-pre-wrap">{finalOpinion}</p>
                             </div>
                           )}
                           {!observations && !extraServices && !finalOpinion && (
                             <div className="text-center py-8 text-muted-foreground">
-                              <p>Nenhuma observação registrada</p>
+                              <p className="text-xs sm:text-sm">Nenhuma observação registrada</p>
                             </div>
                           )}
                         </>
