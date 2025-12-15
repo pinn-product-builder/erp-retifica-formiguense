@@ -55,9 +55,6 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   const [componentsSelected, setComponentsSelected] = useState<string[]>(budget?.component ? [budget.component] : []);
   const [services, setServices] = useState<Service[]>(budget?.services as unknown as Service[] || []);
   const [parts, setParts] = useState<Part[]>(budget?.parts as unknown as Part[] || []);
-  const [laborHours, setLaborHours] = useState<number>(budget?.labor_hours || 0);
-  const [laborDescription, setLaborDescription] = useState<string>((budget as { labor_description?: string })?.labor_description || '');
-  const [laborRate, setLaborRate] = useState<number>(budget?.labor_rate || 50);
   const [discount, setDiscount] = useState<number>(budget?.discount || 0);
   const [taxPercentage, setTaxPercentage] = useState<number>(budget?.tax_percentage || 0);
   const [warrantyMonths, setWarrantyMonths] = useState<number>(budget?.warranty_months || 3);
@@ -73,7 +70,6 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   const [saving, setSaving] = useState(false);
 
   // Estados para campos de texto
-  const [laborHoursText, setLaborHoursText] = useState<string>('');
   const [discountText, setDiscountText] = useState<string>('');
   const [taxText, setTaxText] = useState<string>('');
   const [warrantyText, setWarrantyText] = useState<string>('');
@@ -92,27 +88,6 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(value);
-  };
-
-  // Funções de validação e formatação
-  const validateAndSetHours = (value: string) => {
-    // Permitir vírgula como separador decimal
-    let numericValue = value.replace(/[^\d.,]/g, '');
-    
-    // Se tem vírgula, substituir por ponto para parseFloat
-    if (numericValue.includes(',')) {
-      numericValue = numericValue.replace(',', '.');
-    }
-    
-    const numValue = parseFloat(numericValue) || 0;
-    
-    // Limitar a 999 horas
-    const limitedValue = Math.min(numValue, 999);
-    setLaborHours(limitedValue);
-    
-    // Manter vírgula na exibição se o usuário digitou vírgula
-    const displayValue = value.includes(',') ? limitedValue.toString().replace('.', ',') : limitedValue.toString();
-    setLaborHoursText(displayValue);
   };
 
   const validateAndSetPercentage = (value: string, setter: (value: number) => void, textSetter: (value: string) => void) => {
@@ -157,12 +132,11 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
 
   // Inicializar campos de texto com valores dos números
   useEffect(() => {
-    setLaborHoursText(laborHours.toString());
     setDiscountText(discount.toString());
     setTaxText(taxPercentage.toString());
     setWarrantyText(warrantyMonths.toString());
     setDeliveryText(estimatedDeliveryDays.toString());
-  }, [laborHours, discount, taxPercentage, warrantyMonths, estimatedDeliveryDays]);
+  }, [discount, taxPercentage, warrantyMonths, estimatedDeliveryDays]);
 
   // Carregar dados do diagnóstico quando ordem for selecionada
   useEffect(() => {
@@ -498,10 +472,9 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   }, [currentOrganization?.id]);
 
   // Cálculos automáticos
-  const laborTotal = laborHours * laborRate;
   const servicesTotal = services.reduce((sum, s) => sum + (s.total as number), 0);
   const partsTotal = parts.reduce((sum, p) => sum + (p.total as number), 0);
-  const subtotal = laborTotal + servicesTotal + partsTotal;
+  const subtotal = servicesTotal + partsTotal;
   const discountAmount = (subtotal * discount) / 100;
   const subtotalAfterDiscount = subtotal - discountAmount;
   const taxAmount = (subtotalAfterDiscount * taxPercentage) / 100;
@@ -643,10 +616,10 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
       return;
     }
 
-    if (services.length === 0 && parts.length === 0 && laborHours === 0) {
+    if (services.length === 0 && parts.length === 0) {
       toast({
         title: 'Erro',
-        description: 'Adicione pelo menos um serviço, peça ou hora de mão de obra',
+        description: 'Adicione pelo menos um serviço ou peça',
         variant: 'destructive',
       });
       return;
@@ -659,10 +632,6 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
         component: component as "bloco" | "eixo" | "biela" | "comando" | "cabecote",
         services : services as unknown as Record<string, unknown>[],
         parts : parts as unknown as Record<string, unknown>[],
-        labor_hours: laborHours,
-        labor_rate: laborRate,
-        labor_total: laborTotal,
-        labor_description: laborDescription,
         parts_total: partsTotal,
         discount,
         tax_percentage: taxPercentage,
@@ -745,7 +714,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                       Carregando dados do diagnóstico...
                     </p>
                     <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                      Buscando peças e serviços adicionais
+                      Buscando peças e serviços
                     </p>
                   </div>
                 </div>
@@ -755,56 +724,10 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
         </CardContent>
       </Card>
 
-      {/* Mão de Obra */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Mão de Obra</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="laborHours">Horas de Trabalho</Label>
-              <Input
-                id="laborHours"
-                type="text"
-                placeholder="Ex: 8.5"
-                value={laborHoursText}
-                onChange={(e) => validateAndSetHours(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="laborRate">Valor por Hora (R$)</Label>
-              <MaskedInput
-                id="laborRate"
-                mask="currency"
-                value={laborRate.toString()}
-                onChange={(maskedValue, rawValue) => {
-                  setLaborRate(parseFloat(rawValue) || 0);
-                }}
-              />
-            </div>
-            <div>
-              <Label>Total Mão de Obra</Label>
-              <Input value={formatCurrency(laborTotal)} disabled />
-            </div>
-          </div>
-          <div className="mt-4">
-            <Label htmlFor="laborDescription">Descrição da Mão de Obra</Label>
-            <Textarea
-              id="laborDescription"
-              placeholder="Ex.: Retífica de cabeçote, montagem, ajustes e testes."
-              value={laborDescription}
-              onChange={(e) => setLaborDescription(e.target.value)}
-              rows={3}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Serviços */}
       <Card>
         <CardHeader>
-          <CardTitle>Serviços Adicionais</CardTitle>
+          <CardTitle>Serviços</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {loadingDiagnostic && (

@@ -1,11 +1,7 @@
-// @ts-nocheck
-
 import React, { useState, useMemo } from 'react';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Autocomplete, Chip, TextField, Stack, InputAdornment, IconButton } from '@mui/material';
 import { KanbanColumn } from './KanbanColumn';
-import { ComponentCard } from './ComponentCard';
-import { OrderCard } from './OrderCard';
 import { useWorkflowUpdate } from '@/hooks/useWorkflowUpdate';
 import { useWorkflowStatusConfig, WorkflowStatusConfig, FIXED_WORKFLOW_STATUSES } from '@/hooks/useWorkflowStatusConfig';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -15,41 +11,51 @@ import { useMuiTheme } from '@/config/muiTheme';
 import { useEmployeesDirectory } from '@/hooks/useEmployeesDirectory';
 import { useToast } from '@/hooks/use-toast';
 import { Search, X } from 'lucide-react';
+import { getComponentColor, getComponentColorHex } from '@/utils/componentColors';
 
-// Função para obter cor do componente
-const getComponentColor = (componentId: string): string => {
-  const colorMap: Record<string, string> = {
-    'todos': 'bg-blue-500',
-    'bloco': 'bg-green-500',
-    'eixo': 'bg-orange-500',
-    'biela': 'bg-yellow-500',
-    'comando': 'bg-purple-500',
-    'cabecote': 'bg-red-500',
-    'virabrequim': 'bg-cyan-500',
-    'pistao': 'bg-pink-500',
-    'pistao_com_anel': 'bg-rose-500',
-    'anel': 'bg-indigo-500',
-    'camisas': 'bg-teal-500',
-    'bucha_comando': 'bg-violet-500',
-    'retentores_dianteiro': 'bg-blue-600',
-    'retentores_traseiro': 'bg-blue-700',
-    'pista_virabrequim': 'bg-sky-500',
-    'selo_comando': 'bg-fuchsia-500',
-    'gaxeta': 'bg-emerald-500',
-    'selo_dagua': 'bg-amber-500',
-    'borrachas_camisa': 'bg-lime-500',
-    'calco_camisas': 'bg-green-600',
-    'bujao_carter': 'bg-stone-500',
-    'tubo_bloco': 'bg-gray-500'
+// Tipos para ajudar na organização dos dados
+interface OrderWorkflow {
+  id: string;
+  status: string;
+  component: string;
+  order_id: string;
+  assigned_to?: string;
+  assignedEmployeeName?: string;
+  notes?: string;
+  photos?: any[];
+  started_at?: string;
+  completed_at?: string;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: any;
+}
+
+interface Order {
+  id: string;
+  order_number: string;
+  collection_date?: string;
+  customers?: {
+    name: string;
   };
-  return colorMap[componentId] || 'bg-gray-500';
-};
+  engines?: {
+    brand: string;
+    model: string;
+  };
+  order_workflow: OrderWorkflow[];
+  [key: string]: any;
+}
 
-// STATUS_ORDER será obtido dinamicamente das configurações
-
-interface KanbanBoardProps {
-  orders: Array<Record<string, unknown>>;
-  onOrderUpdate: () => void;
+interface OrderCardData {
+  type: 'order';
+  order: Order;
+  orderId: string;
+  workflows: OrderWorkflow[];
+  orderNumber: string;
+  customerName?: string;
+  engineModel: string;
+  collectionDate?: string;
+  statusConfig?: WorkflowStatusConfig;
+  allowComponentSplit: boolean;
 }
 
 export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
@@ -64,36 +70,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
   const [orderSearch, setOrderSearch] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   
-  // Função para converter cor Tailwind para hex (simplificada - usa cores Material UI)
-  const getColorHex = (tailwindColor: string): string => {
-    const colorMap: Record<string, string> = {
-      'bg-blue-500': '#3b82f6',
-      'bg-green-500': '#22c55e',
-      'bg-orange-500': '#f97316',
-      'bg-yellow-500': '#eab308',
-      'bg-purple-500': '#a855f7',
-      'bg-red-500': '#ef4444',
-      'bg-cyan-500': '#06b6d4',
-      'bg-pink-500': '#ec4899',
-      'bg-rose-500': '#f43f5e',
-      'bg-indigo-500': '#6366f1',
-      'bg-teal-500': '#14b8a6',
-      'bg-violet-500': '#8b5cf6',
-      'bg-blue-600': '#2563eb',
-      'bg-blue-700': '#1d4ed8',
-      'bg-sky-500': '#0ea5e9',
-      'bg-fuchsia-500': '#d946ef',
-      'bg-emerald-500': '#10b981',
-      'bg-amber-500': '#f59e0b',
-      'bg-lime-500': '#84cc16',
-      'bg-green-600': '#16a34a',
-      'bg-stone-500': '#78716c',
-      'bg-gray-500': '#6b7280'
-    };
-    return colorMap[tailwindColor] || '#6b7280';
-  };
-
-  // Construir lista de componentes (sem "todos", pois multiselect já permite selecionar todos)
+  // Construir lista de componentes
   const COMPONENTS = useMemo(() => {
     return engineComponents.map(comp => ({
       id: comp.value,
@@ -107,7 +84,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
     return COMPONENTS.map(comp => ({
       value: comp.id,
       label: comp.name,
-      color: getColorHex(comp.color)
+      color: getComponentColorHex(comp.color)
     }));
   }, [COMPONENTS]);
 
@@ -176,9 +153,9 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
     return componentData?.color || getComponentColor(component);
   };
 
-  // Organizar workflows por status - agrupar por OS ou mostrar por componente conforme configuração
+  // Organizar workflows por status - SEMPRE agrupar por OS
   const organizeWorkflowsByStatus = () => {
-    const workflowsByStatus: Record<string, Array<Record<string, unknown>>> = {};
+    const workflowsByStatus: Record<string, OrderCardData[]> = {};
     const normalizedOrderSearch = orderSearch.trim().toLowerCase();
     
     statusOrder.forEach(status => {
@@ -194,17 +171,17 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
       }
 
       // Agrupar workflows por status para esta OS
-      const workflowsByStatusForOrder: Record<string, Array<Record<string, unknown>>> = {};
+      const workflowsByStatusForOrder: Record<string, OrderWorkflow[]> = {};
       
-      order.order_workflow.forEach((workflow: any) => {
+      order.order_workflow.forEach((workflow) => {
         const status = workflow.status;
-        if (!status) return; // Ignorar workflows sem status
+        if (!status) return;
         
         if (!workflowsByStatusForOrder[status]) {
           workflowsByStatusForOrder[status] = [];
         }
         
-        const workflowItem = {
+        const workflowItem: OrderWorkflow = {
           ...workflow,
           order: order,
           orderNumber: order.order_number,
@@ -213,74 +190,77 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
           collectionDate: order.collection_date,
           componentColor: getComponentColorById(workflow.component),
           statusConfig: statusConfigMap[workflow.status],
-          assignedEmployeeName: workflow.assignedEmployeeName || employeeMap[workflow.assigned_to] || workflow.assigned_to || null
+          assignedEmployeeName: workflow.assignedEmployeeName || employeeMap[workflow.assigned_to || ''] || workflow.assigned_to || null
         };
         
         workflowsByStatusForOrder[status].push(workflowItem);
       });
 
-      // Para cada status que esta OS tem workflows, decidir como exibir
+      // Para cada status que esta OS tem workflows, criar um card de OS
       Object.keys(workflowsByStatusForOrder).forEach(status => {
-        // Garantir que o status existe no objeto workflowsByStatus
         if (!workflowsByStatus[status]) {
           workflowsByStatus[status] = [];
         }
 
         const statusConfig = statusConfigMap[status];
-        const allowSplit = statusConfig?.allow_component_split === true;
         const workflowsForStatus = workflowsByStatusForOrder[status];
 
-        if (allowSplit) {
-          // Status permite split: mostrar cada componente separadamente
-          // Filtrar por componentes selecionados se houver seleção
-          const hasComponentFilter = selectedComponents.length > 0;
-          workflowsForStatus.forEach((workflow: any) => {
-            // Se há filtro de componentes, só incluir se o componente estiver selecionado
-            if (hasComponentFilter && !selectedComponents.includes(workflow.component)) {
-              return;
-            }
-            workflowsByStatus[status].push({
-              ...workflow,
-              type: 'component'
-            });
-          });
-        } else {
-          // Status não permite split: mostrar apenas um card por OS
-          workflowsByStatus[status].push({
-            type: 'order',
-            order: order,
-            orderId: order.id,
-            workflows: workflowsForStatus,
-            orderNumber: order.order_number,
-            customerName: order.customers?.name,
-            engineModel: order.engines ? `${order.engines.brand || ''} ${order.engines.model || ''}`.trim() : 'Motor não informado',
-            collectionDate: order.collection_date,
-            statusConfig: statusConfig
-          });
+        // Filtrar por allowed_components se configurado no status
+        let allowedComponentsForStatus = workflowsForStatus;
+        if (statusConfig?.allowed_components && Array.isArray(statusConfig.allowed_components)) {
+          // Se allowed_components está definido e não é vazio, filtrar
+          if (statusConfig.allowed_components.length > 0) {
+            allowedComponentsForStatus = workflowsForStatus.filter((w) => 
+              statusConfig.allowed_components!.includes(w.component)
+            );
+          }
         }
+        // Se allowed_components é null ou undefined, permitir todos
+
+        // Aplicar filtro de componentes do usuário se houver
+        const filteredWorkflows = selectedComponents.length > 0
+          ? allowedComponentsForStatus.filter((w) => selectedComponents.includes(w.component))
+          : allowedComponentsForStatus;
+
+        // Se após filtrar não sobrou nenhum workflow, não adicionar o card
+        if (filteredWorkflows.length === 0) {
+          return;
+        }
+
+        // SEMPRE criar um card de OS
+        const orderCardData: OrderCardData = {
+          type: 'order',
+          order: order,
+          orderId: order.id,
+          workflows: filteredWorkflows,
+          orderNumber: order.order_number,
+          customerName: order.customers?.name,
+          engineModel: order.engines ? `${order.engines.brand || ''} ${order.engines.model || ''}`.trim() : 'Motor não informado',
+          collectionDate: order.collection_date,
+          statusConfig: statusConfig,
+          allowComponentSplit: statusConfig?.allow_component_split === true
+        };
+        
+        workflowsByStatus[status].push(orderCardData);
       });
     });
 
     // Ordenar por timestamp
     Object.keys(workflowsByStatus).forEach(statusKey => {
       workflowsByStatus[statusKey].sort((a, b) => {
-        const getTimestamp = (item: Record<string, unknown>) => {
-          if (item.type === 'order') {
-            const workflows = item.workflows as Array<Record<string, unknown>>;
-            if (workflows && workflows.length > 0) {
-              const latest = workflows.reduce((latest: any, current: any) => {
-                const latestTime = latest.updated_at || latest.started_at || latest.created_at;
-                const currentTime = current.updated_at || current.started_at || current.created_at;
-                return new Date(currentTime) > new Date(latestTime) ? current : latest;
-              });
-              return latest.updated_at || latest.started_at || latest.created_at 
-                ? new Date(latest.updated_at || latest.started_at || latest.created_at).getTime() 
-                : 0;
-            }
-            return 0;
+        const getTimestamp = (item: OrderCardData) => {
+          const workflows = item.workflows;
+          if (workflows && workflows.length > 0) {
+            const latest = workflows.reduce((latest, current) => {
+              const latestTime = latest.updated_at || latest.started_at || latest.created_at;
+              const currentTime = current.updated_at || current.started_at || current.created_at;
+              return new Date(currentTime || 0).getTime() > new Date(latestTime || 0).getTime() ? current : latest;
+            });
+            return latest.updated_at || latest.started_at || latest.created_at 
+              ? new Date(latest.updated_at || latest.started_at || latest.created_at).getTime() 
+              : 0;
           }
-          const updated = item.updated_at || item.started_at || item.created_at;
-          return updated ? new Date(updated as string).getTime() : 0;
+          return 0;
         };
         return getTimestamp(b) - getTimestamp(a);
       });
@@ -289,7 +269,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
     return workflowsByStatus;
   };
 
-  const handleDragEnd = async (result: unknown) => {
+  const handleDragEnd = async (result: DropResult) => {
     if (!result.destination) {
       setIsDragging(false);
       return;
@@ -307,100 +287,42 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
     const currentStatus = source.droppableId;
     const newStatus = destination.droppableId;
 
-    // Verificar se é um card de OS (começa com "order-")
-    if (draggableId.startsWith('order-')) {
-      const orderId = draggableId.replace('order-', '');
-      
-      // Buscar a OS e todos os seus workflows
-      const order = orders.find((o: any) => o.id === orderId);
-      if (!order || !order.order_workflow) {
-        console.log('Order not found or no workflows:', orderId);
-        return;
-      }
-
-      console.log('Moving order:', order.order_number, 'from', currentStatus, 'to', newStatus);
-      console.log('Order workflows:', order.order_workflow);
-
-      // Para OS agrupada, validar transição sem filtro de componente específico
-      const allowedTransitions = getNextAllowedStatuses(currentStatus, undefined);
-      
-      console.log('Allowed transitions:', allowedTransitions);
-      console.log('Prerequisites:', prerequisites);
-      
-      // Verificar se há pré-requisitos configurados no sistema
-      const hasAnyPrerequisites = prerequisites && prerequisites.length > 0;
-      
-      let isTransitionAllowed = false;
-      
-      if (hasAnyPrerequisites) {
-        // Há pré-requisitos no sistema: verificar se a transição específica está permitida
-        if (allowedTransitions.length > 0) {
-          isTransitionAllowed = allowedTransitions.some(
-            transition => transition.to_status_key === newStatus
-          );
-        } else {
-          // Há pré-requisitos no sistema, mas nenhum para este status específico
-          isTransitionAllowed = false;
-        }
-      } else {
-        // Não há pré-requisitos configurados no sistema: permitir qualquer transição
-        isTransitionAllowed = true;
-      }
-
-      if (!isTransitionAllowed) {
-        console.log('Transition not allowed');
-        toast({
-          title: "Transição não permitida",
-          description: "Esta transição de status não é permitida pelas regras configuradas",
-          variant: "destructive"
-        });
-        setIsDragging(false);
-        return;
-      }
-
-      // Quando arrastar uma OS agrupada, mover TODOS os componentes da OS para o novo status
-      const allWorkflowsInOrder = order.order_workflow || [];
-      
-      if (allWorkflowsInOrder.length === 0) {
-        return;
-      }
-
-      console.log('Updating workflows:', allWorkflowsInOrder.map((w: any) => w.id));
-
-      // Atualizar todos os workflows
-      const updatePromises = allWorkflowsInOrder.map((workflow: any) =>
-        updateWorkflowStatus(workflow.id, newStatus, 'OS movida para novo status')
-      );
-
-      const results = await Promise.all(updatePromises);
-      const allSuccess = results.every(r => r === true);
-
-      console.log('Update results:', results);
-
-      if (allSuccess) {
-        toast({
-          title: "OS movida!",
-          description: `${allWorkflowsInOrder.length} componente(s) movido(s) para ${newStatus}`,
-        });
-        onOrderUpdate();
-      } else {
-        toast({
-          title: "Erro ao mover OS",
-          description: "Alguns componentes não puderam ser movidos",
-          variant: "destructive"
-        });
-      }
-      
+    // Agora TODOS os cards são de OS (sempre começam com "order-")
+    if (!draggableId.startsWith('order-')) {
+      console.error('Invalid draggable ID format:', draggableId);
       setIsDragging(false);
       return;
     }
 
-    // Se não é um card de OS, é um componente individual
-    const workflowId = draggableId;
+    const orderId = draggableId.replace('order-', '');
+    
+    // Buscar a OS e todos os seus workflows no status atual
+    const order = orders.find((o) => o.id === orderId);
+    if (!order || !order.order_workflow) {
+      console.log('Order not found or no workflows:', orderId);
+      setIsDragging(false);
+      return;
+    }
 
-    // Validar se a transição é permitida pelos pré-requisitos
-    const firstSelected = selectedComponents.length > 0 ? selectedComponents[0] : null;
-    const allowedTransitions = getNextAllowedStatuses(currentStatus, firstSelected);
+    // Filtrar apenas workflows que estão no status de origem
+    const workflowsInCurrentStatus = order.order_workflow.filter(
+      (w) => w.status === currentStatus
+    );
+
+    if (workflowsInCurrentStatus.length === 0) {
+      console.log('No workflows in current status');
+      setIsDragging(false);
+      return;
+    }
+
+    console.log('Moving order:', order.order_number, 'from', currentStatus, 'to', newStatus);
+    console.log('Workflows to move:', workflowsInCurrentStatus.length);
+
+    // Validar transição sem filtro de componente específico
+    const allowedTransitions = getNextAllowedStatuses(currentStatus, undefined);
+    
+    console.log('Allowed transitions:', allowedTransitions);
+    console.log('Prerequisites:', prerequisites);
     
     // Verificar se há pré-requisitos configurados no sistema
     const hasAnyPrerequisites = prerequisites && prerequisites.length > 0;
@@ -409,15 +331,21 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
     
     if (hasAnyPrerequisites) {
       // Há pré-requisitos no sistema: verificar se a transição específica está permitida
-      isTransitionAllowed = allowedTransitions.some(
-        transition => transition.to_status_key === newStatus
-      );
+      if (allowedTransitions.length > 0) {
+        isTransitionAllowed = allowedTransitions.some(
+          transition => transition.to_status_key === newStatus
+        );
+      } else {
+        // Há pré-requisitos no sistema, mas nenhum para este status específico
+        isTransitionAllowed = false;
+      }
     } else {
       // Não há pré-requisitos configurados no sistema: permitir qualquer transição
       isTransitionAllowed = true;
     }
 
     if (!isTransitionAllowed) {
+      console.log('Transition not allowed');
       toast({
         title: "Transição não permitida",
         description: "Esta transição de status não é permitida pelas regras configuradas",
@@ -427,24 +355,38 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
       return;
     }
 
-    // Buscar o workflow para obter order_id
-    const workflow = orders
-      .flatMap((o: any) => o.order_workflow || [])
-      .find((w: any) => w.id === workflowId);
+    // Mover apenas os workflows que estão no status atual
+    console.log('Updating workflows:', workflowsInCurrentStatus.map((w) => w.id));
 
-    if (!workflow) {
-      return;
-    }
+    // Atualizar todos os workflows do status atual
+    const updatePromises = workflowsInCurrentStatus.map((workflow) =>
+      updateWorkflowStatus(workflow.id, newStatus, 'OS movida para novo status')
+    );
 
-    const success = await updateWorkflowStatus(workflowId, newStatus);
-    
-    if (success) {
-      // Verificar se todos os componentes da OS estão finalizados e avançar automaticamente
-      if (workflow.order_id) {
-        await checkAndAdvanceOrderWorkflows(workflow.order_id, currentStatus);
-      }
+    const results = await Promise.all(updatePromises);
+    const allSuccess = results.every(r => r === true);
+
+    console.log('Update results:', results);
+
+    if (allSuccess) {
+      const statusConfig = statusConfigMap[newStatus];
+      const newStatusLabel = statusConfig?.status_label || newStatus;
+      
+      toast({
+        title: "OS movida!",
+        description: `${workflowsInCurrentStatus.length} componente(s) movido(s) para ${newStatusLabel}`,
+      });
+      
+      // Verificar se precisa avançar automaticamente
+      await checkAndAdvanceOrderWorkflows(orderId, newStatus);
       
       onOrderUpdate();
+    } else {
+      toast({
+        title: "Erro ao mover OS",
+        description: "Alguns componentes não puderam ser movidos",
+        variant: "destructive"
+      });
     }
     
     setIsDragging(false);

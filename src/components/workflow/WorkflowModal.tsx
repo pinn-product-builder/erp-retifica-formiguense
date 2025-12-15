@@ -242,7 +242,7 @@ export function WorkflowModal({ workflow, open, onClose, onUpdate, employeeOptio
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <span>Workflow - {workflow.component.toUpperCase()}</span>
+            <span>Workflow - {workflow.orderNumber}</span>
             <Badge className={getStatusColor(workflow.status)}>
               {workflow.status.toUpperCase()}
             </Badge>

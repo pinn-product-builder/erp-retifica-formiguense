@@ -19,6 +19,7 @@ export interface WorkflowStatusConfig {
   display_order: number;
   estimated_hours: number;
   allow_component_split?: boolean;
+  allowed_components?: string[] | null;
   visual_config?: Json;
   notification_config?: Json;
   sla_config?: Json;

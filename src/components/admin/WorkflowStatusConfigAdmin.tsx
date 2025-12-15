@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Edit, Trash2, Save, X, Settings, Clock, Shield, ArrowRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Settings, Clock, Shield, ArrowRight, Search } from 'lucide-react';
 import { useWorkflowStatusConfig, WorkflowStatusConfig, StatusPrerequisite, FIXED_WORKFLOW_STATUSES } from '@/hooks/useWorkflowStatusConfig';
 import { useWorkflowHistory } from '@/hooks/useWorkflowHistory';
 import { useToast } from '@/hooks/use-toast';
@@ -70,6 +70,9 @@ export const WorkflowStatusConfigAdmin = () => {
   const [notificationChanges, setNotificationChanges] = useState(true);
   const [loadingAuditConfig, setLoadingAuditConfig] = useState(false);
   
+  // Estado para busca de componentes
+  const [componentSearchTerm, setComponentSearchTerm] = useState('');
+  
   const { history, fetchHistory } = useWorkflowHistory();
 
   const [formData, setFormData] = useState({
@@ -82,6 +85,7 @@ export const WorkflowStatusConfigAdmin = () => {
     estimated_hours: 0,
     is_active: true,
     allow_component_split: false,
+    allowed_components: null as string[] | null,
     visual_config: {
       bgColor: '#f3f4f6',
       textColor: '#374151'
@@ -135,6 +139,7 @@ export const WorkflowStatusConfigAdmin = () => {
       estimated_hours: 0,
       is_active: true,
       allow_component_split: false,
+      allowed_components: null,
       visual_config: {
         bgColor: '#f3f4f6',
         textColor: '#374151'
@@ -150,6 +155,7 @@ export const WorkflowStatusConfigAdmin = () => {
       automation_rules: []
     });
     setEditingStatus(null);
+    setComponentSearchTerm(''); // Limpar busca
     if (resetCreating) {
       setIsCreating(false);
     }
@@ -185,6 +191,7 @@ export const WorkflowStatusConfigAdmin = () => {
       estimated_hours: normalizedStatus.estimated_hours || 0,
       is_active: normalizedStatus.is_active,
       allow_component_split: normalizedStatus.allow_component_split || false,
+      allowed_components: normalizedStatus.allowed_components || null,
       visual_config: (normalizedStatus.visual_config as unknown as VisualConfig) || {
         bgColor: '#f3f4f6',
         textColor: '#374151'
@@ -1150,6 +1157,146 @@ Tem certeza que deseja continuar?`,
                 </p>
               </div>
             </div>
+
+            {/* Seletor de Componentes Permitidos - Aparece quando desmembramento está ativo */}
+            {formData.allow_component_split && (
+              <div className="space-y-3 p-3 sm:p-4 bg-muted/30 rounded-lg border-l-4 border-primary">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Componentes Permitidos no Desmembramento</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Selecione quais componentes podem ser visualizados separadamente neste status. 
+                    Deixe vazio para permitir todos os componentes.
+                  </p>
+                </div>
+                
+                {/* Barra de Pesquisa */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Buscar componentes..."
+                    value={componentSearchTerm}
+                    onChange={(e) => setComponentSearchTerm(e.target.value)}
+                    className="pl-9 h-9"
+                  />
+                  {componentSearchTerm && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+                      onClick={() => setComponentSearchTerm('')}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {componentsLoading ? (
+                    <p className="text-xs text-muted-foreground col-span-full">Carregando componentes...</p>
+                  ) : (
+                    <>
+                      {/* Botão Selecionar/Desmarcar Todos - apenas se não houver busca */}
+                      {!componentSearchTerm && (
+                        <div className="col-span-full">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const allSelected = formData.allowed_components?.length === engineComponents.length;
+                              setFormData(prev => ({
+                                ...prev,
+                                allowed_components: allSelected ? [] : engineComponents.map(c => c.value)
+                              }));
+                            }}
+                            className="w-full"
+                          >
+                            {formData.allowed_components?.length === engineComponents.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                          </Button>
+                        </div>
+                      )}
+                      
+                      {/* Lista de Componentes Filtrada */}
+                      {engineComponents
+                        .filter(component => 
+                          component.label.toLowerCase().includes(componentSearchTerm.toLowerCase()) ||
+                          component.value.toLowerCase().includes(componentSearchTerm.toLowerCase())
+                        )
+                        .map((component) => {
+                          const isSelected = formData.allowed_components === null 
+                            || formData.allowed_components.includes(component.value);
+                          
+                          return (
+                            <div
+                              key={component.value}
+                              className={`flex items-center space-x-2 p-2 rounded border cursor-pointer transition-colors ${
+                                isSelected 
+                                  ? 'bg-primary/10 border-primary' 
+                                  : 'bg-background border-muted-foreground/20 hover:border-muted-foreground/40'
+                              }`}
+                              onClick={() => {
+                                setFormData(prev => {
+                                  const current = prev.allowed_components || [];
+                                  const newValue = current.includes(component.value)
+                                    ? current.filter(c => c !== component.value)
+                                    : [...current, component.value];
+                                  
+                                  return {
+                                    ...prev,
+                                    allowed_components: newValue.length === engineComponents.length ? null : newValue
+                                  };
+                                });
+                              }}
+                            >
+                              <div className={`w-3 h-3 rounded border flex items-center justify-center flex-shrink-0 ${
+                                isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/40'
+                              }`}>
+                                {isSelected && (
+                                  <svg className="w-2 h-2 text-primary-foreground" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                                  </svg>
+                                )}
+                              </div>
+                              <span className="text-xs truncate">{component.label}</span>
+                            </div>
+                          );
+                        })}
+                      
+                      {/* Mensagem quando não há resultados na busca */}
+                      {componentSearchTerm && engineComponents.filter(c => 
+                        c.label.toLowerCase().includes(componentSearchTerm.toLowerCase()) ||
+                        c.value.toLowerCase().includes(componentSearchTerm.toLowerCase())
+                      ).length === 0 && (
+                        <p className="text-xs text-muted-foreground col-span-full text-center py-4">
+                          Nenhum componente encontrado para "{componentSearchTerm}"
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+                
+                {/* Avisos e Mensagens */}
+                {formData.allowed_components && formData.allowed_components.length === 0 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    ⚠️ Nenhum componente selecionado. Nenhuma OS será mostrada neste status.
+                  </p>
+                )}
+                
+                {(formData.allowed_components === null || formData.allowed_components.length === engineComponents.length) && (
+                  <p className="text-xs text-muted-foreground">
+                    ✓ Todos os componentes estão permitidos
+                  </p>
+                )}
+                
+                {formData.allowed_components && formData.allowed_components.length > 0 && formData.allowed_components.length < engineComponents.length && (
+                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                    📋 {formData.allowed_components.length} de {engineComponents.length} componentes selecionados
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Preview */}
             <div className="space-y-2">

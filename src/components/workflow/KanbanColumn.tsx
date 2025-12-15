@@ -1,16 +1,26 @@
-// @ts-nocheck
-
 import React from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
-import { ComponentCard } from './ComponentCard';
 import { OrderCard } from './OrderCard';
 import { Badge } from '@/components/ui/badge';
 import { EmployeeDirectoryEntry } from '@/hooks/useEmployeesDirectory';
 import { WorkflowStatusConfig } from '@/hooks/useWorkflowStatusConfig';
 
+interface OrderCardData {
+  type: 'order';
+  order: any;
+  orderId: string;
+  workflows: any[];
+  orderNumber: string;
+  customerName?: string;
+  engineModel: string;
+  collectionDate?: string;
+  statusConfig?: WorkflowStatusConfig;
+  allowComponentSplit: boolean;
+}
+
 interface KanbanColumnProps {
   status: string;
-  workflows: Array<Record<string, unknown>>;
+  workflows: OrderCardData[];
   componentColor: string;
   statusColors?: Record<string, { bgColor: string; textColor: string }>;
   statusConfig?: WorkflowStatusConfig;
@@ -56,9 +66,7 @@ export function KanbanColumn({ status, workflows, componentColor, statusColors, 
               }`}
             >
               {workflows.map((item, index) => {
-                const draggableId = item.type === 'order' 
-                  ? `order-${item.orderId || item.order?.id || index}` 
-                  : item.id;
+                const draggableId = `order-${item.orderId}`;
                 
                 return (
                   <Draggable 
@@ -75,24 +83,15 @@ export function KanbanColumn({ status, workflows, componentColor, statusColors, 
                           snapshot.isDragging ? 'rotate-3 scale-105' : ''
                         } transition-transform`}
                       >
-                        {item.type === 'order' ? (
-                          <OrderCard 
-                            order={item.order}
-                            workflows={item.workflows || []}
-                            statusConfig={item.statusConfig || statusConfig}
-                            onUpdate={onUpdate}
-                            employeeOptions={employeeOptions}
-                            employeesLoading={employeesLoading}
-                          />
-                        ) : (
-                          <ComponentCard 
-                            workflow={item}
-                            componentColor={item.componentColor || componentColor}
-                            onUpdate={onUpdate}
-                            employeeOptions={employeeOptions}
-                            employeesLoading={employeesLoading}
-                          />
-                        )}
+                        <OrderCard 
+                          order={item.order}
+                          workflows={item.workflows}
+                          statusConfig={item.statusConfig || statusConfig}
+                          allowComponentSplit={item.allowComponentSplit}
+                          onUpdate={onUpdate}
+                          employeeOptions={employeeOptions}
+                          employeesLoading={employeesLoading}
+                        />
                       </div>
                     )}
                   </Draggable>
