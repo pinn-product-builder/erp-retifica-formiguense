@@ -140,7 +140,7 @@ export function OrderCard({
           ) : (
             // Compact component badges when not allowing split
             <div className="flex flex-wrap gap-1">
-              {workflows.slice(0, 5).map((w: any) => (
+              {workflows.slice(0, 3).map((w: any) => (
                 <Badge 
                   key={w.id} 
                   variant={w.completed_at ? "default" : "secondary"}
@@ -155,9 +155,9 @@ export function OrderCard({
                   {getComponentLabel(w.component)}
                 </Badge>
               ))}
-              {workflows.length > 5 && (
+              {workflows.length > 3 && (
                 <Badge variant="outline" className="text-xs px-1.5 py-0.5">
-                  +{workflows.length - 5}
+                  +{workflows.length - 3}
                 </Badge>
               )}
             </div>
