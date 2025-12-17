@@ -189,8 +189,8 @@ export function EngineTypesConfig() {
                         <TableHead className="min-w-[120px]">Nome</TableHead>
                         <TableHead className="min-w-[100px]">Categoria</TableHead>
                         <TableHead className="min-w-[120px] hidden md:table-cell">Componentes</TableHead>
-                        <TableHead className="min-w-[80px] hidden lg:table-cell">Garantia</TableHead>
-                        <TableHead className="min-w-[120px] hidden lg:table-cell">Normas Técnicas</TableHead>
+                        <TableHead className="min-w-[120px] hidden lg:table-cell">Serviços</TableHead>
+                        <TableHead className="min-w-[80px] hidden xl:table-cell">Garantia</TableHead>
                         <TableHead className="min-w-[80px] hidden sm:table-cell">Status</TableHead>
                         <TableHead className="text-right min-w-[80px]">Ações</TableHead>
                       </TableRow>
@@ -236,21 +236,34 @@ export function EngineTypesConfig() {
                               </div>
                             </TableCell>
                             <TableCell className="hidden lg:table-cell">
-                              <span className="text-sm">{engineType.default_warranty_months}m</span>
+                              <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                {(() => {
+                                  const services = (engineType as any).engine_type_services || [];
+                                  const serviceCount = services.length;
+                                  
+                                  if (serviceCount === 0) {
+                                    return <span className="text-xs text-muted-foreground">Nenhum</span>;
+                                  }
+                                  
+                                  return (
+                                    <>
+                                      {services.slice(0, 2).map((ets: any) => (
+                                        <Badge key={ets.id} variant="secondary" className="text-xs">
+                                          {ets.additional_services?.description?.substring(0, 15) || 'Serviço'}
+                                        </Badge>
+                                      ))}
+                                      {serviceCount > 2 && (
+                                        <Badge variant="outline" className="text-xs">
+                                          +{serviceCount - 2}
+                                        </Badge>
+                                      )}
+                                    </>
+                                  );
+                                })()}
+                              </div>
                             </TableCell>
-                            <TableCell className="hidden lg:table-cell">
-                               <div className="flex flex-wrap gap-1 max-w-[150px]">
-                                 {Array.isArray(engineType.technical_standards) ? (engineType.technical_standards as string[]).slice(0, 2).map((standard: string) => (
-                                   <Badge key={String(standard)} variant="outline" className="text-xs">
-                                     {String(standard)}
-                                   </Badge>
-                                 )) : []}
-                                 {Array.isArray(engineType.technical_standards) && engineType.technical_standards.length > 2 && (
-                                   <Badge variant="outline" className="text-xs">
-                                     +{engineType.technical_standards.length - 2}
-                                   </Badge>
-                                 )}
-                               </div>
+                            <TableCell className="hidden xl:table-cell">
+                              <span className="text-sm">{engineType.default_warranty_months}m</span>
                             </TableCell>
                             <TableCell className="hidden sm:table-cell">
                               <Badge 
@@ -427,6 +440,25 @@ export function EngineTypesConfig() {
                               ))}
                             </div>
                           </div>
+                          
+                          {(() => {
+                            const services = (engineType as any).engine_type_services || [];
+                            if (services.length > 0) {
+                              return (
+                                <div>
+                                  <span className="text-sm font-medium">Serviços:</span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {services.map((ets: any) => (
+                                      <Badge key={ets.id} variant="secondary" className="text-xs">
+                                        {ets.additional_services?.description || 'Serviço'}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                           
                           {Array.isArray(engineType.technical_standards) && engineType.technical_standards.length > 0 && (
                             <div>

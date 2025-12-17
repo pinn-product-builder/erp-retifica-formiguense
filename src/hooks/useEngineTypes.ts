@@ -36,7 +36,20 @@ export function useEngineTypes(options: UseEngineTypesOptions = {}) {
       
       let query = supabase
         .from('engine_types')
-        .select('*', { count: 'exact' })
+        .select(`
+          *,
+          engine_type_services (
+            id,
+            service_id,
+            is_required,
+            display_order,
+            additional_services (
+              id,
+              description,
+              value
+            )
+          )
+        `, { count: 'exact' })
         .eq('org_id', currentOrganization.id);
 
       if (search) {
@@ -361,6 +374,74 @@ export function useEngineTypes(options: UseEngineTypesOptions = {}) {
     }
   }, [currentOrganization?.id, fetchEngineTypes]);
 
+  const saveEngineTypeServices = async (engineTypeId: string, serviceIds: string[]) => {
+    try {
+      setLoading(true);
+
+      // Deletar serviços existentes
+      const { error: deleteError } = await supabase
+        .from('engine_type_services')
+        .delete()
+        .eq('engine_type_id', engineTypeId);
+
+      if (deleteError) throw deleteError;
+
+      // Inserir novos serviços
+      if (serviceIds.length > 0) {
+        const servicesToInsert = serviceIds.map((serviceId, index) => ({
+          engine_type_id: engineTypeId,
+          service_id: serviceId,
+          display_order: index,
+          is_required: false
+        }));
+
+        const { error: insertError } = await supabase
+          .from('engine_type_services')
+          .insert(servicesToInsert);
+
+        if (insertError) throw insertError;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao salvar serviços do tipo de motor:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível salvar os serviços do tipo de motor',
+        variant: 'destructive'
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchEngineTypeServices = async (engineTypeId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('engine_type_services')
+        .select(`
+          id,
+          service_id,
+          is_required,
+          display_order,
+          additional_services (
+            id,
+            description,
+            value
+          )
+        `)
+        .eq('engine_type_id', engineTypeId)
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao carregar serviços do tipo de motor:', error);
+      return [];
+    }
+  };
+
   const totalPages = page && pageSize ? Math.ceil(total / pageSize) : 1;
 
   return {
@@ -379,6 +460,8 @@ export function useEngineTypes(options: UseEngineTypesOptions = {}) {
     createWorkflowStep,
     updateWorkflowStep,
     deleteWorkflowStep,
-    reorderWorkflowSteps
+    reorderWorkflowSteps,
+    saveEngineTypeServices,
+    fetchEngineTypeServices
   };
 }

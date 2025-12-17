@@ -31,6 +31,7 @@ import { Plus, X, Save, Loader2, Search } from 'lucide-react';
 import { useEngineTypes, EngineType } from '@/hooks/useEngineTypes';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { useEngineCategories } from '@/hooks/useEngineCategories';
+import { useAdditionalServices } from '@/hooks/useAdditionalServices';
 import { Json , Database} from '@/integrations/supabase/types';
 
 const TECHNICAL_STANDARDS = [
@@ -47,6 +48,7 @@ const engineTypeSchema = z.object({
   description: z.string().optional(),
   technical_standards: z.array(z.string()),
   required_components: z.array(z.string()).min(1, 'Pelo menos um componente é obrigatório'),
+  service_ids: z.array(z.string()).optional(),
   default_warranty_months: z.number().min(1, 'Garantia deve ser pelo menos 1 mês').max(60, 'Garantia não pode exceder 60 meses'),
   is_active: z.boolean(),
   display_order: z.number().min(0),
@@ -71,13 +73,15 @@ interface EngineTypeFormProps {
 }
 
 export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: EngineTypeFormProps) {
-  const { createEngineType, updateEngineType, loading } = useEngineTypes();
+  const { createEngineType, updateEngineType, loading, saveEngineTypeServices, fetchEngineTypeServices } = useEngineTypes();
   const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
   const { fetchAllCategories } = useEngineCategories();
+  const { additionalServices, loading: servicesLoading } = useAdditionalServices();
   const [categories, setCategories] = useState<Array<{ id: string; name: string; components?: string[] }>>([]);
   const [customStandard, setCustomStandard] = useState('');
   const [customEquipment, setCustomEquipment] = useState('');
   const [componentSearchTerm, setComponentSearchTerm] = useState('');
+  const [serviceSearchTerm, setServiceSearchTerm] = useState('');
   const [categoryChanged, setCategoryChanged] = useState(false);
 
   const filteredComponents = useMemo(() => {
@@ -89,6 +93,16 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
       comp.value.toLowerCase().includes(term)
     );
   }, [engineComponents, componentSearchTerm]);
+
+  const filteredServices = useMemo(() => {
+    if (!serviceSearchTerm) return additionalServices;
+    
+    const term = serviceSearchTerm.toLowerCase();
+    return additionalServices.filter(service => 
+      service.description.toLowerCase().includes(term) ||
+      (service.value && service.value.toString().includes(term))
+    );
+  }, [additionalServices, serviceSearchTerm]);
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -110,6 +124,7 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
       description: '',
       technical_standards: [],
       required_components: [],
+      service_ids: [],
       default_warranty_months: 3,
       is_active: true,
       display_order: 0,
@@ -126,29 +141,39 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
   });
 
   useEffect(() => {
-    if (engineType && mode === 'edit') {
-      const categoryId = (engineType as any).category_id;
-      form.reset({
-        name: engineType.name,
-        category_id: categoryId || '',
-        description: engineType.description || '',
-        technical_standards: Array.isArray(engineType.technical_standards) ? engineType.technical_standards as string[] : [],
-        required_components: Array.isArray(engineType.required_components) ? engineType.required_components as string[] : [],
-        default_warranty_months: engineType.default_warranty_months,
-        is_active: engineType.is_active,
-        display_order: engineType.display_order,
-        special_requirements: {
-          ambiente: (engineType.special_requirements as Record<string, unknown>)?.ambiente as string || '',
-          equipamentos: (engineType.special_requirements as Record<string, unknown>)?.equipamentos as string[] || [],
-          certificacao_required: (engineType.special_requirements as Record<string, unknown>)?.certificacao_required as boolean || false,
-          temperatura_controlada: (engineType.special_requirements as Record<string, unknown>)?.temperatura_controlada as boolean || false,
-          umidade_controlada: (engineType.special_requirements as Record<string, unknown>)?.umidade_controlada as boolean || false,
-          limpeza_especial: (engineType.special_requirements as Record<string, unknown>)?.limpeza_especial as boolean || false,
-          rastreabilidade_completa: (engineType.special_requirements as Record<string, unknown>)?.rastreabilidade_completa as boolean || false,
-        },
-      });
-    }
-  }, [engineType, mode, form]);
+    const loadEngineTypeData = async () => {
+      if (engineType && mode === 'edit') {
+        const categoryId = (engineType as any).category_id;
+        
+        // Carregar serviços do tipo de motor
+        const services = await fetchEngineTypeServices(engineType.id);
+        const serviceIds = services.map((s: any) => s.service_id);
+        
+        form.reset({
+          name: engineType.name,
+          category_id: categoryId || '',
+          description: engineType.description || '',
+          technical_standards: Array.isArray(engineType.technical_standards) ? engineType.technical_standards as string[] : [],
+          required_components: Array.isArray(engineType.required_components) ? engineType.required_components as string[] : [],
+          service_ids: serviceIds,
+          default_warranty_months: engineType.default_warranty_months,
+          is_active: engineType.is_active,
+          display_order: engineType.display_order,
+          special_requirements: {
+            ambiente: (engineType.special_requirements as Record<string, unknown>)?.ambiente as string || '',
+            equipamentos: (engineType.special_requirements as Record<string, unknown>)?.equipamentos as string[] || [],
+            certificacao_required: (engineType.special_requirements as Record<string, unknown>)?.certificacao_required as boolean || false,
+            temperatura_controlada: (engineType.special_requirements as Record<string, unknown>)?.temperatura_controlada as boolean || false,
+            umidade_controlada: (engineType.special_requirements as Record<string, unknown>)?.umidade_controlada as boolean || false,
+            limpeza_especial: (engineType.special_requirements as Record<string, unknown>)?.limpeza_especial as boolean || false,
+            rastreabilidade_completa: (engineType.special_requirements as Record<string, unknown>)?.rastreabilidade_completa as boolean || false,
+          },
+        });
+      }
+    };
+    
+    loadEngineTypeData();
+  }, [engineType?.id, mode]);
 
   useEffect(() => {
     if (mode === 'edit' && engineType && categories.length > 0) {
@@ -160,34 +185,36 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
         }
       }
     }
-  }, [categories, mode, engineType, form]);
+  }, [categories.length, mode, engineType?.id]);
 
   useEffect(() => {
-    if (mode === 'edit' && engineType && categories.length > 0) {
+    if (mode === 'edit' && engineType && categories.length > 0 && categoryChanged) {
       const categoryId = form.getValues('category_id');
       const currentComponents = form.getValues('required_components');
       
       if (categoryId) {
         const selectedCategory = categories.find(c => c.id === categoryId);
         
-        if (categoryChanged && selectedCategory) {
+        if (selectedCategory) {
           if (selectedCategory.components && selectedCategory.components.length > 0) {
             const combinedComponents = [...new Set([...currentComponents, ...selectedCategory.components])];
             form.setValue('required_components', combinedComponents);
           }
           setCategoryChanged(false);
-        } else if (currentComponents.length === 0 && selectedCategory && selectedCategory.components && selectedCategory.components.length > 0) {
-          form.setValue('required_components', [...selectedCategory.components]);
         }
       }
     }
-  }, [categories, mode, engineType, form, categoryChanged]);
+  }, [categoryChanged]);
 
   const onSubmit = async (data: EngineTypeFormData) => {
     try {
+      const selectedCategory = categories.find(c => c.id === data.category_id);
+      const categoryName = selectedCategory?.name || '';
+      
       if (mode === 'create') {
         const created = await createEngineType({
           name: data.name!,
+          category: categoryName,
           category_id: data.category_id!,
           description: data.description,
           is_active: data.is_active,
@@ -197,10 +224,17 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
           technical_standards: data.technical_standards as string[],
           special_requirements: data.special_requirements as Json ,
         });
+        
+        // Salvar serviços se houver
+        if (created && data.service_ids && data.service_ids.length > 0) {
+          await saveEngineTypeServices(created.id, data.service_ids);
+        }
+        
         onSuccess(created?.id);
       } else if (engineType) {
         await updateEngineType(engineType.id, {
           name: data.name,
+          category: categoryName,
           category_id: data.category_id,
           description: data.description,
           is_active: data.is_active,
@@ -210,6 +244,10 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
           technical_standards: data.technical_standards as string[],
           special_requirements: data.special_requirements as Json,
         });
+        
+        // Salvar serviços
+        await saveEngineTypeServices(engineType.id, data.service_ids || []);
+        
         onSuccess();
       }
     } catch (error) {
@@ -491,6 +529,164 @@ export function EngineTypeForm({ engineType, mode, onSuccess, onCancel }: Engine
                       </FormControl>
                       <FormDescription>
                         Selecione os componentes que fazem parte deste tipo de motor. Eles aparecerão no checkin.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base sm:text-lg">Serviços do Tipo de Motor</CardTitle>
+              <CardDescription className="text-sm">
+                Selecione os serviços que compõem este tipo de motor (aparecerão no diagnóstico)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="service_ids"
+                render={({ field }) => {
+                  const selectedServices = field.value || [];
+
+                  const handleToggleService = (serviceId: string, checked: boolean) => {
+                    if (checked) {
+                      if (!selectedServices.includes(serviceId)) {
+                        field.onChange([...selectedServices, serviceId]);
+                      }
+                    } else {
+                      field.onChange(selectedServices.filter((id: string) => id !== serviceId));
+                    }
+                  };
+
+                  const handleSelectAll = () => {
+                    if (selectedServices.length === filteredServices.length) {
+                      field.onChange([]);
+                    } else {
+                      field.onChange(filteredServices.map(s => s.id));
+                    }
+                  };
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Serviços Disponíveis</FormLabel>
+                      <FormControl>
+                        {servicesLoading ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                            <span className="ml-2 text-sm text-muted-foreground">
+                              Carregando serviços...
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  placeholder="Buscar serviço..."
+                                  value={serviceSearchTerm}
+                                  onChange={(e) => setServiceSearchTerm(e.target.value)}
+                                  className="pl-9"
+                                />
+                                {serviceSearchTerm && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+                                    onClick={() => setServiceSearchTerm('')}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              {!serviceSearchTerm && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleSelectAll}
+                                >
+                                  {selectedServices.length === additionalServices.length 
+                                    ? 'Desmarcar Todos' 
+                                    : 'Selecionar Todos'}
+                                </Button>
+                              )}
+                            </div>
+                            
+                            <div className="border rounded-lg p-4 max-h-[400px] overflow-y-auto">
+                              {filteredServices.length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center py-4">
+                                  {serviceSearchTerm 
+                                    ? 'Nenhum serviço encontrado' 
+                                    : 'Nenhum serviço cadastrado'}
+                                </p>
+                              ) : (
+                                <div className="grid grid-cols-1 gap-3">
+                                  {filteredServices.map((service) => {
+                                    const isChecked = selectedServices.includes(service.id);
+                                    return (
+                                      <div 
+                                        key={service.id} 
+                                        className={`flex items-start space-x-3 p-3 rounded-lg border transition-colors ${
+                                          isChecked 
+                                            ? 'bg-primary/5 border-primary' 
+                                            : 'bg-muted/30 border-transparent hover:border-muted-foreground/20'
+                                        }`}
+                                      >
+                                        <Checkbox
+                                          id={`service-${service.id}`}
+                                          checked={isChecked}
+                                          onCheckedChange={(checked) => {
+                                            handleToggleService(service.id, checked as boolean);
+                                          }}
+                                          className="mt-1"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                          <Label
+                                            htmlFor={`service-${service.id}`}
+                                            className="text-sm font-medium cursor-pointer block"
+                                          >
+                                            {service.description}
+                                          </Label>
+                                          {service.value && (
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                              R$ {Number(service.value).toFixed(2)}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+
+                            {selectedServices.length > 0 && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">
+                                  {selectedServices.length} serviço(s) selecionado(s)
+                                </span>
+                                {selectedServices.length > 0 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => field.onChange([])}
+                                  >
+                                    Limpar seleção
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </FormControl>
+                      <FormDescription>
+                        Serviços selecionados aparecerão como ponto de partida no diagnóstico
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
