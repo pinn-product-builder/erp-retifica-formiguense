@@ -144,9 +144,9 @@ export function AdditionalServicesAdmin() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 className="text-lg font-semibold">Serviços Adicionais</h3>
+          <h3 className="text-lg font-semibold">Serviços</h3>
           <p className="text-sm text-muted-foreground">
-            Gerencie os serviços adicionais disponíveis para diagnósticos
+            Gerencie os serviços disponíveis para diagnósticos
           </p>
         </div>
         <Button onClick={() => handleOpenDialog()} className="w-full sm:w-auto">

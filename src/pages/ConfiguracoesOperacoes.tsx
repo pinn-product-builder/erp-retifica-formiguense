@@ -1,12 +1,14 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Wrench, ClipboardList, GitBranch, CheckCircle, Cog, FolderTree } from "lucide-react";
+import { Settings, Wrench, ClipboardList, GitBranch, CheckCircle, Cog, FolderTree, Package } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 import { EngineTypesConfig } from "@/components/operations/EngineTypesConfig";
 import { EngineCategoriesConfig } from "@/components/operations/EngineCategoriesConfig";
 import DiagnosticChecklistsConfig from "@/components/operations/DiagnosticChecklistsConfig";
 import { WorkflowStatusConfigAdmin } from "@/components/admin/WorkflowStatusConfigAdmin";
+import { MacroComponentsAdmin } from "@/components/admin/MacroComponentsAdmin";
+import { AdditionalServicesAdmin } from "@/components/admin/AdditionalServicesAdmin";
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionGate } from '@/components/auth/PermissionGate';
 
@@ -73,21 +75,31 @@ const ConfiguracoesOperacoes = () => {
       {/* Tabs de configurações */}
       <Tabs defaultValue="categorias" className="space-y-4 sm:space-y-6">
         <div className="overflow-x-auto">
-          <TabsList className="grid grid-cols-4 w-full min-w-[800px] sm:min-w-0">
+          <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full min-w-[800px] sm:min-w-0">
             <TabsTrigger value="categorias" className="flex items-center gap-2 text-xs sm:text-sm">
               <FolderTree className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Categorias</span>
-              <span className="sm:hidden">Categorias</span>
+              <span className="sm:hidden">Cat.</span>
             </TabsTrigger>
             <TabsTrigger value="tipos-motor" className="flex items-center gap-2 text-xs sm:text-sm">
               <Cog className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Tipos de Motor</span>
               <span className="sm:hidden">Motores</span>
             </TabsTrigger>
+            <TabsTrigger value="componentes" className="flex items-center gap-2 text-xs sm:text-sm">
+              <Package className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Componentes Macro</span>
+              <span className="sm:hidden">Comp.</span>
+            </TabsTrigger>
+            <TabsTrigger value="servicos" className="flex items-center gap-2 text-xs sm:text-sm">
+              <Wrench className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Serviços</span>
+              <span className="sm:hidden">Serv.</span>
+            </TabsTrigger>
             <TabsTrigger value="checklists" className="flex items-center gap-2 text-xs sm:text-sm">
               <ClipboardList className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Checklists Diagnóstico</span>
-              <span className="sm:hidden">Checklists</span>
+              <span className="hidden sm:inline">Checklists</span>
+              <span className="sm:hidden">Check.</span>
             </TabsTrigger>
             <TabsTrigger value="workflow-status" className="flex items-center gap-2 text-xs sm:text-sm">
               <GitBranch className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -148,6 +160,61 @@ const ConfiguracoesOperacoes = () => {
                 }
               >
                 <EngineTypesConfig />
+              </PermissionGate>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Aba Componentes Macro */}
+        <TabsContent value="componentes" className="space-y-4 sm:space-y-6">
+          <Card>
+            <CardHeader className="pb-3 sm:pb-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Package className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
+                Componentes Macro
+              </CardTitle>
+              <CardDescription className="text-sm sm:text-base">
+                Gerencie os componentes macro do sistema (Bloco, Biela, Comando, etc)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PermissionGate 
+                module="settings" 
+                level="admin"
+                fallback={
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">Você não tem permissão para gerenciar componentes macro.</p>
+                  </div>
+                }
+              >
+                <MacroComponentsAdmin />
+              </PermissionGate>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="servicos" className="space-y-4 sm:space-y-6">
+          <Card>
+            <CardHeader className="pb-3 sm:pb-6">
+              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                <Wrench className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600" />
+                Serviços 
+              </CardTitle>
+              <CardDescription className="text-sm sm:text-base">
+                Gerencie os serviços disponíveis para diagnósticos
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PermissionGate 
+                module="settings" 
+                level="admin"
+                fallback={
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">Você não tem permissão para gerenciar serviços.</p>
+                  </div>
+                }
+              >
+                <AdditionalServicesAdmin />
               </PermissionGate>
             </CardContent>
           </Card>
@@ -225,6 +292,8 @@ const ConfiguracoesOperacoes = () => {
               <div className="text-sm text-muted-foreground space-y-1">
                 <p>• <strong>Categorias:</strong> Gerencie categorias de tipos de motor e seus componentes</p>
                 <p>• <strong>Tipos de Motor:</strong> Configure os tipos de motor suportados e seus componentes</p>
+                <p>• <strong>Componentes Macro:</strong> Defina os componentes principais do sistema (Bloco, Biela, etc)</p>
+                <p>• <strong>Serviços:</strong> Configure serviços disponíveis para diagnósticos</p>
                 <p>• <strong>Checklists:</strong> Defina checklists personalizados para diagnóstico por componente</p>
                 <p>• <strong>Status de Workflow:</strong> Personalize os status do fluxo operacional</p>
               </div>

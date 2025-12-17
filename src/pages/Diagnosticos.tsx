@@ -872,10 +872,9 @@ const Diagnosticos = () => {
                         </div>
                       )}
 
-                      {/* Serviços Adicionais */}
                       {(response as any).additional_services && (response as any).additional_services.length > 0 && (
                         <div>
-                          <h5 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Serviços Adicionais</h5>
+                          <h5 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Serviços</h5>
                           <div className="border rounded-lg overflow-x-auto">
                             <Table>
                               <TableHeader>

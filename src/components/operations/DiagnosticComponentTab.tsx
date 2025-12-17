@@ -90,10 +90,10 @@ export function DiagnosticComponentTab({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="w-5 h-5" />
-            Peças e Serviços Adicionais - {component.label}
+            Peças e Serviços - {component.label}
           </CardTitle>
           <CardDescription>
-            Adicione peças e serviços adicionais específicos deste componente
+            Adicione peças e serviços específicos deste componente
           </CardDescription>
         </CardHeader>
         <CardContent>

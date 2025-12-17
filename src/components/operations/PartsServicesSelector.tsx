@@ -366,12 +366,11 @@ export function PartsServicesSelector({
         </CardContent>
       </Card>
 
-      {/* Serviços Adicionais */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wrench className="w-5 h-5" />
-            Serviços Adicionais
+            Serviços
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
