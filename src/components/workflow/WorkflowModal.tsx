@@ -116,12 +116,18 @@ export function WorkflowModal({ workflow, workflows, open, onClose, onUpdate, em
       const allSuccess = results.every(r => r === true);
       
       if (allSuccess) {
-        toast({
-          title: "Etapas concluídas!",
-          description: autoAdvance 
-            ? `${workflowsToProcess.length} componente(s) concluído(s) e avançado(s)`
-            : `${workflowsToProcess.length} componente(s) concluído(s)`
-        });
+        // Toast único consolidado no final
+        if (autoAdvance) {
+          toast({
+            title: "✅ Etapas avançadas!",
+            description: `${workflowsToProcess.length} componente(s) concluído(s) e movido(s) para próxima etapa`
+          });
+        } else {
+          toast({
+            title: "Etapas concluídas!",
+            description: `${workflowsToProcess.length} componente(s) pausado(s) com sucesso`
+          });
+        }
         onUpdate?.();
         onClose();
       } else {

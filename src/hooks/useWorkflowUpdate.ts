@@ -8,7 +8,7 @@ export function useWorkflowUpdate() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const updateWorkflowStatus = async (workflowId: string, newStatus: string, changeReason?: string) => {
+  const updateWorkflowStatus = async (workflowId: string, newStatus: string, changeReason?: string, showToast: boolean = true) => {
     try {
       setLoading(true);
 
@@ -58,19 +58,23 @@ export function useWorkflowUpdate() {
         }
       }
 
-      toast({
-        title: "Status atualizado!",
-        description: `Componente movido para ${newStatus.toUpperCase()}`
-      });
+      if (showToast) {
+        toast({
+          title: "Status atualizado!",
+          description: `Componente movido para ${newStatus.toUpperCase()}`
+        });
+      }
 
       return true;
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o status",
-        variant: "destructive"
-      });
+      if (showToast) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível atualizar o status",
+          variant: "destructive"
+        });
+      }
       return false;
     } finally {
       setLoading(false);
@@ -174,13 +178,14 @@ export function useWorkflowUpdate() {
 
       // Se auto-avanço está habilitado, tentar avançar para próxima etapa
       if (autoAdvance) {
-        await advanceToNextStatus(currentWorkflow);
+        await advanceToNextStatus(currentWorkflow, showToast);
       }
 
-      if (showToast) {
+      if (showToast && !autoAdvance) {
+        // Só mostra toast de conclusão se não for auto-advance (pois o advance já mostra)
         toast({
           title: "Etapa concluída!",
-          description: autoAdvance ? "Avançando para próxima etapa..." : "O trabalho nesta etapa foi finalizado"
+          description: "O trabalho nesta etapa foi finalizado"
         });
       }
 
@@ -200,7 +205,7 @@ export function useWorkflowUpdate() {
     }
   };
 
-  const advanceToNextStatus = async (currentWorkflow: { id: string; status: string; component: string; order_id?: string }) => {
+  const advanceToNextStatus = async (currentWorkflow: { id: string; status: string; component: string; order_id?: string }, showToast: boolean = true) => {
     try {
       // 1. VERIFICAR CHECKLISTS OBRIGATÓRIOS
       const { data: requiredChecklists, error: checklistError } = await supabase
@@ -257,20 +262,24 @@ export function useWorkflowUpdate() {
 
       if (nextStatusError || !nextStatusData) {
         console.log('Nenhum próximo status encontrado ou workflow finalizado');
-        toast({
-          title: "Etapa concluída!",
-          description: "Não há próxima etapa configurada",
-        });
+        if (showToast) {
+          toast({
+            title: "Etapa concluída!",
+            description: "Não há próxima etapa configurada",
+          });
+        }
         return false;
       }
 
       // 3. VERIFICAR TIPO DE TRANSIÇÃO
       if (nextStatusData.transition_type === 'approval_required') {
-        toast({
-          title: "Etapa concluída!",
-          description: "Próxima etapa requer aprovação de supervisor",
-          variant: "default"
-        });
+        if (showToast) {
+          toast({
+            title: "Etapa concluída!",
+            description: "Próxima etapa requer aprovação de supervisor",
+            variant: "default"
+          });
+        }
         return false;
       }
 
@@ -280,7 +289,8 @@ export function useWorkflowUpdate() {
         nextStatusData.to_status_key,
         nextStatusData.transition_type === 'automatic' 
           ? 'Avanço automático após conclusão da etapa anterior'
-          : 'Avançado manualmente pelo usuário após conclusão'
+          : 'Avançado manualmente pelo usuário após conclusão',
+        false // Não mostrar toast aqui
       );
 
       if (success) {
@@ -292,10 +302,12 @@ export function useWorkflowUpdate() {
           })
           .eq('id', currentWorkflow.id);
 
-        toast({
-          title: "✅ Etapa avançada!",
-          description: `Workflow movido para: ${nextStatusData.to_status_key}`,
-        });
+        if (showToast) {
+          toast({
+            title: "✅ Etapa avançada!",
+            description: `Workflow movido para: ${nextStatusData.to_status_key}`,
+          });
+        }
         
         // 5. VERIFICAR SE PRECISA GERAR RELATÓRIO TÉCNICO
         await checkAndGenerateTechnicalReport(currentWorkflow);
@@ -304,11 +316,13 @@ export function useWorkflowUpdate() {
       return success;
     } catch (error) {
       console.error('Erro ao avançar para próximo status:', error);
-      toast({
-        title: "Erro ao avançar",
-        description: "Não foi possível avançar para a próxima etapa",
-        variant: "destructive"
-      });
+      if (showToast) {
+        toast({
+          title: "Erro ao avançar",
+          description: "Não foi possível avançar para a próxima etapa",
+          variant: "destructive"
+        });
+      }
       return false;
     }
   };
