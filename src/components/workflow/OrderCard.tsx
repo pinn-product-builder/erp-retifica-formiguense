@@ -70,7 +70,7 @@ export function OrderCard({
   return (
     <>
       <Card 
-        className="hover:shadow-md transition-all duration-200 bg-card border hover:border-primary/20"
+        className="hover:shadow-md transition-all duration-200 bg-card border hover:border-primary/20 max-w-[243px]"
       >
         <CardContent className="p-3 sm:p-4 space-y-2 sm:space-y-3">
           {/* Header */}
