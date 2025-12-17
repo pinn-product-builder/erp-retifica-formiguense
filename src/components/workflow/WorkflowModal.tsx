@@ -14,9 +14,11 @@ import { useWorkflowUpdate } from '@/hooks/useWorkflowUpdate';
 import { useWorkflowHistory } from '@/hooks/useWorkflowHistory';
 import { Autocomplete, TextField } from '@mui/material';
 import { EmployeeDirectoryEntry } from '@/hooks/useEmployeesDirectory';
+import { useToast } from '@/hooks/use-toast';
 
 interface WorkflowModalProps {
   workflow: unknown;
+  workflows?: unknown[]; // Array de workflows para processar em lote
   open: boolean;
   onClose: () => void;
   onUpdate?: () => void;
@@ -34,13 +36,18 @@ const STATUS_LABELS: Record<string, string> = {
   entregue: 'Entregue'
 };
 
-export function WorkflowModal({ workflow, open, onClose, onUpdate, employeeOptions = [], employeesLoading = false }: WorkflowModalProps) {
+export function WorkflowModal({ workflow, workflows, open, onClose, onUpdate, employeeOptions = [], employeesLoading = false }: WorkflowModalProps) {
   const { updateWorkflowDetails, startWorkflow, completeWorkflow, advanceToNextStatus } = useWorkflowUpdate();
+  const { toast } = useToast();
   const [notes, setNotes] = useState(workflow.notes || '');
   const [assignedEmployeeId, setAssignedEmployeeId] = useState(workflow.assigned_to || '');
   const [saving, setSaving] = useState(false);
   const [completing, setCompleting] = useState(false);
   const { history, loading: historyLoading, fetchHistory, clearHistory } = useWorkflowHistory();
+  
+  // Se workflows array foi passado, usar ele; caso contrário, usar apenas o workflow único
+  const workflowsToProcess = workflows && workflows.length > 0 ? workflows : [workflow];
+  const isMultipleWorkflows = workflowsToProcess.length > 1;
 
   useEffect(() => {
     if (open) {
@@ -69,26 +76,78 @@ export function WorkflowModal({ workflow, open, onClose, onUpdate, employeeOptio
   };
 
   const handleStart = async () => {
-    const success = await startWorkflow(workflow.id);
-    if (success) {
-      onUpdate?.(); // Atualizar o board
-      onClose();
+    if (isMultipleWorkflows) {
+      // Iniciar todos os workflows sem toast individual
+      const promises = workflowsToProcess.map(w => startWorkflow(w.id, false));
+      const results = await Promise.all(promises);
+      const allSuccess = results.every(r => r === true);
+      
+      if (allSuccess) {
+        toast({
+          title: "Etapas iniciadas!",
+          description: `${workflowsToProcess.length} componente(s) iniciado(s) com sucesso`
+        });
+        onUpdate?.();
+        onClose();
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível iniciar alguns componentes",
+          variant: "destructive"
+        });
+      }
+    } else {
+      // Iniciar apenas um workflow (com toast padrão)
+      const success = await startWorkflow(workflow.id);
+      if (success) {
+        onUpdate?.();
+        onClose();
+      }
     }
   };
 
   const handleComplete = async (autoAdvance: boolean = true) => {
     setCompleting(true);
-    const success = await completeWorkflow(workflow.id, autoAdvance);
-    if (success) {
-      onUpdate?.(); // Atualizar o board
-      onClose();
+    
+    if (isMultipleWorkflows) {
+      // Concluir todos os workflows sem toast individual
+      const promises = workflowsToProcess.map(w => completeWorkflow(w.id, autoAdvance, false));
+      const results = await Promise.all(promises);
+      const allSuccess = results.every(r => r === true);
+      
+      if (allSuccess) {
+        toast({
+          title: "Etapas concluídas!",
+          description: autoAdvance 
+            ? `${workflowsToProcess.length} componente(s) concluído(s) e avançado(s)`
+            : `${workflowsToProcess.length} componente(s) concluído(s)`
+        });
+        onUpdate?.();
+        onClose();
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível concluir alguns componentes",
+          variant: "destructive"
+        });
+      }
+    } else {
+      // Concluir apenas um workflow (com toast padrão)
+      const success = await completeWorkflow(workflow.id, autoAdvance);
+      if (success) {
+        onUpdate?.();
+        onClose();
+      }
     }
+    
     setCompleting(false);
   };
 
   const canStartStage = !workflow.started_at || Boolean(workflow.completed_at);
   const isRunning = Boolean(workflow.started_at && !workflow.completed_at);
   const startLabel = !workflow.started_at ? 'Iniciar etapa' : 'Retomar etapa';
+  const completeLabel = 'Concluir e avançar';
+  const pauseLabel = 'Pausar etapa';
   const isEntryStage = workflow.status === 'entrada';
   const isDeliveredStage = workflow.status === 'entregue';
   const slaConfig = workflow.statusConfig?.sla_config as { max_hours?: number; warning_threshold?: number } | undefined;
@@ -339,7 +398,7 @@ export function WorkflowModal({ workflow, open, onClose, onUpdate, employeeOptio
                         disabled={completing}
                       >
                         <Pause className="w-4 h-4 mr-2" />
-                        {completing ? "Concluindo..." : "Concluir e avançar"}
+                        {completing ? "Concluindo..." : completeLabel}
                       </Button>
                       <Button 
                         onClick={() => handleComplete(false)} 
@@ -348,7 +407,7 @@ export function WorkflowModal({ workflow, open, onClose, onUpdate, employeeOptio
                         disabled={completing}
                       >
                         <Pause className="w-4 h-4 mr-2" />
-                        Pausar etapa
+                        {pauseLabel}
                       </Button>
                     </div>
                   )}

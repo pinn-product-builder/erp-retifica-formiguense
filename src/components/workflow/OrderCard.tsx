@@ -60,6 +60,13 @@ export function OrderCard({
     }
   };
 
+  const handleDetailsClick = () => {
+    if (latestWorkflow) {
+      setSelectedWorkflow(latestWorkflow);
+      setShowModal(true);
+    }
+  };
+
   return (
     <>
       <Card 
@@ -169,12 +176,7 @@ export function OrderCard({
             size="sm" 
             variant="ghost" 
             className="h-5 sm:h-6 px-1 sm:px-2 text-xs w-full"
-            onClick={() => {
-              if (latestWorkflow) {
-                setSelectedWorkflow(latestWorkflow);
-                setShowModal(true);
-              }
-            }}
+            onClick={handleDetailsClick}
           >
             Ver detalhes
           </Button>
@@ -184,6 +186,7 @@ export function OrderCard({
       {selectedWorkflow && (
         <WorkflowModal
           workflow={selectedWorkflow}
+          workflows={!allowComponentSplit ? workflows : undefined}
           open={showModal}
           onClose={() => {
             setShowModal(false);

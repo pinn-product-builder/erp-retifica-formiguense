@@ -110,7 +110,7 @@ export function useWorkflowUpdate() {
     }
   };
 
-  const startWorkflow = async (workflowId: string) => {
+  const startWorkflow = async (workflowId: string, showToast: boolean = true) => {
     try {
       setLoading(true);
 
@@ -125,26 +125,30 @@ export function useWorkflowUpdate() {
 
       if (error) throw error;
 
-      toast({
-        title: "Etapa iniciada!",
-        description: "O trabalho nesta etapa foi iniciado"
-      });
+      if (showToast) {
+        toast({
+          title: "Etapa iniciada!",
+          description: "O trabalho nesta etapa foi iniciado"
+        });
+      }
 
       return true;
     } catch (error) {
       console.error('Erro ao iniciar workflow:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível iniciar a etapa",
-        variant: "destructive"
-      });
+      if (showToast) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível iniciar a etapa",
+          variant: "destructive"
+        });
+      }
       return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const completeWorkflow = async (workflowId: string, autoAdvance: boolean = true) => {
+  const completeWorkflow = async (workflowId: string, autoAdvance: boolean = true, showToast: boolean = true) => {
     try {
       setLoading(true);
 
@@ -173,19 +177,23 @@ export function useWorkflowUpdate() {
         await advanceToNextStatus(currentWorkflow);
       }
 
-      toast({
-        title: "Etapa concluída!",
-        description: autoAdvance ? "Avançando para próxima etapa..." : "O trabalho nesta etapa foi finalizado"
-      });
+      if (showToast) {
+        toast({
+          title: "Etapa concluída!",
+          description: autoAdvance ? "Avançando para próxima etapa..." : "O trabalho nesta etapa foi finalizado"
+        });
+      }
 
       return true;
     } catch (error) {
       console.error('Erro ao concluir workflow:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível concluir a etapa",
-        variant: "destructive"
-      });
+      if (showToast) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível concluir a etapa",
+          variant: "destructive"
+        });
+      }
       return false;
     } finally {
       setLoading(false);
