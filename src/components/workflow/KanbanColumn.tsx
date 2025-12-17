@@ -66,7 +66,11 @@ export function KanbanColumn({ status, workflows, componentColor, statusColors, 
               }`}
             >
               {workflows.map((item, index) => {
-                const draggableId = `order-${item.orderId}`;
+                // Se é um card desmembrado (1 workflow apenas), incluir componente no ID
+                const componentSuffix = item.allowComponentSplit && item.workflows.length === 1 
+                  ? `-${item.workflows[0].component}` 
+                  : '';
+                const draggableId = `order-${item.orderId}${componentSuffix}`;
                 
                 return (
                   <Draggable 

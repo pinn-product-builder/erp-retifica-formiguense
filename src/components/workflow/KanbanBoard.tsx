@@ -58,6 +58,11 @@ interface OrderCardData {
   allowComponentSplit: boolean;
 }
 
+interface KanbanBoardProps {
+  orders: Order[];
+  onOrderUpdate: () => void;
+}
+
 export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
   const { updateWorkflowStatus, checkAndAdvanceOrderWorkflows } = useWorkflowUpdate();
   const { workflowStatuses, getStatusColors, getNextAllowedStatuses, prerequisites, loading } = useWorkflowStatusConfig();
@@ -227,21 +232,41 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
           return;
         }
 
-        // SEMPRE criar um card de OS
-        const orderCardData: OrderCardData = {
-          type: 'order',
-          order: order,
-          orderId: order.id,
-          workflows: filteredWorkflows,
-          orderNumber: order.order_number,
-          customerName: order.customers?.name,
-          engineModel: order.engines ? `${order.engines.brand || ''} ${order.engines.model || ''}`.trim() : 'Motor não informado',
-          collectionDate: order.collection_date,
-          statusConfig: statusConfig,
-          allowComponentSplit: statusConfig?.allow_component_split === true
-        };
-        
-        workflowsByStatus[status].push(orderCardData);
+        // Se o status permite desmembramento, criar um card por componente
+        if (statusConfig?.allow_component_split === true) {
+          filteredWorkflows.forEach((workflow) => {
+            const orderCardData: OrderCardData = {
+              type: 'order',
+              order: order,
+              orderId: order.id,
+              workflows: [workflow], // Apenas este componente
+              orderNumber: order.order_number,
+              customerName: order.customers?.name,
+              engineModel: order.engines ? `${order.engines.brand || ''} ${order.engines.model || ''}`.trim() : 'Motor não informado',
+              collectionDate: order.collection_date,
+              statusConfig: statusConfig,
+              allowComponentSplit: true
+            };
+            
+            workflowsByStatus[status].push(orderCardData);
+          });
+        } else {
+          // Caso contrário, criar um único card com todos os workflows
+          const orderCardData: OrderCardData = {
+            type: 'order',
+            order: order,
+            orderId: order.id,
+            workflows: filteredWorkflows,
+            orderNumber: order.order_number,
+            customerName: order.customers?.name,
+            engineModel: order.engines ? `${order.engines.brand || ''} ${order.engines.model || ''}`.trim() : 'Motor não informado',
+            collectionDate: order.collection_date,
+            statusConfig: statusConfig,
+            allowComponentSplit: false
+          };
+          
+          workflowsByStatus[status].push(orderCardData);
+        }
       });
     });
 
@@ -294,7 +319,19 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
       return;
     }
 
-    const orderId = draggableId.replace('order-', '');
+    // Extrair orderId e componente (se houver) do draggableId
+    // Formato: "order-{uuid}" ou "order-{uuid}-{component}"
+    const idParts = draggableId.replace('order-', '').split('-');
+    let orderId: string;
+    let specificComponent: string | null = null;
+
+    if (idParts.length > 5) {
+      // UUID tem 5 partes separadas por hífen, então se tem mais, o último é o componente
+      specificComponent = idParts[idParts.length - 1];
+      orderId = idParts.slice(0, -1).join('-');
+    } else {
+      orderId = idParts.join('-');
+    }
     
     // Buscar a OS e todos os seus workflows no status atual
     const order = orders.find((o) => o.id === orderId);
@@ -304,19 +341,33 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
       return;
     }
 
-    // Filtrar apenas workflows que estão no status de origem
-    const workflowsInCurrentStatus = order.order_workflow.filter(
-      (w) => w.status === currentStatus
-    );
+    // Verificar se o status de origem permite desmembramento
+    const sourceStatusConfig = statusConfigMap[currentStatus];
+    const sourceAllowsSplit = sourceStatusConfig?.allow_component_split === true;
 
-    if (workflowsInCurrentStatus.length === 0) {
-      console.log('No workflows in current status');
+    let workflowsToMove: OrderWorkflow[] = [];
+
+    if (specificComponent) {
+      // Está arrastando um card de componente individual específico
+      workflowsToMove = order.order_workflow.filter(
+        (w) => w.status === currentStatus && w.component === specificComponent
+      );
+      console.log('Moving individual component:', specificComponent);
+    } else {
+      // Está arrastando um card de OS completa - mover todos os workflows no status atual
+      workflowsToMove = order.order_workflow.filter(
+        (w) => w.status === currentStatus
+      );
+    }
+
+    if (workflowsToMove.length === 0) {
+      console.log('No workflows to move');
       setIsDragging(false);
       return;
     }
 
     console.log('Moving order:', order.order_number, 'from', currentStatus, 'to', newStatus);
-    console.log('Workflows to move:', workflowsInCurrentStatus.length);
+    console.log('Workflows to move:', workflowsToMove.length);
 
     // Validar transição sem filtro de componente específico
     const allowedTransitions = getNextAllowedStatuses(currentStatus, undefined);
@@ -355,12 +406,14 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
       return;
     }
 
-    // Mover apenas os workflows que estão no status atual
-    console.log('Updating workflows:', workflowsInCurrentStatus.map((w) => w.id));
+    // Mover os workflows selecionados
+    console.log('Updating workflows:', workflowsToMove.map((w) => w.id));
 
-    // Atualizar todos os workflows do status atual
-    const updatePromises = workflowsInCurrentStatus.map((workflow) =>
-      updateWorkflowStatus(workflow.id, newStatus, 'OS movida para novo status')
+    // Atualizar os workflows
+    const updatePromises = workflowsToMove.map((workflow) =>
+      updateWorkflowStatus(workflow.id, newStatus, sourceAllowsSplit && workflowsToMove.length === 1 
+        ? 'Componente movido para novo status' 
+        : 'OS movida para novo status')
     );
 
     const results = await Promise.all(updatePromises);
@@ -372,9 +425,13 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
       const statusConfig = statusConfigMap[newStatus];
       const newStatusLabel = statusConfig?.status_label || newStatus;
       
+      const moveMessage = workflowsToMove.length === 1 && sourceAllowsSplit
+        ? `Componente ${workflowsToMove[0].component} movido para ${newStatusLabel}`
+        : `${workflowsToMove.length} componente(s) movido(s) para ${newStatusLabel}`;
+      
       toast({
-        title: "OS movida!",
-        description: `${workflowsInCurrentStatus.length} componente(s) movido(s) para ${newStatusLabel}`,
+        title: "Movido com sucesso!",
+        description: moveMessage,
       });
       
       // Verificar se precisa avançar automaticamente
@@ -383,7 +440,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
       onOrderUpdate();
     } else {
       toast({
-        title: "Erro ao mover OS",
+        title: "Erro ao mover",
         description: "Alguns componentes não puderam ser movidos",
         variant: "destructive"
       });
