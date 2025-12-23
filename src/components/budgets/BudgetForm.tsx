@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -46,7 +46,6 @@ interface Part {
 export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProps) {
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
-  const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
   const { additionalServices, loading: loadingServices } = useAdditionalServices();
 
   // Estados do formulário
@@ -74,6 +73,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   const [taxText, setTaxText] = useState<string>('');
   const [warrantyText, setWarrantyText] = useState<string>('');
   const [deliveryText, setDeliveryText] = useState<string>('');
+  const [manualTotal, setManualTotal] = useState<number | null>(null);
+  const [manualTotalText, setManualTotalText] = useState<string>('');
 
   // Novo serviço/peça temporário
   const [newService, setNewService] = useState<Partial<Service>>({ description: '', quantity: 1, unit_price: 0 });
@@ -138,6 +139,58 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     setDeliveryText(estimatedDeliveryDays.toString());
   }, [discount, taxPercentage, warrantyMonths, estimatedDeliveryDays]);
 
+  // Inicializar total manual quando budget for carregado
+  useEffect(() => {
+    if (budget?.id && budget?.total_amount !== undefined && budget?.total_amount !== null && budget.total_amount > 0) {
+      const budgetServices = (budget.services as unknown as Service[]) || [];
+      const budgetParts = (budget.parts as unknown as Part[]) || [];
+      
+      // Carregar serviços e peças com valores corretos
+      const loadedServices = budgetServices.map(s => ({
+        ...s,
+        total: Number(s.total) || 0,
+        unit_price: Number(s.unit_price) || 0,
+        quantity: Number(s.quantity) || 1
+      }));
+      const loadedParts = budgetParts.map(p => ({
+        ...p,
+        total: Number(p.total) || 0,
+        unit_price: Number(p.unit_price) || 0,
+        quantity: Number(p.quantity) || 1
+      }));
+      
+      setServices(loadedServices);
+      setParts(loadedParts);
+      
+      const calculatedTotalValue = (() => {
+        const servicesTotal = loadedServices.reduce((sum, s) => sum + (s.total as number), 0);
+        const partsTotal = loadedParts.reduce((sum, p) => sum + (p.total as number), 0);
+        const subtotal = servicesTotal + partsTotal;
+        const discountAmount = (subtotal * (budget.discount || 0)) / 100;
+        const subtotalAfterDiscount = subtotal - discountAmount;
+        const taxAmount = (subtotalAfterDiscount * (budget.tax_percentage || 0)) / 100;
+        return subtotalAfterDiscount + taxAmount;
+      })();
+      
+      const savedTotal = Number(budget.total_amount) || 0;
+      
+      // Se há diferença significativa OU se o total salvo é diferente do calculado (mesmo que pequena diferença)
+      // significa que foi ajustado manualmente, então preservar
+      if (Math.abs(savedTotal - calculatedTotalValue) > 0.01) {
+        setManualTotal(savedTotal);
+        setManualTotalText(formatCurrency(savedTotal));
+      } else {
+        // Mesmo sem diferença significativa, se o total foi salvo e é diferente, preservar
+        setManualTotal(null);
+        setManualTotalText('');
+      }
+    } else if (!budget?.id) {
+      // Novo orçamento, limpar valores
+      setManualTotal(null);
+      setManualTotalText('');
+    }
+  }, [budget?.id, budget?.total_amount, budget?.services, budget?.parts, budget?.discount, budget?.tax_percentage]);
+
   // Carregar dados do diagnóstico quando ordem for selecionada
   useEffect(() => {
     let isMounted = true;
@@ -184,7 +237,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
           const allGeneratedServices: Array<Record<string, unknown>> = [];
 
           diagnosticResponses.forEach((response: Record<string, unknown>) => {
-            const diagnosticParts = (response.additional_parts as Part[]) || [];
+            const diagnosticParts = (response.additional_parts as Array<Record<string, unknown>>) || [];
             const diagnosticServices = (response.additional_services as Array<Record<string, unknown>>) || [];
             const generatedServices = (response.generated_services as Array<Record<string, unknown>>) || [];
 
@@ -198,7 +251,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
             const loadedServices: Service[] = [];
 
             if (allParts.length > 0) {
-              const partCodes = allParts.map(p => p.part_code);
+              const partCodes = allParts.map(p => String(p.part_code || ''));
               const { data: inventoryData } = await supabase
                 .from('parts_inventory')
                 .select('part_code, quantity')
@@ -206,18 +259,22 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                 .in('part_code', partCodes);
 
               const inventoryMap = new Map(
-                (inventoryData || []).map((inv: any) => [inv.part_code, inv.quantity])
+                (inventoryData || []).map((inv: any) => [inv.part_code, Number(inv.quantity) || 0])
               );
 
-              allParts.forEach((part: Part) => {
+              allParts.forEach((part: Record<string, unknown>) => {
+                const quantity = Number(part.quantity) || 1;
+                const unitPrice = Number(part.unit_price) || 0;
+                const total = Number(part.total) || quantity * unitPrice;
+                
                 loadedParts.push({
-                  id: part.id || `part_${Date.now()}_${Math.random()}`,
-                  part_code: part.part_code,
-                  part_name: part.part_name,
-                  quantity: part.quantity,
-                  unit_price: part.unit_price,
-                  total: part.total,
-                  available_stock: inventoryMap.get(part.part_code) || 0
+                  id: (part.id as string) || `part_${Date.now()}_${Math.random()}`,
+                  part_code: String(part.part_code || ''),
+                  part_name: String(part.part_name || ''),
+                  quantity: quantity,
+                  unit_price: unitPrice,
+                  total: total,
+                  available_stock: inventoryMap.get(String(part.part_code)) || 0
                 });
               });
             }
@@ -225,15 +282,16 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
             if (allServices.length > 0) {
               allServices.forEach((service: Record<string, unknown>) => {
                 const serviceName = service.name || service.description || 'Serviço do diagnóstico';
-                const serviceTotal = (service.total as number) || 0;
-                const laborHours = (service.labor_hours as number) || 1;
+                const quantity = Number(service.quantity) || 1;
+                const unitPrice = Number(service.unit_price) || 0;
+                const total = Number(service.total) || quantity * unitPrice;
                 
                 loadedServices.push({
                   id: (service.id as string) || `service_${Date.now()}_${Math.random()}`,
                   description: String(serviceName),
-                  quantity: 1,
-                  unit_price: laborHours > 0 ? serviceTotal / laborHours : serviceTotal,
-                  total: serviceTotal
+                  quantity: quantity,
+                  unit_price: unitPrice,
+                  total: total
                 });
               });
             }
@@ -471,6 +529,46 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
     fetchParts();
   }, [currentOrganization?.id]);
 
+  // Função para distribuir excedente proporcionalmente entre serviços
+  const distributeExcessToServices = useCallback((excessAmount: number, currentServices: Service[]): Service[] => {
+    if (excessAmount <= 0 || currentServices.length === 0) {
+      return currentServices;
+    }
+
+    const servicesTotal = currentServices.reduce((sum, s) => sum + (s.total as number), 0);
+    
+    if (servicesTotal <= 0) {
+      // Se não há total, distribuir igualmente
+      const equalShare = excessAmount / currentServices.length;
+      return currentServices.map(service => {
+        const quantity = service.quantity || 1;
+        const newTotal = equalShare;
+        const newUnitPrice = newTotal / quantity;
+        return {
+          ...service,
+          total: newTotal,
+          unit_price: newUnitPrice
+        };
+      });
+    }
+
+    // Distribuir proporcionalmente ao valor atual de cada serviço
+    return currentServices.map(service => {
+      const serviceTotal = service.total as number || 0;
+      const proportion = serviceTotal / servicesTotal;
+      const serviceExcess = excessAmount * proportion;
+      const quantity = service.quantity || 1;
+      const newTotal = serviceTotal + serviceExcess;
+      const newUnitPrice = newTotal / quantity;
+      
+      return {
+        ...service,
+        total: newTotal,
+        unit_price: newUnitPrice
+      };
+    });
+  }, []);
+
   // Cálculos automáticos
   const servicesTotal = services.reduce((sum, s) => sum + (s.total as number), 0);
   const partsTotal = parts.reduce((sum, p) => sum + (p.total as number), 0);
@@ -478,7 +576,18 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
   const discountAmount = (subtotal * discount) / 100;
   const subtotalAfterDiscount = subtotal - discountAmount;
   const taxAmount = (subtotalAfterDiscount * taxPercentage) / 100;
-  const totalAmount = subtotalAfterDiscount + taxAmount;
+  const calculatedTotal = subtotalAfterDiscount + taxAmount;
+  
+  // Prioridade: manualTotal > total_amount salvo > calculado
+  // Se há ajuste manual ativo, usar ele
+  // Se não há ajuste manual mas há total_amount salvo diferente do calculado, usar o salvo
+  // Caso contrário, usar o calculado
+  const totalAmount = manualTotal !== null 
+    ? manualTotal 
+    : (budget?.total_amount && budget.total_amount > 0 && Math.abs(budget.total_amount - calculatedTotal) > 0.01)
+      ? budget.total_amount
+      : calculatedTotal;
+  const manualAdjustment = manualTotal !== null ? manualTotal - calculatedTotal : 0;
 
   // Adicionar serviço
   const addService = () => {
@@ -627,6 +736,8 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
 
     setSaving(true);
     try {
+      const finalTotalAmount = manualTotal !== null ? manualTotal : totalAmount;
+
       const budgetData: Partial<DetailedBudget> = {
         order_id: selectedOrderId,
         component: component as "bloco" | "eixo" | "biela" | "comando" | "cabecote",
@@ -636,7 +747,7 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
         discount,
         tax_percentage: taxPercentage,
         tax_amount: taxAmount,
-        total_amount: totalAmount,
+        total_amount: finalTotalAmount,
         warranty_months: warrantyMonths,
         estimated_delivery_days: estimatedDeliveryDays,
         status: budget?.status === 'reopened' ? 'reopened' : 'draft',
@@ -1057,9 +1168,92 @@ export function BudgetForm({ budget, orderId, onSave, onCancel }: BudgetFormProp
                 <span>+ {formatCurrency(taxAmount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-lg font-bold pt-2 border-t">
-              <span>Total:</span>
-              <span>{formatCurrency(totalAmount)}</span>
+            {manualTotal !== null && Math.abs(manualAdjustment) > 0.01 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Total Calculado:</span>
+                <span>{formatCurrency(calculatedTotal)}</span>
+              </div>
+            )}
+            {manualTotal !== null && Math.abs(manualAdjustment) > 0.01 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Ajuste Manual {manualAdjustment > 0 ? '(Acréscimo)' : '(Desconto)'}:
+                </span>
+                <span className={manualAdjustment > 0 ? 'text-green-600' : 'text-red-600'}>
+                  {manualAdjustment > 0 ? '+' : ''}{formatCurrency(manualAdjustment)}
+                </span>
+              </div>
+            )}
+            <div className="space-y-2 pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="manualTotal" className="text-base font-semibold">Total Final:</Label>
+                <div className="flex items-center gap-2">
+                  <MaskedInput
+                    id="manualTotal"
+                    mask="currency"
+                    placeholder={formatCurrency(calculatedTotal)}
+                    value={manualTotalText || formatCurrency(calculatedTotal)}
+                    onChange={(maskedValue, rawValue) => {
+                      const numericValue = parseFloat(rawValue) || 0;
+                      if (numericValue > 0 && Math.abs(numericValue - calculatedTotal) > 0.01) {
+                        setManualTotal(numericValue);
+                        setManualTotalText(maskedValue);
+                        
+                        // Se o valor é maior que o calculado, distribuir o excedente entre os serviços
+                        if (numericValue > calculatedTotal && services.length > 0) {
+                          const excessAmount = numericValue - calculatedTotal;
+                          const updatedServices = distributeExcessToServices(excessAmount, services);
+                          setServices(updatedServices);
+                        }
+                      } else {
+                        setManualTotal(null);
+                        setManualTotalText('');
+                        // Restaurar serviços originais quando remover ajuste manual
+                        if (budget?.services) {
+                          const originalServices = (budget.services as unknown as Service[]).map(s => ({
+                            ...s,
+                            total: Number(s.total) || 0,
+                            unit_price: Number(s.unit_price) || 0,
+                            quantity: Number(s.quantity) || 1
+                          }));
+                          setServices(originalServices);
+                        }
+                      }
+                    }}
+                    className="w-40 sm:w-48 text-right font-bold"
+                  />
+                  {manualTotal !== null && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setManualTotal(null);
+                        setManualTotalText('');
+                        // Restaurar serviços originais quando remover ajuste manual
+                        if (budget?.services) {
+                          const originalServices = (budget.services as unknown as Service[]).map(s => ({
+                            ...s,
+                            total: Number(s.total) || 0,
+                            unit_price: Number(s.unit_price) || 0,
+                            quantity: Number(s.quantity) || 1
+                          }));
+                          setServices(originalServices);
+                        }
+                      }}
+                      className="h-7 w-7 sm:h-8 sm:w-8 p-0"
+                      title="Restaurar total calculado"
+                    >
+                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {manualTotal === null && (
+                <p className="text-xs text-muted-foreground text-right">
+                  Clique no valor para ajustar manualmente
+                </p>
+              )}
             </div>
           </div>
         </CardContent>

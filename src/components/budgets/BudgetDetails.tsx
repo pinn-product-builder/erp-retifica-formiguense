@@ -158,17 +158,24 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
           <CardContent className="space-y-4">
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Mão de Obra</span>
+                <span className="text-sm text-muted-foreground">Serviços</span>
                 <span className="font-medium">
-                  {formatCurrency(budget.labor_total)}
+                  {formatCurrency(budget.labor_total || (budget.services && Array.isArray(budget.services) ? budget.services.reduce((sum: number, s: any) => sum + (Number(s.total) || 0), 0) : 0))}
                 </span>
               </div>
               
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {budget.labor_hours}h × {formatCurrency(budget.labor_rate)}
-                </span>
-              </div>
+              {budget.services && Array.isArray(budget.services) && budget.services.length > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {(() => {
+                      const totalQuantity = budget.services.reduce((sum: number, s: any) => sum + (Number(s.quantity) || 0), 0);
+                      const totalValue = budget.services.reduce((sum: number, s: any) => sum + (Number(s.total) || 0), 0);
+                      const avgUnitPrice = totalQuantity > 0 ? totalValue / totalQuantity : 0;
+                      return `${totalQuantity} unidade(s) × ${formatCurrency(avgUnitPrice)}`;
+                    })()}
+                  </span>
+                </div>
+              )}
 
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Peças</span>
@@ -283,24 +290,27 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
           <CardContent>
             <div className="space-y-4">
               {budget.services && Array.isArray(budget.services) ? budget.services.map((service, index: number) => {
-                const typedService = service as { name?: string; description?: string; labor_hours?: number; labor_rate?: number; total?: number; labor_total?: number };
+                const typedService = service as { name?: string; description?: string; quantity?: number; unit_price?: number; total?: number; labor_total?: number };
+                const quantity = Number(typedService.quantity) || 1;
+                const unitPrice = Number(typedService.unit_price) || 0;
+                const total = Number(typedService.total) || Number(typedService.labor_total) || (quantity * unitPrice);
                 return (
                 <div key={index} className="flex justify-between items-start p-4 border rounded-lg">
                   <div className="flex-1">
-                    <h4 className="font-medium">{typedService.name}</h4>
-                    {typedService.description && (
+                    <h4 className="font-medium">{typedService.description || typedService.name || 'Serviço'}</h4>
+                    {typedService.name && typedService.name !== typedService.description && (
                       <p className="text-sm text-muted-foreground mt-1">
-                        {typedService.description}
+                        {typedService.name}
                       </p>
                     )}
                     <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                      <span>{typedService.labor_hours || 0}h</span>
-                      <span>{formatCurrency(typedService.labor_rate || 0)}/h</span>
+                      <span>Qtd: {quantity}</span>
+                      <span>{formatCurrency(unitPrice)} cada</span>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">
-                      {formatCurrency(typedService.total || typedService.labor_total || 0)}
+                      {formatCurrency(total)}
                     </p>
                   </div>
                 </div>

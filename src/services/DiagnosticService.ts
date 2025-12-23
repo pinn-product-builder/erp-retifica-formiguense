@@ -371,6 +371,188 @@ export class DiagnosticService {
     return diagnosticResponse;
   }
 
+  static async saveAdditionalPartsAndServices(params: {
+    orderId: string;
+    component: string;
+    diagnosedBy: string;
+    orgId: string;
+    additionalParts?: Array<{
+      id?: string;
+      part_code: string;
+      part_name: string;
+      quantity: number;
+      unit_price: number;
+      total: number;
+    }>;
+    additionalServices?: Array<{
+      id?: string;
+      description: string;
+      quantity: number;
+      unit_price: number;
+      total: number;
+    }>;
+    technicalObservations?: string;
+    extraServices?: string;
+    finalOpinion?: string;
+  }): Promise<any> {
+    const { data: existingResponse, error: checkError } = await supabase
+      .from('diagnostic_checklist_responses')
+      .select('id')
+      .eq('order_id', params.orderId)
+      .eq('component', params.component)
+      .eq('org_id', params.orgId)
+      .maybeSingle();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+
+    let diagnosticResponseId: string;
+
+    if (existingResponse) {
+      diagnosticResponseId = existingResponse.id;
+      
+      const { error: updateError } = await supabase
+        .from('diagnostic_checklist_responses')
+        .update({
+          technical_observations: params.technicalObservations || null,
+          extra_services: params.extraServices || null,
+          final_opinion: params.finalOpinion || null,
+        } as any)
+        .eq('id', diagnosticResponseId);
+
+      if (updateError) {
+        console.error('Error updating observations:', updateError);
+      }
+    } else {
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('id, org_id')
+        .eq('id', params.orderId)
+        .single();
+
+      if (!orderData) {
+        throw new Error('Order not found');
+      }
+
+      const { data: newResponse, error: createError } = await supabase
+        .from('diagnostic_checklist_responses')
+        .insert({
+          order_id: params.orderId,
+          checklist_id: null,
+          component: params.component as "bloco" | "eixo" | "biela" | "comando" | "cabecote" | "virabrequim" | "pistao",
+          responses: {},
+          photos: [],
+          generated_services: [],
+          diagnosed_by: params.diagnosedBy,
+          status: 'pending',
+          org_id: params.orgId,
+          technical_observations: params.technicalObservations || null,
+          extra_services: params.extraServices || null,
+          final_opinion: params.finalOpinion || null,
+        } as any)
+        .select()
+        .single();
+
+      if (createError) throw createError;
+      if (!newResponse) throw new Error('Failed to create diagnostic response');
+
+      diagnosticResponseId = newResponse.id;
+    }
+
+    if (params.additionalParts && params.additionalParts.length > 0) {
+      const { error: deletePartsError } = await supabase
+        .from('diagnostic_additional_parts' as any)
+        .delete()
+        .eq('diagnostic_response_id', diagnosticResponseId)
+        .eq('org_id', params.orgId);
+
+      if (deletePartsError) {
+        console.error('Error deleting existing parts:', deletePartsError);
+      }
+
+      const partsToInsert = params.additionalParts.map(part => ({
+        diagnostic_response_id: diagnosticResponseId,
+        part_code: part.part_code,
+        part_name: part.part_name,
+        quantity: part.quantity,
+        unit_price: part.unit_price,
+        total: part.total,
+        org_id: params.orgId,
+      }));
+
+      const { error: partsError } = await supabase
+        .from('diagnostic_additional_parts' as any)
+        .insert(partsToInsert as any);
+
+      if (partsError) {
+        console.error('Error inserting additional parts:', partsError);
+        throw partsError;
+      }
+    } else {
+      const { error: deletePartsError } = await supabase
+        .from('diagnostic_additional_parts' as any)
+        .delete()
+        .eq('diagnostic_response_id', diagnosticResponseId)
+        .eq('org_id', params.orgId);
+
+      if (deletePartsError) {
+        console.error('Error deleting parts:', deletePartsError);
+      }
+    }
+
+    if (params.additionalServices && params.additionalServices.length > 0) {
+      const { error: deleteServicesError } = await supabase
+        .from('diagnostic_additional_services' as any)
+        .delete()
+        .eq('diagnostic_response_id', diagnosticResponseId)
+        .eq('org_id', params.orgId);
+
+      if (deleteServicesError) {
+        console.error('Error deleting existing services:', deleteServicesError);
+      }
+
+      const servicesToInsert = params.additionalServices.map(service => ({
+        diagnostic_response_id: diagnosticResponseId,
+        service_id: service.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service.id) 
+          ? service.id 
+          : null,
+        description: service.description,
+        quantity: service.quantity,
+        unit_price: service.unit_price,
+        total: service.total,
+        org_id: params.orgId,
+      }));
+
+      const { error: servicesError } = await supabase
+        .from('diagnostic_additional_services' as any)
+        .insert(servicesToInsert as any);
+
+      if (servicesError) {
+        console.error('Error inserting additional services:', servicesError);
+        throw servicesError;
+      }
+    } else {
+      const { error: deleteServicesError } = await supabase
+        .from('diagnostic_additional_services' as any)
+        .delete()
+        .eq('diagnostic_response_id', diagnosticResponseId)
+        .eq('org_id', params.orgId);
+
+      if (deleteServicesError) {
+        console.error('Error deleting services:', deleteServicesError);
+      }
+    }
+
+    const { data: updatedResponse } = await supabase
+      .from('diagnostic_checklist_responses')
+      .select('*')
+      .eq('id', diagnosticResponseId)
+      .single();
+
+    return updatedResponse;
+  }
+
   static async uploadChecklistPhoto(
     file: File,
     responseId: string,
@@ -432,7 +614,7 @@ export class DiagnosticService {
       `)
       .eq('order.id', orderId)
       .eq('order.org_id', orgId)
-      .eq('status', 'completed')
+      .in('status', ['completed', 'pending'])
       .order('diagnosed_at', { ascending: false });
 
     if (error) throw error;

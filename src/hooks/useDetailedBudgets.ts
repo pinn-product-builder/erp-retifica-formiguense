@@ -225,9 +225,25 @@ export function useDetailedBudgets() {
         .eq('id', id)
         .single();
       
+      // Garantir que total_amount seja um número válido
+      const updateData = {
+        ...updates,
+        total_amount: updates.total_amount !== undefined && updates.total_amount !== null 
+          ? Number(updates.total_amount) 
+          : undefined,
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Remover campos undefined para evitar problemas
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key as keyof typeof updateData] === undefined) {
+          delete updateData[key as keyof typeof updateData];
+        }
+      });
+      
       const { data, error } = await supabase
         .from('detailed_budgets')
-        .update(updates as any)
+        .update(updateData as any)
         .eq('id', id)
         .select(`
           *,
@@ -239,7 +255,10 @@ export function useDetailedBudgets() {
         `)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao atualizar orçamento:', error);
+        throw error;
+      }
       
       // Se tinha status 'reopened' e ainda está 'reopened', informar que pode enviar ao cliente
       const wasReopened = currentBudget?.status === 'reopened';
