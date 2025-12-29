@@ -330,6 +330,7 @@ export function useBudgetPDF() {
             <table class="parts-table">
               <thead>
                 <tr>
+                  <th>Tipo</th>
                   <th>Item</th>
                   <th class="text-center">Quantidade</th>
                   <th class="text-right">Preço Unitário</th>
@@ -337,37 +338,79 @@ export function useBudgetPDF() {
                 </tr>
               </thead>
               <tbody>
-                ${budget.parts && Array.isArray(budget.parts) ? budget.parts.map((part: unknown) => `
-                <tr>
-                  <td>
-                    <div style="font-weight: 500;">${part.name || part.part_name || 'N/A'}</div>
-                    <div style="font-size: 12px; color: #666;">${part.code || part.part_code || 'N/A'}</div>
-                  </td>
-                  <td class="text-center">${part.quantity || 1}</td>
-                  <td class="text-right">${formatCurrency(part.price || part.unit_price || 0)}</td>
-                  <td class="text-right">${formatCurrency((part.price || part.unit_price || 0) * (part.quantity || 1))}</td>
-                </tr>
-                `).join('') : '<tr><td colspan="4" style="text-align: center; padding: 20px;">Nenhuma peça cadastrada</td></tr>'}
+                ${(() => {
+                  const services = budget.services && Array.isArray(budget.services) ? budget.services : [];
+                  const parts = budget.parts && Array.isArray(budget.parts) ? budget.parts : [];
+                  
+                  if (services.length === 0 && parts.length === 0) {
+                    return '<tr><td colspan="5" style="text-align: center; padding: 20px;">Nenhum item cadastrado</td></tr>';
+                  }
+                  
+                  let html = '';
+                  
+                  // Serviços primeiro
+                  services.forEach((service: any) => {
+                    const quantity = Number(service.quantity) || 1;
+                    const unitPrice = Number(service.unit_price) || 0;
+                    const total = Number(service.total) || (quantity * unitPrice);
+                    html += `
+                      <tr>
+                        <td style="font-weight: 500; color: #3b82f6;">SERVIÇO</td>
+                        <td>
+                          <div style="font-weight: 500;">${service.description || service.name || 'N/A'}</div>
+                        </td>
+                        <td class="text-center">${quantity}</td>
+                        <td class="text-right">${formatCurrency(unitPrice)}</td>
+                        <td class="text-right">${formatCurrency(total)}</td>
+                      </tr>
+                    `;
+                  });
+                  
+                  // Peças depois
+                  parts.forEach((part: any) => {
+                    const quantity = Number(part.quantity) || 1;
+                    const unitPrice = Number(part.unit_price) || 0;
+                    const total = Number(part.total) || (quantity * unitPrice);
+                    html += `
+                      <tr>
+                        <td style="font-weight: 500; color: #10b981;">PEÇA</td>
+                        <td>
+                          <div style="font-weight: 500;">${part.part_name || part.name || 'N/A'}</div>
+                          <div style="font-size: 12px; color: #666;">Código: ${part.part_code || part.code || 'N/A'}</div>
+                        </td>
+                        <td class="text-center">${quantity}</td>
+                        <td class="text-right">${formatCurrency(unitPrice)}</td>
+                        <td class="text-right">${formatCurrency(total)}</td>
+                      </tr>
+                    `;
+                  });
+                  
+                  return html;
+                })()}
               </tbody>
             </table>
             
             <div class="total-section">
               <div class="total-row">
-                <span>Mão de Obra:</span>
-                <span>${formatCurrency(budget.labor_total || 0)}</span>
+                <span>Subtotal Serviços:</span>
+                <span>${formatCurrency(budget.labor_total || (budget.services && Array.isArray(budget.services) ? budget.services.reduce((sum: number, s: any) => sum + (Number(s.total) || 0), 0) : 0))}</span>
               </div>
               <div class="total-row">
-                <span>Peças:</span>
-                <span>${formatCurrency(budget.parts_total || 0)}</span>
+                <span>Subtotal Peças:</span>
+                <span>${formatCurrency(budget.parts_total || (budget.parts && Array.isArray(budget.parts) ? budget.parts.reduce((sum: number, p: any) => sum + (Number(p.total) || 0), 0) : 0))}</span>
               </div>
+              ${budget.discount && budget.discount > 0 ? `
               <div class="total-row">
-                <span>Desconto:</span>
-                <span>-${formatCurrency(budget.discount || 0)}</span>
+                <span>Desconto (${budget.discount}%):</span>
+                <span>-${formatCurrency(((budget.labor_total || 0) + (budget.parts_total || 0)) * (budget.discount / 100))}</span>
               </div>
+              ` : ''}
+              ${budget.tax_amount && budget.tax_amount > 0 ? `
               <div class="total-row">
-                <span>Impostos:</span>
-                <span>${formatCurrency(budget.tax_amount || 0)}</span>
+                <span>Impostos (${budget.tax_percentage || 0}%):</span>
+                <span>${formatCurrency(budget.tax_amount)}</span>
               </div>
+              ` : ''}
               <div class="total-row total-final">
                 <span>TOTAL:</span>
                 <span>${formatCurrency(budget.total_amount || 0)}</span>

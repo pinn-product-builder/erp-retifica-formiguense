@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DiagnosticService } from "@/services/DiagnosticService";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -351,6 +352,11 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
 
       const savedResponses = [];
       const lastComponent = activeMacroComponents[activeMacroComponents.length - 1];
+      const hasAnyChecklist = activeMacroComponents.some(component => {
+        const checklist = componentChecklists[component.value];
+        const responses = componentResponses[component.value] || {};
+        return checklist && Object.keys(responses).length > 0;
+      });
       
       for (const component of activeMacroComponents) {
         const checklist = componentChecklists[component.value];
@@ -358,55 +364,103 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
         const parts = componentParts[component.value] || [];
         const services = componentServices[component.value] || [];
 
-        if (!checklist || Object.keys(responses).length === 0) {
-          continue;
+        const hasChecklistResponses = checklist && Object.keys(responses).length > 0;
+        const hasPartsOrServices = parts.length > 0 || services.length > 0;
+
+        if (hasChecklistResponses) {
+          const generatedServices = generateServices(component.value);
+          const allPhotos = Object.values(responses).flatMap(r => r.photos || []);
+
+          const isLastComponent = component.value === lastComponent.value;
+
+          const response = await DiagnosticService.saveChecklistResponse({
+            orderId,
+            checklistId: checklist.id,
+            component: component.value,
+            responses,
+            photos: allPhotos,
+            generatedServices,
+            diagnosedBy: user.id,
+            additionalParts: parts.length > 0 ? parts : undefined,
+            additionalServices: services.length > 0 ? services : undefined,
+            technicalObservations: isLastComponent ? technicalObservations : undefined,
+            extraServices: isLastComponent ? extraServices : undefined,
+            finalOpinion: isLastComponent ? finalOpinion : undefined
+          });
+
+          savedResponses.push(response);
+        } else if (hasPartsOrServices) {
+          const isLastComponent = component.value === lastComponent.value;
+          
+          const response = await DiagnosticService.saveAdditionalPartsAndServices({
+            orderId,
+            component: component.value,
+            diagnosedBy: user.id,
+            orgId: currentOrganization?.id || '',
+            additionalParts: parts.length > 0 ? parts : undefined,
+            additionalServices: services.length > 0 ? services : undefined,
+            technicalObservations: isLastComponent ? technicalObservations : undefined,
+            extraServices: isLastComponent ? extraServices : undefined,
+            finalOpinion: isLastComponent ? finalOpinion : undefined,
+          });
+
+          if (response) {
+            savedResponses.push(response);
+          }
         }
-
-        const generatedServices = generateServices(component.value);
-        const allPhotos = Object.values(responses).flatMap(r => r.photos || []);
-
-        const isLastComponent = component.value === lastComponent.value;
-
-        const response = await DiagnosticService.saveChecklistResponse({
-          orderId,
-          checklistId: checklist.id,
-          component: component.value,
-          responses,
-          photos: allPhotos,
-          generatedServices,
-          diagnosedBy: user.id,
-          additionalParts: parts.length > 0 ? parts : undefined,
-          additionalServices: services.length > 0 ? services : undefined,
-          technicalObservations: isLastComponent ? technicalObservations : undefined,
-          extraServices: isLastComponent ? extraServices : undefined,
-          finalOpinion: isLastComponent ? finalOpinion : undefined
-        });
-
-        savedResponses.push(response);
       }
 
-
-      if (savedResponses.length === 0) {
-        toast({
-          title: "Atenção",
-          description: "Nenhum checklist foi preenchido",
-          variant: "destructive"
+      if (savedResponses.length === 0 && !hasAnyChecklist) {
+        const hasAnyPartsOrServices = activeMacroComponents.some(component => {
+          const parts = componentParts[component.value] || [];
+          const services = componentServices[component.value] || [];
+          return parts.length > 0 || services.length > 0;
         });
-        setIsSubmitting(false);
-        return;
+
+        if (!hasAnyPartsOrServices) {
+          toast({
+            title: "Atenção",
+            description: "Adicione pelo menos um checklist preenchido ou peças/serviços",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
       }
+
+      const allParts = Object.values(componentParts).flat();
+      const allServices = Object.values(componentServices).flat();
+
+      const enrichedResponses = await Promise.all(
+        savedResponses.map(async (response: any) => {
+          const { data: parts } = await supabase
+            .from('diagnostic_additional_parts' as any)
+            .select('*')
+            .eq('diagnostic_response_id', response.id)
+            .eq('org_id', currentOrganization?.id || '');
+
+          const { data: services } = await supabase
+            .from('diagnostic_additional_services' as any)
+            .select('*')
+            .eq('diagnostic_response_id', response.id)
+            .eq('org_id', currentOrganization?.id || '');
+
+          return {
+            ...response,
+            additional_parts: parts || [],
+            additional_services: services || []
+          };
+        })
+      );
 
       toast({
         title: "Sucesso",
         description: `Diagnóstico salvo com sucesso para ${savedResponses.length} componente(s)`
       });
 
-      const allParts = Object.values(componentParts).flat();
-      const allServices = Object.values(componentServices).flat();
-
       setDiagnosticResponse({
-        ...savedResponses[0],
-        all_responses: savedResponses,
+        ...enrichedResponses[0],
+        all_responses: enrichedResponses,
         additional_parts: allParts,
         additional_services: allServices,
         technical_observations: technicalObservations,
