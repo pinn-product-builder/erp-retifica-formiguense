@@ -30,15 +30,15 @@
 - **Forms**: React Hook Form + Zod
 - **Autenticação**: NextAuth.js
 
-### API Gateway: Customizado (Node.js)
-- **Framework**: Express ou Fastify
+### API Gateway: NestJS (Customizado)
+- **Framework**: NestJS
 - **Features**: 
-  - Rate limiting
-  - Authentication/Authorization
-  - Request/Response transformation
-  - Load balancing
-  - Circuit breaker
-  - Logging e Metrics
+  - Rate limiting (Guards + Throttler)
+  - Authentication/Authorization (Guards + JWT)
+  - Request/Response transformation (Interceptors)
+  - Load balancing (Service Discovery)
+  - Circuit breaker (Custom Interceptor)
+  - Logging e Metrics (Built-in Logger + Prometheus)
 
 ---
 
@@ -54,8 +54,8 @@ graph TB
         NEXT[Next.js App<br/>SSR + SPA<br/>Vercel/AWS]
     end
     
-    subgraph "API Gateway - Custom"
-        GW[API Gateway<br/>Node.js + Express<br/>ECS Fargate]
+    subgraph "API Gateway - NestJS"
+        GW[API Gateway<br/>NestJS<br/>ECS Fargate]
     end
     
     subgraph "Microservices - NestJS + DDD"
@@ -737,7 +737,7 @@ export function OrderList({ initialOrders }: { initialOrders: any[] }) {
 4. ✅ **Performance** - Otimizado para seu caso
 5. ✅ **Observabilidade** - Métricas customizadas
 
-### Estrutura API Gateway
+### Estrutura API Gateway (NestJS)
 
 ```
 api-gateway/
@@ -750,33 +750,46 @@ api-gateway/
 │   │   ├── gateway.service.ts
 │   │   └── gateway.module.ts
 │   │
-│   ├── middleware/
-│   │   ├── auth.middleware.ts
-│   │   ├── rate-limit.middleware.ts
-│   │   ├── logging.middleware.ts
-│   │   ├── cors.middleware.ts
-│   │   └── circuit-breaker.middleware.ts
+│   ├── guards/                    # NestJS Guards
+│   │   ├── auth.guard.ts
+│   │   ├── throttle.guard.ts
+│   │   └── circuit-breaker.guard.ts
+│   │
+│   ├── interceptors/              # NestJS Interceptors
+│   │   ├── logging.interceptor.ts
+│   │   ├── transform.interceptor.ts
+│   │   ├── cache.interceptor.ts
+│   │   └── circuit-breaker.interceptor.ts
+│   │
+│   ├── filters/                   # Exception Filters
+│   │   ├── http-exception.filter.ts
+│   │   └── all-exceptions.filter.ts
 │   │
 │   ├── services/
 │   │   ├── service-discovery.service.ts
 │   │   ├── load-balancer.service.ts
-│   │   ├── cache.service.ts
+│   │   ├── proxy.service.ts
 │   │   └── metrics.service.ts
 │   │
 │   ├── config/
 │   │   ├── routes.config.ts
-│   │   └── services.config.ts
+│   │   ├── services.config.ts
+│   │   └── gateway.config.ts
 │   │
-│   └── utils/
-│       ├── request-transformer.ts
-│       └── response-transformer.ts
+│   └── common/
+│       ├── decorators/
+│       ├── interfaces/
+│       └── utils/
 │
 ├── Dockerfile
+├── nest-cli.json
 ├── package.json
 └── tsconfig.json
 ```
 
-### Implementação API Gateway
+### Implementação API Gateway (NestJS)
+
+#### 1. Configuração de Rotas
 
 ```typescript
 // src/config/routes.config.ts
@@ -812,29 +825,24 @@ export const ROUTES_CONFIG = {
 };
 ```
 
+#### 2. Gateway Service
+
 ```typescript
 // src/gateway/gateway.service.ts
-import { Injectable, HttpException } from '@nestjs/common';
-import axios, { AxiosRequestConfig } from 'axios';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import { ROUTES_CONFIG } from '../config/routes.config';
-import { CircuitBreaker } from '../utils/circuit-breaker';
+import { CircuitBreakerService } from '../services/circuit-breaker.service';
 import { CacheService } from '../services/cache.service';
 
 @Injectable()
 export class GatewayService {
-  private circuitBreakers: Map<string, CircuitBreaker> = new Map();
-
-  constructor(private readonly cacheService: CacheService) {
-    // Inicializar circuit breakers
-    Object.entries(ROUTES_CONFIG).forEach(([route, config]) => {
-      if (config.circuitBreaker) {
-        this.circuitBreakers.set(
-          config.service,
-          new CircuitBreaker(config.circuitBreaker),
-        );
-      }
-    });
-  }
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly circuitBreaker: CircuitBreakerService,
+    private readonly cacheService: CacheService,
+  ) {}
 
   async proxyRequest(
     path: string,
@@ -943,39 +951,236 @@ export class GatewayService {
 }
 ```
 
+#### 3. Gateway Controller
+
 ```typescript
 // src/gateway/gateway.controller.ts
-import { Controller, All, Req, Res, UseGuards } from '@nestjs/common';
+import { 
+  Controller, 
+  All, 
+  Req, 
+  Res, 
+  UseGuards, 
+  UseInterceptors,
+  UseFilters 
+} from '@nestjs/common';
 import { Request, Response } from 'express';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { GatewayService } from './gateway.service';
-import { AuthGuard } from '../guards/auth.guard';
-import { RateLimitGuard } from '../guards/rate-limit.guard';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { LoggingInterceptor } from '../interceptors/logging.interceptor';
+import { CircuitBreakerInterceptor } from '../interceptors/circuit-breaker.interceptor';
+import { AllExceptionsFilter } from '../filters/all-exceptions.filter';
 
 @Controller()
-@UseGuards(RateLimitGuard)
+@ApiTags('Gateway')
+@UseGuards(ThrottlerGuard)
+@UseInterceptors(LoggingInterceptor, CircuitBreakerInterceptor)
+@UseFilters(AllExceptionsFilter)
 export class GatewayController {
   constructor(private readonly gatewayService: GatewayService) {}
 
   @All('api/v1/*')
+  @ApiOperation({ summary: 'Proxy all requests to microservices' })
   async proxyRequest(@Req() req: Request, @Res() res: Response) {
-    try {
-      const result = await this.gatewayService.proxyRequest(
-        req.path,
-        req.method,
-        req.headers,
-        req.body,
-        req.query,
-      );
+    const result = await this.gatewayService.proxyRequest(
+      req.path,
+      req.method,
+      req.headers,
+      req.body,
+      req.query,
+    );
 
-      res.status(200).json(result);
-    } catch (error: any) {
-      res.status(error.status || 500).json({
-        error: error.message,
-        statusCode: error.status || 500,
-      });
-    }
+    return res.status(result.status || 200).json(result.data);
   }
 }
+```
+
+#### 4. Circuit Breaker Interceptor
+
+```typescript
+// src/interceptors/circuit-breaker.interceptor.ts
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
+import { Observable, throwError } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
+import { CircuitBreakerService } from '../services/circuit-breaker.service';
+
+@Injectable()
+export class CircuitBreakerInterceptor implements NestInterceptor {
+  constructor(private readonly circuitBreaker: CircuitBreakerService) {}
+
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const request = context.switchToHttp().getRequest();
+    const serviceName = this.extractServiceName(request.path);
+
+    if (this.circuitBreaker.isOpen(serviceName)) {
+      throw new HttpException(
+        'Service temporarily unavailable',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    return next.handle().pipe(
+      tap(() => this.circuitBreaker.onSuccess(serviceName)),
+      catchError((error) => {
+        this.circuitBreaker.onFailure(serviceName);
+        return throwError(() => error);
+      }),
+    );
+  }
+
+  private extractServiceName(path: string): string {
+    const match = path.match(/\/api\/v1\/([^/]+)/);
+    return match ? match[1] : 'unknown';
+  }
+}
+```
+
+#### 5. Logging Interceptor
+
+```typescript
+// src/interceptors/logging.interceptor.ts
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+  Logger,
+} from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
+
+@Injectable()
+export class LoggingInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(LoggingInterceptor.name);
+
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    const request = context.switchToHttp().getRequest();
+    const { method, url, headers } = request;
+    const userAgent = headers['user-agent'] || '';
+    const requestId = headers['x-request-id'] || crypto.randomUUID();
+
+    const now = Date.now();
+
+    this.logger.log(
+      `[${requestId}] ${method} ${url} - User Agent: ${userAgent}`,
+    );
+
+    return next.handle().pipe(
+      tap({
+        next: () => {
+          const response = context.switchToHttp().getResponse();
+          const { statusCode } = response;
+          const duration = Date.now() - now;
+
+          this.logger.log(
+            `[${requestId}] ${method} ${url} ${statusCode} - ${duration}ms`,
+          );
+        },
+        error: (error) => {
+          const duration = Date.now() - now;
+          this.logger.error(
+            `[${requestId}] ${method} ${url} ${error.status || 500} - ${duration}ms - ${error.message}`,
+          );
+        },
+      }),
+    );
+  }
+}
+```
+
+#### 6. Gateway Module
+
+```typescript
+// src/gateway/gateway.module.ts
+import { Module } from '@nestjs/common';
+import { HttpModule } from '@nestjs/axios';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { GatewayController } from './gateway.controller';
+import { GatewayService } from './gateway.service';
+import { CircuitBreakerService } from '../services/circuit-breaker.service';
+import { CacheService } from '../services/cache.service';
+import { ProxyService } from '../services/proxy.service';
+
+@Module({
+  imports: [
+    HttpModule.register({
+      timeout: 10000,
+      maxRedirects: 5,
+    }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests per minute
+      },
+    ]),
+  ],
+  controllers: [GatewayController],
+  providers: [
+    GatewayService,
+    CircuitBreakerService,
+    CacheService,
+    ProxyService,
+  ],
+})
+export class GatewayModule {}
+```
+
+#### 7. Main Application
+
+```typescript
+// src/main.ts
+import { NestFactory } from '@nestjs/core';
+import { ValidationPipe, Logger } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { AppModule } from './app.module';
+import helmet from 'helmet';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
+
+  // Security
+  app.use(helmet());
+  app.enableCors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+    credentials: true,
+  });
+
+  // Validation
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
+  // Swagger
+  const config = new DocumentBuilder()
+    .setTitle('API Gateway')
+    .setDescription('ERP Retífica - API Gateway')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
+
+  const port = process.env.PORT || 8000;
+  await app.listen(port);
+
+  logger.log(`🚀 API Gateway running on port ${port}`);
+  logger.log(`📚 Swagger docs: http://localhost:${port}/api/docs`);
+}
+
+bootstrap();
 ```
 
 ```typescript

@@ -164,7 +164,7 @@ Migrar o ERP Retífica Formiguense de uma arquitetura monolítica (Supabase BaaS
 
 **Backend:** NestJS + DDD (Domain-Driven Design)  
 **Frontend:** Next.js 14+ (SSR + SPA)  
-**API Gateway:** Customizado (Node.js + Express/Fastify)
+**API Gateway:** NestJS (Customizado)
 
 ### 10 Microserviços Independentes
 

@@ -255,7 +255,7 @@ docs/
 ### Stack Tecnológico
 - **Backend:** NestJS + DDD (Domain-Driven Design)
 - **Frontend:** Next.js 14+ (SSR + SPA)
-- **API Gateway:** Customizado (Node.js + Express/Fastify)
+- **API Gateway:** NestJS (Customizado)
 
 ### Custo Mensal
 **$352/mês** ($4,234/ano)  

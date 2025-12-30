@@ -17,7 +17,7 @@ Este documento compara duas arquiteturas propostas para a migração do ERP Ret�
 ### V2: Stack Moderno (RECOMENDADO)
 - **Backend**: NestJS + DDD
 - **Frontend**: Next.js (SSR + SPA)
-- **API Gateway**: Customizado (Node.js)
+- **API Gateway**: NestJS (Customizado)
 - **Custo**: $352/mês
 
 ---
@@ -121,7 +121,7 @@ export default async function OrdersPage() {
 
 ### API Gateway
 
-| Aspecto | V1: AWS API Gateway | V2: Gateway Customizado | Vencedor |
+| Aspecto | V1: AWS API Gateway | V2: Gateway NestJS (Customizado) | Vencedor |
 |---------|---------------------|------------------------|----------|
 | **Custo Base** | $3.50/milhão requests | $7.30/mês (ECS Fargate) | ✅ V2 (baixo volume) |
 | **Custo (5M req/mês)** | $17.50/mês | $7.30/mês | ✅ V2 |
