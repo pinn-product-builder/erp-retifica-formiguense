@@ -8,6 +8,17 @@ interface BudgetApprovalRequest {
   approved_amount: number;
   registered_by?: string;
   approval_notes?: string;
+  approval_method?: string;
+  approved_by_customer?: string;
+  approval_document?: {
+    file_path: string;
+    file_name: string;
+    file_size: number;
+    file_type: string;
+    uploaded_at: string;
+  };
+  approved_services?: unknown[];
+  approved_parts?: unknown[];
 }
 
 interface Part {
@@ -89,7 +100,28 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { budget_id, approval_type, approved_amount, registered_by, approval_notes }: BudgetApprovalRequest = await req.json();
+    const { 
+      budget_id, 
+      approval_type, 
+      approved_amount, 
+      registered_by, 
+      approval_notes,
+      approval_method,
+      approved_by_customer,
+      approval_document,
+      approved_services,
+      approved_parts
+    }: BudgetApprovalRequest = await req.json();
+
+    console.log('📥 Dados recebidos:', {
+      budget_id,
+      approval_type,
+      approved_amount,
+      approval_method,
+      approved_by_customer,
+      has_approval_document: !!approval_document,
+      approval_document_keys: approval_document ? Object.keys(approval_document) : []
+    });
 
     if (!budget_id || !approval_type || !approved_amount) {
       return new Response(
@@ -562,31 +594,69 @@ Deno.serve(async (req) => {
         approval_type: approval_type,
         approved_amount: approved_amount,
         registered_by: finalRegisteredBy,
-        approval_notes: approval_notes || null
+        approval_notes: approval_notes || null,
+        approved_by_customer: approved_by_customer || null,
+        approved_services: approved_services || [],
+        approved_parts: approved_parts || []
       };
       
-      if (!existingApproval.approval_method) {
+      if (approval_method) {
+        updateData.approval_method = approval_method;
+      } else if (!existingApproval.approval_method) {
         updateData.approval_method = 'manual';
       }
+
+      if (approval_document) {
+        updateData.approval_document = approval_document;
+        console.log('✅ Incluindo approval_document no UPDATE:', approval_document);
+      } else {
+        console.log('⚠️ Nenhum approval_document fornecido para UPDATE');
+      }
       
+      console.log('📝 Atualizando aprovação existente:', existingApproval.id);
       const { error } = await supabaseAdmin
         .from('budget_approvals')
         .update(updateData)
         .eq('id', existingApproval.id);
       approvalError = error;
+      
+      if (error) {
+        console.error('❌ Erro ao atualizar aprovação:', error);
+      } else {
+        console.log('✅ Aprovação atualizada com sucesso');
+      }
     } else {
+      const insertData: Record<string, unknown> = {
+        budget_id: budget_id,
+        approval_type: approval_type,
+        approved_amount: approved_amount,
+        approval_method: approval_method || 'manual',
+        registered_by: finalRegisteredBy,
+        approval_notes: approval_notes || null,
+        approved_by_customer: approved_by_customer || null,
+        approved_services: approved_services || [],
+        approved_parts: approved_parts || [],
+        org_id: detailedBudget.org_id
+      };
+
+      if (approval_document) {
+        insertData.approval_document = approval_document;
+        console.log('✅ Incluindo approval_document no INSERT:', approval_document);
+      } else {
+        console.log('⚠️ Nenhum approval_document fornecido para INSERT');
+      }
+
+      console.log('📝 Criando nova aprovação');
       const { error } = await supabaseAdmin
         .from('budget_approvals')
-        .insert({
-          budget_id: budget_id,
-          approval_type: approval_type,
-          approved_amount: approved_amount,
-            approval_method: 'manual',
-          registered_by: finalRegisteredBy,
-          approval_notes: approval_notes || null,
-          org_id: detailedBudget.org_id
-        });
+        .insert(insertData);
       approvalError = error;
+      
+      if (error) {
+        console.error('❌ Erro ao criar aprovação:', error);
+      } else {
+        console.log('✅ Aprovação criada com sucesso');
+      }
     }
 
     if (approvalError) {

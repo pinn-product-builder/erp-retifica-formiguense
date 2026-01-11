@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Autocomplete, Chip, TextField, Stack, InputAdornment, IconButton } from '@mui/material';
 import { KanbanColumn } from './KanbanColumn';
@@ -71,9 +71,27 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
   const { employees: employeeDirectory, loading: employeesLoading } = useEmployeesDirectory();
   const { toast } = useToast();
   const theme = useMuiTheme();
+  
+  const KANBAN_CACHE_KEY = 'kanban-order-search-filter';
+  
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
   const [orderSearch, setOrderSearch] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  
+  useEffect(() => {
+    const cachedSearch = localStorage.getItem(KANBAN_CACHE_KEY);
+    if (cachedSearch) {
+      setOrderSearch(cachedSearch);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (orderSearch) {
+      localStorage.setItem(KANBAN_CACHE_KEY, orderSearch);
+    } else {
+      localStorage.removeItem(KANBAN_CACHE_KEY);
+    }
+  }, [orderSearch]);
   
   // Construir lista de componentes
   const COMPONENTS = useMemo(() => {

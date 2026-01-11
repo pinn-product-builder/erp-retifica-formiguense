@@ -288,14 +288,18 @@ export function useDetailedBudgets() {
         throw new Error('Dados incompletos para aprovação');
       }
 
-      // Chamar Edge Function para processar aprovação
       const { data: result, error: functionError } = await supabase.functions.invoke('process-budget-approval', {
         body: {
           budget_id: approvalData.budget_id,
           approval_type: approvalData.approval_type,
           approved_amount: approvalData.approved_amount || 0,
           registered_by: approvalData.registered_by || undefined,
-          approval_notes: approvalData.approval_notes || undefined
+          approval_notes: approvalData.approval_notes || undefined,
+          approval_method: approvalData.approval_method || 'manual',
+          approved_by_customer: approvalData.approved_by_customer || undefined,
+          approval_document: approvalData.approval_document || undefined,
+          approved_services: approvalData.approved_services || [],
+          approved_parts: approvalData.approved_parts || []
         }
       });
 
@@ -308,7 +312,6 @@ export function useDetailedBudgets() {
         throw new Error(result?.error || 'Erro ao processar aprovação');
       }
 
-      // Buscar registro de aprovação criado
       const { data: approval, error: approvalError } = await supabase
         .from('budget_approvals')
         .select('*')
@@ -327,7 +330,6 @@ export function useDetailedBudgets() {
       
       handleSuccess(successMessage);
       
-      // Retornar resultado da Edge Function com dados adicionais
       return {
         ...approval,
         ...result,

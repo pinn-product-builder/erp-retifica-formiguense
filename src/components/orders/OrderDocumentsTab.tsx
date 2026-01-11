@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { FileText, Upload, Trash2, Download, Plus, Loader2 } from 'lucide-react';
+import { FileText, Upload, Trash2, Download, Plus, Loader2, CheckCircle2 } from 'lucide-react';
 import { useOrderDocuments } from '@/hooks/useOrderDocuments';
 
 interface OrderDocumentsTabProps {
@@ -21,8 +21,22 @@ const DOCUMENT_TYPES = [
   { value: 'checklist', label: 'Checklist' },
   { value: 'relatorio', label: 'Relatório' },
   { value: 'nota', label: 'Nota Fiscal' },
+  { value: 'aprovacao_orcamento', label: 'Aprovação de Orçamento' },
   { value: 'outros', label: 'Outros' }
 ];
+
+const APPROVAL_TYPES = {
+  total: 'Aprovação Total',
+  partial: 'Aprovação Parcial',
+  rejected: 'Rejeitado'
+};
+
+const APPROVAL_METHODS = {
+  signature: 'Assinatura',
+  whatsapp: 'WhatsApp',
+  email: 'E-mail',
+  verbal: 'Verbal'
+};
 
 export function OrderDocumentsTab({ orderId }: OrderDocumentsTabProps) {
   const { documents, loading, uploadDocument, deleteDocument } = useOrderDocuments(orderId);
@@ -54,7 +68,10 @@ export function OrderDocumentsTab({ orderId }: OrderDocumentsTabProps) {
     }
   };
 
-  const handleDelete = async (documentId: string) => {
+  const handleDelete = async (documentId: string, source?: string) => {
+    if (source === 'budget_approval') {
+      return;
+    }
     if (window.confirm('Deseja remover este documento?')) {
       await deleteDocument(documentId);
     }
@@ -163,46 +180,77 @@ export function OrderDocumentsTab({ orderId }: OrderDocumentsTabProps) {
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {documents.map((document) => (
-            <Card key={document.id}>
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <Badge variant="outline">
-                    {DOCUMENT_TYPES.find(type => type.value === document.document_type)?.label || document.document_type}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {format(new Date(document.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                  </span>
-                </div>
+          {documents.map((document) => {
+            const isApproval = document.source === 'budget_approval';
+            
+            return (
+              <Card key={document.id} className={isApproval ? 'border-green-200 ' : ''}>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      {isApproval && (
+                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      )}
+                      <Badge variant={isApproval ? 'default' : 'outline'} className={isApproval ? 'bg-green-600' : ''}>
+                        {DOCUMENT_TYPES.find(type => type.value === document.document_type)?.label || document.document_type}
+                      </Badge>
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {format(new Date(document.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                    </span>
+                  </div>
 
-                <p className="font-medium text-sm truncate">{document.file_name}</p>
+                  <p className="font-medium text-sm truncate">{document.file_name}</p>
 
-                {document.description && (
-                  <p className="text-xs text-muted-foreground">{document.description}</p>
-                )}
+                  {isApproval && document.approval_info && (
+                    <div className="space-y-1 text-xs">
+                      {document.approval_info.budget_number && (
+                        <p className="text-muted-foreground">
+                          <span className="font-medium">Orçamento:</span> {document.approval_info.budget_number}
+                        </p>
+                      )}
+                      {document.approval_info.approval_type && (
+                        <p className="text-muted-foreground">
+                          <span className="font-medium">Tipo:</span> {APPROVAL_TYPES[document.approval_info.approval_type as keyof typeof APPROVAL_TYPES] || document.approval_info.approval_type}
+                        </p>
+                      )}
+                      {document.approval_info.approved_by_customer && (
+                        <p className="text-muted-foreground">
+                          <span className="font-medium">Aprovado por:</span> {document.approval_info.approved_by_customer}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleDownload(document.url)}
-                    disabled={!document.url}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Baixar
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDelete(document.id)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Remover
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  {!isApproval && document.description && (
+                    <p className="text-xs text-muted-foreground">{document.description}</p>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleDownload(document.url)}
+                      disabled={!document.url}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Baixar
+                    </Button>
+                    {!isApproval && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(document.id, document.source)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remover
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
