@@ -113,6 +113,9 @@ const Orcamentos = () => {
       status: statusFilter === 'todos' ? undefined : statusFilter,
       component: componentFilter === 'todos' ? undefined : componentFilter
     }),
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    staleTime: 30000,
     enabled: !!currentOrganization?.id
   });
 
@@ -705,7 +708,7 @@ const Orcamentos = () => {
           setDuplicatedBudgetData(null);
         }
       }}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">
               {editingBudget ? 'Editar Orçamento' : 'Novo Orçamento'}
@@ -717,15 +720,18 @@ const Orcamentos = () => {
               }
             </DialogDescription>
           </DialogHeader>
-          <BudgetForm
-            budget={(editingBudget || duplicatedBudgetData || undefined) as DetailedBudget | undefined}
-            onSave={editingBudget ? handleUpdateBudget : handleCreateBudget}
-            onCancel={() => {
-              setIsFormOpen(false);
-              setEditingBudget(null);
-              setDuplicatedBudgetData(null);
-            }}
-          />
+          {isFormOpen && (
+            <BudgetForm
+              key={editingBudget?.id || duplicatedBudgetData?.id || 'new'}
+              budget={(editingBudget || duplicatedBudgetData || undefined) as DetailedBudget | undefined}
+              onSave={editingBudget ? handleUpdateBudget : handleCreateBudget}
+              onCancel={() => {
+                setIsFormOpen(false);
+                setEditingBudget(null);
+                setDuplicatedBudgetData(null);
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
 

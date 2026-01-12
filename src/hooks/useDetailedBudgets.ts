@@ -20,6 +20,7 @@ export interface DetailedBudget {
   tax_percentage: number;
   tax_amount: number;
   total_amount: number;
+  original_total_amount?: number;
   warranty_months: number;
   estimated_delivery_days: number;
   labor_description?: string;

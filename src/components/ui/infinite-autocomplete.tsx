@@ -117,15 +117,27 @@ export function InfiniteAutocomplete<T extends InfiniteAutocompleteOption>({
       options={displayedOptions}
       getOptionLabel={getOptionLabel}
       value={value}
-      onChange={onChange}
+      onChange={(event, newValue) => {
+        onChange(event, newValue);
+        if (newValue !== null) {
+          setInputValue('');
+          setPage(1);
+        }
+      }}
       loading={loading}
       filterOptions={(x) => x}
-      onInputChange={(_, newInputValue) => {
-        if (newInputValue !== inputValue) {
+      onInputChange={(_, newInputValue, reason) => {
+        if (reason === 'clear' || (reason === 'reset' && value === null)) {
+          setInputValue('');
+          setPage(1);
+        } else if (newInputValue !== inputValue && reason === 'input') {
           setInputValue(newInputValue);
           setPage(1);
         }
       }}
+      clearOnBlur
+      selectOnFocus
+      handleHomeEndKeys
       disableListWrap={false}
       openOnFocus
       isOptionEqualToValue={isOptionEqualToValue || ((option, value) => option.id === value.id)}

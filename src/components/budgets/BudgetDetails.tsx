@@ -221,6 +221,15 @@ const BudgetDetails = ({ budget, onDuplicate, onGeneratePDF }: BudgetDetailsProp
                   {formatCurrency(budget.total_amount)}
                 </span>
               </div>
+              
+              {budget.original_total_amount && Math.abs(budget.original_total_amount - budget.total_amount) > 0.01 && (
+                <div className="flex justify-between text-sm border-t pt-2">
+                  <span className="text-muted-foreground">Valor Original</span>
+                  <span className="text-muted-foreground whitespace-nowrap">
+                    {formatCurrency(budget.original_total_amount)}
+                  </span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
