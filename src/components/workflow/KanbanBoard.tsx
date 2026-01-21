@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Autocomplete, Chip, TextField, Stack, InputAdornment, IconButton } from '@mui/material';
+import { Autocomplete, Chip, TextField, Stack, InputAdornment } from '@mui/material';
 import { KanbanColumn } from './KanbanColumn';
 import { useWorkflowUpdate } from '@/hooks/useWorkflowUpdate';
 import { useWorkflowStatusConfig, WorkflowStatusConfig, FIXED_WORKFLOW_STATUSES } from '@/hooks/useWorkflowStatusConfig';
@@ -589,18 +589,6 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
                         <Search className="w-4 h-4 text-muted-foreground" />
                       </InputAdornment>
                       {params.InputProps.startAdornment}
-                    </>
-                  ),
-                  endAdornment: (
-                    <>
-                      {orderSearch && (
-                        <InputAdornment position="end">
-                          <IconButton size="small" onClick={() => setOrderSearch('')}>
-                            <X className="w-4 h-4" />
-                          </IconButton>
-                        </InputAdornment>
-                      )}
-                      {params.InputProps.endAdornment}
                     </>
                   )
                 }}
