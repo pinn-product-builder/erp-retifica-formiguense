@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Table, 
   TableBody, 
@@ -14,7 +15,7 @@ import {
 } from '@/components/ui/table';
 import { InfiniteAutocomplete } from '@/components/ui/infinite-autocomplete';
 import { Typography, Box } from '@mui/material';
-import { Trash2, Package, Wrench, ChevronUp, ChevronDown } from 'lucide-react';
+import { Trash2, Package, Wrench, ChevronUp, ChevronDown, Search } from 'lucide-react';
 import { usePartsInventory } from '@/hooks/usePartsInventory';
 import { useAdditionalServices } from '@/hooks/useAdditionalServices';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -64,6 +65,7 @@ export function PartsServicesSelector({
   const [selectedPartValue, setSelectedPartValue] = useState<{ id: string; part_code: string; part_name: string; unit_cost: number; quantity: number; label: string } | null>(null);
   const [selectedServiceValue, setSelectedServiceValue] = useState<{ id: string; description: string; value: number; label: string } | null>(null);
   const [filteredServices, setFilteredServices] = useState(additionalServices.filter(s => s.is_active));
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const loadParts = async () => {
@@ -123,6 +125,24 @@ export function PartsServicesSelector({
     value: s.value,
     macro_component: s.macro_component
   }));
+
+  const togglePart = (partInventory: { id: string; part_code: string; part_name: string; unit_cost: number; quantity: number; label: string }) => {
+    const existingPart = selectedParts.find(p => p.part_code === partInventory.part_code);
+    
+    if (existingPart) {
+      onPartsChange(selectedParts.filter(p => p.part_code !== partInventory.part_code));
+    } else {
+      const newPart: Part = {
+        id: partInventory.id || `part_${Date.now()}`,
+        part_code: partInventory.part_code,
+        part_name: partInventory.part_name,
+        quantity: 1,
+        unit_price: partInventory.unit_cost,
+        total: partInventory.unit_cost
+      };
+      onPartsChange([...selectedParts, newPart]);
+    }
+  };
 
   const addPart = (partInventory: { id: string; part_code: string; part_name: string; unit_cost: number; quantity: number; label: string }) => {
     const existingPart = selectedParts.find(p => p.part_code === partInventory.part_code);
@@ -216,9 +236,13 @@ export function PartsServicesSelector({
   const partsTotal = selectedParts.reduce((sum, p) => sum + p.total, 0);
   const servicesTotal = selectedServices.reduce((sum, s) => sum + s.total, 0);
 
+  const filteredParts = partsInventory.filter(part =>
+    part.part_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    part.part_code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
-      {/* Peças Adicionais */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -227,55 +251,67 @@ export function PartsServicesSelector({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Seleção de Peças */}
           <div className="space-y-2">
-            <Label>Selecionar Peça</Label>
-            <InfiniteAutocomplete
-              options={partsInventory}
-              loading={loadingParts}
-              label="Buscar peça..."
-              placeholder="Digite para buscar ou selecione"
-              getOptionLabel={(option) => option.label}
-              value={selectedPartValue}
-              onChange={(_, newValue) => {
-                if (newValue) {
-                  addPart(newValue);
-                } else {
-                  setSelectedPartValue(null);
-                }
-              }}
-              renderOption={(props, option) => {
-                const isSelected = selectedParts.some(p => p.part_code === option.part_code);
-                return (
-                  <li {...props} key={option.id}>
-                    <Box sx={{ width: '100%' }}>
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          fontWeight: 500,
-                          textDecoration: isSelected ? 'line-through' : 'none',
-                          color: isSelected ? 'text.secondary' : 'text.primary'
-                        }}
-                      >
-                        {option.part_name}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
-                        Código: {option.part_code} | Estoque: {option.quantity} | Preço: R$ {option.unit_cost.toFixed(2)}
-                        {isSelected && ' (já adicionado)'}
-                      </Typography>
-                    </Box>
-                  </li>
-                );
-              }}
-              filterOptions={(options, { inputValue }) => {
-                return options.filter(option =>
-                  option.part_name.toLowerCase().includes(inputValue.toLowerCase()) ||
-                  option.part_code.toLowerCase().includes(inputValue.toLowerCase())
-                );
-              }}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-            />
+            <Label>Selecionar Peças</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome ou código..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
+
+          {loadingParts ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Carregando peças...
+            </div>
+          ) : filteredParts.length > 0 ? (
+            <div className="max-h-[400px] overflow-y-auto border rounded-lg p-4 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {filteredParts.map((part) => {
+                  const isChecked = selectedParts.some(p => p.part_code === part.part_code);
+                  return (
+                    <div 
+                      key={part.id} 
+                      className={cn(
+                        "flex items-start space-x-3 p-3 rounded-lg border transition-colors",
+                        isChecked ? "bg-primary/5 border-primary" : "hover:bg-muted/50"
+                      )}
+                    >
+                      <Checkbox
+                        id={`part-${part.id}`}
+                        checked={isChecked}
+                        onCheckedChange={() => togglePart(part)}
+                        className="mt-1"
+                      />
+                      <Label 
+                        htmlFor={`part-${part.id}`} 
+                        className="flex-1 cursor-pointer space-y-1"
+                      >
+                        <div className="font-medium text-sm">{part.part_name}</div>
+                        <div className="text-xs text-muted-foreground space-y-0.5">
+                          <div>Código: {part.part_code}</div>
+                          <div className="flex items-center justify-between">
+                            <span>Estoque: {part.quantity}</span>
+                            <span className="font-medium text-primary">
+                              R$ {part.unit_cost.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </Label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchTerm ? 'Nenhuma peça encontrada' : 'Nenhuma peça disponível'}
+            </div>
+          )}
 
           {/* Peças Selecionadas */}
           {selectedParts.length > 0 && (
