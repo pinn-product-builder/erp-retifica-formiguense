@@ -11,16 +11,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabase } from "@/hooks/useSupabase";
-import { Camera, ClipboardList, Settings, AlertCircle, ArrowRight } from "lucide-react";
+import { Camera, ClipboardList, Settings, AlertCircle, ArrowRight, Search } from "lucide-react";
 import { EngineTypeSelect } from "@/components/ui/EngineTypeSelect";
 import { useEngineTypes } from "@/hooks/useEngineTypes";
 import { useEngineComponents } from "@/hooks/useEngineComponents";
 import { useEmployees } from "@/hooks/useEmployees";
+import { useEngineModels } from "@/hooks/useEngineModels";
+import { Autocomplete, TextField, Box, Typography } from '@mui/material';
 
 export default function CheckIn() {
   const { engineTypes, fetchEngineTypes } = useEngineTypes();
   const { components: engineComponents } = useEngineComponents();
   const { employees, loading: employeesLoading } = useEmployees();
+  const { engineModels, loading: loadingModels, fetchEngineModels } = useEngineModels();
   
   const [formData, setFormData] = useState({
     // Identificação do Motor
@@ -41,6 +44,13 @@ export default function CheckIn() {
     removidoPorEmpresa: false,
     removidoPorFuncionario: ""
   });
+
+  const [selectedEngineModel, setSelectedEngineModel] = useState<{
+    brand: string;
+    model: string;
+    fuel_type: string;
+    label: string;
+  } | null>(null);
 
   const [fotos, setFotos] = useState({
     frente: null as File | null,
@@ -71,6 +81,14 @@ export default function CheckIn() {
       setHasColetaData(false);
     }
   }, [fetchEngineTypes]);
+
+  useEffect(() => {
+    if (formData.engineTypeId) {
+      fetchEngineModels(formData.engineTypeId);
+    } else {
+      fetchEngineModels();
+    }
+  }, [formData.engineTypeId, fetchEngineModels]);
 
   const selectedEngineType = useMemo(() => {
     return engineTypes.find((et) => et.id === formData.engineTypeId);
@@ -376,17 +394,106 @@ export default function CheckIn() {
                 value={formData.engineTypeId}
                 onChange={(value) => {
                   handleInputChange('engineTypeId', value || '');
-                  if (!value) {
-                    setFormData((prev) => ({
-                      ...prev,
-                      selectedComponents: [],
-                      estadoMotor: ''
-                    }));
-                  }
+                  setSelectedEngineModel(null);
+                  setFormData((prev) => ({
+                    ...prev,
+                    marca: '',
+                    modelo: '',
+                    combustivel: '',
+                    selectedComponents: [],
+                    estadoMotor: ''
+                  }));
                 }}
                 placeholder="Busque e selecione um tipo de motor..."
               />
             </div>
+
+            <div>
+              <Label>Modelo do Motor <span className="text-red-500">*</span></Label>
+              <Autocomplete
+                freeSolo
+                options={engineModels.map(em => ({
+                  brand: em.brand,
+                  model: em.model,
+                  fuel_type: em.fuel_type,
+                  label: `${em.brand} - ${em.model} (${em.fuel_type})`,
+                  count: em.count
+                }))}
+                loading={loadingModels}
+                value={selectedEngineModel}
+                onChange={(_, newValue) => {
+                  if (typeof newValue === 'string') {
+                    setSelectedEngineModel(null);
+                    setFormData((prev) => ({
+                      ...prev,
+                      modelo: newValue
+                    }));
+                  } else if (newValue) {
+                    setSelectedEngineModel(newValue);
+                    setFormData((prev) => ({
+                      ...prev,
+                      marca: newValue.brand,
+                      modelo: newValue.model,
+                      combustivel: newValue.fuel_type
+                    }));
+                  } else {
+                    setSelectedEngineModel(null);
+                    setFormData((prev) => ({
+                      ...prev,
+                      marca: '',
+                      modelo: '',
+                      combustivel: ''
+                    }));
+                  }
+                }}
+                inputValue={formData.modelo}
+                onInputChange={(_, newInputValue) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    modelo: newInputValue
+                  }));
+                }}
+                getOptionLabel={(option) => {
+                  if (typeof option === 'string') return option;
+                  return option.label;
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder={formData.engineTypeId ? "Digite ou busque um modelo..." : "Selecione um tipo primeiro"}
+                    variant="outlined"
+                    size="small"
+                    disabled={!formData.engineTypeId}
+                    required
+                  />
+                )}
+                renderOption={(props, option) => (
+                  <li {...props} key={`${option.brand}-${option.model}-${option.fuel_type}`}>
+                    <Box sx={{ width: '100%' }}>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {option.brand} - {option.model}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+                        Combustível: {option.fuel_type} | Usado {option.count}x
+                      </Typography>
+                    </Box>
+                  </li>
+                )}
+                isOptionEqualToValue={(option, value) => 
+                  option.brand === value.brand && 
+                  option.model === value.model && 
+                  option.fuel_type === value.fuel_type
+                }
+                disabled={!formData.engineTypeId}
+                sx={{ width: '100%' }}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {formData.engineTypeId 
+                  ? "Digite um novo modelo ou selecione um existente" 
+                  : "Selecione um tipo de motor primeiro"}
+              </p>
+            </div>
+
             <div>
               <Label htmlFor="marca">Marca</Label>
               <Input
@@ -394,16 +501,6 @@ export default function CheckIn() {
                 placeholder="Ex: Volkswagen, Ford, etc."
                 value={formData.marca}
                 onChange={(e) => handleInputChange('marca', e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="modelo">Modelo</Label>
-              <Input
-                id="modelo"
-                placeholder="Ex: AP 1.0, CHT 1.6, etc."
-                value={formData.modelo}
-                onChange={(e) => handleInputChange('modelo', e.target.value)}
                 required
               />
             </div>
