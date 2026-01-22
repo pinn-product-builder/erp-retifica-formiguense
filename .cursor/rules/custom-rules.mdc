@@ -1,0 +1,322 @@
+---
+alwaysApply: true
+---
+
+version: 1
+name: "Vite (src/pages) + React + Supabase (Lovable) - Clean Architecture + Responsividade"
+description: >
+  Regras para projeto Vite + React + TypeScript usando src/pages como telas,
+  UI gerada pelo Lovable, Supabase como backend.
+  Enforce: pages -> components/[feature] -> hooks -> services, reuso de UI,
+  responsividade obrigatória, tipagem forte, RLS, Edge Functions e testes.
+
+assumptions:
+  bundler: "Vite"
+  frontend: "React + TypeScript"
+  structure_root: "src/"
+  screens_root: "src/pages"
+  components_root: "src/components"
+  hooks_root: "src/hooks"
+  services_root: "src/services"
+  css: "TailwindCSS"
+  backend: "Supabase (Auth + Postgres + Storage + Edge Functions)"
+  validation: "zod"
+
+# ==========================================================
+# ESTRUTURA OBRIGATÓRIA
+# ==========================================================
+architecture:
+  required_folders:
+    - "src/pages/**"
+    - "src/components/ui/**"
+    - "src/components/<feature>/**"
+    - "src/hooks/**"
+    - "src/services/**"
+    - "supabase/functions/** (se houver edge functions)"
+    - "supabase/migrations/** (se houver migrations)"
+  flow_rule: "src/pages → src/components/<feature> → src/hooks → src/services"
+
+# ==========================================================
+# FRONTEND - AO CRIAR TELAS (OBRIGATÓRIO)
+# ==========================================================
+frontend_rules:
+  - id: "PAGES_ARE_COMPOSITION_ONLY"
+    description: "Pages são somente composição (layout + orquestração)."
+    do:
+      - "Pages importam componentes de feature e chamam hooks."
+      - "Pages não contêm regra de negócio."
+      - "Pages não chamam Supabase diretamente."
+    dont:
+      - "Não fazer cálculos/políticas de negócio em pages."
+      - "Não fazer `supabase.from()` / `auth.*` em pages."
+
+  - id: "FEATURE_COMPONENTS_LOCATION"
+    description: "Componentes específicos de feature ficam em src/components/<feature>/."
+    do:
+      - "Ex: src/components/purchasing/, src/components/budgets/, src/components/orders/"
+      - "Pode ter subpastas: components/<feature>/components, /partials, /shared"
+    dont:
+      - "Não colocar componentes específicos em components/ui."
+
+  - id: "UI_COMPONENTS_LOCATION"
+    description: "Componentes UI reutilizáveis ficam em src/components/ui/."
+    do:
+      - "Button, Input, Select, Dialog/Sheet, Card, Badge, Tabs, ResponsiveTable"
+    dont:
+      - "Não duplicar UI base dentro de features."
+
+  - id: "BUSINESS_LOGIC_ONLY_IN_SERVICES"
+    description: "Regra de negócio deve ficar em src/services (e validações/schemas junto)."
+    do:
+      - "Services concentram: fluxos, políticas, validações, transformações e acesso ao Supabase."
+      - "Hooks chamam services; componentes chamam hooks."
+    dont:
+      - "Não colocar regra de negócio em hooks (hooks são finos)."
+      - "Não colocar regra de negócio em components/pages."
+
+  - id: "HOOKS_ARE_THIN"
+    description: "Hooks são finos: estado + chamar services + mapear loading/error."
+    do:
+      - "Hooks podem lidar com: loading, retry, debounce, state local e side effects de UI."
+      - "Hooks retornam shape consistente: { data, isLoading, error, actions }."
+    dont:
+      - "Não reimplementar regra do service no hook."
+
+  - id: "LOVABLE_CODE_POLICY"
+    description: "Código gerado pelo Lovable deve ser refatorado para seguir camadas."
+    do:
+      - "Extrair chamadas ao Supabase para services."
+      - "Extrair componentes repetidos para components/ui."
+      - "Extrair blocos de feature para components/<feature>/."
+    dont:
+      - "Não manter lógica e acesso a dados no JSX gerado."
+
+# ==========================================================
+# SUPABASE NO FRONT (OBRIGATÓRIO)
+# ==========================================================
+supabase_frontend:
+  - id: "NO_DIRECT_SUPABASE_IN_UI"
+    description: "Supabase só pode ser usado em src/services."
+    do:
+      - "Centralizar client do Supabase (ex: src/services/supabaseClient.ts)."
+      - "Cada service encapsula queries/mutations."
+    dont:
+      - "Não importar Supabase client em pages/components."
+      - "Não espalhar selects/filters em múltiplos arquivos."
+
+  - id: "ENV_SAFETY"
+    description: "Segurança de env: nunca vazar secrets."
+    do:
+      - "No frontend, usar apenas SUPABASE_URL e SUPABASE_ANON_KEY."
+    dont:
+      - "Nunca usar SERVICE_ROLE key no frontend."
+
+# ==========================================================
+# VALIDAÇÃO, TIPAGEM E NOMENCLATURA
+# ==========================================================
+quality:
+  - id: "ZOD_RUNTIME_VALIDATION"
+    description: "Inputs devem ser validados com Zod."
+    do:
+      - "Schemas para forms, params e payloads em services/validators ou services/<feature>/schemas."
+      - "DTOs inferidos: z.infer<typeof Schema>."
+    dont:
+      - "Não confiar só no TS sem validação runtime."
+
+  - id: "STRONG_TS"
+    description: "Tipagem forte obrigatória."
+    do:
+      - "Evitar any; tipar retornos de services."
+    dont:
+      - "Evitar `@ts-nocheck` e `@ts-expect-error` (só com justificativa)."
+
+  - id: "NAMING_STANDARD"
+    description: "Nomeação consistente."
+    do:
+      - "PascalCase: classes, componentes, tipos/interfaces"
+      - "camelCase: funções, variáveis, hooks (prefixo use)"
+      - "snake_case: colunas do banco (Supabase/Postgres)"
+    dont:
+      - "Não usar nomes genéricos (data1, thing, handleX)."
+
+# ==========================================================
+# RESPONSIVIDADE (OBRIGATÓRIO)
+# ==========================================================
+responsiveness:
+  required: true
+  ranges:
+    mobile: "< 640px"
+    tablet: "640px - 1023px"
+    desktop: "≥ 1024px"
+
+  tailwind_breakpoints:
+    - "sm: 640px+"
+    - "md: 768px+"
+    - "lg: 1024px+"
+    - "xl: 1280px+"
+    - "2xl: 1536px+"
+
+  rules:
+    - id: "MOBILE_FIRST"
+      description: "Mobile first sempre."
+      do:
+        - "Escrever classes base para mobile e adicionar sm/md/lg."
+      dont:
+        - "Não desenhar desktop-first."
+
+    - id: "GRIDS"
+      description: "Padrões de grids e layouts."
+      do:
+        - "Stats cards: `grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4` (ou similar)"
+        - "Forms: `grid-cols-1 sm:grid-cols-2 md:grid-cols-3`"
+        - "Usar `min-w-0`, `truncate` para evitar overflow."
+
+    - id: "TYPOGRAPHY"
+      description: "Tipografia responsiva."
+      do:
+        - "Títulos: `text-xl sm:text-2xl md:text-3xl`"
+        - "Texto: `text-sm sm:text-base`"
+        - "Labels: `text-xs sm:text-sm`"
+        - "Valores: `text-lg sm:text-xl md:text-2xl`"
+
+    - id: "SPACING"
+      description: "Espaçamento responsivo."
+      do:
+        - "Padding: `p-3 sm:p-4` ou `p-4 sm:p-6`"
+        - "Gaps: `gap-2 sm:gap-3 md:gap-4`"
+        - "Margens: `m-2 sm:m-4`"
+
+    - id: "BUTTONS"
+      description: "Botões responsivos."
+      do:
+        - "Mobile: ícone-only quando possível `h-7 w-7 sm:h-8 sm:w-8`"
+        - "Desktop: ícone + texto com `hidden sm:inline`"
+        - "Stack vertical em mobile: `flex-col sm:flex-row`"
+
+    - id: "MODALS"
+      description: "Modais/Dialogs responsivos."
+      do:
+        - "Largura: `max-w-[95vw] sm:max-w-md md:max-w-lg lg:max-w-2xl`"
+        - "Altura: `max-h-[90vh] overflow-y-auto`"
+        - "Padding: `p-4 sm:p-6`"
+
+    - id: "TABS"
+      description: "Tabs e navegação responsivos."
+      do:
+        - "Mobile: `overflow-x-auto flex lg:grid`"
+        - "Tabs: `text-xs sm:text-sm flex-shrink-0`"
+        - "Abreviações em mobile quando necessário"
+
+    - id: "TABLES_USE_RESPONSIVETABLE"
+      description: "Tabelas devem usar ResponsiveTable."
+      do:
+        - "Mobile/tablet: cards com informações principais."
+        - "Desktop: tabela completa."
+        - "Colunas com `priority` e `minWidth` para ocultação inteligente."
+
+    - id: "MONEY"
+      description: "Valores monetários."
+      do:
+        - "Sempre `whitespace-nowrap`"
+        - "Usar `truncate` quando necessário"
+        - "Fonte: `text-xs sm:text-sm md:text-base`"
+
+    - id: "ICONS"
+      description: "Ícones responsivos."
+      do:
+        - "`w-3 h-3 sm:w-4 sm:h-4` ou `w-4 h-4 sm:w-5 sm:h-5`"
+        - "Espaçamento: `gap-1 sm:gap-2` ou `gap-2 sm:gap-3`"
+
+    - id: "STATS_CARDS_OVERFLOW"
+      description: "Cards de estatísticas sem overflow."
+      do:
+        - "Padding: `p-3 sm:p-4`"
+        - "Ícones: `w-4 h-4 sm:w-5 sm:h-5` com `p-1.5 sm:p-2`"
+        - "Texto label: `text-xs sm:text-sm`"
+        - "Valor: `text-lg sm:text-xl md:text-2xl`"
+        - "Evitar overflow: `truncate`, `min-w-0`, `flex-1`"
+
+    - id: "SIDEBAR"
+      description: "Sidebar responsiva."
+      do:
+        - "Oculta < 1024px: `hidden lg:block`"
+        - "Usar hamburger menu com `Sheet` em mobile/tablet"
+
+    - id: "RESPONSIVE_TESTING_REQUIRED"
+      description: "Teste sempre em vários tamanhos antes de finalizar."
+      do:
+        - "Validar: mobile (<640), tablet (640-1023), desktop (>=1024)."
+
+# ==========================================================
+# BACKEND - SUPABASE (OBRIGATÓRIO)
+# ==========================================================
+supabase_backend:
+  edge_functions:
+    - id: "EDGE_DOMAIN_STRUCTURE"
+      description: "Edge Functions por domínio."
+      do:
+        - "Organizar em `supabase/functions/[domain]/`"
+        - "Stateless"
+        - "DI quando aplicável (factory/injeção manual)"
+      dont:
+        - "Não manter estado em memória entre requests."
+
+  migrations:
+    - id: "MIGRATIONS_STRUCTURE"
+      description: "Migrations em supabase/migrations com nomes descritivos."
+      do:
+        - "Nome descritivo (ex: add_orders_table, alter_budget_status)."
+
+  sql_logic:
+    - id: "SQL_LOGIC_WHEN_POSSIBLE"
+      description: "Separar lógica em SQL quando fizer sentido."
+      do:
+        - "Preferir constraints/views/functions/triggers para regras estruturais."
+      dont:
+        - "Não duplicar regra em SQL e no frontend."
+
+  rls:
+    - id: "RLS_MANDATORY"
+      description: "RLS obrigatório."
+      do:
+        - "Policies para tabelas sensíveis."
+        - "Considerar RLS como fonte de verdade de autorização."
+      dont:
+        - "Não confiar só no frontend para autorização."
+
+# ==========================================================
+# TESTES
+# ==========================================================
+tests:
+  - id: "UNIT_TESTS"
+    description: "Testes unitários para hooks e casos de uso críticos."
+    do:
+      - "Testar services (regra) com mocks do supabase client."
+      - "Testar hooks críticos quando fizer sentido."
+  - id: "INTEGRATION_TESTS"
+    description: "Testes de integração para fluxos críticos quando estrutura existir."
+    do:
+      - "Cobrir fluxos essenciais (auth, criação/edição, aprovações, etc.)."
+
+# ==========================================================
+# COMPORTAMENTO DO ASSISTENTE (CURSOR)
+# ==========================================================
+assistant_behavior:
+  when_creating_screens:
+    - "Criar tela em src/pages."
+    - "Criar componentes da feature em src/components/<feature>/."
+    - "Criar hook fino em src/hooks."
+    - "Criar regra + supabase access em src/services."
+    - "Garantir responsividade obrigatória (mobile/tablet/desktop)."
+    - "Usar ResponsiveTable para tabelas."
+
+  when_refactoring_lovable_output:
+    - "Mover Supabase calls para src/services."
+    - "Extrair regra do JSX para services."
+    - "Deduplicar UI para src/components/ui."
+    - "Quebrar componentes grandes em menores."
+
+  when_unsure:
+    - "Priorizar separação de camadas, reuso e responsividade."
+
+
