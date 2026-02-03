@@ -91,6 +91,37 @@ frontend_rules:
     dont:
       - "Não manter lógica e acesso a dados no JSX gerado."
 
+  - id: "PAGINATION_REQUIRED"
+    description: "Listagens devem sempre ser paginadas no backend (Supabase)."
+    do:
+      - "Usar paginação para todas as listagens de dados (tabelas, listas, cards)."
+      - "Padrão: 10 itens por página (pode variar conforme contexto)."
+      - "SEMPRE implementar paginação no backend usando .range() do Supabase."
+      - "Implementar filtros também no backend (não no frontend)."
+      - "Usar { count: 'exact' } para obter total de registros."
+      - "Retornar PaginatedResult com: data, count, page, pageSize, totalPages."
+      - "Usar componente Pagination do shadcn/ui."
+      - "Mostrar informações de paginação: 'Mostrando X a Y de Z itens'."
+    dont:
+      - "Não buscar todos os dados e paginar no frontend."
+      - "Não usar scroll infinito sem justificativa clara."
+      - "Não filtrar dados no frontend após buscar tudo do backend."
+    example: |
+      // Service (Backend Pagination)
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      const { data, count } = await supabase
+        .from('table')
+        .select('*', { count: 'exact' })
+        .range(from, to);
+      
+      // Hook
+      const { data, count, totalPages } = useData({ page, pageSize, filters });
+      
+      // Component
+      const [currentPage, setCurrentPage] = useState(1);
+      const ITEMS_PER_PAGE = 10;
+
 # ==========================================================
 # SUPABASE NO FRONT (OBRIGATÓRIO)
 # ==========================================================

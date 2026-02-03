@@ -32,6 +32,7 @@ const Diagnosticos = lazy(() => import('@/pages/Diagnosticos'));
 const Relatorios = lazy(() => import('@/pages/Relatorios'));
 const Configuracoes = lazy(() => import('@/pages/Configuracoes'));
 const ConfiguracoesOperacoes = lazy(() => import('@/pages/ConfiguracoesOperacoes'));
+const Motores = lazy(() => import('@/pages/Motores'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 const Financeiro = lazy(() => import('@/pages/Financeiro'));
 const ContasReceber = lazy(() => import('@/pages/ContasReceber'));
@@ -79,6 +80,7 @@ function AppContent() {
             <Route path="/gestao-funcionarios" element={<ProfileProtectedRoute><Layout><GestaoFuncionarios /></Layout></ProfileProtectedRoute>} />
             <Route path="/funcionarios" element={<ProfileProtectedRoute><Layout><Funcionarios /></Layout></ProfileProtectedRoute>} />
             <Route path="/diagnosticos" element={<ProfileProtectedRoute><Layout><Diagnosticos /></Layout></ProfileProtectedRoute>} />
+            <Route path="/motores" element={<ProfileProtectedRoute><Layout><Motores /></Layout></ProfileProtectedRoute>} />
             <Route path="/gestao-usuarios" element={<AdminRoute><Layout><GestaoUsuarios /></Layout></AdminRoute>} />
             <Route path="/gestao-usuarios/perfis" element={<AdminRoute><Layout><GestaoPerfiUsuarios /></Layout></AdminRoute>} />
             <Route path="/super-admin" element={<ProtectedRoute><Layout><SuperAdmin /></Layout></ProtectedRoute>} />

@@ -410,61 +410,85 @@ export function PartsServicesSelector({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Seleção de Serviços */}
           <div className="space-y-2">
-            <Label>Selecionar Serviço Adicional</Label>
-            <InfiniteAutocomplete
-              options={filteredServices.map(s => ({
-                id: s.id,
-                label: `${s.description} - R$ ${s.value.toFixed(2)}`,
-                description: s.description,
-                value: s.value,
-                macro_component: s.macro_component
-              }))}
-              loading={loadingServices}
-              label="Buscar serviço..."
-              placeholder="Digite para buscar ou selecione"
-              getOptionLabel={(option) => option.label}
-              value={selectedServiceValue}
-              onChange={(_, newValue) => {
-                if (newValue) {
-                  addService(newValue);
-                } else {
-                  setSelectedServiceValue(null);
-                }
-              }}
-              renderOption={(props, option) => {
-                const isSelected = selectedServices.some(s => s.id === option.id);
-                return (
-                  <li {...props} key={option.id}>
-                    <Box sx={{ width: '100%' }}>
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          fontWeight: 500,
-                          textDecoration: isSelected ? 'line-through' : 'none',
-                          color: isSelected ? 'text.secondary' : 'text.primary'
-                        }}
-                      >
-                        {option.description}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
-                        Valor: R$ {option.value.toFixed(2)}
-                        {option.macro_component && ` | ${option.macro_component.name}`}
-                        {isSelected && ' (já adicionado)'}
-                      </Typography>
-                    </Box>
-                  </li>
-                );
-              }}
-              filterOptions={(options, { inputValue }) => {
-                return options.filter(option =>
-                  option.description.toLowerCase().includes(inputValue.toLowerCase())
-                );
-              }}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-            />
+            <Label>Selecionar Serviços</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por descrição..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
+
+          {loadingServices ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Carregando serviços...
+            </div>
+          ) : filteredServices.filter(service =>
+              service.description.toLowerCase().includes(searchTerm.toLowerCase())
+            ).length > 0 ? (
+            <div className="max-h-[400px] overflow-y-auto border rounded-lg p-4 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {filteredServices
+                  .filter(service =>
+                    service.description.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map((service) => {
+                    const isChecked = selectedServices.some(s => s.id === service.id);
+                    return (
+                      <div 
+                        key={service.id} 
+                        className={cn(
+                          "flex items-start space-x-3 p-3 rounded-lg border transition-colors",
+                          isChecked ? "bg-primary/5 border-primary" : "hover:bg-muted/50"
+                        )}
+                      >
+                        <Checkbox
+                          id={`service-${service.id}`}
+                          checked={isChecked}
+                          onCheckedChange={() => {
+                            if (isChecked) {
+                              removeService(service.id);
+                            } else {
+                              addService({
+                                id: service.id,
+                                description: service.description,
+                                value: service.value,
+                                label: `${service.description} - R$ ${service.value.toFixed(2)}`
+                              });
+                            }
+                          }}
+                          className="mt-1"
+                        />
+                        <Label 
+                          htmlFor={`service-${service.id}`} 
+                          className="flex-1 cursor-pointer space-y-1"
+                        >
+                          <div className="font-medium text-sm">{service.description}</div>
+                          <div className="text-xs text-muted-foreground space-y-0.5">
+                            {service.macro_component && (
+                              <div>Componente: {service.macro_component.name}</div>
+                            )}
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-primary">
+                                R$ {service.value.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </Label>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchTerm ? 'Nenhum serviço encontrado' : 'Nenhum serviço disponível'}
+            </div>
+          )}
 
           {/* Serviços Selecionados */}
           {selectedServices.length > 0 && (

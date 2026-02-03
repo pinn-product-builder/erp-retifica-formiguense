@@ -76,6 +76,11 @@ const operationsItems = [
     icon: ClipboardCheck,
   },
   {
+    title: "Motores",
+    url: "/motores",
+    icon: Settings,
+  },
+  {
     title: "Ordens de Serviço",
     url: "/ordens-servico",
     icon: Wrench,
