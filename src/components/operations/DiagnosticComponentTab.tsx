@@ -4,6 +4,7 @@ import { AlertCircle, Package } from "lucide-react";
 import { DiagnosticChecklistItemComponent } from './DiagnosticChecklistItem';
 import { PartsServicesSelector } from './PartsServicesSelector';
 import type { DiagnosticChecklist, DiagnosticChecklistItem } from '@/hooks/useDiagnosticChecklists';
+import type { EngineTemplate } from '@/services/EngineTemplateService';
 
 interface ChecklistResponse {
   [itemId: string]: {
@@ -44,6 +45,7 @@ interface DiagnosticComponentTabProps {
   onServicesChange: (services: Service[]) => void;
   macroComponentId?: string;
   engineTypeId?: string;
+  engineTemplate?: EngineTemplate | null;
   validateItem: (item: DiagnosticChecklistItem, response: { value: unknown; photos: unknown[]; notes?: string }) => { isValid: boolean; message: string };
 }
 
@@ -61,6 +63,7 @@ export function DiagnosticComponentTab({
   onServicesChange,
   macroComponentId,
   engineTypeId,
+  engineTemplate,
   validateItem
 }: DiagnosticComponentTabProps) {
 
@@ -104,6 +107,7 @@ export function DiagnosticComponentTab({
             onServicesChange={onServicesChange}
             macroComponentId={macroComponentId}
             engineTypeId={engineTypeId}
+            engineTemplate={engineTemplate}
           />
         </CardContent>
       </Card>

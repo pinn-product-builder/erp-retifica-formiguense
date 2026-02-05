@@ -43,20 +43,25 @@ const DialogContent = React.forwardRef<
       )}
       {...props}
       onPointerDownOutside={(e) => {
-        // Permitir que cliques no DatePicker não fechem o Dialog
-        const target = e.target as HTMLElement;
-        if (target.closest('.MuiPickersPopper-root') || target.closest('.MuiPopper-root')) {
+        const target = e.target;
+        if (
+          target instanceof HTMLElement &&
+          (target.closest('.MuiPickersPopper-root') || target.closest('.MuiPopper-root'))
+        ) {
           e.preventDefault();
         }
       }}
       onInteractOutside={(e) => {
-        // Permitir que interações no DatePicker não fechem o Dialog
-        const target = e.target as HTMLElement;
-        if (target.closest('.MuiPickersPopper-root') || target.closest('.MuiPopper-root')) {
+        const target = e.target;
+        if (
+          target instanceof HTMLElement &&
+          (target.closest('.MuiPickersPopper-root') || target.closest('.MuiPopper-root'))
+        ) {
           e.preventDefault();
         }
       }}
     >
+      <DialogPrimitive.Title className="sr-only">Dialog</DialogPrimitive.Title>
       {children}
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
         <X className="h-4 w-4" />

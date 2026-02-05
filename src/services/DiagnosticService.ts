@@ -223,6 +223,38 @@ export class DiagnosticService {
     return engine?.engine_type_id || null;
   }
 
+  static async getOrderEngineInfo(orderId: string, orgId: string): Promise<{ brand: string; model: string } | null> {
+    const { data: orderData, error } = await supabase
+      .from('orders')
+      .select(`
+        engine_id,
+        engines(
+          brand,
+          model
+        )
+      `)
+      .eq('id', orderId)
+      .eq('org_id', orgId)
+      .single();
+
+    if (error) {
+      console.error('Erro ao buscar informações do motor da ordem:', error);
+      return null;
+    }
+
+    const enginesData = orderData?.engines;
+    const engine = Array.isArray(enginesData) ? enginesData[0] : enginesData;
+    
+    if (!engine?.brand || !engine?.model) {
+      return null;
+    }
+
+    return {
+      brand: engine.brand,
+      model: engine.model
+    };
+  }
+
   static async getChecklistsByComponent(
     orgId: string,
     component: string,

@@ -22,15 +22,34 @@ export interface AdditionalService {
   org_id?: string;
 }
 
-export function useAdditionalServices() {
+export function useAdditionalServices(): {
+  additionalServices: AdditionalService[];
+  loading: boolean;
+  fetchAdditionalServices: () => Promise<unknown>;
+  createAdditionalService: (
+    service: Omit<
+      AdditionalService,
+      'id' | 'created_at' | 'updated_at' | 'org_id' | 'macro_component' | 'engine_type'
+    >
+  ) => Promise<AdditionalService | null>;
+  updateAdditionalService: (
+    id: string,
+    service: Partial<
+      Omit<AdditionalService, 'id' | 'created_at' | 'updated_at' | 'org_id' | 'macro_component' | 'engine_type'>
+    >
+  ) => Promise<AdditionalService | null>;
+  deleteAdditionalService: (id: string) => Promise<void>;
+  getServicesByComponent: (macroComponentId?: string, engineTypeId?: string) => AdditionalService[];
+} {
   const { currentOrganization } = useOrganization();
   const queryClient = useQueryClient();
 
-  const { data: additionalServices = [], isLoading: loading, refetch: fetchAdditionalServices } = useQuery({
+  const { data: additionalServices = [], isLoading: loading, refetch: fetchAdditionalServices } =
+    useQuery<AdditionalService[]>({
     queryKey: ['additional-services', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) {
-        return [];
+          return [];
       }
 
       const { data, error } = await supabase
@@ -44,7 +63,7 @@ export function useAdditionalServices() {
         .order('description', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as AdditionalService[];
     },
     enabled: !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000,

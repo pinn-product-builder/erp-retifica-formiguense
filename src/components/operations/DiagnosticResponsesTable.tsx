@@ -111,9 +111,11 @@ export function DiagnosticResponsesTable({ responses, onViewDetails, onResumeDia
                     placement="top"
                     arrow
                   >
-                    <Badge variant="outline" className="text-xs cursor-help">
-                      +{remainingComponents.length}
-                    </Badge>
+                    <span>
+                      <Badge variant="outline" className="text-xs cursor-help">
+                        +{remainingComponents.length}
+                      </Badge>
+                    </span>
                   </Tooltip>
                 )}
               </div>

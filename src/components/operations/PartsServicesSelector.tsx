@@ -22,6 +22,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { MaskedInput } from '@/components/ui/masked-input';
+import type { EngineTemplate } from '@/services/EngineTemplateService';
 
 interface Part {
   id: string;
@@ -47,6 +48,7 @@ interface PartsServicesSelectorProps {
   onServicesChange: (services: Service[]) => void;
   macroComponentId?: string;
   engineTypeId?: string;
+  engineTemplate?: EngineTemplate | null;
 }
 
 export function PartsServicesSelector({
@@ -55,22 +57,39 @@ export function PartsServicesSelector({
   onPartsChange,
   onServicesChange,
   macroComponentId,
-  engineTypeId
+  engineTypeId,
+  engineTemplate
 }: PartsServicesSelectorProps) {
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
   const { getAvailableParts, loading: loadingParts } = usePartsInventory();
-  const { additionalServices, loading: loadingServices, getServicesByComponent } = useAdditionalServices();
+  const { additionalServices, loading: loadingServices } = useAdditionalServices();
   const [partsInventory, setPartsInventory] = useState<Array<{ id: string; part_code: string; part_name: string; unit_cost: number; quantity: number; label: string }>>([]);
   const [selectedPartValue, setSelectedPartValue] = useState<{ id: string; part_code: string; part_name: string; unit_cost: number; quantity: number; label: string } | null>(null);
   const [selectedServiceValue, setSelectedServiceValue] = useState<{ id: string; description: string; value: number; label: string } | null>(null);
   const [filteredServices, setFilteredServices] = useState(additionalServices.filter(s => s.is_active));
-  const [searchTerm, setSearchTerm] = useState('');
+  const [partsSearchTerm, setPartsSearchTerm] = useState('');
+  const [servicesSearchTerm, setServicesSearchTerm] = useState('');
 
   useEffect(() => {
     const loadParts = async () => {
+      if (engineTemplate) {
+        const templateParts = (engineTemplate.parts || [])
+          .filter(tp => !macroComponentId || tp.part?.macro_component_id === macroComponentId)
+          .map(tp => ({
+          id: tp.part_id,
+          part_code: tp.part?.part_code || '',
+          part_name: tp.part?.part_name || '',
+          unit_cost: tp.part?.unit_cost || 0,
+          quantity: tp.quantity,
+          label: `${tp.part?.part_code || ''} - ${tp.part?.part_name || ''}`
+          }));
+        setPartsInventory(templateParts);
+        return;
+      }
+
       if (!currentOrganization?.id) return;
-      
+
       try {
         const parts = await getAvailableParts(undefined, macroComponentId);
         setPartsInventory(parts.map(p => ({
@@ -92,9 +111,25 @@ export function PartsServicesSelector({
     };
 
     loadParts();
-  }, [currentOrganization?.id, macroComponentId, getAvailableParts, toast]);
+  }, [currentOrganization?.id, macroComponentId, getAvailableParts, toast, engineTemplate]);
 
   useEffect(() => {
+    if (engineTemplate) {
+      const templateServices = (engineTemplate.services || [])
+        .filter(ts => !macroComponentId || ts.service?.macro_component_id === macroComponentId)
+        .map(ts => ({
+          id: ts.service_id,
+          description: ts.service?.description || '',
+          value: ts.service?.value || 0,
+          is_active: true,
+          macro_component_id: ts.service?.macro_component_id,
+          engine_type_id: undefined,
+          label: `${ts.service?.description || ''} - R$ ${(ts.service?.value || 0).toFixed(2)}`
+        }));
+      setFilteredServices(templateServices);
+      return;
+    }
+
     const filtered = additionalServices.filter(s => {
       if (!s.is_active) return false;
       
@@ -110,13 +145,7 @@ export function PartsServicesSelector({
     });
     
     setFilteredServices(filtered);
-    console.log('Serviços filtrados para componente:', {
-      macroComponentId,
-      engineTypeId,
-      total: filtered.length,
-      services: filtered.map(s => ({ id: s.id, description: s.description, value: s.value }))
-    });
-  }, [additionalServices, macroComponentId, engineTypeId]);
+  }, [additionalServices, macroComponentId, engineTypeId, engineTemplate]);
 
   const servicesOptions = filteredServices.map(s => ({
     id: s.id,
@@ -237,8 +266,8 @@ export function PartsServicesSelector({
   const servicesTotal = selectedServices.reduce((sum, s) => sum + s.total, 0);
 
   const filteredParts = partsInventory.filter(part =>
-    part.part_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    part.part_code.toLowerCase().includes(searchTerm.toLowerCase())
+    part.part_name.toLowerCase().includes(partsSearchTerm.toLowerCase()) ||
+    part.part_code.toLowerCase().includes(partsSearchTerm.toLowerCase())
   );
 
   return (
@@ -257,8 +286,8 @@ export function PartsServicesSelector({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome ou código..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={partsSearchTerm}
+                onChange={(e) => setPartsSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -309,7 +338,7 @@ export function PartsServicesSelector({
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              {searchTerm ? 'Nenhuma peça encontrada' : 'Nenhuma peça disponível'}
+              {partsSearchTerm ? 'Nenhuma peça encontrada' : 'Nenhuma peça disponível'}
             </div>
           )}
 
@@ -416,8 +445,8 @@ export function PartsServicesSelector({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por descrição..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={servicesSearchTerm}
+                onChange={(e) => setServicesSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -428,13 +457,13 @@ export function PartsServicesSelector({
               Carregando serviços...
             </div>
           ) : filteredServices.filter(service =>
-              service.description.toLowerCase().includes(searchTerm.toLowerCase())
+              service.description.toLowerCase().includes(servicesSearchTerm.toLowerCase())
             ).length > 0 ? (
             <div className="max-h-[400px] overflow-y-auto border rounded-lg p-4 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {filteredServices
                   .filter(service =>
-                    service.description.toLowerCase().includes(searchTerm.toLowerCase())
+                    service.description.toLowerCase().includes(servicesSearchTerm.toLowerCase())
                   )
                   .map((service) => {
                     const isChecked = selectedServices.some(s => s.id === service.id);
@@ -486,7 +515,7 @@ export function PartsServicesSelector({
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              {searchTerm ? 'Nenhum serviço encontrado' : 'Nenhum serviço disponível'}
+              {servicesSearchTerm ? 'Nenhum serviço encontrado' : 'Nenhum serviço disponível'}
             </div>
           )}
 

@@ -50,7 +50,76 @@ export interface EngineFilters {
   assemblyState?: string;
 }
 
+export interface EngineModel {
+  brand: string;
+  model: string;
+  fuel_type: string;
+  count: number;
+}
+
 export class EngineService {
+  static async getUniqueEngineModels(params: {
+    orgId: string;
+    engineTypeId?: string;
+  }): Promise<{ models: EngineModel[] }> {
+    let query = supabase
+      .from('engines')
+      .select('brand, model, fuel_type')
+      .eq('org_id', params.orgId);
+
+    if (params.engineTypeId) {
+      query = query.eq('engine_type_id', params.engineTypeId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Erro ao buscar modelos de motores:', error);
+      throw new Error('Erro ao buscar modelos de motores');
+    }
+
+    const map = new Map<string, EngineModel>();
+
+    (data || []).forEach((row) => {
+      const brand = row.brand || '';
+      const model = row.model || '';
+      const fuelType = row.fuel_type || '';
+      const key = `${brand}__${model}__${fuelType}`;
+      const existing = map.get(key);
+
+      if (existing) {
+        existing.count += 1;
+      } else {
+        map.set(key, {
+          brand,
+          model,
+          fuel_type: fuelType,
+          count: 1,
+        });
+      }
+    });
+
+    const models = Array.from(map.values()).sort((a, b) => {
+      if (a.brand !== b.brand) return a.brand.localeCompare(b.brand);
+      if (a.model !== b.model) return a.model.localeCompare(b.model);
+      return a.fuel_type.localeCompare(b.fuel_type);
+    });
+
+    return { models };
+  }
+
+  static formatEngineModelLabel(model: EngineModel): string {
+    return `${model.brand} - ${model.model} (${model.fuel_type})`;
+  }
+
+  static formatEngineModelWithCount(model: EngineModel): string {
+    return `${EngineService.formatEngineModelLabel(model)} (${model.count})`;
+  }
+
+  static validateEngineModel(model: EngineModel): boolean {
+    return Boolean(model.brand && model.model && model.fuel_type);
+  }
+
   static async getEnginesByOrganization(
     orgId: string,
     page: number = 1,
