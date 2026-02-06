@@ -171,6 +171,23 @@ const BudgetFromDiagnostic = ({
         triggered_by: 'Diagnóstico - Serviço Adicional'
       }));
 
+      const laborCost = Number(diagnosticResponse?.labor_cost || 0);
+      if (laborCost > 0) {
+        additionalServiceItems.push({
+          id: 'template_labor_cost',
+          name: 'Mão de obra do template',
+          description: 'Mão de obra do template',
+          labor_hours: 1,
+          labor_rate: laborCost,
+          labor_total: laborCost,
+          parts: [],
+          parts_total: 0,
+          total: laborCost,
+          selected: true,
+          triggered_by: 'Template'
+        });
+      }
+
       const generatedServiceItems: ServiceItem[] = allGeneratedServices.map((service: unknown, index: number) => ({
         id: `service_${index}`,
         name: service.name || service,

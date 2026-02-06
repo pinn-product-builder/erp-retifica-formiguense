@@ -486,6 +486,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
         all_responses: enrichedResponses,
         additional_parts: allParts,
         additional_services: allServices,
+        labor_cost: engineTemplate?.labor_cost ?? 0,
         technical_observations: technicalObservations,
         extra_services: extraServices,
         final_opinion: finalOpinion,
@@ -652,14 +653,15 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
           ))}
 
           <TabsContent value="observations" className="mt-4">
-            <DiagnosticObservationsTab
-              technicalObservations={technicalObservations}
-              extraServices={extraServices}
-              finalOpinion={finalOpinion}
-              onTechnicalObservationsChange={setTechnicalObservations}
-              onExtraServicesChange={setExtraServices}
-              onFinalOpinionChange={setFinalOpinion}
-            />
+          <DiagnosticObservationsTab
+            technicalObservations={technicalObservations}
+            extraServices={extraServices}
+            finalOpinion={finalOpinion}
+            laborCost={engineTemplate?.labor_cost ?? 0}
+            onTechnicalObservationsChange={setTechnicalObservations}
+            onExtraServicesChange={setExtraServices}
+            onFinalOpinionChange={setFinalOpinion}
+          />
           </TabsContent>
         </Tabs>
       )}

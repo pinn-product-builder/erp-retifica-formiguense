@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -12,6 +12,7 @@ import { useAdditionalServices, AdditionalService } from '@/hooks/useAdditionalS
 import { useEngines } from '@/hooks/useEngines';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MaskedInput } from '@/components/ui/masked-input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +42,16 @@ import { formatCurrency } from '@/utils/masks';
 const templateSchema = z.object({
   name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
   description: z.string().optional(),
+  labor_cost: z
+    .string()
+    .optional()
+    .refine(
+      (value) =>
+        value === undefined ||
+        value.trim() === '' ||
+        !Number.isNaN(Number(value)),
+      'Valor inválido'
+    ),
   engine_brand: z.string().min(2, 'Marca é obrigatória'),
   engine_model: z.string().min(2, 'Modelo é obrigatório'),
   engine_type_id: z.string().optional(),
@@ -104,6 +115,8 @@ export function EngineTemplateForm({
     formState: { errors },
     reset,
     setValue,
+    watch,
+    control,
   } = useForm<TemplateFormData>({
     resolver: zodResolver(templateSchema),
   });
@@ -126,6 +139,7 @@ export function EngineTemplateForm({
         setValue('description', template.description || '');
         setValue('engine_brand', template.engine_brand);
         setValue('engine_model', template.engine_model);
+        setValue('labor_cost', template.labor_cost ? String(template.labor_cost) : '');
         setValue('engine_type_id', template.engine_type_id || '');
 
         setSelectedParts(
@@ -153,6 +167,7 @@ export function EngineTemplateForm({
         setValue('description', template.description || '');
         setValue('engine_brand', template.engine_brand);
         setValue('engine_model', template.engine_model);
+        setValue('labor_cost', template.labor_cost ? String(template.labor_cost) : '');
         setValue('engine_type_id', template.engine_type_id || '');
 
         setSelectedParts(
@@ -176,6 +191,7 @@ export function EngineTemplateForm({
           })) || []
         );
       } else if (mode === 'import' && importTemplate) {
+        setValue('labor_cost', importTemplate.labor_cost ? String(importTemplate.labor_cost) : '');
         setSelectedParts(
           importTemplate.parts?.map((p) => ({
             part_id: p.part_id,
@@ -226,9 +242,15 @@ export function EngineTemplateForm({
   };
 
   const onSubmit = async (data: TemplateFormData) => {
+    const parsedLaborCost =
+      data.labor_cost && data.labor_cost.trim() !== ''
+        ? Number(data.labor_cost)
+        : 0;
+
     const templateData: CreateTemplateData = {
       name: data.name,
       description: data.description,
+      labor_cost: Number.isFinite(parsedLaborCost) ? parsedLaborCost : 0,
       engine_brand: data.engine_brand,
       engine_model: data.engine_model,
       engine_type_id: data.engine_type_id,
@@ -351,7 +373,8 @@ export function EngineTemplateForm({
     (sum, s) => sum + s.value * s.quantity,
     0
   );
-  const totalValue = totalPartsValue + totalServicesValue;
+  const laborCostValue = Number(watch('labor_cost') || 0);
+  const totalValue = totalPartsValue + totalServicesValue + (Number.isFinite(laborCostValue) ? laborCostValue : 0);
 
   return (
     <Dialog
@@ -452,7 +475,7 @@ export function EngineTemplateForm({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="engine_brand" className="text-xs sm:text-sm">
                     Marca do Motor *
@@ -482,6 +505,28 @@ export function EngineTemplateForm({
                   />
                   {errors.engine_model && (
                     <p className="text-xs text-destructive">{errors.engine_model.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="labor_cost" className="text-xs sm:text-sm">
+                    Mão de obra (R$)
+                  </Label>
+                  <Controller
+                    control={control}
+                    name="labor_cost"
+                    render={({ field }) => (
+                      <MaskedInput
+                        id="labor_cost"
+                        mask="currency"
+                        value={field.value || ''}
+                        onChange={(_, rawValue) => field.onChange(rawValue)}
+                        className="text-sm"
+                      />
+                    )}
+                  />
+                  {errors.labor_cost && (
+                    <p className="text-xs text-destructive">{errors.labor_cost.message}</p>
                   )}
                 </div>
               </div>
@@ -773,6 +818,9 @@ export function EngineTemplateForm({
                   <div className="text-xs sm:text-sm text-muted-foreground">
                     Total de Serviços:
                   </div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">
+                    Mão de obra:
+                  </div>
                   <div className="text-sm sm:text-base font-semibold">Valor Total:</div>
                 </div>
                 <div className="space-y-1 text-right">
@@ -781,6 +829,9 @@ export function EngineTemplateForm({
                   </div>
                   <div className="text-xs sm:text-sm font-medium">
                     {formatCurrency(totalServicesValue)}
+                  </div>
+                  <div className="text-xs sm:text-sm font-medium">
+                    {formatCurrency(Number.isFinite(laborCostValue) ? laborCostValue : 0)}
                   </div>
                   <div className="text-base sm:text-lg font-bold text-primary">
                     {formatCurrency(totalValue)}

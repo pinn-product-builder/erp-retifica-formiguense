@@ -3,11 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FileText } from "lucide-react";
+import { formatCurrency } from "@/utils/masks";
 
 interface DiagnosticObservationsTabProps {
   technicalObservations: string;
   extraServices: string;
   finalOpinion: string;
+  laborCost: number;
   onTechnicalObservationsChange: (value: string) => void;
   onExtraServicesChange: (value: string) => void;
   onFinalOpinionChange: (value: string) => void;
@@ -17,6 +19,7 @@ export function DiagnosticObservationsTab({
   technicalObservations,
   extraServices,
   finalOpinion,
+  laborCost,
   onTechnicalObservationsChange,
   onExtraServicesChange,
   onFinalOpinionChange
@@ -34,6 +37,12 @@ export function DiagnosticObservationsTab({
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {laborCost > 0 && (
+            <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground mb-3">
+              <span>Mão de obra do template</span>
+              <span className="font-medium text-foreground">{formatCurrency(laborCost)}</span>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="technical_observations">Observações Técnicas</Label>
             <Textarea

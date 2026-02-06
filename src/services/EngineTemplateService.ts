@@ -37,6 +37,7 @@ export interface EngineTemplate {
   org_id: string;
   name: string;
   description: string | null;
+  labor_cost: number | null;
   engine_brand: string;
   engine_model: string;
   engine_type_id: string | null;
@@ -55,6 +56,7 @@ export interface EngineTemplate {
 export interface CreateTemplateData {
   name: string;
   description?: string;
+  labor_cost?: number;
   engine_brand: string;
   engine_model: string;
   engine_type_id?: string;
@@ -232,6 +234,7 @@ export class EngineTemplateService {
         org_id: orgId,
         name: templateData.name,
         description: templateData.description,
+        labor_cost: templateData.labor_cost ?? 0,
         engine_brand: templateData.engine_brand,
         engine_model: templateData.engine_model,
         engine_type_id: templateData.engine_type_id,
@@ -294,6 +297,7 @@ export class EngineTemplateService {
     const updateData: Record<string, unknown> = {};
     if (templateData.name) updateData.name = templateData.name;
     if (templateData.description !== undefined) updateData.description = templateData.description;
+    if (templateData.labor_cost !== undefined) updateData.labor_cost = templateData.labor_cost;
     if (templateData.engine_brand) updateData.engine_brand = templateData.engine_brand;
     if (templateData.engine_model) updateData.engine_model = templateData.engine_model;
     if (templateData.engine_type_id !== undefined)
@@ -391,6 +395,7 @@ export class EngineTemplateService {
     const newTemplateData: CreateTemplateData = {
       name: newName,
       description: originalTemplate.description || undefined,
+      labor_cost: originalTemplate.labor_cost ?? 0,
       engine_brand: newBrand,
       engine_model: newModel,
       engine_type_id: originalTemplate.engine_type_id || undefined,

@@ -1517,6 +1517,153 @@ export type Database = {
           },
         ]
       }
+      engine_template_parts: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          id: string
+          notes: string | null
+          part_id: string
+          quantity: number
+          template_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          notes?: string | null
+          part_id: string
+          quantity?: number
+          template_id: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          notes?: string | null
+          part_id?: string
+          quantity?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engine_template_parts_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "engine_template_parts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "engine_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      engine_template_services: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          id: string
+          notes: string | null
+          quantity: number
+          service_id: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          service_id: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          service_id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engine_template_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "additional_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "engine_template_services_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "engine_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      engine_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          engine_brand: string
+          engine_model: string
+          engine_type_id: string | null
+          id: string
+          labor_cost: number | null
+          name: string
+          org_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          engine_brand: string
+          engine_model: string
+          engine_type_id?: string | null
+          id?: string
+          labor_cost?: number | null
+          name: string
+          org_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          engine_brand?: string
+          engine_model?: string
+          engine_type_id?: string | null
+          id?: string
+          labor_cost?: number | null
+          name?: string
+          org_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engine_templates_engine_type_id_fkey"
+            columns: ["engine_type_id"]
+            isOneToOne: false
+            referencedRelation: "engine_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "engine_templates_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entry_form_fields: {
         Row: {
           default_value: string | null

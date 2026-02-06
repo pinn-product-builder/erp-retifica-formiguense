@@ -92,7 +92,7 @@ export function EngineTemplatesList({
         return sum + value * s.quantity;
       }, 0) || 0;
 
-    return partsTotal + servicesTotal;
+    return partsTotal + servicesTotal + (template.labor_cost || 0);
   };
 
   const columns: ResponsiveTableColumn<EngineTemplate>[] = [
@@ -248,7 +248,6 @@ export function EngineTemplatesList({
         data={templates}
         columns={columns}
         keyExtractor={(template) => template.id}
-        isLoading={isLoading}
         emptyMessage="Nenhum template encontrado"
         renderMobileCard={(template) => (
           <Card className="p-3 sm:p-4 space-y-3">
