@@ -319,7 +319,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
         const validation = validateItem(item, response);
 
         if (item.is_required && !validation.isValid) {
-          allErrors.push(`"${item.item_name}" é obrigatório`);
+          allErrors.push(`"${item.item_name}" é obrigatório no ${component.label}`);
         }
 
         if (item.item_type === 'measurement' && item.expected_values && response?.value) {
@@ -338,6 +338,8 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
     setIsValid(isValid);
     setValidationErrors(allErrors);
     setValidationWarnings(allWarnings);
+
+    return { errors: allErrors, warnings: allWarnings, isValid };
   }, [activeMacroComponents, componentChecklists, componentResponses]);
 
   useEffect(() => {
@@ -354,6 +356,19 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
       toast({
         title: "Erro",
         description: "Ordem de serviço inválida. Por favor, selecione uma ordem válida.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const validation = validateAllComponents();
+
+    if (!validation.isValid && validation.errors.length > 0) {
+      toast({
+        title: "Campos obrigatórios não preenchidos",
+        description: validation.errors.length === 1 
+          ? validation.errors[0]
+          : `${validation.errors.length} campo(s) obrigatório(s) não preenchido(s). Verifique os checklists.`,
         variant: "destructive"
       });
       return;
