@@ -144,6 +144,28 @@ export class EngineTemplateService {
     };
   }
 
+  static async getUsedEngineBrandModels(
+    orgId: string
+  ): Promise<{ engine_brand: string; engine_model: string }[]> {
+    const { data, error } = await supabase
+      .from('engine_templates')
+      .select('engine_brand, engine_model')
+      .eq('org_id', orgId);
+
+    if (error) {
+      console.error('Erro ao buscar marcas/modelos em uso:', error);
+      throw new Error('Erro ao buscar marcas/modelos em uso');
+    }
+
+    const seen = new Set<string>();
+    return (data || []).filter((row) => {
+      const key = `${row.engine_brand}|${row.engine_model}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
   static async getTemplateById(templateId: string, orgId: string): Promise<EngineTemplate | null> {
     const { data, error } = await supabase
       .from('engine_templates')
@@ -245,7 +267,9 @@ export class EngineTemplateService {
 
     if (templateError) {
       console.error('Erro ao criar template:', templateError);
-      throw new Error('Erro ao criar template');
+      const err = new Error(templateError.message) as Error & { code?: string };
+      err.code = templateError.code;
+      throw err;
     }
 
     if (templateData.parts.length > 0) {
@@ -312,7 +336,9 @@ export class EngineTemplateService {
 
       if (templateError) {
         console.error('Erro ao atualizar template:', templateError);
-        throw new Error('Erro ao atualizar template');
+        const err = new Error(templateError.message) as Error & { code?: string };
+        err.code = templateError.code;
+        throw err;
       }
     }
 

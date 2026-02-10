@@ -5,7 +5,7 @@ import { z } from 'zod';
 import {
   useCreateEngineTemplate,
   useUpdateEngineTemplate,
-  useDuplicateEngineTemplate,
+  useUsedEngineBrandModels,
 } from '@/hooks/useEngineTemplates';
 import { usePartsInventory } from '@/hooks/usePartsInventory';
 import { useAdditionalServices, AdditionalService } from '@/hooks/useAdditionalServices';
@@ -104,10 +104,15 @@ export function EngineTemplateForm({
   const { additionalServices, loading: loadingServices } = useAdditionalServices();
   const services = additionalServices as AdditionalService[];
   const { engines, loading: loadingEngines } = useEngines({ page: 1, pageSize: 1000 });
+  const { usedSet } = useUsedEngineBrandModels();
+
+  const enginesWithoutTemplate =
+    mode === 'create' || mode === 'duplicate'
+      ? (engines || []).filter((e) => !usedSet.has(`${e.brand}|${e.model}`))
+      : engines || [];
 
   const createMutation = useCreateEngineTemplate();
   const updateMutation = useUpdateEngineTemplate();
-  const duplicateMutation = useDuplicateEngineTemplate();
 
   const {
     register,
@@ -117,9 +122,17 @@ export function EngineTemplateForm({
     setValue,
     watch,
     control,
+    setError,
+    clearErrors,
   } = useForm<TemplateFormData>({
     resolver: zodResolver(templateSchema),
   });
+
+  useEffect(() => {
+    if (selectedParts.length > 0 && selectedServices.length > 0 && errors.root) {
+      clearErrors('root');
+    }
+  }, [selectedParts.length, selectedServices.length, errors.root, clearErrors]);
 
   useEffect(() => {
     if (!open) {
@@ -166,7 +179,7 @@ export function EngineTemplateForm({
         setValue('name', `${template.name} (Cópia)`);
         setValue('description', template.description || '');
         setValue('engine_brand', template.engine_brand);
-        setValue('engine_model', template.engine_model);
+        setValue('engine_model', `${template.engine_model} (Cópia ${Date.now()})`);
         setValue('labor_cost', template.labor_cost ? String(template.labor_cost) : '');
         setValue('engine_type_id', template.engine_type_id || '');
 
@@ -242,6 +255,20 @@ export function EngineTemplateForm({
   };
 
   const onSubmit = async (data: TemplateFormData) => {
+    clearErrors('root');
+    if (selectedParts.length === 0 || selectedServices.length === 0) {
+      setError('root', {
+        type: 'manual',
+        message:
+          selectedParts.length === 0 && selectedServices.length === 0
+            ? 'Adicione pelo menos uma peça e um serviço ao template.'
+            : selectedParts.length === 0
+              ? 'Adicione pelo menos uma peça ao template.'
+              : 'Adicione pelo menos um serviço ao template.',
+      });
+      return;
+    }
+
     const parsedLaborCost =
       data.labor_cost && data.labor_cost.trim() !== ''
         ? Number(data.labor_cost)
@@ -272,13 +299,8 @@ export function EngineTemplateForm({
           templateId: template.id,
           templateData,
         });
-      } else if (mode === 'duplicate' && template) {
-        await duplicateMutation.mutateAsync({
-          templateId: template.id,
-          newName: data.name,
-          newBrand: data.engine_brand,
-          newModel: data.engine_model,
-        });
+      } else if (mode === 'duplicate') {
+        await createMutation.mutateAsync(templateData);
       } else {
         await createMutation.mutateAsync(templateData);
       }
@@ -455,8 +477,8 @@ export function EngineTemplateForm({
                               <SelectItem value="loading" disabled>
                                 Carregando...
                               </SelectItem>
-                            ) : engines && engines.length > 0 ? (
-                              engines.map((engine) => (
+                            ) : enginesWithoutTemplate.length > 0 ? (
+                              enginesWithoutTemplate.map((engine) => (
                                 <SelectItem key={engine.id} value={engine.id}>
                                   {engine.brand} - {engine.model}
                                   {engine.serial_number && ` (${engine.serial_number})`}
@@ -464,7 +486,9 @@ export function EngineTemplateForm({
                               ))
                             ) : (
                               <SelectItem value="empty" disabled>
-                                Nenhum motor cadastrado
+                                {engines && engines.length > 0
+                                  ? 'Todos os motores já possuem lista de serviços'
+                                  : 'Nenhum motor cadastrado'}
                               </SelectItem>
                             )}
                           </ScrollArea>
@@ -549,7 +573,7 @@ export function EngineTemplateForm({
           <Card>
             <CardHeader className="p-3 sm:p-4">
               <div className="flex justify-between items-center">
-                <CardTitle className="text-base sm:text-lg">Peças e Serviços</CardTitle>
+                <CardTitle className="text-base sm:text-lg">Peças e Serviços *</CardTitle>
                 {mode === 'create' && (
                   <Button
                     type="button"
@@ -563,6 +587,9 @@ export function EngineTemplateForm({
                   </Button>
                 )}
               </div>
+              {errors.root?.message && (
+                <p className="text-xs text-destructive mt-1">{errors.root.message}</p>
+              )}
             </CardHeader>
             <CardContent className="p-3 sm:p-4">
               <Tabs defaultValue="parts" className="w-full">
@@ -849,8 +876,7 @@ export function EngineTemplateForm({
               type="submit"
               disabled={
                 createMutation.isPending ||
-                updateMutation.isPending ||
-                duplicateMutation.isPending
+                updateMutation.isPending
               }
               className="gap-2 text-sm"
             >

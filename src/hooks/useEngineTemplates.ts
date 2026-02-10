@@ -46,6 +46,23 @@ export function useEngineTemplates(params?: UseEngineTemplatesParams) {
   };
 }
 
+export function useUsedEngineBrandModels() {
+  const { currentOrganization } = useOrganization();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['engine-templates-used-brand-models', currentOrganization?.id],
+    queryFn: async () => {
+      if (!currentOrganization?.id) return [];
+      return EngineTemplateService.getUsedEngineBrandModels(currentOrganization.id);
+    },
+    enabled: !!currentOrganization?.id,
+    staleTime: 1000 * 60 * 2,
+  });
+
+  const usedSet = new Set((data || []).map((r) => `${r.engine_brand}|${r.engine_model}`));
+  return { usedEngineBrandModels: data || [], usedSet, isLoading };
+}
+
 export function useEngineTemplate(templateId: string | null) {
   const { currentOrganization } = useOrganization();
 
@@ -115,11 +132,17 @@ export function useCreateEngineTemplate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engine-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['engine-templates-used-brand-models'] });
       toast.success('Template criado com sucesso!');
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       console.error('Erro ao criar template:', error);
-      toast.error('Erro ao criar template');
+      const code = error && typeof error === 'object' && 'code' in error ? (error as { code: string }).code : null;
+      if (code === '23505') {
+        toast.error('Já existe um template com esta marca e modelo. Altere a marca ou o modelo.');
+      } else {
+        toast.error('Erro ao criar template');
+      }
     },
   });
 }
@@ -148,11 +171,17 @@ export function useUpdateEngineTemplate() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engine-templates'] });
       queryClient.invalidateQueries({ queryKey: ['engine-template'] });
+      queryClient.invalidateQueries({ queryKey: ['engine-templates-used-brand-models'] });
       toast.success('Template atualizado com sucesso!');
     },
-    onError: (error: Error) => {
+    onError: (error: unknown) => {
       console.error('Erro ao atualizar template:', error);
-      toast.error('Erro ao atualizar template');
+      const code = error && typeof error === 'object' && 'code' in error ? (error as { code: string }).code : null;
+      if (code === '23505') {
+        toast.error('Já existe um template com esta marca e modelo. Altere a marca ou o modelo.');
+      } else {
+        toast.error('Erro ao atualizar template');
+      }
     },
   });
 }
@@ -170,6 +199,7 @@ export function useDeleteEngineTemplate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engine-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['engine-templates-used-brand-models'] });
       toast.success('Template excluído com sucesso!');
     },
     onError: (error: Error) => {
@@ -210,6 +240,7 @@ export function useDuplicateEngineTemplate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engine-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['engine-templates-used-brand-models'] });
       toast.success('Template duplicado com sucesso!');
     },
     onError: (error: Error) => {

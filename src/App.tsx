@@ -5,6 +5,7 @@ import { ThemeProvider as NextThemeProvider } from 'next-themes';
 import { ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { Toaster } from '@/components/ui/toaster';
+import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 import { AuthProvider } from '@/hooks/useAuth';
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import { ConfirmDialogProvider } from '@/hooks/useConfirmDialog';
@@ -118,6 +119,7 @@ function App() {
             </OrganizationProvider>
           </AuthProvider>
           <Toaster />
+          <SonnerToaster />
         </MuiThemeWrapper>
       </NextThemeProvider>
     </QueryClientProvider>
