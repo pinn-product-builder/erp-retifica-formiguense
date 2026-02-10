@@ -655,13 +655,32 @@ export default function CheckIn() {
                   </div>
                 )}
 
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="giraManualmente"
-                    checked={formData.giraManualmente}
-                    onCheckedChange={(checked) => handleInputChange('giraManualmente', !!checked)}
-                  />
-                  <Label htmlFor="giraManualmente">Gira Manualmente</Label>
+                <div className="space-y-3">
+                  <Label>Gira Manualmente</Label>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="giraManualmenteNao"
+                        name="giraManualmente"
+                        checked={!formData.giraManualmente}
+                        onChange={() => handleInputChange('giraManualmente', false)}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="giraManualmenteNao" className="cursor-pointer">NÃO</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="giraManualmenteSim"
+                        name="giraManualmente"
+                        checked={formData.giraManualmente}
+                        onChange={() => handleInputChange('giraManualmente', true)}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="giraManualmenteSim" className="cursor-pointer">SIM</Label>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
