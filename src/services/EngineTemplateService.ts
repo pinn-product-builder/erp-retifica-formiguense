@@ -259,7 +259,9 @@ export class EngineTemplateService {
         labor_cost: templateData.labor_cost ?? 0,
         engine_brand: templateData.engine_brand,
         engine_model: templateData.engine_model,
-        engine_type_id: templateData.engine_type_id,
+        engine_type_id: templateData.engine_type_id && templateData.engine_type_id.trim() !== '' 
+          ? templateData.engine_type_id 
+          : null,
         created_by: userId,
       })
       .select()
@@ -325,7 +327,9 @@ export class EngineTemplateService {
     if (templateData.engine_brand) updateData.engine_brand = templateData.engine_brand;
     if (templateData.engine_model) updateData.engine_model = templateData.engine_model;
     if (templateData.engine_type_id !== undefined)
-      updateData.engine_type_id = templateData.engine_type_id;
+      updateData.engine_type_id = templateData.engine_type_id && templateData.engine_type_id.trim() !== '' 
+        ? templateData.engine_type_id 
+        : null;
 
     if (Object.keys(updateData).length > 0) {
       const { error: templateError } = await supabase
