@@ -244,7 +244,7 @@ const BudgetApprovalModal = ({
       const result = await approveBudget(approvalData);
       if (result) {
         onApprovalCreated(result);
-        handleOpenChange(false); // Usar handleOpenChange que já reseta o formulário
+        handleOpenChange(false);
       }
     } catch (error) {
       if (error instanceof z.ZodError) {

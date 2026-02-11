@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { useQueryClient } from '@tanstack/react-query';
+import WorkflowService from '@/services/WorkflowService';
 
 export interface DetailedBudget {
   id: string;
@@ -61,6 +63,7 @@ export function useDetailedBudgets() {
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
   const orgId = currentOrganization?.id;
+  const queryClient = useQueryClient();
 
   const handleError = (error: unknown, message: string) => {
     console.error(message, error);
@@ -330,6 +333,17 @@ export function useDetailedBudgets() {
                              'Orçamento rejeitado!';
       
       handleSuccess(successMessage);
+      
+      // Avançar workflows automaticamente após aprovação usando o service
+      if (result.order_id) {
+        const workflowResult = await WorkflowService.advanceOrderWorkflowsAfterApproval(result.order_id);
+        
+        if (workflowResult.success && workflowResult.nextStatus) {
+          // Invalidar queries do workflow para atualizar o kanban
+          queryClient.invalidateQueries({ queryKey: ['order-workflow'] });
+          queryClient.invalidateQueries({ queryKey: ['workflow-status-history'] });
+        }
+      }
       
       return {
         ...approval,
