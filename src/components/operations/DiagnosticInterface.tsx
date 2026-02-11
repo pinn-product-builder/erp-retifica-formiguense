@@ -234,16 +234,25 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
       const photoData = await DiagnosticService.uploadChecklistPhoto(file, responseId, itemId);
 
       if (photoData) {
-        setComponentResponses(prev => ({
-          ...prev,
-          [component]: {
-            ...prev[component] || {},
-            [itemId]: {
-              ...(prev[component]?.[itemId] || { value: '', notes: '' }),
-              photos: [...(prev[component]?.[itemId]?.photos || []), photoData]
+        setComponentResponses(prev => {
+          const updatedResponses = {
+            ...prev,
+            [component]: {
+              ...prev[component] || {},
+              [itemId]: {
+                ...(prev[component]?.[itemId] || { value: '', notes: '' }),
+                photos: [...(prev[component]?.[itemId]?.photos || []), photoData]
+              }
             }
-          }
-        }));
+          };
+          console.log('[handlePhotoUpload] Updated photos count:', updatedResponses[component][itemId].photos.length);
+          return updatedResponses;
+        });
+        
+        toast({
+          title: "Sucesso",
+          description: "Foto enviada com sucesso!",
+        });
       }
     } catch (error) {
       console.error('Erro ao fazer upload da foto:', error);
@@ -346,7 +355,7 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
     if (activeMacroComponents.length > 0 && Object.keys(componentChecklists).length > 0) {
       validateAllComponents();
     }
-  }, [validateAllComponents, activeMacroComponents.length, componentChecklists]);
+  }, [validateAllComponents, activeMacroComponents.length, componentChecklists, componentResponses]);
 
   const handleSubmit = async () => {
     // Validar se orderId existe e é um UUID válido
@@ -526,11 +535,19 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
   const validateItem = (item: DiagnosticChecklistItem, response: { value: unknown; photos: unknown[]; notes?: string }) => {
     if (!item.is_required) return { isValid: true, message: '' };
 
+    if (item.item_type === 'photo') {
+      const hasPhotos = response && response.photos && Array.isArray(response.photos) && response.photos.length > 0;
+      console.log(`[validateItem] ${item.item_name} - photos:`, response?.photos?.length || 0, 'hasPhotos:', hasPhotos);
+      if (!hasPhotos) {
+        return { isValid: false, message: 'Obrigatório' };
+      }
+      return { isValid: true, message: '' };
+    }
+
     const isEmpty = !response || 
       (typeof response.value === 'boolean' && !response.value) ||
       (typeof response.value === 'string' && response.value.trim() === '') ||
       (typeof response.value === 'number' && response.value === 0) ||
-      (item.item_type === 'photo' && (!response.photos || response.photos.length === 0)) ||
       (item.item_type === 'select' && (!response.value || response.value === ''));
 
     if (isEmpty) {

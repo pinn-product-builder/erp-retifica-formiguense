@@ -60,6 +60,12 @@ export function DiagnosticChecklistItemComponent({
   const IconComponent = itemTypeIcons[item.item_type as keyof typeof itemTypeIcons] || CheckCircle;
   const validation = validateItem(item, response);
 
+  React.useEffect(() => {
+    if (item.item_type === 'photo') {
+      console.log(`[${item.item_name}] Photos count:`, response.photos?.length || 0, 'Validation:', validation.isValid);
+    }
+  }, [item.item_name, item.item_type, response.photos?.length, validation.isValid]);
+
   return (
     <Card className="mb-4">
       <CardHeader className="pb-3">
@@ -179,7 +185,15 @@ export function DiagnosticChecklistItemComponent({
         {item.item_type === 'photo' && (
           <div className="space-y-4">
             <div>
-              <Label>Fotos</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Fotos</Label>
+                {response.photos.length > 0 && (
+                  <Badge variant="default" className="bg-green-500 text-white">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    {response.photos.length} foto{response.photos.length > 1 ? 's' : ''} enviada{response.photos.length > 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
               <div className="mt-2">
                 <input
                   type="file"
@@ -192,35 +206,41 @@ export function DiagnosticChecklistItemComponent({
                   id={`photo_${item.id}`}
                 />
                 <Button
-                  variant="outline"
+                  variant={response.photos.length > 0 ? "default" : "outline"}
                   onClick={() => document.getElementById(`photo_${item.id}`)?.click()}
-                  className="w-full"
+                  className={`w-full ${response.photos.length > 0 ? 'bg-green-600 hover:bg-green-700' : ''}`}
                 >
                   <Camera className="w-4 h-4 mr-2" />
-                  Adicionar Foto
+                  {response.photos.length > 0 ? 'Adicionar Mais Fotos' : 'Adicionar Foto'}
                 </Button>
               </div>
             </div>
 
             {response.photos.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {response.photos.map((photo, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={String(photo.url || '')}
-                      alt={`Foto ${index + 1}`}
-                      className="w-full h-24 object-cover rounded border"
-                    />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => onPhotoRemove(index)}
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ))}
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-green-600 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  Fotos enviadas com sucesso
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {response.photos.map((photo, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={String(photo.url || '')}
+                        alt={`Foto ${index + 1}`}
+                        className="w-full h-24 object-cover rounded border-2 border-green-500"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => onPhotoRemove(index)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
