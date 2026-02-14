@@ -4,7 +4,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
 import { Json } from '@/integrations/supabase/types';
 
-export const FIXED_WORKFLOW_STATUSES = ['entrada', 'entregue'] as const;
+export const FIXED_WORKFLOW_STATUSES = ['entrada', 'orcamentos', 'entregue'] as const;
 
 export interface WorkflowStatusConfig {
   id: string;
@@ -491,6 +491,7 @@ export function useWorkflowStatusConfig() {
         // Cores padrão baseadas no status
         const defaultColors: Record<string, { bgColor: string; textColor: string }> = {
           entrada: { bgColor: '#fef2f2', textColor: '#dc2626' },
+          orcamentos: { bgColor: '#e0f2fe', textColor: '#0284c7' },
           metrologia: { bgColor: '#fff7ed', textColor: '#ea580c' },
           usinagem: { bgColor: '#fefce8', textColor: '#ca8a04' },
           montagem: { bgColor: '#f0fdf4', textColor: '#16a34a' },

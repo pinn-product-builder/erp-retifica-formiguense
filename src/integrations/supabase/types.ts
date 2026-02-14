@@ -7312,6 +7312,7 @@ export type Database = {
       transaction_type: "income" | "expense"
       workflow_status:
         | "entrada"
+        | "orcamentos"
         | "metrologia"
         | "usinagem"
         | "montagem"

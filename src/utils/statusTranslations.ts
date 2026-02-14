@@ -43,6 +43,7 @@ export const ORDER_STATUS: Record<string, string> = {
 // Status de Workflow
 export const WORKFLOW_STATUS: Record<string, string> = {
   entrada: 'Entrada',
+  orcamentos: 'Orçamentos',
   metrologia: 'Metrologia',
   usinagem: 'Usinagem',
   montagem: 'Montagem',

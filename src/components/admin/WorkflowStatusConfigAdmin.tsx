@@ -111,6 +111,7 @@ export const WorkflowStatusConfigAdmin = () => {
 
   const statusColors = getStatusColors();
   const isFixedFormStatus = !isCreating && isFixedStatusKey(formData.status_key);
+  const isLockedOrderStatus = !isCreating && (formData.status_key === 'entrada' || formData.status_key === 'entregue');
 
   useEffect(() => {
     if (selectedWorkflowId) {
@@ -235,7 +236,7 @@ export const WorkflowStatusConfigAdmin = () => {
       if (isFixedStatusKey(formData.status_key)) {
         toast({
           title: "Status reservado",
-          description: "Entrada e Entregue já estão configurados automaticamente e não podem ser recriados.",
+          description: "Entrada, Orçamentos e Entregue já estão configurados automaticamente e não podem ser recriados.",
           variant: "destructive",
         });
         return;
@@ -294,7 +295,7 @@ export const WorkflowStatusConfigAdmin = () => {
     if (statusKey && isFixedStatusKey(statusKey)) {
       toast({
         title: "Status obrigatório",
-        description: "Entrada e Entregue são etapas fixas e não podem ser removidas.",
+        description: "Entrada, Orçamentos e Entregue são etapas fixas e não podem ser removidas.",
         variant: "destructive",
       });
       return;
@@ -694,7 +695,7 @@ Tem certeza que deseja continuar?`,
                       </Button>
                     </div>
                     <p className="text-xs sm:text-sm text-muted-foreground">
-                      Os status <strong>Entrada</strong> e <strong>Entregue</strong> são fixos: aparecem no início e fim do fluxo, não podendo ser desativados ou excluídos.
+                    Os status <strong>Entrada</strong>, <strong>Orçamentos</strong> e <strong>Entregue</strong> são fixos e não podem ser desativados ou excluídos. A posição de <strong>Orçamentos</strong> pode ser alterada.
                     </p>
 
                     {loading ? (
@@ -992,10 +993,10 @@ Tem certeza que deseja continuar?`,
                   type="number"
                   value={formData.display_order}
                   onChange={(e) => setFormData(prev => ({ ...prev, display_order: parseInt(e.target.value) }))}
-                  disabled={isFixedFormStatus}
+                  disabled={isLockedOrderStatus}
                   className="h-9 sm:h-10"
                 />
-                {isFixedFormStatus && (
+                {isLockedOrderStatus && (
                   <p className="text-xs text-muted-foreground">
                     Entrada e Entregue têm posições fixas (início e fim).
                   </p>

@@ -208,6 +208,15 @@ export function useDetailedBudgets() {
       if (error) throw error;
       
       handleSuccess('Orçamento detalhado criado com sucesso!');
+
+      if (data?.order_id && data?.status === 'draft') {
+        const updated = await WorkflowService.setOrderWorkflowsStatus(data.order_id, 'orcamentos');
+        if (updated) {
+          queryClient.invalidateQueries({ queryKey: ['order-workflow'] });
+          queryClient.invalidateQueries({ queryKey: ['workflow-status-history'] });
+        }
+      }
+
       return data;
     } catch (error) {
       handleError(error, 'Erro ao criar orçamento detalhado');

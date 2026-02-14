@@ -2,6 +2,7 @@ import React from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { OrderCard } from './OrderCard';
 import { Badge } from '@/components/ui/badge';
+import { translateStatus } from '@/utils/statusTranslations';
 import { EmployeeDirectoryEntry } from '@/hooks/useEmployeesDirectory';
 import { WorkflowStatusConfig } from '@/hooks/useWorkflowStatusConfig';
 
@@ -30,7 +31,7 @@ interface KanbanColumnProps {
 }
 
 export function KanbanColumn({ status, workflows, componentColor, statusColors, statusConfig, onUpdate, employeeOptions, employeesLoading }: KanbanColumnProps) {
-  const statusLabel = statusConfig?.status_label || status;
+  const statusLabel = statusConfig?.status_label || translateStatus(status, 'workflow');
   
   return (
     <div className="bg-muted/30 rounded-lg p-3 sm:p-4 h-full flex flex-col">

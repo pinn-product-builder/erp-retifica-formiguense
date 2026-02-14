@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
 export interface WorkflowAdvanceResult {
   success: boolean;
@@ -7,6 +8,48 @@ export interface WorkflowAdvanceResult {
 }
 
 class WorkflowService {
+  static async setOrderWorkflowsStatus(orderId: string, status: string): Promise<boolean> {
+    try {
+      const { data: workflows, error: fetchError } = await supabase
+        .from('order_workflow')
+        .select('id')
+        .eq('order_id', orderId);
+
+      if (fetchError) {
+        console.error('Erro ao buscar workflows:', fetchError);
+        return false;
+      }
+
+      if (!workflows || workflows.length === 0) {
+        return false;
+      }
+
+      const statusKey = status as unknown as Database['public']['Enums']['workflow_status'];
+      const updatePromises = workflows.map(workflow =>
+        supabase
+          .from('order_workflow')
+          .update({
+            status: statusKey,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', workflow.id)
+      );
+
+      const results = await Promise.all(updatePromises);
+      const hasErrors = results.some(r => r.error);
+
+      if (hasErrors) {
+        console.error('Erro ao atualizar workflows:', results.filter(r => r.error));
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar workflows:', error);
+      return false;
+    }
+  }
+
   static async advanceOrderWorkflowsAfterApproval(orderId: string): Promise<WorkflowAdvanceResult> {
     try {
       const { data: workflows, error: workflowError } = await supabase
@@ -56,11 +99,12 @@ class WorkflowService {
         };
       }
 
+      const nextStatusKey = nextStatusData.to_status_key as unknown as Database['public']['Enums']['workflow_status'];
       const updatePromises = workflows.map(workflow =>
         supabase
           .from('order_workflow')
           .update({
-            status: nextStatusData.to_status_key,
+            status: nextStatusKey,
             started_at: null,
             completed_at: null,
             updated_at: new Date().toISOString()

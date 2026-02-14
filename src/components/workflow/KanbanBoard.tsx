@@ -3,7 +3,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 import { Autocomplete, Chip, TextField, Stack, InputAdornment } from '@mui/material';
 import { KanbanColumn } from './KanbanColumn';
 import { useWorkflowUpdate } from '@/hooks/useWorkflowUpdate';
-import { useWorkflowStatusConfig, WorkflowStatusConfig, FIXED_WORKFLOW_STATUSES } from '@/hooks/useWorkflowStatusConfig';
+import { useWorkflowStatusConfig, WorkflowStatusConfig } from '@/hooks/useWorkflowStatusConfig';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { Badge } from '@/components/ui/badge';
@@ -136,7 +136,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
     const entryStatus = activeStatuses.find(status => status.status_key === 'entrada');
     const deliveredStatus = activeStatuses.find(status => status.status_key === 'entregue');
     const middleStatuses = activeStatuses
-      .filter(status => !FIXED_WORKFLOW_STATUSES.includes(status.status_key as (typeof FIXED_WORKFLOW_STATUSES)[number]))
+      .filter(status => status.status_key !== 'entrada' && status.status_key !== 'entregue')
       .map(status => status.status_key);
 
     const orderedKeys: string[] = [];
@@ -386,6 +386,16 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
 
     console.log('Moving order:', order.order_number, 'from', currentStatus, 'to', newStatus);
     console.log('Workflows to move:', workflowsToMove.length);
+
+    if (currentStatus === 'entrada' && newStatus !== 'orcamentos') {
+      toast({
+        title: "Transição não permitida",
+        description: "A OS precisa estar em Orçamento antes de avançar para o próximo status",
+        variant: "destructive"
+      });
+      setIsDragging(false);
+      return;
+    }
 
     // Validar transição sem filtro de componente específico
     const allowedTransitions = getNextAllowedStatuses(currentStatus, undefined);
