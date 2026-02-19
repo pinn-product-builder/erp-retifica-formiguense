@@ -75,7 +75,9 @@ const Motores = () => {
         return sum + value * s.quantity;
       }, 0) || 0;
 
-    return partsTotal + servicesTotal;
+    const laborCost = template.labor_cost ?? 0;
+
+    return partsTotal + servicesTotal + laborCost;
   };
 
   return (
@@ -363,9 +365,40 @@ const Motores = () => {
               )}
 
               <Card className="bg-primary/5">
-                <CardContent className="p-3 sm:p-4">
+                <CardContent className="p-3 sm:p-4 space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Total de Peças:</span>
+                    <span className="font-medium">
+                      {formatCurrency(
+                        selectedTemplate.parts?.reduce(
+                          (sum, p) => sum + (p.part?.unit_cost || 0) * p.quantity,
+                          0
+                        ) || 0
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Total de Serviços:</span>
+                    <span className="font-medium">
+                      {formatCurrency(
+                        selectedTemplate.services?.reduce(
+                          (sum, s) => sum + (s.service?.value || 0) * s.quantity,
+                          0
+                        ) || 0
+                      )}
+                    </span>
+                  </div>
+                  {(selectedTemplate.labor_cost ?? 0) > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Mão de Obra:</span>
+                      <span className="font-medium">
+                        {formatCurrency(selectedTemplate.labor_cost ?? 0)}
+                      </span>
+                    </div>
+                  )}
+                  <Separator />
                   <div className="flex justify-between items-center">
-                    <div className="text-base sm:text-lg font-bold">Valor Total do Template:</div>
+                    <div className="text-base sm:text-lg font-bold">Valor Total:</div>
                     <div className="text-lg sm:text-xl font-bold text-primary">
                       {formatCurrency(calculateTotalValue(selectedTemplate))}
                     </div>
