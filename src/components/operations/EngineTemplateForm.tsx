@@ -6,6 +6,7 @@ import {
   useCreateEngineTemplate,
   useUpdateEngineTemplate,
   useUsedEngineBrandModels,
+  useEngineTemplates,
 } from '@/hooks/useEngineTemplates';
 import { usePartsInventory } from '@/hooks/usePartsInventory';
 import { useAdditionalServices, AdditionalService } from '@/hooks/useAdditionalServices';
@@ -96,6 +97,7 @@ export function EngineTemplateForm({
   const [partsSearchTerm, setPartsSearchTerm] = useState('');
   const [servicesSearchTerm, setServicesSearchTerm] = useState('');
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importSearchTerm, setImportSearchTerm] = useState('');
   const [useExistingEngine, setUseExistingEngine] = useState(false);
   const [selectedEngineId, setSelectedEngineId] = useState<string>('');
   const lastInitKeyRef = useRef('');
@@ -105,6 +107,7 @@ export function EngineTemplateForm({
   const services = additionalServices as AdditionalService[];
   const { engines, loading: loadingEngines } = useEngines({ page: 1, pageSize: 1000 });
   const { usedSet } = useUsedEngineBrandModels();
+  const { templates: allTemplates } = useEngineTemplates({ pageSize: 1000 });
 
   const enginesWithoutTemplate =
     mode === 'create' || mode === 'duplicate'
@@ -254,6 +257,28 @@ export function EngineTemplateForm({
     onClose();
   };
 
+  const handleImportFromTemplate = (source: EngineTemplate) => {
+    const importedParts = (source.parts || []).map((p) => ({
+      part_id: p.part_id,
+      part_code: p.part?.part_code ?? '',
+      part_name: p.part?.part_name ?? '',
+      unit_cost: p.part?.unit_cost ?? 0,
+      quantity: p.quantity,
+      notes: p.notes,
+    }));
+    const importedServices = (source.services || []).map((s) => ({
+      service_id: s.service_id,
+      description: s.service?.description ?? '',
+      value: s.service?.value ?? 0,
+      quantity: s.quantity,
+      notes: s.notes,
+    }));
+    setSelectedParts(importedParts);
+    setSelectedServices(importedServices);
+    setShowImportDialog(false);
+    setImportSearchTerm('');
+  };
+
   const onSubmit = async (data: TemplateFormData) => {
     clearErrors('root');
     if (selectedParts.length === 0 || selectedServices.length === 0) {
@@ -399,6 +424,7 @@ export function EngineTemplateForm({
   const totalValue = totalPartsValue + totalServicesValue + (Number.isFinite(laborCostValue) ? laborCostValue : 0);
 
   return (
+    <>
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
@@ -887,5 +913,86 @@ export function EngineTemplateForm({
         </form>
       </DialogContent>
     </Dialog>
+
+    <Dialog open={showImportDialog} onOpenChange={(open) => {
+      setShowImportDialog(open);
+      if (!open) setImportSearchTerm('');
+    }}>
+      <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] flex flex-col p-4 sm:p-6">
+        <DialogHeader>
+          <DialogTitle className="text-base sm:text-lg">Importar Peças e Serviços de Template</DialogTitle>
+        </DialogHeader>
+
+        <div className="relative my-2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar template por nome ou motor..."
+            value={importSearchTerm}
+            onChange={(e) => setImportSearchTerm(e.target.value)}
+            className="pl-9 text-sm"
+          />
+        </div>
+
+        <ScrollArea className="flex-1 min-h-0 max-h-[50vh]">
+          <div className="space-y-2 pr-1">
+            {allTemplates
+              .filter((t) => {
+                if (!importSearchTerm.trim()) return true;
+                const term = importSearchTerm.toLowerCase();
+                return (
+                  t.name.toLowerCase().includes(term) ||
+                  t.engine_brand.toLowerCase().includes(term) ||
+                  t.engine_model.toLowerCase().includes(term)
+                );
+              })
+              .map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => handleImportFromTemplate(t)}
+                  className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors space-y-1"
+                >
+                  <div className="font-medium text-sm">{t.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t.engine_brand} — {t.engine_model}
+                  </div>
+                  <div className="flex gap-3 text-xs text-muted-foreground">
+                    <span>{t.parts?.length ?? 0} peça(s)</span>
+                    <span>{t.services?.length ?? 0} serviço(s)</span>
+                  </div>
+                </button>
+              ))}
+            {allTemplates.filter((t) => {
+              if (!importSearchTerm.trim()) return true;
+              const term = importSearchTerm.toLowerCase();
+              return (
+                t.name.toLowerCase().includes(term) ||
+                t.engine_brand.toLowerCase().includes(term) ||
+                t.engine_model.toLowerCase().includes(term)
+              );
+            }).length === 0 && (
+              <div className="text-center py-8 text-sm text-muted-foreground">
+                Nenhum template encontrado
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+
+        <DialogFooter className="mt-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setShowImportDialog(false);
+              setImportSearchTerm('');
+            }}
+            className="text-sm"
+          >
+            Cancelar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
