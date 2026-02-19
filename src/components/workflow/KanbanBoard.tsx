@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useMuiTheme } from '@/config/muiTheme';
 import { useEmployeesDirectory } from '@/hooks/useEmployeesDirectory';
 import { useToast } from '@/hooks/use-toast';
-import { Search, X } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { getComponentColor, getComponentColorHex } from '@/utils/componentColors';
 
 // Tipos para ajudar na organização dos dados
@@ -384,14 +384,15 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
       return;
     }
 
-    console.log('Moving order:', order.order_number, 'from', currentStatus, 'to', newStatus);
-    console.log('Workflows to move:', workflowsToMove.length);
+    const workflowsWithoutEmployee = workflowsToMove.filter(
+      (w) => !w.assigned_to || w.assigned_to.trim() === ''
+    );
 
-    if (currentStatus === 'entrada' && newStatus !== 'orcamentos') {
+    if (workflowsWithoutEmployee.length === workflowsToMove.length) {
       toast({
-        title: "Transição não permitida",
-        description: "A OS precisa estar em Orçamento antes de avançar para o próximo status",
-        variant: "destructive"
+        title: "Funcionário não atribuído",
+        description:"Atribua um funcionário responsável antes de avançar a etapa.",
+        variant: "destructive",
       });
       setIsDragging(false);
       return;
@@ -399,9 +400,7 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
 
     // Validar transição sem filtro de componente específico
     const allowedTransitions = getNextAllowedStatuses(currentStatus, undefined);
-    
-    console.log('Allowed transitions:', allowedTransitions);
-    console.log('Prerequisites:', prerequisites);
+ 
     
     // Verificar se há pré-requisitos configurados no sistema
     const hasAnyPrerequisites = prerequisites && prerequisites.length > 0;
@@ -434,9 +433,6 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
       return;
     }
 
-    // Mover os workflows selecionados
-    console.log('Updating workflows:', workflowsToMove.map((w) => w.id));
-
     // Atualizar os workflows
     const updatePromises = workflowsToMove.map((workflow) =>
       updateWorkflowStatus(workflow.id, newStatus, sourceAllowsSplit && workflowsToMove.length === 1 
@@ -446,8 +442,6 @@ export function KanbanBoard({ orders, onOrderUpdate }: KanbanBoardProps) {
 
     const results = await Promise.all(updatePromises);
     const allSuccess = results.every(r => r === true);
-
-    console.log('Update results:', results);
 
     if (allSuccess) {
       const statusConfig = statusConfigMap[newStatus];
