@@ -78,7 +78,7 @@ export function OrderCard({
             <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
               <Package className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
               <span className="font-semibold text-xs sm:text-sm truncate">
-                OS #{order.order_number}
+              {order.order_number}
               </span>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">
