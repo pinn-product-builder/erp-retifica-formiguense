@@ -1,577 +1,461 @@
 import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { FormField } from '@/components/ui/form-field';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { usePurchasing, type Supplier } from '@/hooks/usePurchasing';
-import { useSupplierEvaluation } from '@/hooks/useSupplierEvaluation';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Star, Edit } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import {
+  Plus, Search, RefreshCw, Users,
+  Building2, Package, History, ShoppingCart,
+} from 'lucide-react';
 
-// Funções de validação
-const validateCNPJ = (cnpj: string): boolean => {
-  if (!cnpj) return true;
-  const cleanCNPJ = cnpj.replace(/\D/g, '');
-  if (cleanCNPJ.length !== 14) return false;
-  if (/^(\d)\1+$/.test(cleanCNPJ)) return false;
-  
-  let length = cleanCNPJ.length - 2;
-  let numbers = cleanCNPJ.substring(0, length);
-  const digits = cleanCNPJ.substring(length);
-  let sum = 0;
-  let pos = length - 7;
-  
-  for (let i = length; i >= 1; i--) {
-    sum += parseInt(numbers.charAt(length - i)) * pos--;
-    if (pos < 2) pos = 9;
-  }
-  
-  let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-  if (result !== parseInt(digits.charAt(0))) return false;
-  
-  length = length + 1;
-  numbers = cleanCNPJ.substring(0, length);
-  sum = 0;
-  pos = length - 7;
-  
-  for (let i = length; i >= 1; i--) {
-    sum += parseInt(numbers.charAt(length - i)) * pos--;
-    if (pos < 2) pos = 9;
-  }
-  
-  result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-  if (result !== parseInt(digits.charAt(1))) return false;
-  
-  return true;
-};
+import { useSuppliers } from '@/hooks/useSuppliers';
+import { SupplierCard } from './SupplierCard';
+import { SupplierForm } from './SupplierForm';
+import { SupplierProductsTab } from './SupplierProductsTab';
+import { SUPPLIER_CATEGORIES, type Supplier } from '@/services/SupplierService';
 
-const validateEmail = (email: string): boolean => {
-  if (!email) return true;
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
-const validatePhone = (phone: string): boolean => {
-  if (!phone) return true;
-  const cleanPhone = phone.replace(/\D/g, '');
-  return cleanPhone.length === 10 || cleanPhone.length === 11;
-};
-
-export default function SuppliersManager() {
-  const { 
-    suppliers, 
-    loading, 
-    createSupplier, 
-    fetchSuppliers
-  } = usePurchasing();
-  const { updateSupplier } = useSupplierEvaluation();
-  const { toast } = useToast();
-
-  const [newSupplier, setNewSupplier] = useState({
-    name: '',
-    cnpj: '',
-    email: '',
-    phone: '',
-    address: '',
-    contact_person: '',
-    payment_terms: '',
-    delivery_days: 0,
-  });
-
-  const [supplierErrors, setSupplierErrors] = useState<{
-    email?: string;
-    phone?: string;
-    cnpj?: string;
-  }>({});
-
-  const [editingSupplier, setEditingSupplier] = useState<{
-    id: string;
-    name: string;
-    cnpj: string;
-    email: string;
-    phone: string;
-    address: string;
-    contact_person: string;
-    payment_terms: string;
-    delivery_days: number;
-  } | null>(null);
-
-  const [editSupplierErrors, setEditSupplierErrors] = useState<{
-    email?: string;
-    phone?: string;
-    cnpj?: string;
-  }>({});
-
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-
-  const validateSupplierForm = (formData: typeof newSupplier): boolean => {
-    const errors: {
-      email?: string;
-      phone?: string;
-      cnpj?: string;
-    } = {};
-
-    if (formData.email && !validateEmail(formData.email)) {
-      errors.email = 'Email inválido';
-    }
-
-    if (formData.phone && !validatePhone(formData.phone)) {
-      errors.phone = 'Telefone inválido. Deve ter 10 ou 11 dígitos';
-    }
-
-    if (formData.cnpj && !validateCNPJ(formData.cnpj)) {
-      errors.cnpj = 'CNPJ inválido';
-    }
-
-    setSupplierErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleCreateSupplier = async () => {
-    if (!newSupplier.name) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Nome do fornecedor é obrigatório"
-      });
-      return;
-    }
-
-    if (!validateSupplierForm(newSupplier)) {
-      toast({
-        variant: "destructive",
-        title: "Erro de validação",
-        description: "Por favor, corrija os erros no formulário antes de salvar"
-      });
-      return;
-    }
-    
-    try {
-      await createSupplier({
-        ...newSupplier,
-        rating: 5.0,
-        is_active: true,
-      });
-      
-      setNewSupplier({
-        name: '',
-        cnpj: '',
-        email: '',
-        phone: '',
-        address: '',
-        contact_person: '',
-        payment_terms: '',
-        delivery_days: 0,
-      });
-      setSupplierErrors({});
-      setShowCreateDialog(false);
-
-      toast({
-        title: "Sucesso",
-        description: "Fornecedor criado com sucesso"
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Falha ao criar fornecedor"
-      });
-    }
-  };
-
-  const handleEditSupplier = (supplier: Supplier) => {
-    setEditingSupplier({
-      id: supplier.id,
-      name: supplier.name,
-      cnpj: supplier.cnpj || '',
-      email: supplier.email || '',
-      phone: supplier.phone || '',
-      address: supplier.address || '',
-      contact_person: supplier.contact_person || '',
-      payment_terms: supplier.payment_terms || '',
-      delivery_days: supplier.delivery_days,
-    });
-    setEditSupplierErrors({});
-  };
-
-  const validateEditSupplierForm = (formData: typeof editingSupplier): boolean => {
-    if (!formData) return false;
-    
-    const errors: {
-      email?: string;
-      phone?: string;
-      cnpj?: string;
-    } = {};
-
-    if (formData.email && !validateEmail(formData.email)) {
-      errors.email = 'Email inválido';
-    }
-
-    if (formData.phone && !validatePhone(formData.phone)) {
-      errors.phone = 'Telefone inválido. Deve ter 10 ou 11 dígitos';
-    }
-
-    if (formData.cnpj && !validateCNPJ(formData.cnpj)) {
-      errors.cnpj = 'CNPJ inválido';
-    }
-
-    setEditSupplierErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleUpdateSupplier = async () => {
-    if (!editingSupplier) return;
-
-    if (!validateEditSupplierForm(editingSupplier)) {
-      toast({
-        variant: "destructive",
-        title: "Erro de validação",
-        description: "Por favor, corrija os erros no formulário antes de salvar"
-      });
-      return;
-    }
-
-    try {
-      await updateSupplier(editingSupplier.id, editingSupplier);
-      setEditingSupplier(null);
-      setEditSupplierErrors({});
-      await fetchSuppliers();
-      
-      toast({
-        title: "Sucesso",
-        description: "Fornecedor atualizado com sucesso"
-      });
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Falha ao atualizar fornecedor"
-      });
-    }
-  };
+// ─── Modal de Detalhes ────────────────────────────────────────────────────────
+function SupplierDetailsModal({
+  supplier,
+  onClose,
+  onEdit,
+}: {
+  supplier: Supplier;
+  onClose: () => void;
+  onEdit: () => void;
+}) {
+  const displayName = supplier.trade_name ?? supplier.name;
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Fornecedores</h2>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Fornecedor
+    <Dialog open onOpenChange={open => !open && onClose()}>
+      <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <DialogTitle className="text-base sm:text-lg">{displayName}</DialogTitle>
+              {supplier.code && (
+                <p className="text-xs text-muted-foreground font-mono">{supplier.code}</p>
+              )}
+            </div>
+            <Button size="sm" variant="outline" onClick={onEdit} className="flex-shrink-0">
+              Editar
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Cadastrar Fornecedor</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Nome da Empresa</Label>
-                <Input
-                  value={newSupplier.name}
-                  onChange={(e) => setNewSupplier({...newSupplier, name: e.target.value})}
-                  placeholder="Razão social do fornecedor"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <FormField
-                    label="CNPJ"
-                    name="new-cnpj"
-                    mask="cnpj"
-                    value={newSupplier.cnpj}
-                    onChange={(value, rawValue) => {
-                      setNewSupplier({...newSupplier, cnpj: rawValue || ''});
-                      if (supplierErrors.cnpj) {
-                        setSupplierErrors({...supplierErrors, cnpj: undefined});
-                      }
-                    }}
-                    error={supplierErrors.cnpj}
-                    validation={{
-                      custom: (value) => {
-                        if (!value) return true;
-                        return validateCNPJ(value);
-                      }
-                    }}
-                  />
-                </div>
-                <div>
-                  <Label>Prazo de Entrega (dias)</Label>
-                  <Input
-                    type="text"
-                    style={{
-                      marginTop: '7px',
-                    }}
-                    value={newSupplier.delivery_days}
-                    onChange={(e) => setNewSupplier({...newSupplier, delivery_days: Number(e.target.value)})}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Email</Label>
-                  <Input
-                    type="email"
-                    value={newSupplier.email}
-                    onChange={(e) => {
-                      setNewSupplier({...newSupplier, email: e.target.value});
-                      if (supplierErrors.email) {
-                        setSupplierErrors({...supplierErrors, email: undefined});
-                      }
-                    }}
-                    onBlur={() => {
-                      if (newSupplier.email && !validateEmail(newSupplier.email)) {
-                        setSupplierErrors({...supplierErrors, email: 'Email inválido'});
-                      }
-                    }}
-                    placeholder="contato@fornecedor.com"
-                    className={supplierErrors.email ? 'border-destructive' : ''}
-                  />
-                  {supplierErrors.email && (
-                    <p className="text-sm text-destructive mt-1">{supplierErrors.email}</p>
-                  )}
-                </div>
-                <div>
-                  <FormField
-                    label="Telefone"
-                    name="new-phone"
-                    mask="phone"
-                    value={newSupplier.phone}
-                    onChange={(value, rawValue) => {
-                      setNewSupplier({...newSupplier, phone: rawValue || ''});
-                      if (supplierErrors.phone) {
-                        setSupplierErrors({...supplierErrors, phone: undefined});
-                      }
-                    }}
-                    error={supplierErrors.phone}
-                    validation={{
-                      custom: (value) => {
-                        if (!value) return true;
-                        return validatePhone(value);
-                      }
-                    }}
-                    placeholder="(11) 99999-9999"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label>Pessoa de Contato</Label>
-                <Input
-                  value={newSupplier.contact_person}
-                  onChange={(e) => setNewSupplier({...newSupplier, contact_person: e.target.value})}
-                  placeholder="Nome do responsável"
-                />
-              </div>
-              <div>
-                <Label>Endereço</Label>
-                <Textarea
-                  value={newSupplier.address}
-                  onChange={(e) => setNewSupplier({...newSupplier, address: e.target.value})}
-                  placeholder="Endereço completo"
-                />
-              </div>
-              <div>
-                <Label>Condições de Pagamento</Label>
-                <Input
-                  value={newSupplier.payment_terms}
-                  onChange={(e) => setNewSupplier({...newSupplier, payment_terms: e.target.value})}
-                  placeholder="Ex: 30/60/90 dias"
-                />
-              </div>
-              <Button onClick={handleCreateSupplier} className="w-full">
-                Cadastrar Fornecedor
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          </div>
+        </DialogHeader>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {suppliers.map((supplier) => (
-          <Card key={supplier.id}>
-            <CardContent className="p-4">
-              <div className="space-y-2">
-                <div className="flex items-start justify-between">
-                  <h3 className="font-medium">{supplier.name}</h3>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                    <span className="text-sm">{supplier.rating.toFixed(1)}</span>
-                  </div>
+        <Tabs defaultValue="info">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="info" className="text-xs sm:text-sm">
+              <Building2 className="w-3.5 h-3.5 mr-1.5" />
+              Informações
+            </TabsTrigger>
+            <TabsTrigger value="products" className="text-xs sm:text-sm">
+              <Package className="w-3.5 h-3.5 mr-1.5" />
+              Produtos
+            </TabsTrigger>
+            <TabsTrigger value="history" className="text-xs sm:text-sm">
+              <History className="w-3.5 h-3.5 mr-1.5" />
+              Histórico
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Aba info */}
+          <TabsContent value="info" className="mt-4 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-muted-foreground">Razão Social</p>
+                <p className="text-sm font-medium">{supplier.legal_name ?? supplier.name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">CNPJ</p>
+                <p className="text-sm font-mono">{supplier.document ?? supplier.cnpj ?? '—'}</p>
+              </div>
+              {supplier.email && (
+                <div>
+                  <p className="text-xs text-muted-foreground">E-mail</p>
+                  <p className="text-sm">{supplier.email}</p>
                 </div>
-                {supplier.contact_person && (
-                  <p className="text-sm text-muted-foreground">
-                    Contato: {supplier.contact_person}
-                  </p>
-                )}
-                <p className="text-sm text-muted-foreground">
-                  Entrega: {supplier.delivery_days} dias
+              )}
+              {supplier.phone && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Telefone</p>
+                  <p className="text-sm">{supplier.phone}</p>
+                </div>
+              )}
+              {supplier.whatsapp && (
+                <div>
+                  <p className="text-xs text-muted-foreground">WhatsApp</p>
+                  <p className="text-sm">{supplier.whatsapp}</p>
+                </div>
+              )}
+              {supplier.contact_person && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Contato</p>
+                  <p className="text-sm">{supplier.contact_person}</p>
+                </div>
+              )}
+              {supplier.payment_terms && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Prazo de Pagamento</p>
+                  <p className="text-sm">{supplier.payment_terms}</p>
+                </div>
+              )}
+              {supplier.delivery_days > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground">Prazo de Entrega</p>
+                  <p className="text-sm">{supplier.delivery_days} dias</p>
+                </div>
+              )}
+            </div>
+
+            {supplier.address_jsonb && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Endereço</p>
+                <p className="text-sm">
+                  {supplier.address_jsonb.street}, {supplier.address_jsonb.number}
+                  {supplier.address_jsonb.complement && `, ${supplier.address_jsonb.complement}`}
+                  {' — '}{supplier.address_jsonb.neighborhood}, {supplier.address_jsonb.city}/{supplier.address_jsonb.state}
+                  {' — '}{supplier.address_jsonb.postal_code}
                 </p>
-                {supplier.phone && (
-                  <p className="text-sm text-muted-foreground">
-                    Tel: {supplier.phone}
-                  </p>
-                )}
-                <div className="pt-2 flex items-center justify-between">
-                  <Badge variant={supplier.is_active ? "default" : "secondary"}>
-                    {supplier.is_active ? "Ativo" : "Inativo"}
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditSupplier(supplier)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-        {suppliers.length === 0 && (
-          <Card className="col-span-full">
-            <CardContent className="p-8 text-center">
-              <p className="text-muted-foreground">Nenhum fornecedor cadastrado</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            )}
 
-      {/* Dialog de Edição */}
-      <Dialog open={!!editingSupplier} onOpenChange={(open) => !open && setEditingSupplier(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Editar Fornecedor</DialogTitle>
-          </DialogHeader>
-          {editingSupplier && (
-            <div className="space-y-4">
+            {(supplier.categories?.length ?? 0) > 0 && (
               <div>
-                <Label>Nome da Empresa *</Label>
-                <Input
-                  value={editingSupplier.name}
-                  onChange={(e) => setEditingSupplier({...editingSupplier, name: e.target.value})}
-                  placeholder="Razão social do fornecedor"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <FormField
-                    label="CNPJ"
-                    name="edit-cnpj"
-                    mask="cnpj"
-                    value={editingSupplier.cnpj}
-                    onChange={(value, rawValue) => {
-                      setEditingSupplier({...editingSupplier, cnpj: rawValue || ''});
-                      if (editSupplierErrors.cnpj) {
-                        setEditSupplierErrors({...editSupplierErrors, cnpj: undefined});
-                      }
-                    }}
-                    error={editSupplierErrors.cnpj}
-                    validation={{
-                      custom: (value) => {
-                        if (!value) return true;
-                        return validateCNPJ(value);
-                      }
-                    }}
-                  />
-                </div>
-                <div>
-                  <Label>Prazo de Entrega (dias)</Label>
-                  <Input
-                    type="text"
-                    value={editingSupplier.delivery_days}
-                    onChange={(e) => setEditingSupplier({...editingSupplier, delivery_days: Number(e.target.value) || 0})}
-                  />
+                <p className="text-xs text-muted-foreground mb-1">Categorias</p>
+                <div className="flex flex-wrap gap-1">
+                  {(supplier.categories ?? []).map(v => {
+                    const cat = SUPPLIER_CATEGORIES.find(c => c.value === v);
+                    return (
+                      <span key={v} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-secondary">
+                        {cat?.label ?? v}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Email</Label>
-                  <Input
-                    type="email"
-                    value={editingSupplier.email}
-                    onChange={(e) => {
-                      setEditingSupplier({...editingSupplier, email: e.target.value});
-                      if (editSupplierErrors.email) {
-                        setEditSupplierErrors({...editSupplierErrors, email: undefined});
-                      }
-                    }}
-                    onBlur={() => {
-                      if (editingSupplier.email && !validateEmail(editingSupplier.email)) {
-                        setEditSupplierErrors({...editSupplierErrors, email: 'Email inválido'});
-                      }
-                    }}
-                    placeholder="contato@fornecedor.com"
-                    className={editSupplierErrors.email ? 'border-destructive' : ''}
-                  />
-                  {editSupplierErrors.email && (
-                    <p className="text-sm text-destructive mt-1">{editSupplierErrors.email}</p>
-                  )}
-                </div>
-                <div>
-                  <FormField
-                    label="Telefone"
-                    name="edit-phone"
-                    mask="phone"
-                    value={editingSupplier.phone}
-                    onChange={(value, rawValue) => {
-                      setEditingSupplier({...editingSupplier, phone: rawValue || ''});
-                      if (editSupplierErrors.phone) {
-                        setEditSupplierErrors({...editSupplierErrors, phone: undefined});
-                      }
-                    }}
-                    error={editSupplierErrors.phone}
-                    validation={{
-                      custom: (value) => {
-                        if (!value) return true;
-                        return validatePhone(value);
-                      }
-                    }}
-                    placeholder="(11) 99999-9999"
-                  />
-                </div>
-              </div>
+            )}
+
+            {supplier.notes && (
               <div>
-                <Label>Pessoa de Contato</Label>
-                <Input
-                  value={editingSupplier.contact_person}
-                  onChange={(e) => setEditingSupplier({...editingSupplier, contact_person: e.target.value})}
-                  placeholder="Nome do responsável"
-                />
+                <p className="text-xs text-muted-foreground mb-1">Observações</p>
+                <p className="text-sm text-muted-foreground">{supplier.notes}</p>
               </div>
-              <div>
-                <Label>Endereço</Label>
-                <Textarea
-                  value={editingSupplier.address}
-                  onChange={(e) => setEditingSupplier({...editingSupplier, address: e.target.value})}
-                  placeholder="Endereço completo"
-                />
-              </div>
-              <div>
-                <Label>Condições de Pagamento</Label>
-                <Input
-                  value={editingSupplier.payment_terms}
-                  onChange={(e) => setEditingSupplier({...editingSupplier, payment_terms: e.target.value})}
-                  placeholder="Ex: 30/60/90 dias"
-                />
-              </div>
-              <div className="flex flex-col sm:flex-row justify-end gap-2">
-                <Button variant="outline" onClick={() => setEditingSupplier(null)} className="w-full sm:w-auto">
-                  Cancelar
-                </Button>
-                <Button onClick={handleUpdateSupplier} disabled={loading} className="w-full sm:w-auto">
-                  Salvar Alterações
-                </Button>
-              </div>
+            )}
+          </TabsContent>
+
+          {/* Aba produtos */}
+          <TabsContent value="products" className="mt-4">
+            <SupplierProductsTab supplier={supplier} />
+          </TabsContent>
+
+          {/* Aba histórico */}
+          <TabsContent value="history" className="mt-4">
+            <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
+              <ShoppingCart className="w-5 h-5" />
+              <p className="text-sm">Histórico de compras em breve</p>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 }
 
+// ─── Modal de Bloqueio ────────────────────────────────────────────────────────
+function BlockSupplierModal({
+  supplier,
+  onClose,
+  onConfirm,
+}: {
+  supplier: Supplier;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+}) {
+  const [reason, setReason] = useState('');
+  return (
+    <AlertDialog open onOpenChange={open => !open && onClose()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Bloquear fornecedor?</AlertDialogTitle>
+          <AlertDialogDescription>
+            O fornecedor {supplier.trade_name ?? supplier.name} será bloqueado e não aparecerá em cotações.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="space-y-1 py-2">
+          <Label htmlFor="block-reason">Motivo do bloqueio *</Label>
+          <Textarea
+            id="block-reason"
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            placeholder="Descreva o motivo do bloqueio..."
+            rows={3}
+          />
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onClose}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={!reason.trim()}
+            onClick={() => onConfirm(reason.trim())}
+            className="bg-destructive hover:bg-destructive/90"
+          >
+            Bloquear
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
+export default function SuppliersManager() {
+  const {
+    suppliers, count, page, totalPages, pageSize, isLoading, filters,
+    actions,
+  } = useSuppliers({ isActive: true });
+
+  const [search, setSearch]         = useState('');
+  const [category, setCategory]     = useState('all');
+  const [statusFilter, setStatus]   = useState<'active' | 'inactive' | 'all'>('active');
+
+  const [formOpen, setFormOpen]           = useState(false);
+  const [editingSupplier, setEditing]     = useState<Supplier | undefined>();
+  const [detailsSupplier, setDetails]     = useState<Supplier | undefined>();
+  const [blockingSupplier, setBlocking]   = useState<Supplier | undefined>();
+
+  const applySearch = () => {
+    actions.applyFilters({
+      search:   search || undefined,
+      category: category !== 'all' ? category : undefined,
+      isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
+    });
+  };
+
+  const handleSearchKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') applySearch();
+  };
+
+  const handleEdit = (supplier: Supplier) => {
+    setEditing(supplier);
+    setDetails(undefined);
+    setFormOpen(true);
+  };
+
+  const handleFormSuccess = async () => {
+    setFormOpen(false);
+    setEditing(undefined);
+    actions.refresh();
+  };
+
+  const from = (page - 1) * pageSize + 1;
+  const to   = Math.min(page * pageSize, count);
+
+  return (
+    <div className="space-y-4">
+      {/* Cabeçalho */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+          <h2 className="text-base sm:text-lg font-semibold">Fornecedores</h2>
+          {count > 0 && (
+            <span className="text-sm text-muted-foreground">({count})</span>
+          )}
+        </div>
+        <Button
+          size="sm"
+          onClick={() => { setEditing(undefined); setFormOpen(true); }}
+          className="h-8 sm:h-9 w-full sm:w-auto"
+        >
+          <Plus className="w-3.5 h-3.5 mr-1.5" />
+          <span className="hidden sm:inline">Novo Fornecedor</span>
+          <span className="sm:hidden">Novo</span>
+        </Button>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Buscar por nome, CNPJ ou código..."
+            className="pl-8 h-9"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onKeyDown={handleSearchKey}
+          />
+        </div>
+
+        <Select value={category} onValueChange={setCategory}>
+          <SelectTrigger className="w-full sm:w-44 h-9">
+            <SelectValue placeholder="Categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas categorias</SelectItem>
+            {SUPPLIER_CATEGORIES.map(c => (
+              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={statusFilter} onValueChange={v => setStatus(v as typeof statusFilter)}>
+          <SelectTrigger className="w-full sm:w-36 h-9">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="active">Ativos</SelectItem>
+            <SelectItem value="inactive">Inativos</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Button size="sm" variant="outline" className="h-9 shrink-0" onClick={applySearch}>
+          <Search className="w-3.5 h-3.5 sm:mr-1.5" />
+          <span className="hidden sm:inline">Filtrar</span>
+        </Button>
+      </div>
+
+      {/* Grid de cards */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16 gap-2 text-muted-foreground">
+          <RefreshCw className="w-4 h-4 animate-spin" />
+          <span className="text-sm">Carregando fornecedores...</span>
+        </div>
+      ) : suppliers.length === 0 ? (
+        <div className="border rounded-lg p-12 text-center text-muted-foreground">
+          <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
+          <p className="text-sm font-medium">Nenhum fornecedor encontrado</p>
+          <p className="text-xs mt-1">
+            {filters.search || filters.category
+              ? 'Tente ajustar os filtros'
+              : 'Clique em "Novo Fornecedor" para cadastrar'}
+          </p>
+          {!filters.search && !filters.category && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-4"
+              onClick={() => { setEditing(undefined); setFormOpen(true); }}
+            >
+              <Plus className="w-3.5 h-3.5 mr-1.5" /> Novo Fornecedor
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          {suppliers.map(supplier => (
+            <SupplierCard
+              key={supplier.id}
+              supplier={supplier}
+              onEdit={handleEdit}
+              onViewDetails={s => setDetails(s)}
+              onToggleActive={actions.toggleActive}
+              onBlock={s => setBlocking(s)}
+              onUnblock={s => actions.unblockSupplier(s.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
+          <span className="text-xs">
+            Mostrando {from}–{to} de {count} fornecedores
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2"
+              disabled={page === 1}
+              onClick={() => actions.goToPage(page - 1)}
+            >
+              Anterior
+            </Button>
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+              const p = totalPages <= 5 ? i + 1 : Math.max(1, page - 2) + i;
+              if (p > totalPages) return null;
+              return (
+                <Button
+                  key={p}
+                  variant={p === page ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => actions.goToPage(p)}
+                >
+                  {p}
+                </Button>
+              );
+            })}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2"
+              disabled={page === totalPages}
+              onClick={() => actions.goToPage(page + 1)}
+            >
+              Próxima
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Formulário (Criar/Editar) */}
+      <Dialog open={formOpen} onOpenChange={open => { if (!open) { setFormOpen(false); setEditing(undefined); } }}>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingSupplier ? 'Editar Fornecedor' : 'Cadastrar Fornecedor'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingSupplier
+                ? 'Atualize as informações do fornecedor.'
+                : 'Preencha os dados para cadastrar um novo fornecedor.'}
+            </DialogDescription>
+          </DialogHeader>
+          <SupplierForm
+            supplier={editingSupplier}
+            onSuccess={handleFormSuccess}
+            onCancel={() => { setFormOpen(false); setEditing(undefined); }}
+            onSubmit={editingSupplier
+              ? data => actions.updateSupplier(editingSupplier.id, data)
+              : data => actions.createSupplier(data)
+            }
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Detalhes */}
+      {detailsSupplier && (
+        <SupplierDetailsModal
+          supplier={detailsSupplier}
+          onClose={() => setDetails(undefined)}
+          onEdit={() => handleEdit(detailsSupplier)}
+        />
+      )}
+
+      {/* Modal de Bloqueio */}
+      {blockingSupplier && (
+        <BlockSupplierModal
+          supplier={blockingSupplier}
+          onClose={() => setBlocking(undefined)}
+          onConfirm={async reason => {
+            await actions.blockSupplier(blockingSupplier.id, reason);
+            setBlocking(undefined);
+          }}
+        />
+      )}
+    </div>
+  );
+}

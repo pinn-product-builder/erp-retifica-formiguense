@@ -34,12 +34,20 @@ Automatizar processo de cotação permitindo solicitação simultânea a múltip
 **AC07:** Status: rascunho, enviada, respondida  
 **AC08:** Dashboard com cotações pendentes resposta  
 **AC09:** Notificação quando fornecedor responde
+**AC10:** Exportar cotação em formato Excel editável
+**AC11:** Exportar cotação em formato PDF
+**AC12:** Importar proposta de arquivo Excel
+**AC13:** Pré-visualização dos dados antes de confirmar a importação
+**AC14:** Opção de envio via WhatsApp (gerar link)
+**AC15:** Baixe direto do arquivo para envio manual
+**AC16:** Editar cotações em status draft/sent/waiting_proposals
+
 
 ---
 
 ## 📐 Business Rules
 
-### RN-COM-009: Estrutura de Cotação
+### RN-COM-008: Estrutura de Cotação
 ```typescript
 type QuotationStatus = 
   | 'draft'          // Rascunho
@@ -104,7 +112,7 @@ interface QuotationProposal {
 }
 ```
 
-### RN-COM-010: Numeração Automática
+### RN-COM-009: Numeração Automática
 ```typescript
 // Formato: COT-YYMMDD-NNN
 // Exemplo: COT-250127-001
@@ -133,7 +141,7 @@ async function generateQuotationNumber(orgId: string): Promise<string> {
 }
 ```
 
-### RN-COM-011: Sugestão de Fornecedores
+### RN-COM-010: Sugestão de Fornecedores
 ```typescript
 async function suggestSuppliersForItem(
   partId: string
@@ -159,50 +167,22 @@ async function suggestSuppliersForItem(
 }
 ```
 
-### RN-COM-012: Email de Cotação
-```typescript
-interface QuotationEmailData {
-  quotation_number: string;
-  supplier_name: string;
-  due_date: string;
-  items: {
-    description: string;
-    quantity: number;
-    specifications?: string;
-  }[];
-  notes?: string;
-  response_link: string;         // Link público para responder
-}
+RN-PUR-011: Cotação Mínima
+Mínimo 3 fornecedores quando disponíveis
+Prazo de resposta: 3-7 dias úteis
+Itens devem ter especificações claras
 
-async function sendQuotationEmail(
-  quotationId: string,
-  supplierId: string
-): Promise<void> {
-  const quotation = await getQuotation(quotationId);
-  const supplier = await getSupplier(supplierId);
-  
-  const emailData: QuotationEmailData = {
-    quotation_number: quotation.quotation_number,
-    supplier_name: supplier.trade_name,
-    due_date: formatDate(quotation.due_date),
-    items: quotation.items.map(item => ({
-      description: item.description,
-      quantity: item.quantity,
-      specifications: item.specifications,
-    })),
-    notes: quotation.notes,
-    response_link: `${APP_URL}/public/quotation-response/${quotationId}/${supplierId}`,
-  };
-  
-  await sendEmail({
-    to: supplier.email,
-    subject: `Solicitação de Cotação ${quotation.quotation_number}`,
-    template: 'quotation-request',
-    data: emailData,
-  });
-}
-```
+RN-PUR-012: Regras de Edição de Cotações
+Cotações em status draft, sent, waiting_proposalspodem ser editadas
+Cotações em status analyzing, approved, cancelled, expiredNÃO podem ser editadas
+Ao editar cotação enviada, fornecedores podem ser notificados da atualização
 
+RN-PUR-013: Fluxo de Importação/Exportação
+Exportação de planilha Excel formatada para preenchimento
+O modelo inclui: código, descrição, quantidade, campos para preço e prazo
+Importação valida formato e exibe preview antes de confirmar
+Sistema detecta automaticamente mapeamento de colunas
+Formatos suportados: .xlsx, .xls, .csv
 ---
 
 ## 🗄️ Database Schema

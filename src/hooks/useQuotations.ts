@@ -1,288 +1,252 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useOrganization } from '@/hooks/useOrganization';
+import { useState, useCallback, useEffect } from 'react';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import {
+  QuotationService,
+  EDITABLE_STATUSES,
+  type Quotation,
+  type QuotationItem,
+  type QuotationFilters,
+  type QuotationHeaderFormData,
+  type QuotationItemFormData,
+  type ProposalFormData,
+  type QuotationStatus,
+  type PaginatedQuotations,
+} from '@/services/QuotationService';
 
-/**
- * Interface para cotação
- */
-export interface Quotation {
-  id: string;
-  requisition_id: string;
-  supplier_id: string;
-  quote_number?: string;
-  quote_date: string;
-  validity_date?: string;
-  total_value: number;
-  delivery_time?: number; // dias
-  terms?: string;
-  status: 'pending' | 'approved' | 'rejected';
-  created_at: string;
-  updated_at: string;
-  org_id: string;
-  
-  // Relacionamentos
-  supplier?: {
-    name: string;
-    delivery_days: number;
-    rating: number;
-  };
-  items?: QuotationItem[];
-}
+const ITEMS_PER_PAGE = 10;
 
-/**
- * Interface para item de cotação
- */
-export interface QuotationItem {
-  id: string;
-  quotation_id: string;
-  item_name: string;
-  description?: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  part_id?: string;
-}
-
-/**
- * Dados para criar cotação
- */
-export interface CreateQuotationData {
-  requisition_id: string;
-  supplier_id: string;
-  quote_date: string;
-  validity_date?: string;
-  delivery_time?: number;
-  terms?: string;
-  items: Omit<QuotationItem, 'id' | 'quotation_id'>[];
-}
-
-/**
- * Hook para gerenciar cotações de compras
- */
-export function useQuotations() {
-  const [quotations, setQuotations] = useState<Quotation[]>([]);
-  const [loading, setLoading] = useState(false);
+export function useQuotations(initialFilters: QuotationFilters = {}) {
   const { currentOrganization } = useOrganization();
+  const { user } = useAuth();
   const { toast } = useToast();
 
-  /**
-   * Buscar cotações
-   */
-  const fetchQuotations = useCallback(async (requisitionId?: string) => {
-    if (!currentOrganization?.id) return [];
+  const [result, setResult] = useState<PaginatedQuotations>({
+    data: [], count: 0, page: 1, pageSize: ITEMS_PER_PAGE, totalPages: 0,
+  });
+  const [isLoading, setIsLoading]   = useState(false);
+  const [filters,    setFiltersState] = useState<QuotationFilters>(initialFilters);
+  const [currentPage, setCurrentPage] = useState(1);
 
+  const fetchQuotations = useCallback(async (page = currentPage, f = filters) => {
+    if (!currentOrganization?.id) return;
     try {
-      setLoading(true);
-
-      let query = supabase
-        .from('quotations')
-        .select(`
-          *,
-          supplier:suppliers(*),
-          items:quotation_items(*)
-        `)
-        .eq('org_id', currentOrganization.id)
-        .order('created_at', { ascending: false });
-
-      if (requisitionId) {
-        query = query.eq('requisition_id', requisitionId);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      setQuotations((data || []) as Quotation[]);
-      return data as Quotation[];
-    } catch (error) {
-      console.error('Error fetching quotations:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível carregar as cotações',
-        variant: 'destructive',
-      });
-      return [];
+      setIsLoading(true);
+      const data = await QuotationService.getQuotations(currentOrganization.id, f, page, ITEMS_PER_PAGE);
+      setResult(data);
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível carregar cotações', variant: 'destructive' });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }, [currentOrganization?.id]);
+  }, [currentOrganization?.id, currentPage, filters, toast]);
 
-  /**
-   * Criar cotação
-   */
-  const createQuotation = useCallback(async (quotationData: CreateQuotationData) => {
-    if (!currentOrganization?.id) {
-      toast({
-        title: 'Erro',
-        description: 'Organização não encontrada',
-        variant: 'destructive',
-      });
+  useEffect(() => { fetchQuotations(); }, [fetchQuotations]);
+
+  const setFilters = (newFilters: QuotationFilters) => {
+    setFiltersState(newFilters);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchQuotations(page);
+  };
+
+  const createQuotation = async (data: QuotationHeaderFormData): Promise<Quotation | null> => {
+    if (!currentOrganization?.id || !user?.id) return null;
+    try {
+      const quotation = await QuotationService.create(currentOrganization.id, user.id, data);
+      toast({ title: 'Cotação criada', description: `${quotation.quotation_number} salva como rascunho.` });
+      await fetchQuotations();
+      return quotation;
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível criar a cotação', variant: 'destructive' });
       return null;
     }
+  };
 
+  const updateQuotation = async (id: string, data: Partial<QuotationHeaderFormData>): Promise<boolean> => {
     try {
-      setLoading(true);
-
-      // Calcular valor total
-      const totalValue = quotationData.items.reduce(
-        (sum, item) => sum + item.total_price,
-        0
-      );
-
-      // Criar cotação
-      const { data: quotation, error: quotationError } = await supabase
-        .from('quotations')
-        .insert({
-          requisition_id: quotationData.requisition_id,
-          supplier_id: quotationData.supplier_id,
-          quote_date: quotationData.quote_date,
-          validity_date: quotationData.validity_date,
-          total_value: totalValue,
-          delivery_time: quotationData.delivery_time,
-          terms: quotationData.terms,
-          status: 'pending',
-          org_id: currentOrganization.id,
-        })
-        .select()
-        .single();
-
-      if (quotationError) throw quotationError;
-
-      // Criar itens da cotação
-      if (quotationData.items.length > 0) {
-        const items = quotationData.items.map(item => ({
-          ...item,
-          quotation_id: quotation.id,
-        }));
-
-        const { error: itemsError } = await supabase
-          .from('quotation_items')
-          .insert(items);
-
-        if (itemsError) throw itemsError;
-      }
-
-      toast({
-        title: 'Sucesso',
-        description: 'Cotação criada com sucesso',
-      });
-
-      // Recarregar cotações após criação
-      const { data: updatedData } = await supabase
-        .from('quotations')
-        .select(`
-          *,
-          supplier:suppliers(*),
-          items:quotation_items(*)
-        `)
-        .eq('org_id', currentOrganization.id)
-        .eq('id', quotation.id);
-      
-      if (updatedData?.[0]) {
-        setQuotations(prev => [updatedData[0] as Quotation, ...prev]);
-      }
-      
-      return quotation as Quotation;
-    } catch (error) {
-      console.error('Error creating quotation:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível criar a cotação',
-        variant: 'destructive',
-      });
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [currentOrganization?.id]);
-
-  /**
-   * Atualizar status da cotação
-   */
-  const updateQuotationStatus = useCallback(async (
-    quotationId: string,
-    status: 'approved' | 'rejected'
-  ) => {
-    try {
-      const { error } = await supabase
-        .from('quotations')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', quotationId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Sucesso',
-        description: `Cotação ${status === 'approved' ? 'aprovada' : 'rejeitada'} com sucesso`,
-      });
-
-      // Atualizar cotações após mudança de status
-      setQuotations(prev => 
-        prev.map(q => 
-          q.id === quotationId 
-            ? { ...q, status, updated_at: new Date().toISOString() }
-            : q
-        )
-      );
-      
+      await QuotationService.update(id, data);
+      toast({ title: 'Cotação atualizada' });
+      await fetchQuotations();
       return true;
-    } catch (error) {
-      console.error('Error updating quotation status:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar a cotação',
-        variant: 'destructive',
-      });
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível atualizar', variant: 'destructive' });
       return false;
     }
-  }, []);
+  };
 
-  /**
-   * Comparar cotações de uma requisição
-   */
-  const compareQuotations = useCallback((quotes: Quotation[]) => {
-    if (quotes.length === 0) return null;
+  const updateStatus = async (id: string, status: QuotationStatus): Promise<boolean> => {
+    try {
+      await QuotationService.updateStatus(id, status);
+      toast({ title: 'Status atualizado' });
+      await fetchQuotations();
+      return true;
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível atualizar o status', variant: 'destructive' });
+      return false;
+    }
+  };
 
-    const comparison = quotes.map(quote => ({
-      id: quote.id,
-      supplier: quote.supplier?.name || 'N/A',
-      total: quote.total_value,
-      delivery: quote.delivery_time || quote.supplier?.delivery_days || 0,
-      rating: quote.supplier?.rating || 0,
-      status: quote.status,
-    }));
-
-    // Encontrar melhor cotação (menor preço)
-    const bestPrice = comparison.reduce((best, current) => 
-      current.total < best.total ? current : best
-    );
-
-    // Encontrar entrega mais rápida
-    const fastestDelivery = comparison.reduce((best, current) => 
-      current.delivery < best.delivery ? current : best
-    );
-
-    // Fornecedor com melhor avaliação
-    const bestRated = comparison.reduce((best, current) => 
-      current.rating > best.rating ? current : best
-    );
-
-    return {
-      quotations: comparison,
-      bestPrice,
-      fastestDelivery,
-      bestRated,
-    };
-  }, []);
+  const deleteQuotation = async (id: string): Promise<boolean> => {
+    try {
+      await QuotationService.delete(id);
+      toast({ title: 'Cotação excluída' });
+      await fetchQuotations();
+      return true;
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível excluir a cotação', variant: 'destructive' });
+      return false;
+    }
+  };
 
   return {
-    quotations,
-    loading,
-    fetchQuotations,
-    createQuotation,
-    updateQuotationStatus,
-    compareQuotations,
+    quotations: result.data,
+    count:      result.count,
+    totalPages: result.totalPages,
+    currentPage,
+    isLoading,
+    filters,
+    setFilters,
+    handlePageChange,
+    refresh: fetchQuotations,
+    actions: { createQuotation, updateQuotation, updateStatus, deleteQuotation },
   };
 }
 
+// ── Hook para detalhes de uma cotação ─────────────────────────────────────────
+export function useQuotationDetails(quotationId: string | null) {
+  const { toast } = useToast();
+
+  const [quotation, setQuotation] = useState<Quotation | null>(null);
+  const [items,     setItems]     = useState<QuotationItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchDetails = useCallback(async () => {
+    if (!quotationId) return;
+    try {
+      setIsLoading(true);
+      const result = await QuotationService.getById(quotationId);
+      setQuotation(result.quotation);
+      setItems(result.items);
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível carregar detalhes', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [quotationId, toast]);
+
+  useEffect(() => { fetchDetails(); }, [fetchDetails]);
+
+  const canEdit = quotation ? EDITABLE_STATUSES.includes(quotation.status) : false;
+
+  const addItem = async (data: QuotationItemFormData): Promise<boolean> => {
+    if (!quotationId) return false;
+    try {
+      await QuotationService.addItem(quotationId, data, items.length);
+      toast({ title: 'Item adicionado' });
+      await fetchDetails();
+      return true;
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível adicionar o item', variant: 'destructive' });
+      return false;
+    }
+  };
+
+  const updateItem = async (itemId: string, data: Partial<QuotationItemFormData>): Promise<boolean> => {
+    try {
+      await QuotationService.updateItem(itemId, data);
+      toast({ title: 'Item atualizado' });
+      await fetchDetails();
+      return true;
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível atualizar o item', variant: 'destructive' });
+      return false;
+    }
+  };
+
+  const deleteItem = async (itemId: string): Promise<boolean> => {
+    try {
+      await QuotationService.deleteItem(itemId);
+      toast({ title: 'Item removido' });
+      await fetchDetails();
+      return true;
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível remover o item', variant: 'destructive' });
+      return false;
+    }
+  };
+
+  const addProposal = async (
+    itemId: string,
+    supplierId: string,
+    data: ProposalFormData,
+    quantity: number
+  ): Promise<boolean> => {
+    try {
+      await QuotationService.addProposal(itemId, supplierId, data, quantity);
+      // Se status é sent/waiting, atualiza para responded
+      if (quotation && ['sent', 'waiting_proposals'].includes(quotation.status)) {
+        await QuotationService.updateStatus(quotationId!, 'responded');
+      }
+      toast({ title: 'Proposta registrada' });
+      await fetchDetails();
+      return true;
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível registrar a proposta', variant: 'destructive' });
+      return false;
+    }
+  };
+
+  const updateProposal = async (
+    proposalId: string,
+    data: Partial<ProposalFormData>,
+    quantity: number
+  ): Promise<boolean> => {
+    try {
+      await QuotationService.updateProposal(proposalId, data, quantity);
+      toast({ title: 'Proposta atualizada' });
+      await fetchDetails();
+      return true;
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível atualizar a proposta', variant: 'destructive' });
+      return false;
+    }
+  };
+
+  const selectProposal = async (proposalId: string, itemId: string): Promise<boolean> => {
+    try {
+      await QuotationService.selectProposal(proposalId, itemId);
+      toast({ title: 'Proposta selecionada como vencedora' });
+      await fetchDetails();
+      return true;
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível selecionar a proposta', variant: 'destructive' });
+      return false;
+    }
+  };
+
+  const deleteProposal = async (proposalId: string): Promise<boolean> => {
+    try {
+      await QuotationService.deleteProposal(proposalId);
+      toast({ title: 'Proposta removida' });
+      await fetchDetails();
+      return true;
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível remover a proposta', variant: 'destructive' });
+      return false;
+    }
+  };
+
+  return {
+    quotation,
+    items,
+    isLoading,
+    canEdit,
+    refresh: fetchDetails,
+    actions: { addItem, updateItem, deleteItem, addProposal, updateProposal, selectProposal, deleteProposal },
+  };
+}
