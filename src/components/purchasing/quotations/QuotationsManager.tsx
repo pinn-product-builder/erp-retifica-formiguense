@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useQuotations, useQuotationDetails } from '@/hooks/useQuotations';
-import { QuotationsList }   from './QuotationsList';
-import { QuotationForm }    from './QuotationForm';
-import { QuotationDetails } from './QuotationDetails';
+import { QuotationsList }          from './QuotationsList';
+import { QuotationForm }           from './QuotationForm';
+import { QuotationDetails }        from './QuotationDetails';
+import { ProposalComparisonView }  from './ProposalComparisonView';
 import type { Quotation } from '@/services/QuotationService';
 
 export function QuotationsManager() {
@@ -12,9 +13,10 @@ export function QuotationsManager() {
     actions: { createQuotation, updateQuotation, updateStatus, deleteQuotation },
   } = useQuotations();
 
-  const [formOpen,     setFormOpen]     = useState(false);
-  const [editTarget,   setEditTarget]   = useState<Quotation | null>(null);
-  const [viewTarget,   setViewTarget]   = useState<Quotation | null>(null);
+  const [formOpen,       setFormOpen]       = useState(false);
+  const [editTarget,     setEditTarget]     = useState<Quotation | null>(null);
+  const [viewTarget,     setViewTarget]     = useState<Quotation | null>(null);
+  const [compareTarget,  setCompareTarget]  = useState<Quotation | null>(null);
 
   const {
     quotation: detailQuotation,
@@ -23,9 +25,10 @@ export function QuotationsManager() {
     actions:   detailActions,
   } = useQuotationDetails(viewTarget?.id ?? null);
 
-  const handleNew = () => { setEditTarget(null); setFormOpen(true); };
-  const handleEdit = (q: Quotation) => { setEditTarget(q); setFormOpen(true); };
-  const handleView = (q: Quotation) => setViewTarget(q);
+  const handleNew     = () => { setEditTarget(null); setFormOpen(true); };
+  const handleEdit    = (q: Quotation) => { setEditTarget(q); setFormOpen(true); };
+  const handleView    = (q: Quotation) => setViewTarget(q);
+  const handleCompare = (q: Quotation) => setCompareTarget(q);
 
   const handleFormSubmit = async (data: Parameters<typeof createQuotation>[0]) => {
     if (editTarget) {
@@ -33,12 +36,17 @@ export function QuotationsManager() {
       return ok;
     }
     const result = await createQuotation(data);
-    if (result) setViewTarget(result); // abre detalhes após criar
+    if (result) setViewTarget(result);
     return result;
   };
 
   const handleCloseDetails = () => {
     setViewTarget(null);
+    refresh();
+  };
+
+  const handleCloseCompare = () => {
+    setCompareTarget(null);
     refresh();
   };
 
@@ -56,6 +64,7 @@ export function QuotationsManager() {
         onNew={handleNew}
         onEdit={handleEdit}
         onView={handleView}
+        onCompare={handleCompare}
         onDelete={deleteQuotation}
       />
 
@@ -75,7 +84,6 @@ export function QuotationsManager() {
           isLoading={detailLoading}
           onStatusChange={async (status) => {
             const ok = await updateStatus(detailQuotation.id, status);
-            if (ok) await detailActions.addItem; // força re-fetch via hook
             return ok;
           }}
           onAddItem={detailActions.addItem}
@@ -85,6 +93,17 @@ export function QuotationsManager() {
           onEditProposal={detailActions.updateProposal}
           onSelectProposal={detailActions.selectProposal}
           onDeleteProposal={detailActions.deleteProposal}
+        />
+      )}
+
+      {/* Comparativo de propostas — acessível direto da lista */}
+      {compareTarget && (
+        <ProposalComparisonView
+          open={!!compareTarget}
+          onOpenChange={v => { if (!v) handleCloseCompare(); }}
+          quotationId={compareTarget.id}
+          quotationNumber={compareTarget.quotation_number}
+          onPurchaseOrdersCreated={handleCloseCompare}
         />
       )}
     </>

@@ -38,7 +38,7 @@ Facilitar análise comparativa de propostas através de visualização consolida
 
 ## 📐 Business Rules
 
-### RN-COM-013: Matriz de Comparação
+### RN-COM-012: Matriz de Comparação
 ```typescript
 interface ProposalComparison {
   part_id: string;
@@ -75,7 +75,7 @@ interface ProposalSummary {
 }
 ```
 
-### RN-COM-014: Cálculo de Score
+### RN-COM-013: Cálculo de Score
 ```typescript
 function calculateProposalScore(
   proposal: ProposalSummary,

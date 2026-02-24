@@ -15,8 +15,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   Plus, Pencil, Trash2, Loader2, CheckCircle2, ChevronDown,
-  Download, MessageCircle, Send, X, Star,
+  Download, MessageCircle, Send, X, Star, BarChart2,
 } from 'lucide-react';
+import { ProposalComparisonView } from './ProposalComparisonView';
 import {
   QuotationService,
   STATUS_LABELS,
@@ -42,7 +43,7 @@ interface QuotationDetailsProps {
   onAddItem:        (data: QuotationItemFormData) => Promise<boolean>;
   onEditItem:       (itemId: string, data: Partial<QuotationItemFormData>) => Promise<boolean>;
   onDeleteItem:     (itemId: string) => Promise<boolean>;
-  onAddProposal:    (itemId: string, supplierId: string, data: ProposalFormData) => Promise<boolean>;
+  onAddProposal:    (itemId: string, supplierId: string, data: ProposalFormData, quantity: number) => Promise<boolean>;
   onEditProposal:   (proposalId: string, data: Partial<ProposalFormData>, qty: number) => Promise<boolean>;
   onSelectProposal: (proposalId: string, itemId: string) => Promise<boolean>;
   onDeleteProposal: (proposalId: string) => Promise<boolean>;
@@ -62,6 +63,7 @@ export function QuotationDetails({
   const [addProposalItem, setAddProposalItem]  = useState<QuotationItem | null>(null);
   const [editProposal,    setEditProposal]     = useState<{ proposal: QuotationProposal; item: QuotationItem } | null>(null);
   const [deleteProposalId, setDeleteProposalId] = useState<string | null>(null);
+  const [compareOpen,     setCompareOpen]      = useState(false);
 
   const handleCsvDownload = () => {
     const csv = QuotationService.generateCsvContent(quotation, items);
@@ -150,6 +152,13 @@ export function QuotationDetails({
             <Button size="sm" variant="outline" onClick={handleWhatsApp} className="h-8 text-xs gap-1 text-green-700 border-green-300 hover:bg-green-50">
               <MessageCircle className="w-3 h-3" />WhatsApp
             </Button>
+            {/* Comparar propostas — disponível quando há ao menos uma proposta */}
+            {items.some(i => (i.proposals ?? []).length > 0) && (
+              <Button size="sm" variant="outline" onClick={() => setCompareOpen(true)}
+                className="h-8 text-xs gap-1 text-purple-700 border-purple-300 hover:bg-purple-50">
+                <BarChart2 className="w-3 h-3" />Comparar Propostas
+              </Button>
+            )}
             {quotation.status === 'draft' && (
               <Button size="sm" variant="default" onClick={() => onStatusChange('sent')} className="h-8 text-xs gap-1 ml-auto">
                 <Send className="w-3 h-3" />Enviar Cotação
@@ -333,7 +342,7 @@ export function QuotationDetails({
           itemQuantity={addProposalItem.quantity}
           respondedSupplierIds={(addProposalItem.proposals ?? []).map(p => p.supplier_id)}
           onSubmit={async (supplierId, data) => {
-            const ok = await onAddProposal(addProposalItem.id, supplierId, data);
+            const ok = await onAddProposal(addProposalItem.id, supplierId, data, addProposalItem.quantity);
             if (ok) setAddProposalItem(null);
             return ok;
           }}
@@ -354,6 +363,15 @@ export function QuotationDetails({
           }}
         />
       )}
+
+      {/* Comparativo de propostas */}
+      <ProposalComparisonView
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
+        quotationId={quotation.id}
+        quotationNumber={quotation.quotation_number}
+        onPurchaseOrdersCreated={() => { setCompareOpen(false); onOpenChange(false); }}
+      />
 
       {/* Confirmar exclusão de item */}
       <AlertDialog open={!!deleteItemId} onOpenChange={v => { if (!v) setDeleteItemId(null); }}>

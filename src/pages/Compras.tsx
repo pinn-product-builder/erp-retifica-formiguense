@@ -3,17 +3,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Users, FileText, Package, Plus, Star, TrendingUp, Award, Check, X } from 'lucide-react';
+import { ShoppingCart, Users, FileText, Package, Plus, Star, TrendingUp, Award, Check, X, ArrowRight, ClipboardCopy } from 'lucide-react';
 import { usePurchasing } from '@/hooks/usePurchasing';
 import { usePurchaseNeeds } from '@/hooks/usePurchaseNeeds';
-import { useQuotations } from '@/hooks/useQuotations';
 import { usePurchaseReceipts } from '@/hooks/usePurchaseReceipts';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
 import SupplierEvaluation from '@/components/purchasing/SupplierEvaluation';
 import SuppliersManager from '@/components/purchasing/SuppliersManager';
-import QuotationManager from '@/components/purchasing/QuotationManager';
 import PurchaseNeedsManager from '@/components/purchasing/PurchaseNeedsManager';
 import PurchaseOrderManager from '@/components/purchasing/PurchaseOrderManager';
 import ReceiptManager from '@/components/purchasing/ReceiptManager';
@@ -55,6 +54,7 @@ const translatePriority = (priority: string) => {
 };
 
 export default function Compras() {
+  const navigate = useNavigate();
   const {
     requisitions,
     purchaseOrders,
@@ -69,7 +69,6 @@ export default function Compras() {
   } = usePurchasing();
   const { toast } = useToast();
   const { fetchNeeds } = usePurchaseNeeds();
-  const { fetchQuotations } = useQuotations();
   const { fetchReceipts } = usePurchaseReceipts();
 
   const [showRequisitionDialog, setShowRequisitionDialog] = useState(false);
@@ -169,8 +168,6 @@ export default function Compras() {
           fetchPurchaseOrders();
         } else if (value === 'receipts') {
           fetchReceipts();
-        } else if (value === 'quotations') {
-          fetchQuotations();
         } else if (value === 'suppliers') {
           fetchSuppliers();
         }
@@ -352,13 +349,26 @@ export default function Compras() {
           <ReceiptManager />
         </TabsContent>
 
-        {/* Quotations Tab */}
+        {/* Quotations Tab — redireciona para nova tela */}
         <TabsContent value="quotations" className="space-y-4">
-          <QuotationManager 
-            onOrderCreated={() => {
-              fetchPurchaseOrders();
-            }}
-          />
+          <Card className="max-w-lg mx-auto mt-8">
+            <CardContent className="p-8 flex flex-col items-center text-center gap-4">
+              <div className="rounded-full bg-purple-100 dark:bg-purple-900/30 p-4">
+                <ClipboardCopy className="w-8 h-8 text-purple-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Cotações foram migradas</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  O módulo de cotações agora possui uma tela dedicada com comparativo de propostas,
+                  sugestão automática de fornecedores e geração de pedidos de compra.
+                </p>
+              </div>
+              <Button onClick={() => navigate('/cotacoes')} className="gap-2">
+                Ir para Cotações
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Evaluations Tab */}

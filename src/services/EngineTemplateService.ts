@@ -22,6 +22,7 @@ export interface IEngineTemplateService {
   template_id: string;
   service_id: string;
   quantity: number;
+  custom_value: number | null;
   notes: string | null;
   display_order: number;
   service?: {
@@ -68,6 +69,7 @@ export interface CreateTemplateData {
   services: Array<{
     service_id: string;
     quantity: number;
+    custom_value?: number | null;
     notes?: string;
   }>;
 }
@@ -105,6 +107,7 @@ export class EngineTemplateService {
           id,
           service_id,
           quantity,
+          custom_value,
           notes,
           display_order,
           service:additional_services(id, description, value, macro_component_id)
@@ -185,6 +188,7 @@ export class EngineTemplateService {
           id,
           service_id,
           quantity,
+          custom_value,
           notes,
           display_order,
           service:additional_services(id, description, value, macro_component_id)
@@ -226,6 +230,7 @@ export class EngineTemplateService {
           id,
           service_id,
           quantity,
+          custom_value,
           notes,
           display_order,
           service:additional_services(id, description, value, macro_component_id)
@@ -298,6 +303,7 @@ export class EngineTemplateService {
         template_id: template.id,
         service_id: service.service_id,
         quantity: service.quantity,
+        custom_value: service.custom_value ?? null,
         notes: service.notes,
         display_order: index,
       }));
@@ -377,6 +383,7 @@ export class EngineTemplateService {
           template_id: templateId,
           service_id: service.service_id,
           quantity: service.quantity,
+          custom_value: service.custom_value ?? null,
           notes: service.notes,
           display_order: index,
         }));
@@ -439,6 +446,7 @@ export class EngineTemplateService {
         originalTemplate.services?.map((s) => ({
           service_id: s.service_id,
           quantity: s.quantity,
+          custom_value: s.custom_value ?? null,
           notes: s.notes || undefined,
         })) || [],
     };

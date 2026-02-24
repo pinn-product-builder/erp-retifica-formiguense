@@ -35,7 +35,7 @@ import {
   Calendar,
   Building2,
 } from 'lucide-react';
-import { useQuotations, type Quotation } from '@/hooks/useQuotations';
+import { useQuotations, type Quotation } from '@/hooks/useQuotationsLegacy';
 import { usePurchasing } from '@/hooks/usePurchasing';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';

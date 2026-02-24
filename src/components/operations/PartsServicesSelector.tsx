@@ -117,15 +117,18 @@ export function PartsServicesSelector({
     if (engineTemplate) {
       const templateServices = (engineTemplate.services || [])
         .filter(ts => !macroComponentId || ts.service?.macro_component_id === macroComponentId)
-        .map(ts => ({
-          id: ts.service_id,
-          description: ts.service?.description || '',
-          value: ts.service?.value || 0,
-          is_active: true,
-          macro_component_id: ts.service?.macro_component_id,
-          engine_type_id: undefined,
-          label: `${ts.service?.description || ''} - R$ ${(ts.service?.value || 0).toFixed(2)}`
-        }));
+        .map(ts => {
+          const effectiveValue = ts.custom_value ?? ts.service?.value ?? 0;
+          return {
+            id: ts.service_id,
+            description: ts.service?.description || '',
+            value: effectiveValue,
+            is_active: true,
+            macro_component_id: ts.service?.macro_component_id,
+            engine_type_id: undefined,
+            label: `${ts.service?.description || ''} - R$ ${effectiveValue.toFixed(2)}`
+          };
+        });
       setFilteredServices(templateServices);
       return;
     }

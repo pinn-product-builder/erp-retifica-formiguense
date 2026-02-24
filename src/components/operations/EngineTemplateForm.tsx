@@ -73,6 +73,7 @@ interface SelectedService {
   service_id: string;
   description: string;
   value: number;
+  custom_value: number | null;
   quantity: number;
   notes?: string;
 }
@@ -174,6 +175,7 @@ export function EngineTemplateForm({
             service_id: s.service_id,
             description: s.service?.description || '',
             value: s.service?.value || 0,
+            custom_value: s.custom_value ?? null,
             quantity: s.quantity,
             notes: s.notes || undefined,
           })) || []
@@ -202,6 +204,7 @@ export function EngineTemplateForm({
             service_id: s.service_id,
             description: s.service?.description || '',
             value: s.service?.value || 0,
+            custom_value: s.custom_value ?? null,
             quantity: s.quantity,
             notes: s.notes || undefined,
           })) || []
@@ -224,6 +227,7 @@ export function EngineTemplateForm({
             service_id: s.service_id,
             description: s.service?.description || '',
             value: s.service?.value || 0,
+            custom_value: s.custom_value ?? null,
             quantity: s.quantity,
             notes: s.notes || undefined,
           })) || []
@@ -270,6 +274,7 @@ export function EngineTemplateForm({
       service_id: s.service_id,
       description: s.service?.description ?? '',
       value: s.service?.value ?? 0,
+      custom_value: s.custom_value ?? null,
       quantity: s.quantity,
       notes: s.notes,
     }));
@@ -314,6 +319,7 @@ export function EngineTemplateForm({
       services: selectedServices.map((s) => ({
         service_id: s.service_id,
         quantity: s.quantity,
+        custom_value: s.custom_value ?? null,
         notes: s.notes,
       })),
     };
@@ -370,6 +376,7 @@ export function EngineTemplateForm({
             service_id: service.id,
             description: service.description,
             value: service.value,
+            custom_value: null,
             quantity: 1,
           },
         ];
@@ -377,6 +384,16 @@ export function EngineTemplateForm({
     },
     []
   );
+
+  const updateServiceCustomValue = useCallback((serviceId: string, rawValue: string) => {
+    setSelectedServices((prev) =>
+      prev.map((s) => {
+        if (s.service_id !== serviceId) return s;
+        const parsed = parseFloat(rawValue.replace(',', '.'));
+        return { ...s, custom_value: rawValue.trim() === '' || Number.isNaN(parsed) ? null : parsed };
+      })
+    );
+  }, []);
 
   const updatePartQuantity = useCallback((partId: string, delta: number) => {
     setSelectedParts((prev) =>
@@ -417,7 +434,7 @@ export function EngineTemplateForm({
     0
   );
   const totalServicesValue = selectedServices.reduce(
-    (sum, s) => sum + s.value * s.quantity,
+    (sum, s) => sum + (s.custom_value ?? s.value) * s.quantity,
     0
   );
   const laborCostValue = Number(watch('labor_cost') || 0);
@@ -766,47 +783,68 @@ export function EngineTemplateForm({
                           {selectedServices.map((service) => (
                             <div
                               key={service.service_id}
-                              className="flex items-center justify-between gap-2 p-2 bg-muted rounded-md"
+                              className="flex flex-col gap-1.5 p-2 bg-muted rounded-md"
                             >
-                              <div className="flex-1 min-w-0">
-                                <div className="text-xs sm:text-sm font-medium truncate">
-                                  {service.description}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs sm:text-sm font-medium truncate">
+                                    {service.description}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    Padrão: {formatCurrency(service.value)}
+                                  </div>
                                 </div>
-                                <div className="text-xs font-semibold">
-                                  {formatCurrency(service.value * service.quantity)}
+                                <div className="flex items-center gap-1 sm:gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => updateServiceQuantity(service.service_id, -1)}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                  <span className="text-xs w-6 text-center">
+                                    {service.quantity}
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => updateServiceQuantity(service.service_id, 1)}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeService(service.service_id)}
+                                    className="h-6 w-6 p-0 text-destructive"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1 sm:gap-2">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => updateServiceQuantity(service.service_id, -1)}
-                                  className="h-6 w-6 p-0"
-                                >
-                                  <Minus className="h-3 w-3" />
-                                </Button>
-                                <span className="text-xs w-6 text-center">
-                                  {service.quantity}
+                              <div className="flex items-center gap-2">
+                                <Label className="text-xs text-muted-foreground whitespace-nowrap">
+                                  Valor para lista:
+                                </Label>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  placeholder={String(service.value)}
+                                  value={service.custom_value ?? ''}
+                                  onChange={(e) =>
+                                    updateServiceCustomValue(service.service_id, e.target.value)
+                                  }
+                                  className="h-6 text-xs w-28 px-2"
+                                />
+                                <span className="text-xs font-semibold whitespace-nowrap">
+                                  = {formatCurrency((service.custom_value ?? service.value) * service.quantity)}
                                 </span>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => updateServiceQuantity(service.service_id, 1)}
-                                  className="h-6 w-6 p-0"
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeService(service.service_id)}
-                                  className="h-6 w-6 p-0 text-destructive"
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
                               </div>
                             </div>
                           ))}

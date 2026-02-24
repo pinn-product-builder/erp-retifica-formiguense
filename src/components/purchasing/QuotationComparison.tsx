@@ -26,7 +26,7 @@ import {
   Target,
   Zap,
 } from 'lucide-react';
-import { type Quotation } from '@/hooks/useQuotations';
+import { type Quotation } from '@/hooks/useQuotationsLegacy';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import IconButton from '@mui/material/IconButton';

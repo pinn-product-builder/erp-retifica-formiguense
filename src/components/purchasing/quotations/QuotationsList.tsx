@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/pagination';
 import {
   Plus, Search, MoreVertical, Eye, Pencil, Trash2,
-  Loader2, ClipboardList, Clock, CheckCircle2, AlertCircle,
+  Loader2, ClipboardList, Clock, CheckCircle2, AlertCircle, BarChart2,
 } from 'lucide-react';
 import {
   STATUS_LABELS, STATUS_COLORS,
@@ -50,6 +50,7 @@ interface QuotationsListProps {
   onNew:        () => void;
   onEdit:       (q: Quotation) => void;
   onView:       (q: Quotation) => void;
+  onCompare:    (q: Quotation) => void;
   onDelete:     (id: string) => Promise<boolean>;
 }
 
@@ -71,7 +72,7 @@ function StatCard({ icon: Icon, label, value, color }: {
 
 export function QuotationsList({
   quotations, count, totalPages, currentPage, isLoading,
-  filters, onFilters, onPageChange, onNew, onEdit, onView, onDelete,
+  filters, onFilters, onPageChange, onNew, onEdit, onView, onCompare, onDelete,
 }: QuotationsListProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [search,   setSearch]   = useState(filters.search ?? '');
@@ -146,7 +147,8 @@ export function QuotationsList({
       ) : (
         <div className="space-y-2">
           {quotations.map(q => {
-            const isOverdue = (q.days_until_due ?? 0) < 0 && ['sent', 'waiting_proposals'].includes(q.status);
+            const isOverdue    = (q.days_until_due ?? 0) < 0 && ['sent', 'waiting_proposals'].includes(q.status);
+            const hasProposals = (q.total_proposals ?? 0) > 0;
             return (
               <div key={q.id}
                 className="flex items-center gap-3 p-3 sm:p-4 rounded-lg border hover:bg-accent/30 transition-colors cursor-pointer"
@@ -175,6 +177,19 @@ export function QuotationsList({
                   </div>
                 </div>
 
+                {/* Botão de comparação rápida — visível quando há propostas */}
+                {hasProposals && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hidden sm:flex h-8 text-xs gap-1.5 flex-shrink-0 text-purple-700 border-purple-300 hover:bg-purple-50"
+                    onClick={e => { e.stopPropagation(); onCompare(q); }}
+                  >
+                    <BarChart2 className="w-3.5 h-3.5" />
+                    Comparar
+                  </Button>
+                )}
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
@@ -188,6 +203,12 @@ export function QuotationsList({
                     <DropdownMenuItem onClick={e => { e.stopPropagation(); onEdit(q); }}>
                       <Pencil className="w-4 h-4 mr-2" /> Editar
                     </DropdownMenuItem>
+                    {hasProposals && (
+                      <DropdownMenuItem onClick={e => { e.stopPropagation(); onCompare(q); }}
+                        className="text-purple-700 focus:text-purple-700">
+                        <BarChart2 className="w-4 h-4 mr-2" /> Comparar Propostas
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive"

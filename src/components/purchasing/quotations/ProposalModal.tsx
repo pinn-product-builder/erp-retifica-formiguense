@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
@@ -64,7 +65,7 @@ export function ProposalModal({
   } = useForm<ProposalFormData & { supplier_id: string }>({
     resolver: zodResolver(
       proposalSchema.extend({
-        supplier_id: require('zod').string().uuid('Fornecedor obrigatório'),
+        supplier_id: z.string().uuid('Fornecedor obrigatório'),
       })
     ),
     defaultValues: proposal
