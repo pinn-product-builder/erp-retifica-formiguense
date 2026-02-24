@@ -157,6 +157,11 @@ const inventoryItems = [
     icon: ClipboardCopy,
   },
   {
+    title: "Pedidos de Compra",
+    url: "/pedidos-compra",
+    icon: ClipboardList,
+  },
+  {
     title: "Compras",
     url: "/compras",
     icon: ShoppingCart,

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input }  from '@/components/ui/input';
-import { Badge }  from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
@@ -19,24 +21,14 @@ import {
   PaginationNext, PaginationPrevious,
 } from '@/components/ui/pagination';
 import {
-  Plus, Search, MoreVertical, Eye, Pencil, Trash2,
-  Loader2, ClipboardList, Clock, CheckCircle2, AlertCircle, BarChart2,
+  Plus, Search, Filter, MoreHorizontal, Eye, Pencil, Trash2,
+  Loader2, FileText, Clock, CheckCircle, AlertTriangle, BarChart3,
+  Send, XCircle,
 } from 'lucide-react';
 import {
   STATUS_LABELS, STATUS_COLORS,
   type Quotation, type QuotationStatus, type QuotationFilters,
 } from '@/services/QuotationService';
-
-const STATUS_OPTIONS: { value: QuotationStatus | 'all'; label: string }[] = [
-  { value: 'all',             label: 'Todos os status' },
-  { value: 'draft',           label: 'Rascunho' },
-  { value: 'sent',            label: 'Enviada' },
-  { value: 'waiting_proposals', label: 'Aguardando Propostas' },
-  { value: 'responded',       label: 'Respondida' },
-  { value: 'approved',        label: 'Aprovada' },
-  { value: 'rejected',        label: 'Rejeitada' },
-  { value: 'cancelled',       label: 'Cancelada' },
-];
 
 interface QuotationsListProps {
   quotations:   Quotation[];
@@ -54,181 +46,273 @@ interface QuotationsListProps {
   onDelete:     (id: string) => Promise<boolean>;
 }
 
-function StatCard({ icon: Icon, label, value, color }: {
-  icon: React.ElementType; label: string; value: number; color: string;
-}) {
-  return (
-    <div className="rounded-lg border p-3 sm:p-4 flex items-center gap-3">
-      <div className={`rounded-lg p-1.5 sm:p-2 ${color}`}>
-        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs sm:text-sm text-muted-foreground truncate">{label}</p>
-        <p className="text-lg sm:text-xl md:text-2xl font-bold">{value}</p>
-      </div>
-    </div>
-  );
-}
+type TabValue = 'all' | 'waiting' | 'responded' | 'finished';
 
 export function QuotationsList({
   quotations, count, totalPages, currentPage, isLoading,
   filters, onFilters, onPageChange, onNew, onEdit, onView, onCompare, onDelete,
 }: QuotationsListProps) {
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [search,   setSearch]   = useState(filters.search ?? '');
+  const [deleteId,  setDeleteId]  = useState<string | null>(null);
+  const [search,    setSearch]    = useState(filters.search ?? '');
+  const [activeTab, setActiveTab] = useState<TabValue>('all');
 
-  const total    = count;
-  const pending  = quotations.filter(q => ['sent', 'waiting_proposals'].includes(q.status)).length;
+  const waiting   = quotations.filter(q => ['sent', 'waiting_proposals'].includes(q.status)).length;
   const responded = quotations.filter(q => q.status === 'responded').length;
-  const overdue  = quotations.filter(q => (q.days_until_due ?? 0) < 0 && ['sent', 'waiting_proposals'].includes(q.status)).length;
+  const approved  = quotations.filter(q => q.status === 'approved').length;
+  const overdue   = quotations.filter(q => (q.days_until_due ?? 0) < 0 && !['approved', 'rejected', 'cancelled'].includes(q.status)).length;
+
+  const tabFiltered = quotations.filter(q => {
+    if (activeTab === 'waiting')   return ['sent', 'waiting_proposals'].includes(q.status);
+    if (activeTab === 'responded') return q.status === 'responded';
+    if (activeTab === 'finished')  return ['approved', 'rejected', 'cancelled'].includes(q.status);
+    return true;
+  });
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onFilters({ ...filters, search });
   };
 
+  const canEdit    = (q: Quotation) => ['draft', 'sent', 'waiting_proposals'].includes(q.status);
+  const canCompare = (q: Quotation) => (q.total_proposals ?? 0) > 0;
+  const canDelete  = (q: Quotation) => !['approved'].includes(q.status);
+
+  const fmt = (d: string) => new Date(d).toLocaleDateString('pt-BR');
+
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-6">
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-        <StatCard icon={ClipboardList} label="Total"       value={total}    color="bg-blue-100 text-blue-600" />
-        <StatCard icon={Clock}         label="Pendentes"   value={pending}  color="bg-yellow-100 text-yellow-600" />
-        <StatCard icon={CheckCircle2}  label="Respondidas" value={responded} color="bg-purple-100 text-purple-600" />
-        <StatCard icon={AlertCircle}   label="Vencidas"    value={overdue}  color="bg-red-100 text-red-600" />
-      </div>
-
-      {/* Filtros + Novo */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-        <form onSubmit={handleSearchSubmit} className="relative flex-1 w-full sm:max-w-xs">
-          <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar cotação..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-8"
-          />
-        </form>
-
-        <Select
-          value={filters.status ?? 'all'}
-          onValueChange={v => onFilters({ ...filters, status: v as QuotationStatus | 'all' })}
-        >
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map(o => (
-              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Button onClick={onNew} className="w-full sm:w-auto gap-1.5">
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Nova Cotação</span>
-          <span className="sm:hidden">Nova</span>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <FileText className="h-6 w-6" />
+            Cotações
+          </h1>
+          <p className="text-muted-foreground text-sm">Gerencie suas cotações de compra</p>
+        </div>
+        <Button onClick={onNew}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Cotação
         </Button>
       </div>
 
-      {/* Lista */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : quotations.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground">
-          <ClipboardList className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="text-sm font-medium">Nenhuma cotação encontrada</p>
-          <Button variant="link" size="sm" onClick={onNew} className="mt-1">
-            Criar primeira cotação
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {quotations.map(q => {
-            const isOverdue    = (q.days_until_due ?? 0) < 0 && ['sent', 'waiting_proposals'].includes(q.status);
-            const hasProposals = (q.total_proposals ?? 0) > 0;
-            return (
-              <div key={q.id}
-                className="flex items-center gap-3 p-3 sm:p-4 rounded-lg border hover:bg-accent/30 transition-colors cursor-pointer"
-                onClick={() => onView(q)}>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold">{q.quotation_number}</span>
-                    <Badge className={`${STATUS_COLORS[q.status]} border text-xs`}>
-                      {STATUS_LABELS[q.status]}
-                    </Badge>
-                    {isOverdue && (
-                      <Badge variant="destructive" className="text-xs">Vencida</Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                    <span>Prazo: {new Date(q.due_date).toLocaleDateString('pt-BR')}</span>
-                    {q.days_until_due != null && !isOverdue && (
-                      <span className={q.days_until_due <= 3 ? 'text-yellow-600 font-medium' : ''}>
-                        {q.days_until_due}d restantes
-                      </span>
-                    )}
-                    <span>{q.total_items ?? 0} iten(s)</span>
-                    {(q.suppliers_responded ?? 0) > 0 && (
-                      <span className="text-purple-600">{q.suppliers_responded} fornecedor(es) respondeu</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Botão de comparação rápida — visível quando há propostas */}
-                {hasProposals && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="hidden sm:flex h-8 text-xs gap-1.5 flex-shrink-0 text-purple-700 border-purple-300 hover:bg-purple-50"
-                    onClick={e => { e.stopPropagation(); onCompare(q); }}
-                  >
-                    <BarChart2 className="w-3.5 h-3.5" />
-                    Comparar
-                  </Button>
-                )}
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={e => { e.stopPropagation(); onView(q); }}>
-                      <Eye className="w-4 h-4 mr-2" /> Visualizar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={e => { e.stopPropagation(); onEdit(q); }}>
-                      <Pencil className="w-4 h-4 mr-2" /> Editar
-                    </DropdownMenuItem>
-                    {hasProposals && (
-                      <DropdownMenuItem onClick={e => { e.stopPropagation(); onCompare(q); }}
-                        className="text-purple-700 focus:text-purple-700">
-                        <BarChart2 className="w-4 h-4 mr-2" /> Comparar Propostas
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={e => { e.stopPropagation(); setDeleteId(q.id); }}>
-                      <Trash2 className="w-4 h-4 mr-2" /> Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-500 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-2xl font-bold">{waiting}</div>
+                <p className="text-sm text-muted-foreground truncate">Aguardando</p>
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-purple-500 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-2xl font-bold">{responded}</div>
+                <p className="text-sm text-muted-foreground truncate">Respondidas</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-2xl font-bold">{approved}</div>
+                <p className="text-sm text-muted-foreground truncate">Aprovadas</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-2xl font-bold">{overdue}</div>
+                <p className="text-sm text-muted-foreground truncate">Vencidas</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Busca */}
+      <Card>
+        <CardContent className="pt-6">
+          <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por número ou item..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Button type="submit" variant="outline">
+              <Filter className="h-4 w-4 mr-2" />
+              Buscar
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Tabs + Tabela */}
+      <Tabs value={activeTab} onValueChange={v => setActiveTab(v as TabValue)}>
+        <TabsList>
+          <TabsTrigger value="all">Todas ({count})</TabsTrigger>
+          <TabsTrigger value="waiting">Aguardando ({waiting})</TabsTrigger>
+          <TabsTrigger value="responded">Respondidas ({responded})</TabsTrigger>
+          <TabsTrigger value="finished">Finalizadas ({quotations.filter(q => ['approved', 'rejected', 'cancelled'].includes(q.status)).length})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeTab} className="mt-4">
+          <Card>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : tabFiltered.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm font-medium">Nenhuma cotação encontrada</p>
+                  <Button variant="link" size="sm" onClick={onNew} className="mt-1">
+                    Criar primeira cotação
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Número</TableHead>
+                        <TableHead className="hidden md:table-cell">Itens</TableHead>
+                        <TableHead className="hidden sm:table-cell">Respostas</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="hidden sm:table-cell">Prazo</TableHead>
+                        <TableHead className="hidden lg:table-cell">Criado em</TableHead>
+                        <TableHead className="w-[50px]" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tabFiltered.map(q => {
+                        const isOverdue = (q.days_until_due ?? 0) < 0 && !['approved', 'rejected', 'cancelled'].includes(q.status);
+                        return (
+                          <TableRow
+                            key={q.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => onView(q)}
+                          >
+                            <TableCell>
+                              <div className="font-medium text-sm">{q.quotation_number}</div>
+                              {q.notes && (
+                                <div className="text-xs text-muted-foreground truncate max-w-[180px]">{q.notes}</div>
+                              )}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell text-sm">
+                              {q.total_items ?? 0} item(ns)
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {(q.suppliers_responded ?? 0) > 0 ? (
+                                <Badge variant="outline" className="text-xs">
+                                  {q.suppliers_responded} resposta(s)
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <Badge className={`${STATUS_COLORS[q.status]} border text-xs`}>
+                                  {STATUS_LABELS[q.status]}
+                                </Badge>
+                                {isOverdue && (
+                                  <Badge variant="destructive" className="text-xs">Vencida</Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-sm text-muted-foreground whitespace-nowrap">
+                              <div>{fmt(q.due_date)}</div>
+                              {q.days_until_due != null && !isOverdue && (
+                                <div className={`text-xs ${q.days_until_due <= 3 ? 'text-yellow-600 font-medium' : 'text-muted-foreground'}`}>
+                                  {q.days_until_due}d restantes
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell text-sm text-muted-foreground whitespace-nowrap">
+                              {fmt(q.created_at)}
+                            </TableCell>
+                            <TableCell onClick={e => e.stopPropagation()}>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => onView(q)}>
+                                    <Eye className="h-4 w-4 mr-2" />Ver Detalhes
+                                  </DropdownMenuItem>
+                                  {canEdit(q) && (
+                                    <DropdownMenuItem onClick={() => onEdit(q)}>
+                                      <Pencil className="h-4 w-4 mr-2" />Editar
+                                    </DropdownMenuItem>
+                                  )}
+                                  {canCompare(q) && (
+                                    <DropdownMenuItem
+                                      className="text-purple-700 focus:text-purple-700"
+                                      onClick={() => onCompare(q)}
+                                    >
+                                      <BarChart3 className="h-4 w-4 mr-2" />Comparar Propostas
+                                    </DropdownMenuItem>
+                                  )}
+                                  {q.status === 'draft' && (
+                                    <DropdownMenuItem onClick={() => onView(q)}>
+                                      <Send className="h-4 w-4 mr-2" />Enviar Cotação
+                                    </DropdownMenuItem>
+                                  )}
+                                  {canDelete(q) && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        className="text-destructive focus:text-destructive"
+                                        onClick={() => setDeleteId(q.id)}
+                                      >
+                                        <XCircle className="h-4 w-4 mr-2" />Cancelar / Excluir
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Paginação */}
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground">
+      {!isLoading && totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-muted-foreground">
+          <span>
             Mostrando {Math.min((currentPage - 1) * 10 + 1, count)} a {Math.min(currentPage * 10, count)} de {count} cotações
-          </p>
+          </span>
           <Pagination>
             <PaginationContent>
               <PaginationItem>
@@ -238,7 +322,7 @@ export function QuotationsList({
                 />
               </PaginationItem>
               <PaginationItem>
-                <span className="text-sm px-3">{currentPage} / {totalPages}</span>
+                <span className="px-3 py-1 text-sm">{currentPage} / {totalPages}</span>
               </PaginationItem>
               <PaginationItem>
                 <PaginationNext
@@ -262,8 +346,10 @@ export function QuotationsList({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive hover:bg-destructive/90"
-              onClick={async () => { if (deleteId) { await onDelete(deleteId); setDeleteId(null); } }}>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={async () => { if (deleteId) { await onDelete(deleteId); setDeleteId(null); } }}
+            >
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>

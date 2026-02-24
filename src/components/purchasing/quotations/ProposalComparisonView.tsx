@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   Loader2, CheckCircle2, Trophy, Zap, DollarSign,
-  Star, ShoppingCart, Printer, Info,
+  Star, Printer, Info,
 } from 'lucide-react';
 import { useQuotationComparison }  from '@/hooks/useQuotationComparison';
 import type { ProposalRow, ComparisonItem } from '@/services/ComparisonService';
@@ -229,7 +229,7 @@ export function ProposalComparisonView({
   quotationNumber,
   onPurchaseOrdersCreated,
 }: ProposalComparisonViewProps) {
-  const { items, isLoading, allSelected, selectProposal, generatePurchaseOrders } =
+  const { items, isLoading, allSelected, selectProposal } =
     useQuotationComparison(open ? quotationId : null);
 
   // ── Justificativa ─────────────────────────────────────────────────────────
@@ -237,10 +237,6 @@ export function ProposalComparisonView({
   const [pendingRow,      setPendingRow]       = useState<ProposalRow | null>(null);
   const [justifyText,     setJustifyText]      = useState('');
   const [justifyLoading,  setJustifyLoading]   = useState(false);
-
-  // ── Gerar Pedido ──────────────────────────────────────────────────────────
-  const [generateOpen,    setGenerateOpen]     = useState(false);
-  const [generating,      setGenerating]       = useState(false);
 
   const handleSelectClick = (row: ProposalRow) => {
     if (row.is_best_price) {
@@ -264,16 +260,6 @@ export function ProposalComparisonView({
     setJustifyText('');
   };
 
-  const handleGenerate = async () => {
-    setGenerating(true);
-    const poNumbers = await generatePurchaseOrders();
-    setGenerating(false);
-    setGenerateOpen(false);
-    if (poNumbers) {
-      onPurchaseOrdersCreated?.();
-    }
-  };
-
   const handlePrint = () => window.print();
 
   return (
@@ -292,11 +278,6 @@ export function ProposalComparisonView({
                 <Button size="sm" variant="outline" onClick={handlePrint} className="h-8 text-xs gap-1">
                   <Printer className="w-3.5 h-3.5" />Imprimir / PDF
                 </Button>
-                {allSelected && (
-                  <Button size="sm" onClick={() => setGenerateOpen(true)} className="h-8 text-xs gap-1">
-                    <ShoppingCart className="w-3.5 h-3.5" />Gerar Pedido de Compra
-                  </Button>
-                )}
               </div>
             </div>
           </DialogHeader>
@@ -323,7 +304,7 @@ export function ProposalComparisonView({
 
               {!allSelected && (
                 <p className="text-xs text-muted-foreground text-center italic">
-                  Selecione uma proposta vencedora para cada item para habilitar a geração de pedido de compra.
+                  Selecione uma proposta vencedora para cada item. Após selecionar todas, o botão de gerar pedido estará disponível nos detalhes da cotação.
                 </p>
               )}
             </div>
@@ -371,25 +352,6 @@ export function ProposalComparisonView({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Confirmar geração de pedido ──────────────────────────────────────── */}
-      <AlertDialog open={generateOpen} onOpenChange={setGenerateOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Gerar Pedidos de Compra?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Serão criados pedidos de compra agrupados por fornecedor com base nas propostas selecionadas.
-              A cotação será marcada como <strong>Aprovada</strong>.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <Button disabled={generating} onClick={handleGenerate}>
-              {generating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Confirmar e Gerar
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

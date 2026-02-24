@@ -3,18 +3,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Users, FileText, Package, Plus, Star, TrendingUp, Award, Check, X, ArrowRight, ClipboardCopy } from 'lucide-react';
+import { ShoppingCart, Users, FileText, Package, Plus, Star, TrendingUp, Award, Check, X } from 'lucide-react';
 import { usePurchasing } from '@/hooks/usePurchasing';
 import { usePurchaseNeeds } from '@/hooks/usePurchaseNeeds';
 import { usePurchaseReceipts } from '@/hooks/usePurchaseReceipts';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
 import SupplierEvaluation from '@/components/purchasing/SupplierEvaluation';
 import SuppliersManager from '@/components/purchasing/SuppliersManager';
 import PurchaseNeedsManager from '@/components/purchasing/PurchaseNeedsManager';
-import PurchaseOrderManager from '@/components/purchasing/PurchaseOrderManager';
 import ReceiptManager from '@/components/purchasing/ReceiptManager';
 import RequisitionForm from '@/components/purchasing/RequisitionForm';
 
@@ -54,7 +52,6 @@ const translatePriority = (priority: string) => {
 };
 
 export default function Compras() {
-  const navigate = useNavigate();
   const {
     requisitions,
     purchaseOrders,
@@ -62,10 +59,8 @@ export default function Compras() {
     loading,
     createRequisition,
     updateRequisitionStatus,
-    createPurchaseOrder,
     fetchRequisitions,
-    fetchPurchaseOrders,
-    fetchSuppliers
+    fetchSuppliers,
   } = usePurchasing();
   const { toast } = useToast();
   const { fetchNeeds } = usePurchaseNeeds();
@@ -164,19 +159,15 @@ export default function Compras() {
           fetchNeeds();
         } else if (value === 'requisitions') {
           fetchRequisitions();
-        } else if (value === 'orders') {
-          fetchPurchaseOrders();
-        } else if (value === 'receipts') {
+        } else         if (value === 'receipts') {
           fetchReceipts();
         } else if (value === 'suppliers') {
           fetchSuppliers();
         }
       }} className="space-y-4">
-        <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-7">
+        <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-5">
           <TabsTrigger value="needs" className="flex-shrink-0 text-xs sm:text-sm">Necessidades</TabsTrigger>
           <TabsTrigger value="requisitions" className="flex-shrink-0 text-xs sm:text-sm">Requisições</TabsTrigger>
-          <TabsTrigger value="quotations" className="flex-shrink-0 text-xs sm:text-sm">Cotações</TabsTrigger>
-          <TabsTrigger value="orders" className="flex-shrink-0 text-xs sm:text-sm">Pedidos</TabsTrigger>
           <TabsTrigger value="receipts" className="flex-shrink-0 text-xs sm:text-sm">Recebimentos</TabsTrigger>
           <TabsTrigger value="suppliers" className="flex-shrink-0 text-xs sm:text-sm">Fornecedores</TabsTrigger>
           <TabsTrigger value="evaluations" className="flex items-center gap-1 sm:gap-2 flex-shrink-0 text-xs sm:text-sm">
@@ -336,39 +327,9 @@ export default function Compras() {
         </TabsContent>
 
         {/* Purchase Orders Tab */}
-        <TabsContent value="orders" className="space-y-4">
-          <PurchaseOrderManager 
-            onOrderCreated={() => {
-              fetchPurchaseOrders();
-            }}
-          />
-        </TabsContent>
-
         {/* Receipts Tab */}
         <TabsContent value="receipts" className="space-y-4">
           <ReceiptManager />
-        </TabsContent>
-
-        {/* Quotations Tab — redireciona para nova tela */}
-        <TabsContent value="quotations" className="space-y-4">
-          <Card className="max-w-lg mx-auto mt-8">
-            <CardContent className="p-8 flex flex-col items-center text-center gap-4">
-              <div className="rounded-full bg-purple-100 dark:bg-purple-900/30 p-4">
-                <ClipboardCopy className="w-8 h-8 text-purple-600" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold">Cotações foram migradas</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  O módulo de cotações agora possui uma tela dedicada com comparativo de propostas,
-                  sugestão automática de fornecedores e geração de pedidos de compra.
-                </p>
-              </div>
-              <Button onClick={() => navigate('/cotacoes')} className="gap-2">
-                Ir para Cotações
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* Evaluations Tab */}

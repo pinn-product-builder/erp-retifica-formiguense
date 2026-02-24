@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuotations, useQuotationDetails } from '@/hooks/useQuotations';
+import { useQuotationComparison } from '@/hooks/useQuotationComparison';
 import { QuotationsList }          from './QuotationsList';
 import { QuotationForm }           from './QuotationForm';
 import { QuotationDetails }        from './QuotationDetails';
@@ -7,6 +9,7 @@ import { ProposalComparisonView }  from './ProposalComparisonView';
 import type { Quotation } from '@/services/QuotationService';
 
 export function QuotationsManager() {
+  const navigate = useNavigate();
   const {
     quotations, count, totalPages, currentPage, isLoading, filters,
     setFilters, handlePageChange, refresh,
@@ -23,7 +26,10 @@ export function QuotationsManager() {
     items:     detailItems,
     isLoading: detailLoading,
     actions:   detailActions,
+    refresh:   refreshDetails,
   } = useQuotationDetails(viewTarget?.id ?? null);
+
+  const { generatePurchaseOrders } = useQuotationComparison(viewTarget?.id ?? null);
 
   const handleNew     = () => { setEditTarget(null); setFormOpen(true); };
   const handleEdit    = (q: Quotation) => { setEditTarget(q); setFormOpen(true); };
@@ -48,6 +54,11 @@ export function QuotationsManager() {
   const handleCloseCompare = () => {
     setCompareTarget(null);
     refresh();
+  };
+
+  const handlePurchaseOrdersCreated = () => {
+    setCompareTarget(null);
+    navigate('/pedidos-compra');
   };
 
   return (
@@ -84,6 +95,7 @@ export function QuotationsManager() {
           isLoading={detailLoading}
           onStatusChange={async (status) => {
             const ok = await updateStatus(detailQuotation.id, status);
+            if (ok) await refreshDetails();
             return ok;
           }}
           onAddItem={detailActions.addItem}
@@ -93,6 +105,14 @@ export function QuotationsManager() {
           onEditProposal={detailActions.updateProposal}
           onSelectProposal={detailActions.selectProposal}
           onDeleteProposal={detailActions.deleteProposal}
+          onGeneratePurchaseOrders={async () => {
+            const poNumbers = await generatePurchaseOrders();
+            if (poNumbers) {
+              setViewTarget(null);
+              navigate('/pedidos-compra');
+            }
+            return poNumbers;
+          }}
         />
       )}
 
@@ -103,7 +123,7 @@ export function QuotationsManager() {
           onOpenChange={v => { if (!v) handleCloseCompare(); }}
           quotationId={compareTarget.id}
           quotationNumber={compareTarget.quotation_number}
-          onPurchaseOrdersCreated={handleCloseCompare}
+          onPurchaseOrdersCreated={handlePurchaseOrdersCreated}
         />
       )}
     </>

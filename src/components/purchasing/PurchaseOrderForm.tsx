@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Calculator } from 'lucide-react';
 import { usePurchasing, Supplier, PurchaseOrder, PurchaseOrderItem } from '@/hooks/usePurchasing';
-import { useQuotations, type Quotation } from '@/hooks/useQuotations';
+import { useQuotations, type Quotation } from '@/hooks/useQuotationsLegacy';
 import { useToast } from '@/hooks/use-toast';
 import { FormField } from '@/components/ui/form-field';
 import { formatCurrency } from '@/lib/utils';

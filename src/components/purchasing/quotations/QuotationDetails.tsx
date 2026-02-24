@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   Plus, Pencil, Trash2, Loader2, CheckCircle2, ChevronDown,
-  Download, MessageCircle, Send, X, Star, BarChart2,
+  Download, MessageCircle, Send, X, Star, BarChart2, ShoppingCart,
 } from 'lucide-react';
 import { ProposalComparisonView } from './ProposalComparisonView';
 import {
@@ -47,6 +47,7 @@ interface QuotationDetailsProps {
   onEditProposal:   (proposalId: string, data: Partial<ProposalFormData>, qty: number) => Promise<boolean>;
   onSelectProposal: (proposalId: string, itemId: string) => Promise<boolean>;
   onDeleteProposal: (proposalId: string) => Promise<boolean>;
+  onGeneratePurchaseOrders?: () => Promise<string[] | null>;
 }
 
 export function QuotationDetails({
@@ -54,16 +55,38 @@ export function QuotationDetails({
   quotation, items, isLoading,
   onStatusChange, onAddItem, onEditItem, onDeleteItem,
   onAddProposal, onEditProposal, onSelectProposal, onDeleteProposal,
+  onGeneratePurchaseOrders,
 }: QuotationDetailsProps) {
   const canEdit = EDITABLE_STATUSES.includes(quotation.status);
 
-  const [addItemOpen,     setAddItemOpen]     = useState(false);
-  const [editItem,        setEditItem]         = useState<QuotationItem | null>(null);
-  const [deleteItemId,    setDeleteItemId]     = useState<string | null>(null);
-  const [addProposalItem, setAddProposalItem]  = useState<QuotationItem | null>(null);
-  const [editProposal,    setEditProposal]     = useState<{ proposal: QuotationProposal; item: QuotationItem } | null>(null);
-  const [deleteProposalId, setDeleteProposalId] = useState<string | null>(null);
-  const [compareOpen,     setCompareOpen]      = useState(false);
+  const [addItemOpen,      setAddItemOpen]      = useState(false);
+  const [editItem,         setEditItem]          = useState<QuotationItem | null>(null);
+  const [deleteItemId,     setDeleteItemId]      = useState<string | null>(null);
+  const [addProposalItem,  setAddProposalItem]   = useState<QuotationItem | null>(null);
+  const [editProposal,     setEditProposal]      = useState<{ proposal: QuotationProposal; item: QuotationItem } | null>(null);
+  const [deleteProposalId, setDeleteProposalId]  = useState<string | null>(null);
+  const [compareOpen,      setCompareOpen]       = useState(false);
+  const [generateOpen,     setGenerateOpen]      = useState(false);
+  const [generating,       setGenerating]        = useState(false);
+
+  // Todas as propostas selecionadas: cada item precisa ter ao menos 1 proposta marcada
+  const allSelected =
+    items.length > 0 &&
+    items.every(item => (item.proposals ?? []).some(p => p.is_selected));
+
+  // Botão disponível quando responded ou approved e todas propostas selecionadas
+  const canGeneratePO =
+    !!onGeneratePurchaseOrders &&
+    allSelected &&
+    ['responded', 'approved'].includes(quotation.status);
+
+  const handleGenerate = async () => {
+    if (!onGeneratePurchaseOrders) return;
+    setGenerating(true);
+    await onGeneratePurchaseOrders();
+    setGenerating(false);
+    setGenerateOpen(false);
+  };
 
   const handleCsvDownload = () => {
     const csv = QuotationService.generateCsvContent(quotation, items);
@@ -158,6 +181,18 @@ export function QuotationDetails({
                 className="h-8 text-xs gap-1 text-purple-700 border-purple-300 hover:bg-purple-50">
                 <BarChart2 className="w-3 h-3" />Comparar Propostas
               </Button>
+            )}
+            {/* Gerar Pedido de Compra — disponível quando todas propostas estão selecionadas */}
+            {canGeneratePO && (
+              <Button size="sm" onClick={() => setGenerateOpen(true)}
+                className="h-8 text-xs gap-1 bg-green-600 hover:bg-green-700">
+                <ShoppingCart className="w-3 h-3" />Gerar Pedido de Compra
+              </Button>
+            )}
+            {!canGeneratePO && allSelected && !['responded', 'approved'].includes(quotation.status) && (
+              <span className="text-xs text-muted-foreground italic self-center">
+                Mova para "Respondida" para gerar pedido
+              </span>
             )}
             {quotation.status === 'draft' && (
               <Button size="sm" variant="default" onClick={() => onStatusChange('sent')} className="h-8 text-xs gap-1 ml-auto">
@@ -402,6 +437,26 @@ export function QuotationDetails({
             <AlertDialogAction className="bg-destructive hover:bg-destructive/90"
               onClick={async () => { if (deleteProposalId) { await onDeleteProposal(deleteProposalId); setDeleteProposalId(null); } }}>
               Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmar geração de pedido de compra */}
+      <AlertDialog open={generateOpen} onOpenChange={setGenerateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Gerar Pedidos de Compra?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Serão criados pedidos de compra agrupados por fornecedor com base nas propostas selecionadas.
+              A cotação será marcada como <strong>Aprovada</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction disabled={generating} onClick={handleGenerate}>
+              {generating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Confirmar e Gerar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
