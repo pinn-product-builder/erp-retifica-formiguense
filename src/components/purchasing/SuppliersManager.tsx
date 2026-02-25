@@ -16,13 +16,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Plus, Search, RefreshCw, Users,
-  Building2, Package, History, ShoppingCart,
+  Building2, Package, History, ShoppingCart, Star,
 } from 'lucide-react';
 
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { SupplierCard } from './SupplierCard';
 import { SupplierForm } from './SupplierForm';
 import { SupplierProductsTab } from './SupplierProductsTab';
+import { SupplierEvaluationTab } from './SupplierEvaluationTab';
 import { SUPPLIER_CATEGORIES, type Supplier } from '@/services/SupplierService';
 
 // ─── Modal de Detalhes ────────────────────────────────────────────────────────
@@ -55,18 +56,26 @@ function SupplierDetailsModal({
         </DialogHeader>
 
         <Tabs defaultValue="info">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="info" className="text-xs sm:text-sm">
-              <Building2 className="w-3.5 h-3.5 mr-1.5" />
-              Informações
+              <Building2 className="w-3.5 h-3.5 mr-1 sm:mr-1.5" />
+              <span className="hidden sm:inline">Informações</span>
+              <span className="sm:hidden">Info</span>
+            </TabsTrigger>
+            <TabsTrigger value="evaluation" className="text-xs sm:text-sm">
+              <Star className="w-3.5 h-3.5 mr-1 sm:mr-1.5" />
+              <span className="hidden sm:inline">Avaliação</span>
+              <span className="sm:hidden">Nota</span>
             </TabsTrigger>
             <TabsTrigger value="products" className="text-xs sm:text-sm">
-              <Package className="w-3.5 h-3.5 mr-1.5" />
-              Produtos
+              <Package className="w-3.5 h-3.5 mr-1 sm:mr-1.5" />
+              <span className="hidden sm:inline">Produtos</span>
+              <span className="sm:hidden">Prod.</span>
             </TabsTrigger>
             <TabsTrigger value="history" className="text-xs sm:text-sm">
-              <History className="w-3.5 h-3.5 mr-1.5" />
-              Histórico
+              <History className="w-3.5 h-3.5 mr-1 sm:mr-1.5" />
+              <span className="hidden sm:inline">Histórico</span>
+              <span className="sm:hidden">Hist.</span>
             </TabsTrigger>
           </TabsList>
 
@@ -153,6 +162,14 @@ function SupplierDetailsModal({
                 <p className="text-sm text-muted-foreground">{supplier.notes}</p>
               </div>
             )}
+          </TabsContent>
+
+          {/* Aba avaliação */}
+          <TabsContent value="evaluation" className="mt-4">
+            <SupplierEvaluationTab
+              supplierId={supplier.id}
+              currentRating={supplier.rating}
+            />
           </TabsContent>
 
           {/* Aba produtos */}
