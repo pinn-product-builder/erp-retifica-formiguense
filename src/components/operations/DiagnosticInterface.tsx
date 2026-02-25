@@ -24,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useMacroComponents } from "@/hooks/useMacroComponents";
 import { useAdditionalServices } from "@/hooks/useAdditionalServices";
-import { useEngineTemplateByEngine } from "@/hooks/useEngineTemplates";
+import { useEngineTemplateByEngineType } from "@/hooks/useEngineTemplates";
 import BudgetFromDiagnostic from './BudgetFromDiagnostic';
 import { DiagnosticComponentTab } from './DiagnosticComponentTab';
 import { DiagnosticObservationsTab } from './DiagnosticObservationsTab';
@@ -95,10 +95,8 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
   const { macroComponents } = useMacroComponents();
   const { getServicesByComponent } = useAdditionalServices();
   const [orderEngineTypeId, setOrderEngineTypeId] = useState<string | null>(null);
-  const [engineBrand, setEngineBrand] = useState<string | undefined>(undefined);
-  const [engineModel, setEngineModel] = useState<string | undefined>(undefined);
-  
-  const { template: engineTemplate } = useEngineTemplateByEngine(engineBrand, engineModel);
+
+  const { template: engineTemplate } = useEngineTemplateByEngineType(orderEngineTypeId);
 
   const activeMacroComponents = React.useMemo(() => {
     if (!Array.isArray(macroComponents)) return [];
@@ -195,23 +193,6 @@ const DiagnosticInterface = ({ orderId, onComplete }: DiagnosticInterfaceProps) 
     loadOrderEngineType();
   }, [orderId, currentOrganization?.id]);
 
-  useEffect(() => {
-    const loadEngineInfo = async () => {
-      if (!orderId || !currentOrganization?.id) return;
-      
-      try {
-        const engineInfo = await DiagnosticService.getOrderEngineInfo(orderId, currentOrganization.id);
-        if (engineInfo) {
-          setEngineBrand(engineInfo.brand);
-          setEngineModel(engineInfo.model);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar informações do motor:', error);
-      }
-    };
-
-    loadEngineInfo();
-  }, [orderId, currentOrganization?.id]);
 
 
 

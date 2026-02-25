@@ -39,9 +39,7 @@ export interface EngineTemplate {
   name: string;
   description: string | null;
   labor_cost: number | null;
-  engine_brand: string;
-  engine_model: string;
-  engine_type_id: string | null;
+  engine_type_id: string;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -49,6 +47,7 @@ export interface EngineTemplate {
     id: string;
     name: string;
     category: string;
+    description?: string | null;
   } | null;
   parts?: EngineTemplatePart[];
   services?: IEngineTemplateService[];
@@ -58,9 +57,7 @@ export interface CreateTemplateData {
   name: string;
   description?: string;
   labor_cost?: number;
-  engine_brand: string;
-  engine_model: string;
-  engine_type_id?: string;
+  engine_type_id: string;
   parts: Array<{
     part_id: string;
     quantity: number;
@@ -79,6 +76,28 @@ export interface TemplateFilters {
   engineTypeId?: string;
 }
 
+const TEMPLATE_SELECT = `
+  *,
+  engine_type:engine_types(id, name, category, description),
+  parts:engine_template_parts(
+    id,
+    part_id,
+    quantity,
+    notes,
+    display_order,
+    part:parts_inventory(id, part_code, part_name, unit_cost, macro_component_id)
+  ),
+  services:engine_template_services(
+    id,
+    service_id,
+    quantity,
+    custom_value,
+    notes,
+    display_order,
+    service:additional_services(id, description, value, macro_component_id)
+  )
+`;
+
 export class EngineTemplateService {
   static async getTemplates(
     orgId: string,
@@ -91,36 +110,11 @@ export class EngineTemplateService {
 
     let query = supabase
       .from('engine_templates')
-      .select(
-        `
-        *,
-        engine_type:engine_types(id, name, category),
-        parts:engine_template_parts(
-          id,
-          part_id,
-          quantity,
-          notes,
-          display_order,
-          part:parts_inventory(id, part_code, part_name, unit_cost, macro_component_id)
-        ),
-        services:engine_template_services(
-          id,
-          service_id,
-          quantity,
-          custom_value,
-          notes,
-          display_order,
-          service:additional_services(id, description, value, macro_component_id)
-        )
-      `,
-        { count: 'exact' }
-      )
+      .select(TEMPLATE_SELECT, { count: 'exact' })
       .eq('org_id', orgId);
 
     if (filters?.searchTerm) {
-      query = query.or(
-        `name.ilike.%${filters.searchTerm}%,engine_brand.ilike.%${filters.searchTerm}%,engine_model.ilike.%${filters.searchTerm}%`
-      );
+      query = query.or(`name.ilike.%${filters.searchTerm}%`);
     }
 
     if (filters?.engineTypeId && filters.engineTypeId !== 'todos') {
@@ -147,54 +141,24 @@ export class EngineTemplateService {
     };
   }
 
-  static async getUsedEngineBrandModels(
-    orgId: string
-  ): Promise<{ engine_brand: string; engine_model: string }[]> {
+  static async getUsedEngineTypeIds(orgId: string): Promise<string[]> {
     const { data, error } = await supabase
       .from('engine_templates')
-      .select('engine_brand, engine_model')
+      .select('engine_type_id')
       .eq('org_id', orgId);
 
     if (error) {
-      console.error('Erro ao buscar marcas/modelos em uso:', error);
-      throw new Error('Erro ao buscar marcas/modelos em uso');
+      console.error('Erro ao buscar tipos de motor em uso:', error);
+      throw new Error('Erro ao buscar tipos de motor em uso');
     }
 
-    const seen = new Set<string>();
-    return (data || []).filter((row) => {
-      const key = `${row.engine_brand}|${row.engine_model}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    return (data || []).map((row) => row.engine_type_id).filter(Boolean) as string[];
   }
 
   static async getTemplateById(templateId: string, orgId: string): Promise<EngineTemplate | null> {
     const { data, error } = await supabase
       .from('engine_templates')
-      .select(
-        `
-        *,
-        engine_type:engine_types(id, name, category),
-        parts:engine_template_parts(
-          id,
-          part_id,
-          quantity,
-          notes,
-          display_order,
-          part:parts_inventory(id, part_code, part_name, unit_cost, macro_component_id)
-        ),
-        services:engine_template_services(
-          id,
-          service_id,
-          quantity,
-          custom_value,
-          notes,
-          display_order,
-          service:additional_services(id, description, value, macro_component_id)
-        )
-      `
-      )
+      .select(TEMPLATE_SELECT)
       .eq('id', templateId)
       .eq('org_id', orgId)
       .single();
@@ -207,43 +171,19 @@ export class EngineTemplateService {
     return data as unknown as EngineTemplate;
   }
 
-  static async getTemplateByEngine(
+  static async getTemplateByEngineType(
     orgId: string,
-    engineBrand: string,
-    engineModel: string
+    engineTypeId: string
   ): Promise<EngineTemplate | null> {
     const { data, error } = await supabase
       .from('engine_templates')
-      .select(
-        `
-        *,
-        engine_type:engine_types(id, name, category),
-        parts:engine_template_parts(
-          id,
-          part_id,
-          quantity,
-          notes,
-          display_order,
-          part:parts_inventory(id, part_code, part_name, unit_cost, macro_component_id)
-        ),
-        services:engine_template_services(
-          id,
-          service_id,
-          quantity,
-          custom_value,
-          notes,
-          display_order,
-          service:additional_services(id, description, value, macro_component_id)
-        )
-      `
-      )
+      .select(TEMPLATE_SELECT)
       .eq('org_id', orgId)
-      .eq('engine_brand', engineBrand)
-      .eq('engine_model', engineModel)
+      .eq('engine_type_id', engineTypeId)
       .maybeSingle();
 
     if (error) {
-      console.error('Erro ao buscar template por motor:', error);
+      console.error('Erro ao buscar template por tipo de motor:', error);
       return null;
     }
 
@@ -262,11 +202,9 @@ export class EngineTemplateService {
         name: templateData.name,
         description: templateData.description,
         labor_cost: templateData.labor_cost ?? 0,
-        engine_brand: templateData.engine_brand,
-        engine_model: templateData.engine_model,
-        engine_type_id: templateData.engine_type_id && templateData.engine_type_id.trim() !== '' 
-          ? templateData.engine_type_id 
-          : null,
+        engine_type_id: templateData.engine_type_id,
+        engine_brand: '',
+        engine_model: '',
         created_by: userId,
       })
       .select()
@@ -330,12 +268,9 @@ export class EngineTemplateService {
     if (templateData.name) updateData.name = templateData.name;
     if (templateData.description !== undefined) updateData.description = templateData.description;
     if (templateData.labor_cost !== undefined) updateData.labor_cost = templateData.labor_cost;
-    if (templateData.engine_brand) updateData.engine_brand = templateData.engine_brand;
-    if (templateData.engine_model) updateData.engine_model = templateData.engine_model;
-    if (templateData.engine_type_id !== undefined)
-      updateData.engine_type_id = templateData.engine_type_id && templateData.engine_type_id.trim() !== '' 
-        ? templateData.engine_type_id 
-        : null;
+    if (templateData.engine_type_id !== undefined && templateData.engine_type_id.trim() !== '') {
+      updateData.engine_type_id = templateData.engine_type_id;
+    }
 
     if (Object.keys(updateData).length > 0) {
       const { error: templateError } = await supabase
@@ -420,8 +355,7 @@ export class EngineTemplateService {
     orgId: string,
     userId: string,
     newName: string,
-    newBrand: string,
-    newModel: string
+    newEngineTypeId: string
   ): Promise<EngineTemplate> {
     const originalTemplate = await this.getTemplateById(templateId, orgId);
 
@@ -433,9 +367,7 @@ export class EngineTemplateService {
       name: newName,
       description: originalTemplate.description || undefined,
       labor_cost: originalTemplate.labor_cost ?? 0,
-      engine_brand: newBrand,
-      engine_model: newModel,
-      engine_type_id: originalTemplate.engine_type_id || undefined,
+      engine_type_id: newEngineTypeId,
       parts:
         originalTemplate.parts?.map((p) => ({
           part_id: p.part_id,

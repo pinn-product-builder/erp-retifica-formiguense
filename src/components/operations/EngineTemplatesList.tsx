@@ -113,14 +113,20 @@ export function EngineTemplatesList({
       ),
     },
     {
-      key: 'engine',
-      header: 'Motor',
+      key: 'engine_type',
+      header: 'Tipo de Motor',
       priority: 2,
       minWidth: 180,
       render: (template) => (
         <div className="space-y-1">
-          <div className="font-medium text-xs sm:text-sm">{template.engine_brand}</div>
-          <div className="text-xs text-muted-foreground">{template.engine_model}</div>
+          <div className="font-medium text-xs sm:text-sm">
+            {template.engine_type?.name ?? '—'}
+          </div>
+          {template.engine_type?.category && (
+            <div className="text-xs text-muted-foreground">
+              {template.engine_type.category}
+            </div>
+          )}
         </div>
       ),
     },
@@ -210,7 +216,7 @@ export function EngineTemplatesList({
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Buscar por nome, marca ou modelo..."
+              placeholder="Buscar por nome do template..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -256,8 +262,9 @@ export function EngineTemplatesList({
                 <div className="font-semibold text-sm sm:text-base truncate">
                   {template.name}
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  {template.engine_brand} - {template.engine_model}
+                <div className="text-xs text-muted-foreground truncate">
+                  {template.engine_type?.name ?? '—'}
+                  {template.engine_type?.category && ` — ${template.engine_type.category}`}
                 </div>
               </div>
               <div className="font-semibold text-sm whitespace-nowrap ml-2">

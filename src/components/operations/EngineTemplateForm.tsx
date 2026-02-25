@@ -5,12 +5,11 @@ import { z } from 'zod';
 import {
   useCreateEngineTemplate,
   useUpdateEngineTemplate,
-  useUsedEngineBrandModels,
+  useUsedEngineTypeIds,
   useEngineTemplates,
 } from '@/hooks/useEngineTemplates';
 import { usePartsInventory } from '@/hooks/usePartsInventory';
 import { useAdditionalServices, AdditionalService } from '@/hooks/useAdditionalServices';
-import { useEngines } from '@/hooks/useEngines';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MaskedInput } from '@/components/ui/masked-input';
@@ -25,19 +24,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Search, Plus, Minus, X, Copy, Save } from 'lucide-react';
 import { EngineTemplate, CreateTemplateData } from '@/services/EngineTemplateService';
+import { EngineTypeSelect } from '@/components/ui/EngineTypeSelect';
 import { formatCurrency } from '@/utils/masks';
 
 const templateSchema = z.object({
@@ -53,9 +46,7 @@ const templateSchema = z.object({
         !Number.isNaN(Number(value)),
       'Valor inválido'
     ),
-  engine_brand: z.string().min(2, 'Marca é obrigatória'),
-  engine_model: z.string().min(2, 'Modelo é obrigatório'),
-  engine_type_id: z.string().optional(),
+  engine_type_id: z.string().min(1, 'Tipo de motor é obrigatório'),
 });
 
 type TemplateFormData = z.infer<typeof templateSchema>;
@@ -99,21 +90,13 @@ export function EngineTemplateForm({
   const [servicesSearchTerm, setServicesSearchTerm] = useState('');
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importSearchTerm, setImportSearchTerm] = useState('');
-  const [useExistingEngine, setUseExistingEngine] = useState(false);
-  const [selectedEngineId, setSelectedEngineId] = useState<string>('');
   const lastInitKeyRef = useRef('');
 
   const { parts, loading: loadingParts } = usePartsInventory();
   const { additionalServices, loading: loadingServices } = useAdditionalServices();
   const services = additionalServices as AdditionalService[];
-  const { engines, loading: loadingEngines } = useEngines({ page: 1, pageSize: 1000 });
-  const { usedSet } = useUsedEngineBrandModels();
+  const { usedSet } = useUsedEngineTypeIds();
   const { templates: allTemplates } = useEngineTemplates({ pageSize: 1000 });
-
-  const enginesWithoutTemplate =
-    mode === 'create' || mode === 'duplicate'
-      ? (engines || []).filter((e) => !usedSet.has(`${e.brand}|${e.model}`))
-      : engines || [];
 
   const createMutation = useCreateEngineTemplate();
   const updateMutation = useUpdateEngineTemplate();
@@ -131,6 +114,8 @@ export function EngineTemplateForm({
   } = useForm<TemplateFormData>({
     resolver: zodResolver(templateSchema),
   });
+
+  const engineTypeId = watch('engine_type_id');
 
   useEffect(() => {
     if (selectedParts.length > 0 && selectedServices.length > 0 && errors.root) {
@@ -154,8 +139,6 @@ export function EngineTemplateForm({
       if (mode === 'edit' && template) {
         setValue('name', template.name);
         setValue('description', template.description || '');
-        setValue('engine_brand', template.engine_brand);
-        setValue('engine_model', template.engine_model);
         setValue('labor_cost', template.labor_cost ? String(template.labor_cost) : '');
         setValue('engine_type_id', template.engine_type_id || '');
 
@@ -183,10 +166,8 @@ export function EngineTemplateForm({
       } else if (mode === 'duplicate' && template) {
         setValue('name', `${template.name} (Cópia)`);
         setValue('description', template.description || '');
-        setValue('engine_brand', template.engine_brand);
-        setValue('engine_model', `${template.engine_model} (Cópia ${Date.now()})`);
         setValue('labor_cost', template.labor_cost ? String(template.labor_cost) : '');
-        setValue('engine_type_id', template.engine_type_id || '');
+        setValue('engine_type_id', '');
 
         setSelectedParts(
           template.parts?.map((p) => ({
@@ -236,21 +217,9 @@ export function EngineTemplateForm({
         reset();
         setSelectedParts([]);
         setSelectedServices([]);
-        setUseExistingEngine(false);
-        setSelectedEngineId('');
       }
     }
   }, [open, mode, template, importTemplate, setValue, reset]);
-
-  const handleEngineSelect = (engineId: string) => {
-    setSelectedEngineId(engineId);
-    const selectedEngine = engines?.find((e) => e.id === engineId);
-    if (selectedEngine) {
-      setValue('engine_brand', selectedEngine.brand);
-      setValue('engine_model', selectedEngine.model);
-      setValue('engine_type_id', selectedEngine.engine_type_id || '');
-    }
-  };
 
   const handleClose = () => {
     reset();
@@ -308,8 +277,6 @@ export function EngineTemplateForm({
       name: data.name,
       description: data.description,
       labor_cost: Number.isFinite(parsedLaborCost) ? parsedLaborCost : 0,
-      engine_brand: data.engine_brand,
-      engine_model: data.engine_model,
       engine_type_id: data.engine_type_id,
       parts: selectedParts.map((p) => ({
         part_id: p.part_id,
@@ -330,8 +297,6 @@ export function EngineTemplateForm({
           templateId: template.id,
           templateData,
         });
-      } else if (mode === 'duplicate') {
-        await createMutation.mutateAsync(templateData);
       } else {
         await createMutation.mutateAsync(templateData);
       }
@@ -440,6 +405,15 @@ export function EngineTemplateForm({
   const laborCostValue = Number(watch('labor_cost') || 0);
   const totalValue = totalPartsValue + totalServicesValue + (Number.isFinite(laborCostValue) ? laborCostValue : 0);
 
+  const availableTemplatesForImport = allTemplates.filter((t) => {
+    if (!importSearchTerm.trim()) return true;
+    const term = importSearchTerm.toLowerCase();
+    return (
+      t.name.toLowerCase().includes(term) ||
+      (t.engine_type?.name ?? '').toLowerCase().includes(term)
+    );
+  });
+
   return (
     <>
     <Dialog
@@ -473,7 +447,7 @@ export function EngineTemplateForm({
                 <Input
                   id="name"
                   {...register('name')}
-                  placeholder="Ex: Fire 1.0 Completo"
+                  placeholder="Ex: Revisão Completa Fire 1.0"
                   className="text-sm"
                 />
                 {errors.name && (
@@ -481,97 +455,30 @@ export function EngineTemplateForm({
                 )}
               </div>
 
-              {mode === 'create' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="useExistingEngine"
-                      checked={useExistingEngine}
-                      onCheckedChange={(checked) => {
-                        setUseExistingEngine(checked as boolean);
-                        if (!checked) {
-                          setSelectedEngineId('');
-                          setValue('engine_brand', '');
-                          setValue('engine_model', '');
-                          setValue('engine_type_id', '');
-                        }
-                      }}
-                    />
-                    <Label
-                      htmlFor="useExistingEngine"
-                      className="text-xs sm:text-sm font-normal cursor-pointer"
-                    >
-                      Selecionar motor já cadastrado
-                    </Label>
-                  </div>
-
-                  {useExistingEngine && (
-                    <div className="space-y-2">
-                      <Label htmlFor="existingEngine" className="text-xs sm:text-sm">
-                        Motor Cadastrado
-                      </Label>
-                      <Select value={selectedEngineId} onValueChange={handleEngineSelect}>
-                        <SelectTrigger className="text-sm">
-                          <SelectValue placeholder="Selecione um motor..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <ScrollArea className="h-[200px]">
-                            {loadingEngines ? (
-                              <SelectItem value="loading" disabled>
-                                Carregando...
-                              </SelectItem>
-                            ) : enginesWithoutTemplate.length > 0 ? (
-                              enginesWithoutTemplate.map((engine) => (
-                                <SelectItem key={engine.id} value={engine.id}>
-                                  {engine.brand} - {engine.model}
-                                  {engine.serial_number && ` (${engine.serial_number})`}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="empty" disabled>
-                                {engines && engines.length > 0
-                                  ? 'Todos os motores já possuem lista de serviços'
-                                  : 'Nenhum motor cadastrado'}
-                              </SelectItem>
-                            )}
-                          </ScrollArea>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="engine_brand" className="text-xs sm:text-sm">
-                    Marca do Motor *
+                  <Label htmlFor="engine_type_id" className="text-xs sm:text-sm">
+                    Tipo de Motor *
                   </Label>
-                  <Input
-                    id="engine_brand"
-                    {...register('engine_brand')}
-                    placeholder="Ex: Fiat"
-                    className="text-sm"
-                    disabled={useExistingEngine && mode === 'create'}
+                  <Controller
+                    control={control}
+                    name="engine_type_id"
+                    render={({ field }) => (
+                      <EngineTypeSelect
+                        value={field.value || undefined}
+                        onChange={(value) => field.onChange(value ?? '')}
+                        placeholder="Selecione o tipo de motor..."
+                        disabled={mode === 'edit'}
+                      />
+                    )}
                   />
-                  {errors.engine_brand && (
-                    <p className="text-xs text-destructive">{errors.engine_brand.message}</p>
+                  {errors.engine_type_id && (
+                    <p className="text-xs text-destructive">{errors.engine_type_id.message}</p>
                   )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="engine_model" className="text-xs sm:text-sm">
-                    Modelo do Motor *
-                  </Label>
-                  <Input
-                    id="engine_model"
-                    {...register('engine_model')}
-                    placeholder="Ex: Fire 1.0"
-                    className="text-sm"
-                    disabled={useExistingEngine && mode === 'create'}
-                  />
-                  {errors.engine_model && (
-                    <p className="text-xs text-destructive">{errors.engine_model.message}</p>
+                  {mode === 'duplicate' && (
+                    <p className="text-xs text-muted-foreground">
+                      Selecione um tipo de motor diferente do original para a cópia.
+                    </p>
                   )}
                 </div>
 
@@ -597,6 +504,12 @@ export function EngineTemplateForm({
                   )}
                 </div>
               </div>
+
+              {engineTypeId && mode === 'create' && usedSet.has(engineTypeId) && (
+                <p className="text-xs text-destructive">
+                  Já existe um template para este tipo de motor.
+                </p>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="description" className="text-xs sm:text-sm">
@@ -938,7 +851,12 @@ export function EngineTemplateForm({
               type="submit"
               disabled={
                 createMutation.isPending ||
-                updateMutation.isPending
+                updateMutation.isPending ||
+                !watch('name') ||
+                !watch('engine_type_id') ||
+                selectedParts.length === 0 ||
+                selectedServices.length === 0 ||
+                (mode !== 'edit' && usedSet.has(watch('engine_type_id') || ''))
               }
               className="gap-2 text-sm"
             >
@@ -962,7 +880,7 @@ export function EngineTemplateForm({
         <div className="relative my-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar template por nome ou motor..."
+            placeholder="Buscar template por nome ou tipo de motor..."
             value={importSearchTerm}
             onChange={(e) => setImportSearchTerm(e.target.value)}
             className="pl-9 text-sm"
@@ -971,42 +889,27 @@ export function EngineTemplateForm({
 
         <ScrollArea className="flex-1 min-h-0 max-h-[50vh]">
           <div className="space-y-2 pr-1">
-            {allTemplates
-              .filter((t) => {
-                if (!importSearchTerm.trim()) return true;
-                const term = importSearchTerm.toLowerCase();
-                return (
-                  t.name.toLowerCase().includes(term) ||
-                  t.engine_brand.toLowerCase().includes(term) ||
-                  t.engine_model.toLowerCase().includes(term)
-                );
-              })
-              .map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => handleImportFromTemplate(t)}
-                  className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors space-y-1"
-                >
-                  <div className="font-medium text-sm">{t.name}</div>
+            {availableTemplatesForImport.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => handleImportFromTemplate(t)}
+                className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors space-y-1"
+              >
+                <div className="font-medium text-sm">{t.name}</div>
+                {t.engine_type && (
                   <div className="text-xs text-muted-foreground">
-                    {t.engine_brand} — {t.engine_model}
+                    {t.engine_type.name}
+                    {t.engine_type.category && ` — ${t.engine_type.category}`}
                   </div>
-                  <div className="flex gap-3 text-xs text-muted-foreground">
-                    <span>{t.parts?.length ?? 0} peça(s)</span>
-                    <span>{t.services?.length ?? 0} serviço(s)</span>
-                  </div>
-                </button>
-              ))}
-            {allTemplates.filter((t) => {
-              if (!importSearchTerm.trim()) return true;
-              const term = importSearchTerm.toLowerCase();
-              return (
-                t.name.toLowerCase().includes(term) ||
-                t.engine_brand.toLowerCase().includes(term) ||
-                t.engine_model.toLowerCase().includes(term)
-              );
-            }).length === 0 && (
+                )}
+                <div className="flex gap-3 text-xs text-muted-foreground">
+                  <span>{t.parts?.length ?? 0} peça(s)</span>
+                  <span>{t.services?.length ?? 0} serviço(s)</span>
+                </div>
+              </button>
+            ))}
+            {availableTemplatesForImport.length === 0 && (
               <div className="text-center py-8 text-sm text-muted-foreground">
                 Nenhum template encontrado
               </div>

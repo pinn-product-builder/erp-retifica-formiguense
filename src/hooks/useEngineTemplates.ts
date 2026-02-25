@@ -46,21 +46,21 @@ export function useEngineTemplates(params?: UseEngineTemplatesParams) {
   };
 }
 
-export function useUsedEngineBrandModels() {
+export function useUsedEngineTypeIds() {
   const { currentOrganization } = useOrganization();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['engine-templates-used-brand-models', currentOrganization?.id],
+    queryKey: ['engine-templates-used-type-ids', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
-      return EngineTemplateService.getUsedEngineBrandModels(currentOrganization.id);
+      return EngineTemplateService.getUsedEngineTypeIds(currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
     staleTime: 1000 * 60 * 2,
   });
 
-  const usedSet = new Set((data || []).map((r) => `${r.engine_brand}|${r.engine_model}`));
-  return { usedEngineBrandModels: data || [], usedSet, isLoading };
+  const usedSet = new Set(data || []);
+  return { usedEngineTypeIds: data || [], usedSet, isLoading };
 }
 
 export function useEngineTemplate(templateId: string | null) {
@@ -84,25 +84,23 @@ export function useEngineTemplate(templateId: string | null) {
   };
 }
 
-export function useEngineTemplateByEngine(engineBrand?: string, engineModel?: string) {
+export function useEngineTemplateByEngineType(engineTypeId?: string | null) {
   const { currentOrganization } = useOrganization();
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: [
-      'engine-template-by-engine',
+      'engine-template-by-engine-type',
       currentOrganization?.id,
-      engineBrand,
-      engineModel,
+      engineTypeId,
     ],
     queryFn: async () => {
-      if (!currentOrganization?.id || !engineBrand || !engineModel) return null;
-      return EngineTemplateService.getTemplateByEngine(
+      if (!currentOrganization?.id || !engineTypeId) return null;
+      return EngineTemplateService.getTemplateByEngineType(
         currentOrganization.id,
-        engineBrand,
-        engineModel
+        engineTypeId
       );
     },
-    enabled: !!currentOrganization?.id && !!engineBrand && !!engineModel,
+    enabled: !!currentOrganization?.id && !!engineTypeId,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -132,14 +130,14 @@ export function useCreateEngineTemplate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engine-templates'] });
-      queryClient.invalidateQueries({ queryKey: ['engine-templates-used-brand-models'] });
+      queryClient.invalidateQueries({ queryKey: ['engine-templates-used-type-ids'] });
       toast.success('Template criado com sucesso!');
     },
     onError: (error: unknown) => {
       console.error('Erro ao criar template:', error);
       const code = error && typeof error === 'object' && 'code' in error ? (error as { code: string }).code : null;
       if (code === '23505') {
-        toast.error('Já existe um template com esta marca e modelo. Altere a marca ou o modelo.');
+        toast.error('Já existe um template para este tipo de motor.');
       } else {
         toast.error('Erro ao criar template');
       }
@@ -171,14 +169,14 @@ export function useUpdateEngineTemplate() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engine-templates'] });
       queryClient.invalidateQueries({ queryKey: ['engine-template'] });
-      queryClient.invalidateQueries({ queryKey: ['engine-templates-used-brand-models'] });
+      queryClient.invalidateQueries({ queryKey: ['engine-templates-used-type-ids'] });
       toast.success('Template atualizado com sucesso!');
     },
     onError: (error: unknown) => {
       console.error('Erro ao atualizar template:', error);
       const code = error && typeof error === 'object' && 'code' in error ? (error as { code: string }).code : null;
       if (code === '23505') {
-        toast.error('Já existe um template com esta marca e modelo. Altere a marca ou o modelo.');
+        toast.error('Já existe um template para este tipo de motor.');
       } else {
         toast.error('Erro ao atualizar template');
       }
@@ -199,7 +197,7 @@ export function useDeleteEngineTemplate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engine-templates'] });
-      queryClient.invalidateQueries({ queryKey: ['engine-templates-used-brand-models'] });
+      queryClient.invalidateQueries({ queryKey: ['engine-templates-used-type-ids'] });
       toast.success('Template excluído com sucesso!');
     },
     onError: (error: Error) => {
@@ -218,13 +216,11 @@ export function useDuplicateEngineTemplate() {
     mutationFn: async ({
       templateId,
       newName,
-      newBrand,
-      newModel,
+      newEngineTypeId,
     }: {
       templateId: string;
       newName: string;
-      newBrand: string;
-      newModel: string;
+      newEngineTypeId: string;
     }) => {
       if (!currentOrganization?.id || !user?.id) {
         throw new Error('Organização ou usuário não encontrado');
@@ -234,13 +230,12 @@ export function useDuplicateEngineTemplate() {
         currentOrganization.id,
         user.id,
         newName,
-        newBrand,
-        newModel
+        newEngineTypeId
       );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['engine-templates'] });
-      queryClient.invalidateQueries({ queryKey: ['engine-templates-used-brand-models'] });
+      queryClient.invalidateQueries({ queryKey: ['engine-templates-used-type-ids'] });
       toast.success('Template duplicado com sucesso!');
     },
     onError: (error: Error) => {

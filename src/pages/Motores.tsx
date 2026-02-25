@@ -1,15 +1,9 @@
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { StatCard } from '@/components/StatCard';
-import { Settings, Package, CheckCircle, XCircle, FileText } from 'lucide-react';
-import { EnginesList } from '@/components/operations/EnginesList';
+import { FileText, Package, Settings } from 'lucide-react';
 import { EngineTemplatesList } from '@/components/operations/EngineTemplatesList';
 import { EngineTemplateForm } from '@/components/operations/EngineTemplateForm';
-import { EngineService } from '@/services/EngineService';
 import { useModuleGuard } from '@/hooks/useRoleGuard';
-import { useOrganization } from '@/hooks/useOrganization';
-import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -21,23 +15,10 @@ type FormMode = 'create' | 'edit' | 'duplicate' | 'import';
 
 const Motores = () => {
   const { hasPermission } = useModuleGuard('production', 'read', { blockAccess: true });
-  const { currentOrganization } = useOrganization();
-  const [activeTab, setActiveTab] = useState('motores');
   const [formOpen, setFormOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>('create');
   const [selectedTemplate, setSelectedTemplate] = useState<EngineTemplate | null>(null);
-
-  const { data: stats } = useQuery({
-    queryKey: ['engine-stats', currentOrganization?.id],
-    queryFn: async () => {
-      if (!currentOrganization?.id) {
-        return { total: 0, completos: 0, montados: 0, parciais: 0, desmontados: 0 };
-      }
-      return await EngineService.getEngineStats(currentOrganization.id);
-    },
-    enabled: !!currentOrganization?.id,
-  });
 
   const handleCreateNew = () => {
     setSelectedTemplate(null);
@@ -80,131 +61,52 @@ const Motores = () => {
     return partsTotal + servicesTotal + laborCost;
   };
 
+  if (!hasPermission) return null;
+
   return (
     <div className="space-y-4 sm:space-y-6 p-3 sm:p-4 md:p-6">
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold truncate flex items-center gap-2 sm:gap-3">
-            <Settings className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8" />
-            Gestão de Motores
+            <FileText className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8" />
+            Templates de Motor
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Motores cadastrados e templates de peças/serviços por modelo
+            Templates de peças e serviços por tipo de motor
           </p>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 text-xs sm:text-sm">
-          <TabsTrigger value="motores" className="gap-1 sm:gap-2">
-            <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Motores Cadastrados</span>
-            <span className="sm:hidden">Motores</span>
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="gap-1 sm:gap-2">
-            <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Templates de Motor</span>
-            <span className="sm:hidden">Templates</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="motores" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <StatCard
-              title="Total"
-              value={stats?.total || 0}
-              icon={Package}
-              variant="default"
-              className="p-3 sm:p-4"
-            />
-            <StatCard
-              title="Completos"
-              value={stats?.completos || 0}
-              icon={CheckCircle}
-              variant="success"
-              className="p-3 sm:p-4"
-            />
-            <StatCard
-              title="Montados"
-              value={stats?.montados || 0}
-              icon={Settings}
-              variant="primary"
-              className="p-3 sm:p-4"
-            />
-            <StatCard
-              title="Parciais"
-              value={stats?.parciais || 0}
-              icon={XCircle}
-              variant="warning"
-              className="p-3 sm:p-4"
-            />
+      <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex gap-2 sm:gap-3">
+            <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
+              <p className="font-medium text-blue-900 dark:text-blue-100">
+                Como usar os Templates:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-blue-800 dark:text-blue-200">
+                <li>Crie templates com peças e serviços específicos para cada tipo de motor</li>
+                <li>
+                  Ao criar um diagnóstico, o sistema sugerirá automaticamente as peças e serviços
+                  do template correspondente ao tipo de motor
+                </li>
+                <li>
+                  Duplique templates existentes para criar variações para outros tipos de motor
+                </li>
+                <li>Edite templates para manter as informações sempre atualizadas</li>
+              </ul>
+            </div>
           </div>
+        </CardContent>
+      </Card>
 
-          <EnginesList />
-
-          <Card className="border-l-4 border-l-blue-500">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Settings className="w-4 h-4 text-blue-600" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="font-semibold text-sm">Sobre os Motores</h3>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>
-                      • Os motores são cadastrados automaticamente durante o processo de check-in
-                    </p>
-                    <p>
-                      • Cada motor pode estar associado a uma ou mais ordens de serviço
-                    </p>
-                    <p>
-                      • O estado de montagem indica se o motor está montado, parcialmente montado ou
-                      desmontado
-                    </p>
-                    <p>
-                      • A informação de componentes presentes ajuda no planejamento do diagnóstico e
-                      orçamento
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="templates" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
-          <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex gap-2 sm:gap-3">
-                <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
-                  <p className="font-medium text-blue-900 dark:text-blue-100">
-                    Como usar os Templates:
-                  </p>
-                  <ul className="list-disc list-inside space-y-1 text-blue-800 dark:text-blue-200">
-                    <li>Crie templates com peças e serviços específicos para cada modelo de motor</li>
-                    <li>
-                      Ao criar um diagnóstico, o sistema sugerirá automaticamente as peças e serviços
-                      do template
-                    </li>
-                    <li>
-                      Duplique templates existentes para criar variações de modelos similares
-                    </li>
-                    <li>Edite templates para manter as informações sempre atualizadas</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <EngineTemplatesList
-            onCreateNew={handleCreateNew}
-            onView={handleView}
-            onEdit={handleEdit}
-            onDuplicate={handleDuplicate}
-          />
-        </TabsContent>
-      </Tabs>
+      <EngineTemplatesList
+        onCreateNew={handleCreateNew}
+        onView={handleView}
+        onEdit={handleEdit}
+        onDuplicate={handleDuplicate}
+      />
 
       <EngineTemplateForm
         open={formOpen}
@@ -232,9 +134,14 @@ const Motores = () => {
                       <div className="text-sm font-medium">{selectedTemplate.name}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">Motor</div>
+                      <div className="text-xs text-muted-foreground">Tipo de Motor</div>
                       <div className="text-sm font-medium">
-                        {selectedTemplate.engine_brand} - {selectedTemplate.engine_model}
+                        {selectedTemplate.engine_type?.name ?? '—'}
+                        {selectedTemplate.engine_type?.category && (
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({selectedTemplate.engine_type.category})
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -336,7 +243,7 @@ const Motores = () => {
                                 </Badge>
                                 <div className="text-xs sm:text-sm font-semibold whitespace-nowrap">
                                   {formatCurrency(
-                                    (service.service?.value || 0) * service.quantity
+                                    (service.custom_value ?? service.service?.value ?? 0) * service.quantity
                                   )}
                                 </div>
                               </div>
@@ -354,7 +261,7 @@ const Motores = () => {
                       <div className="text-sm font-bold">
                         {formatCurrency(
                           selectedTemplate.services.reduce(
-                            (sum, s) => sum + (s.service?.value || 0) * s.quantity,
+                            (sum, s) => sum + (s.custom_value ?? s.service?.value ?? 0) * s.quantity,
                             0
                           )
                         )}
@@ -382,7 +289,7 @@ const Motores = () => {
                     <span className="font-medium">
                       {formatCurrency(
                         selectedTemplate.services?.reduce(
-                          (sum, s) => sum + (s.service?.value || 0) * s.quantity,
+                          (sum, s) => sum + (s.custom_value ?? s.service?.value ?? 0) * s.quantity,
                           0
                         ) || 0
                       )}
