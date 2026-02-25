@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   ConditionalOrderService,
   type ConditionalOrder,
+  type ConditionalExtension,
   type CreateConditionalOrderData,
   type ItemDecision,
   type PaginatedConditionals,
@@ -126,6 +127,68 @@ export function useConditionalOrders() {
     [currentOrganization?.id, fetchConditionals, toast]
   );
 
+  const registerReceipt = useCallback(
+    async (
+      conditionalId: string,
+      items: Array<{ item_id: string; quantity_received: number; receiving_notes?: string }>,
+      notes?: string
+    ): Promise<boolean> => {
+      if (!currentOrganization?.id) return false;
+      try {
+        setLoading(true);
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData.user?.id ?? '';
+        await ConditionalOrderService.registerReceipt(conditionalId, currentOrganization.id, userId, items, notes);
+        toast({ title: 'Sucesso', description: 'Entrada registrada. Status atualizado para Em Análise.' });
+        await fetchConditionals();
+        return true;
+      } catch (error) {
+        console.error(error);
+        toast({ title: 'Erro', description: 'Não foi possível registrar a entrada', variant: 'destructive' });
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [currentOrganization?.id, fetchConditionals, toast]
+  );
+
+  const extendDeadline = useCallback(
+    async (
+      conditionalId: string,
+      input: { days_added: number; justification: string }
+    ): Promise<boolean> => {
+      if (!currentOrganization?.id) return false;
+      try {
+        setLoading(true);
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData.user?.id ?? '';
+        await ConditionalOrderService.extendDeadline(conditionalId, currentOrganization.id, userId, input);
+        toast({ title: 'Prazo prorrogado', description: `+${input.days_added} dia(s) adicionados` });
+        await fetchConditionals();
+        return true;
+      } catch (error) {
+        console.error(error);
+        toast({ title: 'Erro', description: 'Não foi possível prorrogar o prazo', variant: 'destructive' });
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [currentOrganization?.id, fetchConditionals, toast]
+  );
+
+  const fetchExtensions = useCallback(
+    async (conditionalId: string): Promise<ConditionalExtension[]> => {
+      try {
+        return await ConditionalOrderService.getExtensions(conditionalId);
+      } catch {
+        return [];
+      }
+    },
+    []
+  );
+
   const cancelConditional = useCallback(
     async (conditionalId: string): Promise<boolean> => {
       if (!currentOrganization?.id) return false;
@@ -169,6 +232,9 @@ export function useConditionalOrders() {
     fetchConditionals,
     createConditional,
     applyDecisions,
+    registerReceipt,
+    extendDeadline,
+    fetchExtensions,
     cancelConditional,
     setCurrentPage,
   };

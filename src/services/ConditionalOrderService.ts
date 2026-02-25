@@ -8,8 +8,26 @@ export interface ConditionalOrderItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  quantity_received?: number;
+  received_at?: string;
+  received_by?: string;
+  receiving_notes?: string;
   decision?: 'approve' | 'return' | null;
   decision_notes?: string;
+  created_at: string;
+}
+
+export interface ConditionalExtension {
+  id: string;
+  conditional_order_id: string;
+  previous_deadline: string;
+  new_deadline: string;
+  days_added: number;
+  justification: string;
+  extension_number: number;
+  requested_by: string;
+  approved_by?: string;
+  status: 'pending' | 'approved' | 'rejected';
   created_at: string;
 }
 
@@ -24,6 +42,7 @@ export interface ConditionalOrder {
   notes?: string;
   status: 'pending' | 'in_analysis' | 'approved' | 'partial_return' | 'returned' | 'purchased' | 'overdue';
   total_amount: number;
+  received_at?: string;
   decided_at?: string;
   decided_by?: string;
   justification?: string;
@@ -32,6 +51,7 @@ export interface ConditionalOrder {
   created_by?: string;
   supplier?: { name: string; document?: string };
   items?: ConditionalOrderItem[];
+  extensions?: ConditionalExtension[];
 }
 
 export interface CreateConditionalOrderData {
@@ -220,6 +240,100 @@ export const ConditionalOrderService = {
       justification,
       decided_by: userId,
     });
+  },
+
+  async registerReceipt(
+    conditionalId: string,
+    orgId: string,
+    userId: string,
+    items: Array<{ item_id: string; quantity_received: number; receiving_notes?: string }>,
+    notes?: string
+  ): Promise<void> {
+    for (const item of items) {
+      const { error } = await supabase
+        .from('conditional_order_items')
+        .update({
+          quantity_received: item.quantity_received,
+          received_at: new Date().toISOString(),
+          received_by: userId,
+          receiving_notes: item.receiving_notes ?? null,
+        })
+        .eq('id', item.item_id);
+      if (error) throw error;
+    }
+
+    const { error } = await supabase
+      .from('conditional_orders')
+      .update({
+        status: 'in_analysis',
+        received_at: new Date().toISOString(),
+        ...(notes ? { notes } : {}),
+      })
+      .eq('id', conditionalId)
+      .eq('org_id', orgId);
+    if (error) throw error;
+  },
+
+  async extendDeadline(
+    conditionalId: string,
+    orgId: string,
+    userId: string,
+    input: { days_added: number; justification: string }
+  ): Promise<void> {
+    const { data: co, error: coErr } = await supabase
+      .from('conditional_orders')
+      .select('expiry_date, id')
+      .eq('id', conditionalId)
+      .eq('org_id', orgId)
+      .single();
+    if (coErr) throw coErr;
+
+    const { data: exts, error: extErr } = await supabase
+      .from('conditional_extensions')
+      .select('id')
+      .eq('conditional_order_id', conditionalId);
+    if (extErr) throw extErr;
+
+    const extensionNumber = (exts?.length ?? 0) + 1;
+    if (extensionNumber > 2) throw new Error('Número máximo de prorrogações atingido');
+
+    const prev = new Date(co.expiry_date);
+    const next = new Date(prev);
+    next.setDate(next.getDate() + input.days_added);
+
+    const { error: insErr } = await supabase
+      .from('conditional_extensions')
+      .insert({
+        conditional_order_id: conditionalId,
+        previous_deadline: prev.toISOString().split('T')[0],
+        new_deadline: next.toISOString().split('T')[0],
+        days_added: input.days_added,
+        justification: input.justification,
+        extension_number: extensionNumber,
+        requested_by: userId,
+        status: 'approved',
+      });
+    if (insErr) throw insErr;
+
+    const { error: updErr } = await supabase
+      .from('conditional_orders')
+      .update({
+        expiry_date: next.toISOString().split('T')[0],
+        status: 'in_analysis',
+      })
+      .eq('id', conditionalId)
+      .eq('org_id', orgId);
+    if (updErr) throw updErr;
+  },
+
+  async getExtensions(conditionalId: string): Promise<ConditionalExtension[]> {
+    const { data, error } = await supabase
+      .from('conditional_extensions')
+      .select('*')
+      .eq('conditional_order_id', conditionalId)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as ConditionalExtension[];
   },
 
   async markOverdue(orgId: string): Promise<void> {
