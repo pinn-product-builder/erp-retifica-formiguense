@@ -831,14 +831,12 @@ export function EngineTemplateForm({
                                 <Label className="text-xs text-muted-foreground whitespace-nowrap">
                                   Valor para lista:
                                 </Label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  placeholder={String(service.value)}
-                                  value={service.custom_value ?? ''}
-                                  onChange={(e) =>
-                                    updateServiceCustomValue(service.service_id, e.target.value)
+                                <MaskedInput
+                                  type="text"
+                                  mask="currency"
+                                  value={String(service.custom_value ?? '')}
+                                  onChange={(_, rawValue) =>
+                                    updateServiceCustomValue(service.service_id, rawValue)
                                   }
                                   className="h-6 text-xs w-28 px-2"
                                 />

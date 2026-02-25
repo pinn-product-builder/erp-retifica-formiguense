@@ -28,6 +28,8 @@ import {
   ClipboardList,
   Store,
   ClipboardCopy,
+  PackageCheck,
+  RefreshCw,
 } from "lucide-react";
 
 import {
@@ -165,6 +167,16 @@ const inventoryItems = [
     title: "Aprovações",
     url: "/aprovacoes-pedidos",
     icon: ClipboardCheck,
+  },
+  {
+    title: "Recebimentos",
+    url: "/recebimentos",
+    icon: PackageCheck,
+  },
+  {
+    title: "Condicionais",
+    url: "/condicionais",
+    icon: RefreshCw,
   },
   {
     title: "Compras",

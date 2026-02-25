@@ -23,6 +23,21 @@ export interface PendingApprovalRow {
   created_at: string;
   supplier_name: string;
   required_level: 'auto' | 'gerente' | 'admin';
+  items_count?: number;
+  items_preview?: Array<{ item_name: string; quantity: number; unit_price: number }>;
+}
+
+export interface ApprovalHistoryRow {
+  id: string;
+  order_id: string;
+  action: 'enviado' | 'aprovado' | 'rejeitado' | 'escalado';
+  performed_by: string;
+  performed_at: string;
+  required_level: string;
+  notes?: string | null;
+  rejection_reason?: string | null;
+  created_at: string;
+  performer_name?: string;
 }
 
 export type AppRole = 'owner' | 'admin' | 'manager' | 'user' | 'super_admin';
@@ -46,27 +61,52 @@ export const PurchaseOrderApprovalService = {
   async listPending(orgId: string): Promise<PendingApprovalRow[]> {
     const { data, error } = await supabase
       .from('purchase_orders')
-      .select('id, po_number, org_id, supplier_id, status, order_date, expected_delivery, total_value, created_by, created_at, supplier:suppliers(name)')
+      .select(`
+        id, po_number, org_id, supplier_id, status,
+        order_date, expected_delivery, total_value, created_by, created_at,
+        supplier:suppliers(name),
+        items:purchase_order_items(id, item_name, quantity, unit_price)
+      `)
       .eq('org_id', orgId)
       .eq('status', 'pending_approval')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    return (data ?? []).map((row: Record<string, unknown>) => ({
-      id: row.id,
-      po_number: row.po_number,
-      org_id: row.org_id,
-      supplier_id: row.supplier_id,
-      status: row.status,
-      order_date: row.order_date,
-      expected_delivery: row.expected_delivery,
-      total_value: row.total_value ?? 0,
-      created_by: row.created_by,
-      created_at: row.created_at,
-      supplier_name: (row.supplier as { name?: string })?.name ?? '',
-      required_level: getRequiredLevel(Number(row.total_value) || 0),
-    })) as PendingApprovalRow[];
+    return (data ?? []).map((row: Record<string, unknown>) => {
+      const items = (row.items as Array<{ id: string; item_name: string; quantity: number; unit_price: number }>) ?? [];
+      return {
+        id: row.id,
+        po_number: row.po_number,
+        org_id: row.org_id,
+        supplier_id: row.supplier_id,
+        status: row.status,
+        order_date: row.order_date,
+        expected_delivery: row.expected_delivery,
+        total_value: row.total_value ?? 0,
+        created_by: row.created_by,
+        created_at: row.created_at,
+        supplier_name: (row.supplier as { name?: string })?.name ?? '',
+        required_level: getRequiredLevel(Number(row.total_value) || 0),
+        items_count: items.length,
+        items_preview: items.slice(0, 3).map((i) => ({
+          item_name: i.item_name,
+          quantity: i.quantity,
+          unit_price: i.unit_price,
+        })),
+      };
+    }) as PendingApprovalRow[];
+  },
+
+  async listHistory(orderId: string): Promise<ApprovalHistoryRow[]> {
+    const { data, error } = await supabase
+      .from('purchase_order_approvals')
+      .select('id, order_id, action, performed_by, performed_at, required_level, notes, rejection_reason, created_at')
+      .eq('order_id', orderId)
+      .order('performed_at', { ascending: true });
+
+    if (error) throw error;
+    return (data ?? []) as ApprovalHistoryRow[];
   },
 
   async sendForApproval(orderId: string, totalValue: number, userId: string): Promise<'approved' | 'pending_approval'> {
