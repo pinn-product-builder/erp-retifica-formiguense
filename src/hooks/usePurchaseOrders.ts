@@ -10,6 +10,7 @@ import {
   POUpdateData,
   POStats,
 } from '@/services/PurchaseOrderService';
+import { PurchaseOrderApprovalService } from '@/services/PurchaseOrderApprovalService';
 
 const PAGE_SIZE = 10;
 
@@ -89,6 +90,30 @@ export function usePurchaseOrders() {
     }
   };
 
+  const sendForApproval = async (id: string, totalValue: number): Promise<boolean> => {
+    try {
+      const result = await PurchaseOrderApprovalService.sendForApproval(
+        id,
+        totalValue,
+        user?.id ?? '',
+      );
+      if (result === 'approved') {
+        toast({ title: 'Pedido aprovado automaticamente (valor < R$ 1.000)' });
+      } else {
+        toast({ title: 'Pedido enviado para aprovação' });
+      }
+      refresh();
+      return true;
+    } catch (err) {
+      toast({
+        title: 'Erro ao enviar para aprovação',
+        description: String(err),
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   const send = async (id: string): Promise<boolean> => {
     try {
       await PurchaseOrderService.send(id);
@@ -139,6 +164,7 @@ export function usePurchaseOrders() {
     refresh,
     update,
     approve,
+    sendForApproval,
     send,
     confirm,
     cancel,

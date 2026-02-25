@@ -43,6 +43,7 @@ interface PurchaseOrdersListProps {
   onView:      (order: PurchaseOrderRow) => void;
   onEdit:      (order: PurchaseOrderRow) => void;
   onApprove:   (id: string) => Promise<boolean>;
+  onSendForApproval?: (id: string, totalValue: number) => Promise<boolean>;
   onSend:      (id: string) => Promise<boolean>;
   onConfirm:   (id: string) => Promise<boolean>;
   onCancel:    (id: string) => Promise<boolean>;
@@ -51,7 +52,7 @@ interface PurchaseOrdersListProps {
 export function PurchaseOrdersList({
   orders, count, totalPages, page, pageSize, isLoading,
   filters, stats, onFilters, onPage, onNew,
-  onView, onEdit, onApprove, onSend, onConfirm, onCancel,
+  onView, onEdit, onApprove, onSendForApproval, onSend, onConfirm, onCancel,
 }: PurchaseOrdersListProps) {
   const [search,    setSearch]    = useState(filters.search ?? '');
   const [activeTab, setActiveTab] = useState<TabValue>('all');
@@ -79,7 +80,8 @@ export function PurchaseOrdersList({
 
   const canEdit    = (s: string) => ['draft', 'pending', 'pending_approval'].includes(s);
   const canApprove = (s: string) => ['pending', 'pending_approval'].includes(s);
-  const canSend    = (s: string) => ['draft', 'approved'].includes(s);
+  const canSendForApproval = (s: string) => s === 'draft';
+  const canSendToSupplier = (s: string) => s === 'approved';
   const canConfirm = (s: string) => s === 'sent';
   const canCancel  = (s: string) => !['delivered', 'cancelled'].includes(s);
 
@@ -270,7 +272,12 @@ export function PurchaseOrdersList({
                                       <ThumbsUp className="h-4 w-4 mr-2" />Aprovar
                                     </DropdownMenuItem>
                                   )}
-                                  {canSend(order.status) && (
+                                  {canSendForApproval(order.status) && onSendForApproval && (
+                                    <DropdownMenuItem onClick={() => onSendForApproval(order.id, order.total_value ?? 0)}>
+                                      <Send className="h-4 w-4 mr-2" />Enviar para Aprovação
+                                    </DropdownMenuItem>
+                                  )}
+                                  {canSendToSupplier(order.status) && (
                                     <DropdownMenuItem onClick={() => onSend(order.id)}>
                                       <Send className="h-4 w-4 mr-2" />Enviar ao Fornecedor
                                     </DropdownMenuItem>

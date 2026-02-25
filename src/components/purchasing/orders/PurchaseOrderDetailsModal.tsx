@@ -41,6 +41,7 @@ interface PurchaseOrderDetailsModalProps {
   isLoading:     boolean;
   onEdit?:       () => void;
   onApprove?:    (id: string) => Promise<boolean>;
+  onSendForApproval?: (id: string, totalValue: number) => Promise<boolean>;
   onSend?:       (id: string) => Promise<boolean>;
   onConfirm?:    (id: string) => Promise<boolean>;
   onCancel?:     (id: string) => Promise<boolean>;
@@ -51,6 +52,7 @@ const STATUS_ICONS: Record<string, React.ElementType> = {
   pending:          Clock,
   pending_approval: Clock,
   approved:         CheckCircle,
+  rejected:         AlertCircle,
   sent:             Send,
   confirmed:        CheckCircle,
   in_transit:       Truck,
@@ -65,6 +67,7 @@ export function PurchaseOrderDetailsModal({
   isLoading,
   onEdit,
   onApprove,
+  onSendForApproval,
   onSend,
   onConfirm,
   onCancel,
@@ -132,7 +135,8 @@ export function PurchaseOrderDetailsModal({
 
   const canEdit    = ['draft', 'pending', 'pending_approval'].includes(order.status);
   const canApprove = ['pending', 'pending_approval'].includes(order.status);
-  const canSend    = ['draft', 'approved'].includes(order.status);
+  const canSendForApproval = order.status === 'draft';
+  const canSendToSupplier = order.status === 'approved';
   const canConfirm = order.status === 'sent';
   const canCancel  = !['delivered', 'cancelled'].includes(order.status);
 
@@ -167,7 +171,13 @@ export function PurchaseOrderDetailsModal({
               Aprovar
             </Button>
           )}
-          {canSend && onSend && (
+          {canSendForApproval && onSendForApproval && (
+            <Button size="sm" variant="default" onClick={() => onSendForApproval(order.id, order.total_value ?? 0)}>
+              <Send className="h-3.5 w-3.5 mr-1.5" />
+              Enviar para Aprovação
+            </Button>
+          )}
+          {canSendToSupplier && onSend && (
             <Button size="sm" variant="default" onClick={() => onSend(order.id)}>
               <Send className="h-3.5 w-3.5 mr-1.5" />
               Enviar ao Fornecedor

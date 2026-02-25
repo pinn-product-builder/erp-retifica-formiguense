@@ -162,6 +162,11 @@ const inventoryItems = [
     icon: ClipboardList,
   },
   {
+    title: "Aprovações",
+    url: "/aprovacoes-pedidos",
+    icon: ClipboardCheck,
+  },
+  {
     title: "Compras",
     url: "/compras",
     icon: ShoppingCart,

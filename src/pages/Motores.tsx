@@ -71,7 +71,7 @@ const Motores = () => {
 
     const servicesTotal =
       template.services?.reduce((sum, s) => {
-        const value = s.service?.value || 0;
+        const value = s.custom_value ?? s.service?.value ?? 0;
         return sum + value * s.quantity;
       }, 0) || 0;
 

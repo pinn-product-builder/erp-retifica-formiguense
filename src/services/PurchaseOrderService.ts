@@ -7,6 +7,7 @@ export const PO_STATUS_LABELS: Record<string, string> = {
   pending:          'Pendente',
   pending_approval: 'Aguardando Aprovação',
   approved:         'Aprovado',
+  rejected:         'Rejeitado',
   sent:             'Enviado',
   confirmed:        'Confirmado',
   in_transit:       'Em Trânsito',
@@ -19,11 +20,18 @@ export const PO_STATUS_COLORS: Record<string, string> = {
   pending:          'bg-yellow-100 text-yellow-700 border-yellow-200',
   pending_approval: 'bg-amber-100 text-amber-700 border-amber-200',
   approved:         'bg-blue-100 text-blue-700 border-blue-200',
+  rejected:         'bg-red-100 text-red-700 border-red-200',
   sent:             'bg-purple-100 text-purple-700 border-purple-200',
   confirmed:        'bg-green-100 text-green-700 border-green-200',
   in_transit:       'bg-orange-100 text-orange-700 border-orange-200',
   delivered:        'bg-emerald-100 text-emerald-700 border-emerald-200',
   cancelled:        'bg-red-100 text-red-700 border-red-200',
+};
+
+export const APPROVAL_LEVEL_LABELS: Record<string, string> = {
+  auto:   'Auto-aprovado',
+  gerente: 'Gerente',
+  admin:  'Administrador',
 };
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────

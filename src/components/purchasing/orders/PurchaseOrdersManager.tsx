@@ -20,11 +20,18 @@ export function PurchaseOrdersManager() {
     setPage,
     update,
     approve,
+    sendForApproval,
     send,
     confirm,
     cancel,
     refresh,
   } = usePurchaseOrders();
+
+  const handleSendForApprovalInDetails = async (id: string, totalValue: number) => {
+    const ok = await sendForApproval(id, totalValue);
+    if (ok) refreshDetail();
+    return ok;
+  };
 
   const [viewId,      setViewId]      = useState<string | null>(null);
   const [editTarget,  setEditTarget]  = useState<PurchaseOrderRow | null>(null);
@@ -77,6 +84,7 @@ export function PurchaseOrdersManager() {
         onView={handleView}
         onEdit={handleEdit}
         onApprove={approve}
+        onSendForApproval={sendForApproval}
         onSend={send}
         onConfirm={confirm}
         onCancel={cancel}
@@ -98,6 +106,7 @@ export function PurchaseOrdersManager() {
         isLoading={detailLoading}
         onEdit={handleEditFromDetails}
         onApprove={(id) => handleActionInDetails(approve, id)}
+        onSendForApproval={handleSendForApprovalInDetails}
         onSend={(id) => handleActionInDetails(send, id)}
         onConfirm={(id) => handleActionInDetails(confirm, id)}
         onCancel={(id) => handleActionInDetails(cancel, id)}

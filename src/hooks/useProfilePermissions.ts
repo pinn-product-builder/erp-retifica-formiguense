@@ -65,6 +65,8 @@ const PAGE_MODULE_MAPPING: Record<string, ModuleName> = {
   '/gestao-funcionarios': 'hr',
   '/estoque': 'inventory',
   '/compras': 'purchasing',
+  '/pedidos-compra': 'purchasing',
+  '/aprovacoes-pedidos': 'purchasing',
   '/financeiro': 'financial',
   '/contas-receber': 'financial',
   '/contas-pagar': 'financial',
