@@ -566,7 +566,7 @@ export function QuotationForm({ open, onOpenChange, quotation, onSubmit }: Quota
   // ── Create wizard render ───────────────────────────────────────────────────────
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Nova Cotação</DialogTitle>
           <DialogDescription>
@@ -579,7 +579,7 @@ export function QuotationForm({ open, onOpenChange, quotation, onSubmit }: Quota
 
         <StepIndicator />
 
-        <div className="flex-1 overflow-y-auto py-2 pr-1">
+        <div className="flex-1 min-h-0 overflow-y-auto py-2 pr-1">
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
