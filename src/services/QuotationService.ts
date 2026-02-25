@@ -156,6 +156,28 @@ export interface PaginatedQuotations {
   totalPages: number;
 }
 
+// ── Quotation for PO ──────────────────────────────────────────────────────────
+export interface QuotationForPO {
+  id: string;
+  quotation_number: string;
+  status: QuotationStatus;
+  due_date: string;
+  total_items: number;
+  supplier_id: string;
+  supplier_name: string;
+  total_value: number;
+  lead_time_days: number;
+  payment_terms: string;
+  items: Array<{
+    item_name: string;
+    part_id?: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+    description?: string;
+  }>;
+}
+
 // ── Service ───────────────────────────────────────────────────────────────────
 export const QuotationService = {
 
@@ -236,6 +258,60 @@ export const QuotationService = {
     })) as QuotationItem[];
 
     return { quotation: quotationRes.data as Quotation, items };
+  },
+
+  async listReadyForPO(orgId: string): Promise<Quotation[]> {
+    const { data, error } = await supabase
+      .from('purchase_quotation_details')
+      .select('*')
+      .eq('org_id', orgId)
+      .in('status', ['responded', 'approved'])
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as Quotation[];
+  },
+
+  async getForPurchaseOrder(id: string): Promise<QuotationForPO | null> {
+    const { quotation, items } = await QuotationService.getById(id);
+
+    const allProposals = items.flatMap(item =>
+      (item.proposals ?? []).map(p => ({ ...p, item }))
+    );
+    const selected = allProposals.filter(p => p.is_selected);
+
+    const pool = selected.length > 0 ? selected : allProposals;
+    if (pool.length === 0) return null;
+
+    const firstSupplierId = pool[0].supplier_id;
+    const supplierPool = pool.filter(p => p.supplier_id === firstSupplierId);
+
+    const poItems = supplierPool.map(p => ({
+      item_name: p.item.part_name,
+      part_id: p.item.part_id,
+      quantity: p.item.quantity,
+      unit_price: p.unit_price,
+      total_price: p.total_price,
+      description: p.item.description,
+    }));
+
+    const totalValue = poItems.reduce((sum, i) => sum + i.total_price, 0);
+    const maxLeadTime = Math.max(...supplierPool.map(p => p.lead_time_days ?? 0));
+    const paymentTerms = supplierPool.find(p => p.payment_terms)?.payment_terms ?? '';
+    const supplierName = supplierPool[0].supplier_name ?? '';
+
+    return {
+      id: quotation.id,
+      quotation_number: quotation.quotation_number,
+      status: quotation.status,
+      due_date: quotation.due_date,
+      total_items: poItems.length,
+      supplier_id: firstSupplierId,
+      supplier_name: supplierName,
+      total_value: totalValue,
+      lead_time_days: maxLeadTime,
+      payment_terms: paymentTerms,
+      items: poItems,
+    };
   },
 
   async create(orgId: string, userId: string, data: QuotationHeaderFormData): Promise<Quotation> {

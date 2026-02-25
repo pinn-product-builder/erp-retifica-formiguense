@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -30,9 +31,11 @@ import {
   Pencil,
   X,
   ThumbsUp,
+  History,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { PurchaseOrderRow, PO_STATUS_LABELS, PO_STATUS_COLORS } from '@/services/PurchaseOrderService';
+import { ApprovalHistoryTimeline } from '@/components/purchasing/approvals/ApprovalHistoryTimeline';
 
 interface PurchaseOrderDetailsModalProps {
   open:          boolean;
@@ -73,6 +76,7 @@ export function PurchaseOrderDetailsModal({
   onCancel,
 }: PurchaseOrderDetailsModalProps) {
   const printRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState('details');
 
   const handlePrint = () => {
     const content = printRef.current;
@@ -196,6 +200,24 @@ export function PurchaseOrderDetailsModal({
             </Button>
           )}
         </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-1">
+          <TabsList className="h-8">
+            <TabsTrigger value="details" className="text-xs sm:text-sm px-2 sm:px-3">
+              <FileText className="h-3.5 w-3.5 mr-1.5" />
+              Detalhes
+            </TabsTrigger>
+            <TabsTrigger value="history" className="text-xs sm:text-sm px-2 sm:px-3">
+              <History className="h-3.5 w-3.5 mr-1.5" />
+              Histórico
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="history" className="mt-3">
+            <ApprovalHistoryTimeline orderId={order.id} />
+          </TabsContent>
+
+          <TabsContent value="details" className="mt-0">
 
         {/* Conteúdo imprimível */}
         <div ref={printRef}>
@@ -369,6 +391,9 @@ export function PurchaseOrderDetailsModal({
 
           </div>
         </div>
+
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

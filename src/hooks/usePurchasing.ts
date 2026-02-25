@@ -349,7 +349,7 @@ export const usePurchasing = () => {
       await fetchPurchaseOrders();
       toast({
         title: 'Sucesso',
-        description: `Pedido de compra ${poNumber} criado com sucesso`,
+        description: `Pedido de compra ${(orderData as { po_number?: string })?.po_number ?? ''} criado com sucesso`,
       });
       
       return orderData;

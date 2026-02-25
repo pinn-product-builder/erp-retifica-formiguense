@@ -52,7 +52,7 @@ export function NewConditionalModal({
   onSubmit,
   loading = false,
 }: NewConditionalModalProps) {
-  const { suppliers } = useSuppliersList();
+  const { suppliers: activeSuppliers } = useSuppliersList();
   const [formData, setFormData] = useState({
     supplier_id: '',
     analysis_days: '30',
@@ -114,8 +114,7 @@ export function NewConditionalModal({
     onOpenChange(false);
   };
 
-  const selectedSupplier = suppliers.find((s) => s.id === formData.supplier_id);
-  const activeSuppliers = suppliers.filter((s) => s.is_active);
+  const selectedSupplier = activeSuppliers.find((s) => s.id === formData.supplier_id);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

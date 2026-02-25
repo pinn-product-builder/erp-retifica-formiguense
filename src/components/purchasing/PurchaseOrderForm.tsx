@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Calculator } from 'lucide-react';
 import { usePurchasing, Supplier, PurchaseOrder, PurchaseOrderItem } from '@/hooks/usePurchasing';
-import { useQuotations, type Quotation } from '@/hooks/useQuotationsLegacy';
+import { QuotationService, type Quotation, type QuotationForPO } from '@/services/QuotationService';
+import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
 import { FormField } from '@/components/ui/form-field';
 import { formatCurrency } from '@/lib/utils';
@@ -56,9 +57,14 @@ export default function PurchaseOrderForm({
   onSuccess 
 }: PurchaseOrderFormProps) {
   const { suppliers, createPurchaseOrder, loading } = usePurchasing();
-  const { quotations, fetchQuotations, loading: loadingQuotations } = useQuotations();
+  const { currentOrganization } = useOrganization();
   const { parts, fetchParts } = usePartsInventory();
   const { toast } = useToast();
+
+  const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [loadingQuotations, setLoadingQuotations] = useState(false);
+  const [selectedQuotationForPO, setSelectedQuotationForPO] = useState<QuotationForPO | null>(null);
+  const [loadingQuotationDetails, setLoadingQuotationDetails] = useState(false);
 
   const [formData, setFormData] = useState<POFormData>(() => ({
     quotation_id: quotationId || '',
@@ -77,17 +83,18 @@ export default function PurchaseOrderForm({
   }));
 
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
 
-  // Buscar cotações e peças quando o modal abrir
   useEffect(() => {
-    if (open) {
-      fetchQuotations();
+    if (open && currentOrganization?.id) {
+      setLoadingQuotations(true);
+      QuotationService.listReadyForPO(currentOrganization.id)
+        .then(setQuotations)
+        .catch(console.error)
+        .finally(() => setLoadingQuotations(false));
       fetchParts({ search: '' });
     }
-  }, [open, fetchQuotations, fetchParts]);
+  }, [open, currentOrganization?.id, fetchParts]);
 
-  // Reset form when modal opens
   useEffect(() => {
     if (open) {
       setFormData({
@@ -106,58 +113,43 @@ export default function PurchaseOrderForm({
         total_value: 0,
       });
       setSelectedSupplier(null);
-      setSelectedQuotation(null);
+      setSelectedQuotationForPO(null);
     }
   }, [open, quotationId]);
 
-  // Quando uma cotação é selecionada, preencher dados
   useEffect(() => {
-    if (formData.quotation_id) {
-      const quotation = quotations.find(q => q.id === formData.quotation_id);
-      if (quotation) {
-        setSelectedQuotation(quotation);
-        
-        // Preencher fornecedor
-        setFormData(prev => ({
-          ...prev,
-          supplier_id: quotation.supplier_id,
-          requisition_id: quotation.requisition_id,
-          terms: quotation.terms || '',
-        }));
-        
-        // Preencher itens da cotação
-        if (quotation.items && Array.isArray(quotation.items) && quotation.items.length > 0) {
-          const newItems = quotation.items.map(item => ({
-            item_name: item.item_name || '',
-            description: item.description || '',
-            quantity: item.quantity || 1,
-            unit_price: item.unit_price || 0,
-            total_price: item.total_price || (item.quantity || 1) * (item.unit_price || 0),
-            part_id: (item as any).part_id, // part_id pode vir da cotação se disponível
-          }));
-          
-          const subtotal = newItems.reduce((sum, item) => sum + item.total_price, 0);
-          
-          setFormData(prev => ({
+    if (!formData.quotation_id) return;
+
+    setLoadingQuotationDetails(true);
+    QuotationService.getForPurchaseOrder(formData.quotation_id)
+      .then(qpo => {
+        if (!qpo) return;
+        setSelectedQuotationForPO(qpo);
+
+        const subtotal = qpo.items.reduce((s, i) => s + i.total_price, 0);
+
+        setFormData(prev => {
+          const next = {
             ...prev,
-            items: newItems,
+            supplier_id: qpo.supplier_id,
+            terms: qpo.payment_terms || prev.terms,
+            items: qpo.items,
             subtotal,
             total_value: subtotal + prev.taxes + prev.freight - prev.discount,
-          }));
-        }
-        
-        // Preencher data de entrega baseada no prazo de entrega da cotação
-        if (quotation.delivery_time) {
-          const deliveryDate = new Date();
-          deliveryDate.setDate(deliveryDate.getDate() + quotation.delivery_time);
-          setFormData(prev => ({
-            ...prev,
-            expected_delivery: deliveryDate.toISOString().split('T')[0],
-          }));
-        }
-      }
-    }
-  }, [formData.quotation_id, quotations]);
+          };
+
+          if (qpo.lead_time_days > 0) {
+            const d = new Date();
+            d.setDate(d.getDate() + qpo.lead_time_days);
+            next.expected_delivery = d.toISOString().split('T')[0];
+          }
+
+          return next;
+        });
+      })
+      .catch(console.error)
+      .finally(() => setLoadingQuotationDetails(false));
+  }, [formData.quotation_id]);
 
   // Buscar part_id para itens que não têm quando as peças forem carregadas
   useEffect(() => {
@@ -372,24 +364,25 @@ export default function PurchaseOrderForm({
               <SelectContent>
                 {loadingQuotations ? (
                   <SelectItem value="loading" disabled>Carregando cotações...</SelectItem>
-                ) : quotations.filter(q => q.status === 'approved').length === 0 ? (
-                  <SelectItem value="none" disabled>Nenhuma cotação aprovada disponível</SelectItem>
+                ) : quotations.length === 0 ? (
+                  <SelectItem value="none" disabled>Nenhuma cotação com propostas disponível</SelectItem>
                 ) : (
-                  quotations
-                    .filter(q => q.status === 'approved')
-                    .map((quotation) => (
-                      <SelectItem key={quotation.id} value={quotation.id}>
-                        {quotation.quote_number || quotation.id.substring(0, 8)} - {quotation.supplier?.name || 'Fornecedor'} - {formatCurrency(quotation.total_value)}
-                      </SelectItem>
-                    ))
+                  quotations.map((quotation) => (
+                    <SelectItem key={quotation.id} value={quotation.id}>
+                      {quotation.quotation_number} — {quotation.total_items ?? 0} {(quotation.total_items ?? 0) === 1 ? 'item' : 'itens'}
+                    </SelectItem>
+                  ))
                 )}
               </SelectContent>
             </Select>
-            {selectedQuotation && (
-              <div className="mt-2 p-2 bg-muted rounded text-sm">
-                <p><strong>Fornecedor:</strong> {selectedQuotation.supplier?.name}</p>
-                <p><strong>Valor Total:</strong> {formatCurrency(selectedQuotation.total_value)}</p>
-                <p><strong>Prazo de Entrega:</strong> {selectedQuotation.delivery_time || selectedQuotation.supplier?.delivery_days || 'N/A'} dias</p>
+            {loadingQuotationDetails && (
+              <p className="mt-1 text-xs text-muted-foreground">Carregando detalhes da cotação...</p>
+            )}
+            {selectedQuotationForPO && !loadingQuotationDetails && (
+              <div className="mt-2 p-2 bg-muted rounded text-sm space-y-0.5">
+                <p><strong>Fornecedor:</strong> {selectedQuotationForPO.supplier_name}</p>
+                <p><strong>Valor Total:</strong> {formatCurrency(selectedQuotationForPO.total_value)}</p>
+                <p><strong>Prazo de Entrega:</strong> {selectedQuotationForPO.lead_time_days > 0 ? `${selectedQuotationForPO.lead_time_days} dias` : 'N/A'}</p>
               </div>
             )}
           </div>

@@ -46,9 +46,9 @@ const Compras = lazy(() => import('@/pages/Compras'));
 const Fornecedores = lazy(() => import('@/pages/Fornecedores'));
 const Cotacoes       = lazy(() => import('@/pages/Cotacoes'));
 const PedidosCompra  = lazy(() => import('@/pages/PedidosCompra'));
-const AprovacoesPedidos = lazy(() => import('@/pages/AprovacoesPedidos'));
 const Condicionais = lazy(() => import('@/pages/Condicionais'));
 const Recebimentos = lazy(() => import('@/pages/Recebimentos'));
+const Contratos = lazy(() => import('@/pages/Contratos'));
 const OrdensServico = lazy(() => import('@/pages/OrdensServico'));
 const GestaoFuncionarios = lazy(() => import('@/pages/GestaoFuncionarios'));
 const GestaoUsuarios = lazy(() => import('@/pages/GestaoUsuarios'));
@@ -87,9 +87,9 @@ function AppContent() {
             <Route path="/fornecedores" element={<ProfileProtectedRoute><Layout><Fornecedores /></Layout></ProfileProtectedRoute>} />
             <Route path="/cotacoes"         element={<ProfileProtectedRoute><Layout><Cotacoes /></Layout></ProfileProtectedRoute>} />
             <Route path="/pedidos-compra"   element={<ProfileProtectedRoute><Layout><PedidosCompra /></Layout></ProfileProtectedRoute>} />
-            <Route path="/aprovacoes-pedidos" element={<ProfileProtectedRoute><Layout><AprovacoesPedidos /></Layout></ProfileProtectedRoute>} />
             <Route path="/condicionais" element={<ProfileProtectedRoute><Layout><Condicionais /></Layout></ProfileProtectedRoute>} />
             <Route path="/recebimentos" element={<ProfileProtectedRoute><Layout><Recebimentos /></Layout></ProfileProtectedRoute>} />
+            <Route path="/contratos" element={<ProfileProtectedRoute><Layout><Contratos /></Layout></ProfileProtectedRoute>} />
             <Route path="/gestao-funcionarios" element={<ProfileProtectedRoute><Layout><GestaoFuncionarios /></Layout></ProfileProtectedRoute>} />
             <Route path="/funcionarios" element={<ProfileProtectedRoute><Layout><Funcionarios /></Layout></ProfileProtectedRoute>} />
             <Route path="/diagnosticos" element={<ProfileProtectedRoute><Layout><Diagnosticos /></Layout></ProfileProtectedRoute>} />
