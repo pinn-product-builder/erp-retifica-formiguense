@@ -44,7 +44,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import PurchaseNeedForm from './PurchaseNeedForm';
-import RequisitionForm from './RequisitionForm';
+import MaterialRequisitionModal from './MaterialRequisitionModal';
 
 const PRIORITY_CONFIG = {
   critical: {
@@ -648,16 +648,14 @@ export default function PurchaseNeedsManager() {
         </CardContent>
       </Card>
 
-      {/* Modal de Requisição com peça pré-selecionada */}
-      <RequisitionForm
+      <MaterialRequisitionModal
         open={showRequisitionDialog}
         onOpenChange={(open) => {
           setShowRequisitionDialog(open);
-          if (!open) {
-            setSelectedNeedForRequisition(null);
-          }
+          if (!open) setSelectedNeedForRequisition(null);
         }}
         preselectedPart={selectedNeedForRequisition ? {
+          part_id: selectedNeedForRequisition.part_id,
           part_code: selectedNeedForRequisition.part_code,
           part_name: selectedNeedForRequisition.part_name,
           shortage_quantity: selectedNeedForRequisition.shortage_quantity,

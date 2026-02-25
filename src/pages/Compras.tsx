@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Users, FileText, Package, Plus, Star, TrendingUp, Award, Check, X } from 'lucide-react';
+import { ShoppingCart, Users, FileText, Package, Plus, Star, TrendingUp, Award, Check, X, BarChart2 } from 'lucide-react';
 import { usePurchasing } from '@/hooks/usePurchasing';
 import { usePurchaseNeeds } from '@/hooks/usePurchaseNeeds';
 import { usePurchaseReceipts } from '@/hooks/usePurchaseReceipts';
@@ -15,6 +15,7 @@ import SuppliersManager from '@/components/purchasing/SuppliersManager';
 import PurchaseNeedsManager from '@/components/purchasing/PurchaseNeedsManager';
 import ReceiptManager from '@/components/purchasing/ReceiptManager';
 import RequisitionForm from '@/components/purchasing/RequisitionForm';
+import { PurchasingDashboard } from '@/components/purchasing/reports/PurchasingDashboard';
 
 const STATUS_COLORS = {
   pending: 'bg-yellow-500/20 text-yellow-700',
@@ -165,15 +166,20 @@ export default function Compras() {
           fetchSuppliers();
         }
       }} className="space-y-4">
-        <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-5">
+        <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-3">
           <TabsTrigger value="needs" className="flex-shrink-0 text-xs sm:text-sm">Necessidades</TabsTrigger>
           <TabsTrigger value="requisitions" className="flex-shrink-0 text-xs sm:text-sm">Requisições</TabsTrigger>
-          <TabsTrigger value="receipts" className="flex-shrink-0 text-xs sm:text-sm">Recebimentos</TabsTrigger>
-          <TabsTrigger value="suppliers" className="flex-shrink-0 text-xs sm:text-sm">Fornecedores</TabsTrigger>
-          <TabsTrigger value="evaluations" className="flex items-center gap-1 sm:gap-2 flex-shrink-0 text-xs sm:text-sm">
+          {/* <TabsTrigger value="receipts" className="flex-shrink-0 text-xs sm:text-sm">Recebimentos</TabsTrigger> */}
+          {/* <TabsTrigger value="suppliers" className="flex-shrink-0 text-xs sm:text-sm">Fornecedores</TabsTrigger> */}
+          {/* <TabsTrigger value="evaluations" className="flex items-center gap-1 sm:gap-2 flex-shrink-0 text-xs sm:text-sm">
             <Award className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Avaliações</span>
             <span className="sm:hidden">Aval.</span>
+          </TabsTrigger> */}
+          <TabsTrigger value="reports" className="flex items-center gap-1 sm:gap-2 flex-shrink-0 text-xs sm:text-sm">
+            <BarChart2 className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Relatórios</span>
+            <span className="sm:hidden">Rel.</span>
           </TabsTrigger>
         </TabsList>
 
@@ -335,6 +341,11 @@ export default function Compras() {
         {/* Evaluations Tab */}
         <TabsContent value="evaluations" className="space-y-4">
           <SupplierEvaluation />
+        </TabsContent>
+
+        {/* Reports Tab */}
+        <TabsContent value="reports" className="space-y-4">
+          <PurchasingDashboard />
         </TabsContent>
       </Tabs>
     </div>

@@ -245,7 +245,7 @@ export function usePurchaseNeeds() {
   }, [currentOrganization?.id]);
 
   /**
-   * Gerar necessidades automáticas baseadas no estoque baixo
+   * Gerar necessidades automáticas a partir dos alertas de estoque ativos
    */
   const generateAutoNeeds = useCallback(async () => {
     if (!currentOrganization?.id) return false;
@@ -253,22 +253,23 @@ export function usePurchaseNeeds() {
     try {
       setLoading(true);
 
-      // TODO: Implementar função SQL generate_purchase_needs_from_low_stock
-      // const { data, error } = await supabase.rpc('generate_purchase_needs_from_low_stock', {
-      //   p_org_id: currentOrganization.id
-      // });
-      // if (error) throw error;
-      // const generatedCount = data?.generated_count || 0;
-      
-      const generatedCount = 0; // Temporário
+      const { data, error } = await supabase.rpc('generate_purchase_needs_from_alerts', {
+        p_org_id: currentOrganization.id,
+      });
+
+      if (error) throw error;
+
+      const generatedCount = (data as { generated_count?: number } | null)?.generated_count ?? 0;
 
       toastRef.current({
         title: 'Sucesso',
-        description: `${generatedCount} necessidades de compra foram geradas automaticamente`,
+        description:
+          generatedCount > 0
+            ? `${generatedCount} necessidade(s) gerada(s) a partir dos alertas de estoque`
+            : 'Nenhuma nova necessidade identificada nos alertas de estoque',
       });
 
-      // Recarregar necessidades após geração automática
-      // await fetchNeeds(); // TODO: Implementar quando as funções SQL estiverem prontas
+      await fetchNeeds();
       return true;
     } catch (error) {
       console.error('Error generating auto needs:', error);
@@ -281,7 +282,7 @@ export function usePurchaseNeeds() {
     } finally {
       setLoading(false);
     }
-  }, [currentOrganization?.id]);
+  }, [currentOrganization?.id, fetchNeeds]);
 
   /**
    * Converter necessidade em requisição de compra
