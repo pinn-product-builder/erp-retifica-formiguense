@@ -12,12 +12,16 @@ import {
   CheckCircle2, 
   AlertTriangle,
   Truck,
-  FileText
+  FileText,
+  RotateCcw,
 } from 'lucide-react';
 import { usePurchaseReceipts } from '@/hooks/usePurchaseReceipts';
+import { useSupplierReturns } from '@/hooks/useSupplierReturns';
 import { formatCurrency } from '@/lib/utils';
 import { ReceiveOrderModal } from './ReceiveOrderModal';
 import { PurchaseOrderDetailsModal } from './PurchaseOrderDetailsModal';
+import { SupplierReturnModal } from './SupplierReturnModal';
+import { RETURN_STATUS_LABELS, RETURN_STATUS_COLORS } from '@/services/SupplierReturnService';
 
 interface PendingPO {
   id: string;
@@ -60,6 +64,7 @@ const translateStatus = (status: string) => {
 
 export default function ReceiptManager() {
   const { receipts, loading, fetchReceipts, fetchPendingPOs } = usePurchaseReceipts();
+  const { returns, fetchReturns } = useSupplierReturns();
   
   const [pendingPOs, setPendingPOs] = useState<PendingPO[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,12 +73,15 @@ export default function ReceiptManager() {
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [selectedPOForDetails, setSelectedPOForDetails] = useState<string | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedReceiptForReturn, setSelectedReceiptForReturn] = useState<string | null>(null);
+  const [showReturnModal, setShowReturnModal] = useState(false);
 
   const loadData = useCallback(async () => {
     const pos = await fetchPendingPOs();
     setPendingPOs(pos as PendingPO[]);
     await fetchReceipts();
-  }, [fetchPendingPOs, fetchReceipts]);
+    await fetchReturns();
+  }, [fetchPendingPOs, fetchReceipts, fetchReturns]);
 
   useEffect(() => {
     loadData();
@@ -114,6 +122,11 @@ export default function ReceiptManager() {
   const handleViewDetails = (poId: string) => {
     setSelectedPOForDetails(poId);
     setShowDetailsModal(true);
+  };
+
+  const handleReturnReceipt = (receiptId: string) => {
+    setSelectedReceiptForReturn(receiptId);
+    setShowReturnModal(true);
   };
 
   const getDashboardStats = () => {
@@ -351,7 +364,7 @@ export default function ReceiptManager() {
           <CardContent>
             <div className="space-y-3">
               {receipts.slice(0, 5).map((receipt) => (
-                <div key={receipt.id} className="flex justify-between items-center p-3 border rounded-lg">
+                <div key={receipt.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border rounded-lg">
                   <div>
                     <p className="font-medium">{receipt.receipt_number}</p>
                     <p className="text-sm text-muted-foreground">
@@ -361,10 +374,54 @@ export default function ReceiptManager() {
                       {new Date(receipt.receipt_date).toLocaleDateString()}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">{formatCurrency(receipt.total_value)}</p>
+                  <div className="flex items-center gap-2 sm:flex-col sm:items-end">
+                    <p className="font-medium whitespace-nowrap">{formatCurrency(receipt.total_value)}</p>
                     <Badge variant={receipt.has_divergence ? 'secondary' : 'default'}>
                       {receipt.status === 'completed' ? 'Completo' : 'Parcial'}
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => handleReturnReceipt(receipt.id)}
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      <span className="hidden sm:inline">Devolver</span>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Devoluções */}
+      {returns.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RotateCcw className="h-4 w-4" />
+              Devoluções ao Fornecedor
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {returns.slice(0, 10).map((ret) => (
+                <div key={ret.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 border rounded-lg">
+                  <div>
+                    <p className="font-medium">{ret.return_number}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {ret.supplier?.name} · {ret.receipt?.receipt_number}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(ret.return_date).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 sm:flex-col sm:items-end">
+                    <p className="font-medium whitespace-nowrap">{formatCurrency(ret.total_amount)}</p>
+                    <Badge className={RETURN_STATUS_COLORS[ret.status]}>
+                      {RETURN_STATUS_LABELS[ret.status]}
                     </Badge>
                   </div>
                 </div>
@@ -393,6 +450,19 @@ export default function ReceiptManager() {
           open={showDetailsModal}
           onOpenChange={setShowDetailsModal}
           purchaseOrderId={selectedPOForDetails}
+        />
+      )}
+
+      {/* Supplier Return Modal */}
+      {selectedReceiptForReturn && (
+        <SupplierReturnModal
+          open={showReturnModal}
+          onOpenChange={setShowReturnModal}
+          receiptId={selectedReceiptForReturn}
+          onSuccess={() => {
+            loadData();
+            setSelectedReceiptForReturn(null);
+          }}
         />
       )}
     </div>
