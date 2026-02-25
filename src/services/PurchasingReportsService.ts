@@ -39,6 +39,59 @@ export interface PurchasingReportData {
   topSuppliers: SupplierVolume[];
 }
 
+export interface SupplierPerformance {
+  supplier_id: string;
+  supplier_name: string;
+  delivery_rating: number;
+  quality_rating: number;
+  price_rating: number;
+  overall_rating: number;
+  on_time_rate: number;
+  quality_issue_rate: number;
+  total_evaluations: number;
+}
+
+export interface LeadTimeDetail {
+  supplier_id: string;
+  supplier_name: string;
+  avg_days: number;
+  min_days: number;
+  max_days: number;
+  total_orders: number;
+}
+
+export interface TopItem {
+  item_name: string;
+  total_purchased: number;
+  avg_unit_price: number;
+  min_unit_price: number;
+  max_unit_price: number;
+  times_purchased: number;
+}
+
+export interface AuditFlag {
+  type: string;
+  count: number;
+  severity: 'high' | 'medium' | 'low';
+}
+
+export interface AuditData {
+  totalOrders: number;
+  ordersWithQuotation: number;
+  ordersWithoutQuotation: number;
+  emergencyRate: number;
+  avgApprovalDays: number;
+  flags: AuditFlag[];
+  flaggedOrders: Array<{
+    po_number: string;
+    supplier_name: string;
+    total_value: number;
+    order_date: string;
+    flag: string;
+    severity: 'high' | 'medium' | 'low';
+  }>;
+}
+
 function getDateRange(filters: FiltrosRelatorio): { start: string; end: string } {
   const now = new Date();
   const fmt = (d: Date) => d.toISOString().split('T')[0];
@@ -193,6 +246,206 @@ export const PurchasingReportsService = {
       volumeByMonth,
       topSuppliers,
     };
+  },
+
+  async fetchSupplierPerformance(orgId: string): Promise<SupplierPerformance[]> {
+    const { data, error } = await db
+      .from('supplier_evaluations')
+      .select(`
+        supplier_id,
+        delivery_rating, quality_rating, price_rating, overall_rating,
+        delivered_on_time, had_quality_issues,
+        supplier:suppliers(name)
+      `)
+      .eq('org_id', orgId);
+
+    if (error) throw error;
+
+    const grouped = new Map<string, {
+      name: string;
+      deliveries: number[];
+      qualities: number[];
+      prices: number[];
+      overalls: number[];
+      on_time: number;
+      quality_issues: number;
+      count: number;
+    }>();
+
+    for (const row of (data ?? [])) {
+      const id   = row.supplier_id as string;
+      const name = (row.supplier as { name?: string } | null)?.name ?? id;
+      if (!grouped.has(id)) {
+        grouped.set(id, { name, deliveries: [], qualities: [], prices: [], overalls: [], on_time: 0, quality_issues: 0, count: 0 });
+      }
+      const g = grouped.get(id)!;
+      g.deliveries.push(Number(row.delivery_rating) || 0);
+      g.qualities.push(Number(row.quality_rating) || 0);
+      g.prices.push(Number(row.price_rating) || 0);
+      g.overalls.push(Number(row.overall_rating) || 0);
+      if (row.delivered_on_time) g.on_time++;
+      if (row.had_quality_issues) g.quality_issues++;
+      g.count++;
+    }
+
+    const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+
+    return Array.from(grouped.entries()).map(([id, g]) => ({
+      supplier_id:        id,
+      supplier_name:      g.name,
+      delivery_rating:    avg(g.deliveries),
+      quality_rating:     avg(g.qualities),
+      price_rating:       avg(g.prices),
+      overall_rating:     avg(g.overalls),
+      on_time_rate:       g.count > 0 ? (g.on_time / g.count) * 100 : 0,
+      quality_issue_rate: g.count > 0 ? (g.quality_issues / g.count) * 100 : 0,
+      total_evaluations:  g.count,
+    })).sort((a, b) => b.overall_rating - a.overall_rating);
+  },
+
+  async fetchLeadTimeDetails(orgId: string, filters: FiltrosRelatorio): Promise<LeadTimeDetail[]> {
+    const { start, end } = getDateRange(filters);
+
+    const { data, error } = await db
+      .from('purchase_orders')
+      .select('supplier_id, order_date, actual_delivery, supplier:suppliers(name)')
+      .eq('org_id', orgId)
+      .gte('order_date', start)
+      .lte('order_date', end)
+      .not('actual_delivery', 'is', null)
+      .not('status', 'in', '("cancelled","draft")');
+
+    if (error) throw error;
+
+    const grouped = new Map<string, { name: string; diffs: number[] }>();
+
+    for (const row of (data ?? [])) {
+      const id   = row.supplier_id as string;
+      const name = (row.supplier as { name?: string } | null)?.name ?? id;
+      const diff = (new Date(row.actual_delivery).getTime() - new Date(row.order_date).getTime()) / 86_400_000;
+      if (!grouped.has(id)) grouped.set(id, { name, diffs: [] });
+      grouped.get(id)!.diffs.push(diff);
+    }
+
+    return Array.from(grouped.entries())
+      .map(([id, g]) => ({
+        supplier_id:   id,
+        supplier_name: g.name,
+        avg_days:      g.diffs.reduce((a, b) => a + b, 0) / g.diffs.length,
+        min_days:      Math.min(...g.diffs),
+        max_days:      Math.max(...g.diffs),
+        total_orders:  g.diffs.length,
+      }))
+      .sort((a, b) => a.avg_days - b.avg_days);
+  },
+
+  async fetchTopItems(orgId: string, filters: FiltrosRelatorio): Promise<TopItem[]> {
+    const { start, end } = getDateRange(filters);
+
+    const { data, error } = await db
+      .from('purchase_order_items')
+      .select(`
+        item_name, unit_price, quantity,
+        po:purchase_orders!po_id(org_id, order_date, status)
+      `)
+      .gte('po.order_date', start)
+      .lte('po.order_date', end);
+
+    if (error) throw error;
+
+    const grouped = new Map<string, { prices: number[]; qty: number; times: number }>();
+
+    for (const row of (data ?? [])) {
+      const po = row.po as { org_id?: string; status?: string } | null;
+      if (!po || po.org_id !== orgId) continue;
+      if (po.status === 'cancelled' || po.status === 'draft') continue;
+
+      const name = (row.item_name as string) || '(sem nome)';
+      if (!grouped.has(name)) grouped.set(name, { prices: [], qty: 0, times: 0 });
+      const g = grouped.get(name)!;
+      g.prices.push(Number(row.unit_price) || 0);
+      g.qty  += Number(row.quantity) || 0;
+      g.times++;
+    }
+
+    return Array.from(grouped.entries())
+      .map(([name, g]) => ({
+        item_name:       name,
+        total_purchased: g.qty,
+        avg_unit_price:  g.prices.length > 0 ? g.prices.reduce((a, b) => a + b, 0) / g.prices.length : 0,
+        min_unit_price:  g.prices.length > 0 ? Math.min(...g.prices) : 0,
+        max_unit_price:  g.prices.length > 0 ? Math.max(...g.prices) : 0,
+        times_purchased: g.times,
+      }))
+      .sort((a, b) => b.total_purchased * b.avg_unit_price - a.total_purchased * a.avg_unit_price)
+      .slice(0, 10);
+  },
+
+  async fetchAuditData(orgId: string, filters: FiltrosRelatorio): Promise<AuditData> {
+    const { start, end } = getDateRange(filters);
+
+    const { data: orders, error } = await db
+      .from('purchase_orders')
+      .select(`
+        id, po_number, quotation_id, total_value, order_date,
+        approved_at, created_at, status, requires_approval,
+        supplier:suppliers(name)
+      `)
+      .eq('org_id', orgId)
+      .gte('order_date', start)
+      .lte('order_date', end)
+      .not('status', 'in', '("cancelled","draft")');
+
+    if (error) throw error;
+
+    const rows = (orders ?? []) as Array<{
+      id: string;
+      po_number: string;
+      quotation_id: string | null;
+      total_value: number;
+      order_date: string;
+      approved_at: string | null;
+      created_at: string;
+      status: string;
+      requires_approval: boolean;
+      supplier: { name?: string } | null;
+    }>;
+
+    const totalOrders            = rows.length;
+    const ordersWithQuotation    = rows.filter(r => r.quotation_id != null).length;
+    const ordersWithoutQuotation = totalOrders - ordersWithQuotation;
+    const emergencyRate          = totalOrders > 0 ? (ordersWithoutQuotation / totalOrders) * 100 : 0;
+
+    const approvedWithDelay = rows.filter(r => r.requires_approval && r.approved_at != null);
+    const avgApprovalDays =
+      approvedWithDelay.length > 0
+        ? approvedWithDelay.reduce((s, r) => {
+            return s + (new Date(r.approved_at!).getTime() - new Date(r.created_at).getTime()) / 86_400_000;
+          }, 0) / approvedWithDelay.length
+        : 0;
+
+    const flags: AuditFlag[] = [
+      { type: 'Sem cotação',       count: ordersWithoutQuotation,                                           severity: 'high'   },
+      { type: 'Aprovação tardia',  count: approvedWithDelay.filter(r => {
+          const d = (new Date(r.approved_at!).getTime() - new Date(r.created_at).getTime()) / 86_400_000;
+          return d > 2;
+        }).length,                                                                                            severity: 'medium' },
+      { type: 'Alto valor (>R$20k)', count: rows.filter(r => Number(r.total_value) > 20_000).length,        severity: 'medium' },
+    ].filter(f => f.count > 0);
+
+    const flaggedOrders = rows
+      .filter(r => r.quotation_id == null || Number(r.total_value) > 20_000)
+      .slice(0, 10)
+      .map(r => ({
+        po_number:     r.po_number,
+        supplier_name: r.supplier?.name ?? '—',
+        total_value:   Number(r.total_value) || 0,
+        order_date:    r.order_date,
+        flag:          r.quotation_id == null ? 'Sem cotação' : 'Alto valor',
+        severity:      (r.quotation_id == null ? 'high' : 'medium') as 'high' | 'medium' | 'low',
+      }));
+
+    return { totalOrders, ordersWithQuotation, ordersWithoutQuotation, emergencyRate, avgApprovalDays, flags, flaggedOrders };
   },
 
   buildPrintHTML(

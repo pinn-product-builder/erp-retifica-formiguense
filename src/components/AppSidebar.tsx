@@ -31,6 +31,7 @@ import {
   PackageCheck,
   RefreshCw,
   ScrollText,
+  BarChart3,
 } from "lucide-react";
 
 import {
@@ -183,6 +184,11 @@ const inventoryItems = [
     title: "Compras",
     url: "/compras",
     icon: ShoppingCart,
+  },
+  {
+    title: "Relatórios",
+    url: "/relatorios-compras",
+    icon: BarChart3,
   },
 ];
 

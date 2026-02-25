@@ -5,6 +5,10 @@ import {
   PurchasingReportsService,
   type FiltrosRelatorio,
   type PurchasingReportData,
+  type SupplierPerformance,
+  type LeadTimeDetail,
+  type TopItem,
+  type AuditData,
   type PeriodoAnalise,
 } from '@/services/PurchasingReportsService';
 
@@ -14,21 +18,32 @@ export function usePurchasingReports() {
   const { currentOrganization } = useOrganization();
   const { toast } = useToast();
 
-  const [isLoading, setIsLoading]   = useState(false);
-  const [data, setData]             = useState<PurchasingReportData | null>(null);
-  const [filters, setFilters]       = useState<FiltrosRelatorio>(DEFAULT_FILTERS);
+  const [isLoading, setIsLoading]                       = useState(false);
+  const [data, setData]                                 = useState<PurchasingReportData | null>(null);
+  const [supplierPerformance, setSupplierPerformance]   = useState<SupplierPerformance[]>([]);
+  const [leadTimeDetails, setLeadTimeDetails]           = useState<LeadTimeDetail[]>([]);
+  const [topItems, setTopItems]                         = useState<TopItem[]>([]);
+  const [auditData, setAuditData]                       = useState<AuditData | null>(null);
+  const [filters, setFilters]                           = useState<FiltrosRelatorio>(DEFAULT_FILTERS);
 
-  const fetch = useCallback(
+  const fetchAll = useCallback(
     async (overrideFilters?: FiltrosRelatorio) => {
       if (!currentOrganization?.id) return;
-      const activeFilters = overrideFilters ?? filters;
+      const active = overrideFilters ?? filters;
       setIsLoading(true);
       try {
-        const result = await PurchasingReportsService.fetchDashboardData(
-          currentOrganization.id,
-          activeFilters,
-        );
-        setData(result);
+        const [dashboard, perf, lead, items, audit] = await Promise.all([
+          PurchasingReportsService.fetchDashboardData(currentOrganization.id, active),
+          PurchasingReportsService.fetchSupplierPerformance(currentOrganization.id),
+          PurchasingReportsService.fetchLeadTimeDetails(currentOrganization.id, active),
+          PurchasingReportsService.fetchTopItems(currentOrganization.id, active),
+          PurchasingReportsService.fetchAuditData(currentOrganization.id, active),
+        ]);
+        setData(dashboard);
+        setSupplierPerformance(perf);
+        setLeadTimeDetails(lead);
+        setTopItems(items);
+        setAuditData(audit);
       } catch (err) {
         console.error('usePurchasingReports:', err);
         toast({ title: 'Erro', description: 'Falha ao carregar relatório de compras', variant: 'destructive' });
@@ -43,9 +58,9 @@ export function usePurchasingReports() {
     (next: Partial<FiltrosRelatorio>) => {
       const merged = { ...filters, ...next };
       setFilters(merged);
-      fetch(merged);
+      fetchAll(merged);
     },
-    [filters, fetch],
+    [filters, fetchAll],
   );
 
   const setPeriod = useCallback(
@@ -70,8 +85,12 @@ export function usePurchasingReports() {
   return {
     isLoading,
     data,
+    supplierPerformance,
+    leadTimeDetails,
+    topItems,
+    auditData,
     filters,
-    fetch,
+    fetchAll,
     setPeriod,
     applyFilters,
     printReport,
@@ -79,10 +98,10 @@ export function usePurchasingReports() {
 }
 
 export const PERIOD_LABELS: Record<string, string> = {
-  hoje:         'Hoje',
-  semana:       'Esta Semana',
-  mes:          'Este Mês',
-  trimestre:    'Último Trimestre',
-  ano:          'Este Ano',
+  hoje:          'Hoje',
+  semana:        'Esta Semana',
+  mes:           'Este Mês',
+  trimestre:     'Último Trimestre',
+  ano:           'Este Ano',
   personalizado: 'Personalizado',
 };
