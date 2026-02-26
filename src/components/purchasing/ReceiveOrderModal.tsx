@@ -278,7 +278,7 @@ export function ReceiveOrderModal({
         ...prev,
         [itemId]: {
           ...prev[itemId],
-          approved_quantity: Math.max(0, value - rejectedQty),
+          approved_quantity: Math.max(0, Number(value) - rejectedQty),
         },
       }));
     }
@@ -290,7 +290,7 @@ export function ReceiveOrderModal({
         ...prev,
         [itemId]: {
           ...prev[itemId],
-          approved_quantity: Math.max(0, receivedQty - value),
+          approved_quantity: Math.max(0, receivedQty - Number(value)),
         },
       }));
     }
