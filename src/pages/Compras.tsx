@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Users, FileText, Package, Plus, Star, TrendingUp, Award, Check, X } from 'lucide-react';
+import { ShoppingCart, Users, FileText, Package, Plus, Check, X } from 'lucide-react';
 import { usePurchasing } from '@/hooks/usePurchasing';
 import { usePurchaseNeeds } from '@/hooks/usePurchaseNeeds';
 import { usePurchaseReceipts } from '@/hooks/usePurchaseReceipts';
@@ -15,6 +15,7 @@ import SuppliersManager from '@/components/purchasing/SuppliersManager';
 import PurchaseNeedsManager from '@/components/purchasing/PurchaseNeedsManager';
 import ReceiptManager from '@/components/purchasing/ReceiptManager';
 import RequisitionForm from '@/components/purchasing/RequisitionForm';
+import { InvoicesManager } from '@/components/purchasing/invoices/InvoicesManager';
 
 const STATUS_COLORS = {
   pending: 'bg-yellow-500/20 text-yellow-700',
@@ -57,7 +58,6 @@ export default function Compras() {
     purchaseOrders,
     suppliers,
     loading,
-    createRequisition,
     updateRequisitionStatus,
     fetchRequisitions,
     fetchSuppliers,
@@ -154,20 +154,15 @@ export default function Compras() {
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={(value) => {
         setActiveTab(value);
-        // Recarregar dados quando a aba mudar
-        if (value === 'needs') {
-          fetchNeeds();
-        } else if (value === 'requisitions') {
-          fetchRequisitions();
-        } else         if (value === 'receipts') {
-          fetchReceipts();
-        } else if (value === 'suppliers') {
-          fetchSuppliers();
-        }
+        if (value === 'needs')        fetchNeeds();
+        else if (value === 'requisitions') fetchRequisitions();
+        else if (value === 'receipts')     fetchReceipts();
+        else if (value === 'suppliers')    fetchSuppliers();
       }} className="space-y-4">
-        <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-2">
-          <TabsTrigger value="needs" className="flex-shrink-0 text-xs sm:text-sm">Necessidades</TabsTrigger>
+        <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-3">
+          <TabsTrigger value="needs"        className="flex-shrink-0 text-xs sm:text-sm">Necessidades</TabsTrigger>
           <TabsTrigger value="requisitions" className="flex-shrink-0 text-xs sm:text-sm">Requisições</TabsTrigger>
+          <TabsTrigger value="invoices"     className="flex-shrink-0 text-xs sm:text-sm">Notas Fiscais</TabsTrigger>
         </TabsList>
 
         {/* Purchase Needs Tab */}
@@ -314,12 +309,16 @@ export default function Compras() {
           )}
         </TabsContent>
 
+        {/* Notas Fiscais */}
+        <TabsContent value="invoices" className="space-y-4">
+          <InvoicesManager />
+        </TabsContent>
+
         {/* Suppliers Tab */}
         <TabsContent value="suppliers" className="space-y-4">
           <SuppliersManager />
         </TabsContent>
 
-        {/* Purchase Orders Tab */}
         {/* Receipts Tab */}
         <TabsContent value="receipts" className="space-y-4">
           <ReceiptManager />

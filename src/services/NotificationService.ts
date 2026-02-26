@@ -217,6 +217,59 @@ export class NotificationService {
   }
 
   /**
+   * Busca o ID de um notification_type por código (global ou da org)
+   */
+  static async getNotificationTypeId(code: string, orgId: string): Promise<string | null> {
+    const { data } = await supabase
+      .from('notification_types')
+      .select('id')
+      .eq('code', code)
+      .or(`org_id.is.null,org_id.eq.${orgId}`)
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle();
+    return data?.id ?? null;
+  }
+
+  /**
+   * Cria uma notificação global de recebimento de mercadorias (US-PUR-034)
+   */
+  static async createReceiptNotification(params: {
+    orgId:          string;
+    poNumber:       string;
+    supplierName:   string;
+    receiptNumber:  string;
+    totalValue:     number;
+    itemCount:      number;
+    actionUrl?:     string;
+  }): Promise<void> {
+    try {
+      const typeId = await NotificationService.getNotificationTypeId('system_alert', params.orgId);
+      if (!typeId) return;
+
+      const valueFormatted = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+        .format(params.totalValue);
+
+      await NotificationService.createNotification({
+        orgId:              params.orgId,
+        notificationTypeId: typeId,
+        title:              `Recebimento registrado — PC ${params.poNumber}`,
+        message:            `${params.itemCount} item(ns) recebidos de ${params.supplierName}. NF: ${params.receiptNumber}. Total: ${valueFormatted}.`,
+        severity:           'success',
+        isGlobal:           true,
+        actionUrl:          params.actionUrl ?? '/compras',
+        metadata:           {
+          po_number:      params.poNumber,
+          receipt_number: params.receiptNumber,
+          supplier_name:  params.supplierName,
+        } as unknown as Database['public']['Tables']['notifications']['Row']['metadata'],
+      });
+    } catch {
+      // Notificação é secundária; não propagamos erro
+    }
+  }
+
+  /**
    * Configura subscription para real-time updates
    */
   static subscribeToNotifications(

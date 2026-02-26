@@ -196,6 +196,11 @@ const inventoryItems = [
     url: "/relatorios-compras",
     icon: BarChart3,
   },
+  {
+    title: "Configurações",
+    url: "/configuracoes-compras",
+    icon: Settings,
+  },
 ];
 
 // Financeiro

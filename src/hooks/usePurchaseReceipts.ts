@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
+import { NotificationService } from '@/services/NotificationService';
 
 export interface PurchaseReceipt {
   id: string;
@@ -367,6 +368,23 @@ export function usePurchaseReceipts() {
       toast({
         title: 'Sucesso',
         description: `Recebimento ${receiptNumber} registrado com sucesso`,
+      });
+
+      // Notificar Estoque e PCP sobre o recebimento (US-PUR-034)
+      const { data: poData } = await supabase
+        .from('purchase_orders')
+        .select('po_number, supplier:suppliers(name)')
+        .eq('id', receiptData.purchase_order_id)
+        .single();
+
+      NotificationService.createReceiptNotification({
+        orgId:         currentOrganization.id,
+        poNumber:      poData?.po_number   ?? receiptData.purchase_order_id,
+        supplierName:  poData?.supplier?.name ?? 'Fornecedor',
+        receiptNumber,
+        totalValue,
+        itemCount:     receiptData.items.length,
+        actionUrl:     '/compras',
       });
 
       return receipt as PurchaseReceipt;

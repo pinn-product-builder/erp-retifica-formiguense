@@ -9,11 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Package, Upload, Star, ChevronUp, ChevronDown, FileText, X, Loader2, ExternalLink } from 'lucide-react';
+import { AlertCircle, Package, Upload, Star, ChevronUp, ChevronDown, FileText, X, Loader2, ExternalLink, Eye, EyeOff, History, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { usePurchaseReceipts } from '@/hooks/usePurchaseReceipts';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -87,7 +88,17 @@ export function ReceiveOrderModal({
   });
   
   const [receiptItems, setReceiptItems] = useState<Record<string, ReceiptItem>>({});
-  const [showEvaluation, setShowEvaluation] = useState(false);
+  const [showEvaluation,      setShowEvaluation]      = useState(false);
+  const [blindMode,           setBlindMode]           = useState(false);
+  const [showBlindReview,     setShowBlindReview]     = useState(false);
+  const [excessJustification, setExcessJustification] = useState('');
+  const [receiptHistory, setReceiptHistory] = useState<{
+    id: string; receipt_number: string; receipt_date: string;
+    invoice_number?: string; total_value: number; status: string;
+  }[]>([]);
+
+  const EXCESS_TOLERANCE = 0.05;
+
   const [evaluation, setEvaluation] = useState({
     delivery_rating: 5,
     quality_rating: 5,
@@ -191,6 +202,15 @@ export function ReceiveOrderModal({
           delivered_on_time: today <= expectedDate,
         }));
       }
+
+      // Fetch receipt history for this PO
+      const { data: historyData } = await supabase
+        .from('purchase_receipts')
+        .select('id, receipt_number, receipt_date, invoice_number, total_value, status')
+        .eq('purchase_order_id', purchaseOrderId)
+        .order('receipt_date', { ascending: false });
+      setReceiptHistory((historyData ?? []) as typeof receiptHistory);
+
     } catch (error) {
       console.error('Error fetching order data:', error);
     }
@@ -236,11 +256,23 @@ export function ReceiveOrderModal({
     }
   };
 
+  const excessItems = orderItems.filter(item => {
+    const remaining = item.quantity - item.received_quantity;
+    const counted   = receiptItems[item.id]?.received_quantity ?? 0;
+    return counted > remaining * (1 + EXCESS_TOLERANCE);
+  });
+  const hasExcess = excessItems.length > 0;
+
   const handleReceive = async () => {
     const items = Object.values(receiptItems).filter(item => item.received_quantity > 0);
 
     if (items.length === 0) {
       alert('Informe pelo menos um item a receber');
+      return;
+    }
+
+    if (hasExcess && !excessJustification.trim()) {
+      alert('Há itens com quantidade acima de 5% do pedido. Informe a justificativa de excesso antes de confirmar.');
       return;
     }
 
@@ -331,6 +363,117 @@ export function ReceiveOrderModal({
   const hasQualityIssues = Object.values(receiptItems).some(
     item => item.quality_status === 'rejected' || item.rejected_quantity > 0
   );
+
+  // ── Tela de revisão modo cego ──────────────────────────────────────────────
+  if (showBlindReview) {
+    const results = orderItems.map(item => {
+      const remaining = item.quantity - item.received_quantity;
+      const counted   = receiptItems[item.id]?.received_quantity ?? 0;
+      const divergence = counted - remaining;
+      const divergence_percentage = remaining > 0 ? (Math.abs(divergence) / remaining) * 100 : 0;
+      const status =
+        counted === 0          ? 'missing'
+        : counted > remaining  ? 'over'
+        : counted < remaining  ? 'under'
+        : 'match';
+      return { item_id: item.id, item_name: item.item_name, expected_quantity: remaining, counted_quantity: counted, divergence, divergence_percentage, status };
+    });
+
+    const hasDivg = results.some(r => r.status !== 'match');
+
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
+              Revisão de Divergências — Modo Cego
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {hasDivg ? (
+              <Alert variant="destructive" className="text-xs sm:text-sm">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Foram encontradas divergências entre a contagem e o pedido original.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert className="border-green-200 bg-green-50 text-xs sm:text-sm">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-700">
+                  Nenhuma divergência encontrada. Recebimento conforme o pedido.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              {results.map(r => {
+                const rowStyle =
+                  r.status === 'match'   ? 'border-green-200 bg-green-50/50'
+                  : r.status === 'over'  ? 'border-orange-200 bg-orange-50/50'
+                  : r.status === 'under' ? 'border-yellow-200 bg-yellow-50/50'
+                  :                        'border-red-200 bg-red-50/50';
+                const StatusIcon =
+                  r.status === 'match'   ? CheckCircle2
+                  : r.status === 'over'  ? AlertTriangle
+                  : r.status === 'under' ? AlertTriangle
+                  :                        XCircle;
+                const iconColor =
+                  r.status === 'match'   ? 'text-green-600'
+                  : r.status === 'over'  ? 'text-orange-600'
+                  : r.status === 'under' ? 'text-yellow-600'
+                  :                        'text-red-600';
+                const statusLabel =
+                  r.status === 'match'   ? 'Conforme'
+                  : r.status === 'over'  ? `+${r.divergence} (excesso)`
+                  : r.status === 'under' ? `${r.divergence} (falta)`
+                  :                        'Não recebido';
+
+                return (
+                  <div key={r.item_id} className={`flex items-center gap-3 p-3 rounded-lg border ${rowStyle}`}>
+                    <StatusIcon className={`w-4 h-4 flex-shrink-0 ${iconColor}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium truncate">{r.item_name}</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        Esperado: {r.expected_quantity} · Contado: {r.counted_quantity}
+                      </p>
+                    </div>
+                    <Badge
+                      className={`text-[10px] sm:text-xs flex-shrink-0 ${
+                        r.status === 'match'
+                          ? 'bg-green-100 text-green-700 border-green-200'
+                          : r.status === 'over'
+                          ? 'bg-orange-100 text-orange-700 border-orange-200'
+                          : r.status === 'under'
+                          ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                          : 'bg-red-100 text-red-700 border-red-200'
+                      }`}
+                    >
+                      {statusLabel}
+                      {r.status !== 'match' && r.status !== 'missing' && (
+                        <span className="ml-1">({r.divergence_percentage.toFixed(1)}%)</span>
+                      )}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2 border-t">
+              <Button variant="outline" size="sm" onClick={() => setShowBlindReview(false)}>
+                Ajustar Contagem
+              </Button>
+              <Button size="sm" onClick={() => { setShowBlindReview(false); handleReceive(); }}>
+                Confirmar e Registrar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   if (showEvaluation) {
     return (
@@ -479,10 +622,26 @@ export function ReceiveOrderModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Receber Pedido de Compra - {purchaseOrder?.po_number}
-          </DialogTitle>
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Package className="h-4 w-4 sm:h-5 sm:w-5" />
+              Receber Pedido - {purchaseOrder?.po_number}
+            </DialogTitle>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {blindMode ? <EyeOff className="w-3.5 h-3.5 text-amber-600" /> : <Eye className="w-3.5 h-3.5 text-muted-foreground" />}
+              <span className="text-xs font-medium text-muted-foreground">Modo Cego</span>
+              <Switch
+                checked={blindMode}
+                onCheckedChange={setBlindMode}
+                aria-label="Ativar modo cego"
+              />
+            </div>
+          </div>
+          {blindMode && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
+              Modo cego ativo — quantidades do pedido ocultadas para conferência independente.
+            </p>
+          )}
         </DialogHeader>
 
         <div className="space-y-6">
@@ -494,7 +653,9 @@ export function ReceiveOrderModal({
               </CardHeader>
               <CardContent className="text-sm space-y-1">
                 <p><strong>Fornecedor:</strong> {purchaseOrder.supplier?.name}</p>
-                <p><strong>Valor Total:</strong> {formatCurrency(purchaseOrder.total_value)}</p>
+                {!blindMode && (
+                  <p><strong>Valor Total:</strong> {formatCurrency(purchaseOrder.total_value)}</p>
+                )}
                 {purchaseOrder.expected_delivery && (
                   <p><strong>Entrega Esperada:</strong> {new Date(purchaseOrder.expected_delivery).toLocaleDateString()}</p>
                 )}
@@ -502,8 +663,8 @@ export function ReceiveOrderModal({
             </Card>
           )}
 
-          {/* Progress Summary */}
-          {orderItems.length > 0 && (
+          {/* Progress Summary — oculto em modo cego (US-028) */}
+          {!blindMode && orderItems.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Resumo do Progresso</CardTitle>
@@ -686,41 +847,41 @@ export function ReceiveOrderModal({
                             <p className="text-sm text-muted-foreground">{item.description}</p>
                           )}
                           <div className="space-y-2 mt-2">
-                            {/* Quantity Summary */}
-                            <div className="grid grid-cols-4 gap-4 text-sm">
-                              <div>
-                                <span className="text-muted-foreground">Pedido:</span>
-                                <span className="ml-1 font-medium">{item.quantity}</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Recebido:</span>
-                                <span className="ml-1 font-medium text-green-600">{item.received_quantity}</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Restante:</span>
-                                <span className="ml-1 font-semibold text-blue-600">{remaining}</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Preço:</span>
-                                <span className="ml-1 font-medium">{formatCurrency(item.unit_price)}</span>
-                              </div>
-                            </div>
-                            
-                            {/* Progress Bar */}
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-xs text-muted-foreground">
-                                <span>Progresso do Item</span>
-                                <span>{item.quantity > 0 ? Math.round((item.received_quantity / item.quantity) * 100) : 0}%</span>
-                              </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                                  style={{ 
-                                    width: `${item.quantity > 0 ? (item.received_quantity / item.quantity) * 100 : 0}%` 
-                                  }}
-                                />
-                              </div>
-                            </div>
+                            {/* Quantity Summary — oculto em modo cego (US-028) */}
+                            {!blindMode && (
+                              <>
+                                <div className="grid grid-cols-4 gap-4 text-sm">
+                                  <div>
+                                    <span className="text-muted-foreground">Pedido:</span>
+                                    <span className="ml-1 font-medium">{item.quantity}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Recebido:</span>
+                                    <span className="ml-1 font-medium text-green-600">{item.received_quantity}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Restante:</span>
+                                    <span className="ml-1 font-semibold text-blue-600">{remaining}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">Preço:</span>
+                                    <span className="ml-1 font-medium">{formatCurrency(item.unit_price)}</span>
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="flex justify-between text-xs text-muted-foreground">
+                                    <span>Progresso do Item</span>
+                                    <span>{item.quantity > 0 ? Math.round((item.received_quantity / item.quantity) * 100) : 0}%</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div
+                                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                      style={{ width: `${item.quantity > 0 ? (item.received_quantity / item.quantity) * 100 : 0}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
                         {hasDivergence && (
@@ -750,10 +911,10 @@ export function ReceiveOrderModal({
                             <Input
                               type="number"
                               min="0"
-                              max={remaining}
+                              max={blindMode ? undefined : remaining}
                               value={receiptItem?.received_quantity || 0}
                               onChange={(e) => updateReceiptItem(item.id, 'received_quantity', Number(e.target.value))}
-                              className={`w-16 sm:w-20 text-center ${receiptItem?.received_quantity > remaining ? 'border-red-300' : ''}`}
+                              className={`w-16 sm:w-20 text-center ${!blindMode && receiptItem?.received_quantity > remaining ? 'border-red-300' : ''}`}
                             />
                             <Button
                               type="button"
@@ -761,15 +922,17 @@ export function ReceiveOrderModal({
                               size="icon"
                               className="h-7 w-7 sm:h-8 sm:w-8"
                               onClick={() => {
-                                const newValue = Math.min(remaining, (receiptItem?.received_quantity || 0) + 1);
+                                const newValue = blindMode
+                                  ? (receiptItem?.received_quantity || 0) + 1
+                                  : Math.min(remaining, (receiptItem?.received_quantity || 0) + 1);
                                 updateReceiptItem(item.id, 'received_quantity', newValue);
                               }}
-                              disabled={(receiptItem?.received_quantity || 0) >= remaining}
+                              disabled={!blindMode && (receiptItem?.received_quantity || 0) >= remaining}
                             >
                               <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
                             </Button>
                           </div>
-                          {receiptItem?.received_quantity > remaining && (
+                          {!blindMode && receiptItem?.received_quantity > remaining && (
                             <p className="text-xs text-red-600 mt-1">
                               Quantidade não pode ser maior que o restante ({remaining})
                             </p>
@@ -927,6 +1090,42 @@ export function ReceiveOrderModal({
             })}
           </div>
 
+          {/* Histórico de recebimentos anteriores (US-030) */}
+          {receiptHistory.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-sm sm:text-base flex items-center gap-2 mb-2">
+                <History className="w-4 h-4 text-muted-foreground" />
+                Histórico de Recebimentos ({receiptHistory.length})
+              </h3>
+              <div className="space-y-1.5">
+                {receiptHistory.map(r => (
+                  <div key={r.id} className="flex items-center gap-2 p-2 sm:p-2.5 rounded-md border bg-muted/30 text-xs sm:text-sm">
+                    <FileText className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                    <span className="font-medium flex-shrink-0">{r.receipt_number}</span>
+                    <span className="text-muted-foreground flex-shrink-0">
+                      {new Date(r.receipt_date).toLocaleDateString('pt-BR')}
+                    </span>
+                    {r.invoice_number && (
+                      <span className="text-muted-foreground hidden sm:inline truncate">NF: {r.invoice_number}</span>
+                    )}
+                    <span className="ml-auto font-medium flex-shrink-0 whitespace-nowrap">
+                      {formatCurrency(r.total_value)}
+                    </span>
+                    <Badge
+                      className={`text-[10px] flex-shrink-0 ${
+                        r.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        r.status === 'partial'   ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {r.status === 'completed' ? 'Completo' : r.status === 'partial' ? 'Parcial' : r.status}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* General Notes */}
           <div>
             <Label>Observações Gerais do Recebimento</Label>
@@ -948,10 +1147,12 @@ export function ReceiveOrderModal({
                 <span>Total de itens a receber:</span>
                 <span className="font-semibold">{totalToReceive} unidade(s)</span>
               </div>
-              <div className="flex justify-between">
-                <span>Valor total estimado:</span>
-                <span className="font-semibold">{formatCurrency(totalValue)}</span>
-              </div>
+              {!blindMode && (
+                <div className="flex justify-between">
+                  <span>Valor total estimado:</span>
+                  <span className="font-semibold">{formatCurrency(totalValue)}</span>
+                </div>
+              )}
               {hasDivergences && (
                 <div className="flex justify-between text-yellow-700">
                   <span>Status:</span>
@@ -961,14 +1162,52 @@ export function ReceiveOrderModal({
             </CardContent>
           </Card>
 
+          {/* Justificativa de excesso (US-030) */}
+          {hasExcess && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="space-y-2">
+                <p className="text-xs sm:text-sm font-medium">
+                  {excessItems.map(i => {
+                    const remaining = i.quantity - i.received_quantity;
+                    const counted   = receiptItems[i.id]?.received_quantity ?? 0;
+                    const pct = remaining > 0 ? ((counted - remaining) / remaining * 100).toFixed(1) : '—';
+                    return `${i.item_name}: +${counted - remaining} un (${pct}% acima)`;
+                  }).join(' · ')}
+                </p>
+                <div>
+                  <Label className="text-xs">Justificativa de Excesso *</Label>
+                  <Textarea
+                    value={excessJustification}
+                    onChange={e => setExcessJustification(e.target.value)}
+                    placeholder="Explique o motivo de receber acima da quantidade pedida..."
+                    rows={2}
+                    className="mt-1 text-xs"
+                  />
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Actions */}
           <div className="flex gap-2 justify-end pt-4 border-t">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleReceive} disabled={loading || totalToReceive === 0}>
-              {loading ? 'Processando...' : 'Confirmar Recebimento'}
-            </Button>
+            {blindMode ? (
+              <Button
+                onClick={() => setShowBlindReview(true)}
+                disabled={loading || totalToReceive === 0}
+                className="gap-1.5"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                Revisar Divergências
+              </Button>
+            ) : (
+              <Button onClick={handleReceive} disabled={loading || totalToReceive === 0 || (hasExcess && !excessJustification.trim())}>
+                {loading ? 'Processando...' : 'Confirmar Recebimento'}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
