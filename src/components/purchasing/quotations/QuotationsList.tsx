@@ -23,11 +23,11 @@ import {
 import {
   Plus, Search, Filter, MoreHorizontal, Eye, Pencil, Trash2,
   Loader2, FileText, Clock, CheckCircle, AlertTriangle, BarChart3,
-  Send, XCircle,
+  Send, XCircle, RotateCcw, Copy,
 } from 'lucide-react';
 import {
-  STATUS_LABELS, STATUS_COLORS,
-  type Quotation, type QuotationStatus, type QuotationFilters,
+  STATUS_LABELS, STATUS_COLORS, URGENCY_LABELS, URGENCY_COLORS,
+  QuotationService, type Quotation, type QuotationStatus, type QuotationFilters,
 } from '@/services/QuotationService';
 
 interface QuotationsListProps {
@@ -44,6 +44,8 @@ interface QuotationsListProps {
   onView:       (q: Quotation) => void;
   onCompare:    (q: Quotation) => void;
   onDelete:     (id: string) => Promise<boolean>;
+  onReopen?:    (q: Quotation) => void;
+  onCopy?:      (q: Quotation) => void;
 }
 
 type TabValue = 'all' | 'waiting' | 'responded' | 'finished';
@@ -51,6 +53,7 @@ type TabValue = 'all' | 'waiting' | 'responded' | 'finished';
 export function QuotationsList({
   quotations, count, totalPages, currentPage, isLoading,
   filters, onFilters, onPageChange, onNew, onEdit, onView, onCompare, onDelete,
+  onReopen, onCopy,
 }: QuotationsListProps) {
   const [deleteId,  setDeleteId]  = useState<string | null>(null);
   const [search,    setSearch]    = useState(filters.search ?? '');
@@ -76,6 +79,7 @@ export function QuotationsList({
   const canEdit    = (q: Quotation) => ['draft', 'sent', 'waiting_proposals'].includes(q.status);
   const canCompare = (q: Quotation) => (q.total_proposals ?? 0) > 0;
   const canDelete  = (q: Quotation) => !['approved'].includes(q.status);
+  const canReopen  = (q: Quotation) => QuotationService.canReopen(q.status);
 
   const fmt = (d: string) => new Date(d).toLocaleDateString('pt-BR');
 
@@ -215,8 +219,13 @@ export function QuotationsList({
                           >
                             <TableCell>
                               <div className="font-medium text-sm">{q.quotation_number}</div>
-                              {q.notes && (
-                                <div className="text-xs text-muted-foreground truncate max-w-[180px]">{q.notes}</div>
+                              {q.title && (
+                                <div className="text-xs text-muted-foreground truncate max-w-[200px]">{q.title}</div>
+                              )}
+                              {q.urgency && q.urgency !== 'normal' && (
+                                <Badge className={`text-xs mt-0.5 ${URGENCY_COLORS[q.urgency]}`}>
+                                  {URGENCY_LABELS[q.urgency]}
+                                </Badge>
                               )}
                             </TableCell>
                             <TableCell className="hidden md:table-cell text-sm">
@@ -279,6 +288,19 @@ export function QuotationsList({
                                   {q.status === 'draft' && (
                                     <DropdownMenuItem onClick={() => onView(q)}>
                                       <Send className="h-4 w-4 mr-2" />Enviar Cotação
+                                    </DropdownMenuItem>
+                                  )}
+                                  {canReopen(q) && onReopen && (
+                                    <DropdownMenuItem
+                                      className="text-amber-700 focus:text-amber-700"
+                                      onClick={() => onReopen(q)}
+                                    >
+                                      <RotateCcw className="h-4 w-4 mr-2" />Reabrir Cotação
+                                    </DropdownMenuItem>
+                                  )}
+                                  {onCopy && (
+                                    <DropdownMenuItem onClick={() => onCopy(q)}>
+                                      <Copy className="h-4 w-4 mr-2" />Copiar Cotação
                                     </DropdownMenuItem>
                                   )}
                                   {canDelete(q) && (

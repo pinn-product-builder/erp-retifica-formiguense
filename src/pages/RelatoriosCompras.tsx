@@ -12,17 +12,26 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import {
   FileDown, TrendingUp, TrendingDown, Building2, Package, Clock,
   DollarSign, AlertTriangle, CheckCircle, BarChart3, FileText, RefreshCw,
-  Printer, PieChart as PieChartIcon,
+  Printer, PieChart as PieChartIcon, ChevronsUpDown, Check, X, History,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
 import { usePurchasingReports, PERIOD_LABELS } from '@/hooks/usePurchasingReports';
+import { usePriceHistory } from '@/hooks/usePriceHistory';
 import { type PeriodoAnalise } from '@/services/PurchasingReportsService';
+import { type PriceHistoryPeriod } from '@/services/PriceHistoryService';
+import { PriceHistoryChart } from '@/components/purchasing/reports/PriceHistoryChart';
+import { SupplierPriceComparison } from '@/components/purchasing/reports/SupplierPriceComparison';
 
 const PERIOD_OPTIONS: { value: PeriodoAnalise; label: string }[] = [
   { value: 'mes',          label: 'Este Mês'         },
@@ -31,6 +40,13 @@ const PERIOD_OPTIONS: { value: PeriodoAnalise; label: string }[] = [
   { value: 'semana',       label: 'Esta Semana'       },
   { value: 'hoje',         label: 'Hoje'              },
   { value: 'personalizado', label: 'Personalizado'   },
+];
+
+const PRICE_PERIOD_OPTIONS: { value: PriceHistoryPeriod; label: string }[] = [
+  { value: '3m',  label: 'Últimos 3 meses'  },
+  { value: '6m',  label: 'Últimos 6 meses'  },
+  { value: '12m', label: 'Últimos 12 meses' },
+  { value: '24m', label: 'Últimos 24 meses' },
 ];
 
 const SCORE_COLOR = (score: number) =>
@@ -60,6 +76,14 @@ export default function RelatoriosCompras() {
     isLoading, data, supplierPerformance, leadTimeDetails, topItems, auditData,
     filters, fetchAll, setPeriod, applyFilters, printReport,
   } = usePurchasingReports();
+
+  const {
+    allItems, isLoadingItems, selectedItem, period: histPeriod,
+    isLoading: histLoading, data: histData,
+    selectItem, changePeriod: changeHistPeriod, clearSelection,
+  } = usePriceHistory();
+
+  const [comboOpen, setComboOpen] = useState(false);
 
   const [localStart, setLocalStart] = useState('');
   const [localEnd,   setLocalEnd]   = useState('');
@@ -373,6 +397,112 @@ export default function RelatoriosCompras() {
 
         {/* ── TAB: Preços ─────────────────────────────────── */}
         <TabsContent value="prices" className="space-y-4">
+
+          {/* Seção de Histórico de Preços */}
+          <Card>
+            <CardHeader className="p-3 sm:p-4 pb-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                  <History className="w-4 h-4" />
+                  Histórico de Preços por Item
+                </CardTitle>
+                {selectedItem && (
+                  <Select value={histPeriod} onValueChange={(v) => changeHistPeriod(v as PriceHistoryPeriod)}>
+                    <SelectTrigger className="w-44 h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRICE_PERIOD_OPTIONS.map(o => (
+                        <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="p-3 sm:p-4 pt-0 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Popover open={comboOpen} onOpenChange={setComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={comboOpen}
+                      className="w-full sm:w-80 justify-between text-xs sm:text-sm h-9"
+                    >
+                      <span className="truncate">
+                        {selectedItem ?? 'Buscar item pelo nome...'}
+                      </span>
+                      <ChevronsUpDown className="w-3.5 h-3.5 opacity-50 flex-shrink-0 ml-2" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar item..." className="text-xs" />
+                      <CommandList>
+                        <CommandEmpty>
+                          {isLoadingItems ? 'Carregando...' : 'Nenhum item encontrado.'}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {allItems.map((item) => (
+                            <CommandItem
+                              key={item}
+                              value={item}
+                              onSelect={(val) => {
+                                selectItem(val);
+                                setComboOpen(false);
+                              }}
+                              className="text-xs"
+                            >
+                              <Check
+                                className={cn('mr-2 w-3.5 h-3.5', selectedItem === item ? 'opacity-100' : 'opacity-0')}
+                              />
+                              {item}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+
+                {selectedItem && (
+                  <Button variant="ghost" size="sm" onClick={clearSelection} className="gap-1.5 h-9">
+                    <X className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Limpar</span>
+                  </Button>
+                )}
+              </div>
+
+              {!selectedItem && (
+                <p className="text-xs sm:text-sm text-muted-foreground py-2">
+                  Selecione um item para visualizar o histórico de preços por fornecedor.
+                </p>
+              )}
+
+              {selectedItem && histLoading && (
+                <div className="space-y-3">
+                  <Skeleton className="h-24" />
+                  <Skeleton className="h-64" />
+                </div>
+              )}
+
+              {selectedItem && !histLoading && histData && (
+                <div className="space-y-3">
+                  <PriceHistoryChart data={histData} />
+                  <SupplierPriceComparison suppliers={histData.by_supplier} />
+                </div>
+              )}
+
+              {selectedItem && !histLoading && histData && histData.entries.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhuma compra encontrada para "{selectedItem}" no período selecionado.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Top Itens por Volume */}
           <Card>
             <CardHeader className="p-4 sm:p-6 pb-2">
               <CardTitle className="text-sm sm:text-base">Top Itens por Volume de Compra</CardTitle>
@@ -414,9 +544,10 @@ export default function RelatoriosCompras() {
                           <TableHead>Item</TableHead>
                           <TableHead className="text-center">Qtd. Comprada</TableHead>
                           <TableHead className="text-right">Preço Médio</TableHead>
-                          <TableHead className="text-right">Mín.</TableHead>
-                          <TableHead className="text-right">Máx.</TableHead>
+                          <TableHead className="text-right hidden sm:table-cell">Mín.</TableHead>
+                          <TableHead className="text-right hidden sm:table-cell">Máx.</TableHead>
                           <TableHead className="text-center">Variação</TableHead>
+                          <TableHead className="text-center hidden md:table-cell">Histórico</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -429,12 +560,26 @@ export default function RelatoriosCompras() {
                               <TableCell className="font-medium text-xs sm:text-sm max-w-[160px] truncate">{item.item_name}</TableCell>
                               <TableCell className="text-center">{item.total_purchased}</TableCell>
                               <TableCell className="text-right whitespace-nowrap">{formatCurrency(item.avg_unit_price)}</TableCell>
-                              <TableCell className="text-right whitespace-nowrap text-emerald-600">{formatCurrency(item.min_unit_price)}</TableCell>
-                              <TableCell className="text-right whitespace-nowrap text-red-500">{formatCurrency(item.max_unit_price)}</TableCell>
+                              <TableCell className="text-right whitespace-nowrap text-emerald-600 hidden sm:table-cell">{formatCurrency(item.min_unit_price)}</TableCell>
+                              <TableCell className="text-right whitespace-nowrap text-red-500 hidden sm:table-cell">{formatCurrency(item.max_unit_price)}</TableCell>
                               <TableCell className="text-center">
                                 <Badge variant={variation > 20 ? 'destructive' : variation > 0 ? 'secondary' : 'outline'} className="text-xs">
                                   {variation > 0 ? `+${variation.toFixed(0)}%` : '—'}
                                 </Badge>
+                              </TableCell>
+                              <TableCell className="text-center hidden md:table-cell">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 gap-1 text-xs"
+                                  onClick={() => {
+                                    selectItem(item.item_name);
+                                    document.querySelector('[data-value="prices"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                  }}
+                                >
+                                  <History className="w-3 h-3" />
+                                  Ver
+                                </Button>
                               </TableCell>
                             </TableRow>
                           );

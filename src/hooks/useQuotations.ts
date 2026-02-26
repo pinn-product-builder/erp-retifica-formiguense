@@ -103,6 +103,46 @@ export function useQuotations(initialFilters: QuotationFilters = {}) {
     }
   };
 
+  const reopenQuotation = async (
+    id: string,
+    newDueDate: string,
+    reason: string,
+    notes?: string,
+  ): Promise<Quotation | null> => {
+    try {
+      const updated = await QuotationService.reopenQuotation(id, newDueDate, reason, notes);
+      toast({ title: 'Cotação reaberta', description: 'Status atualizado para Aguardando Propostas.' });
+      await fetchQuotations();
+      return updated;
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível reabrir a cotação', variant: 'destructive' });
+      return null;
+    }
+  };
+
+  const copyQuotation = async (
+    originalId: string,
+    newDueDate: string,
+    newTitle?: string,
+  ): Promise<Quotation | null> => {
+    if (!currentOrganization?.id || !user?.id) return null;
+    try {
+      const copy = await QuotationService.copyQuotation(
+        originalId,
+        currentOrganization.id,
+        user.id,
+        newDueDate,
+        newTitle,
+      );
+      toast({ title: 'Cotação copiada', description: `${copy.quotation_number} criada como rascunho.` });
+      await fetchQuotations();
+      return copy;
+    } catch {
+      toast({ title: 'Erro', description: 'Não foi possível copiar a cotação', variant: 'destructive' });
+      return null;
+    }
+  };
+
   return {
     quotations: result.data,
     count:      result.count,
@@ -113,7 +153,7 @@ export function useQuotations(initialFilters: QuotationFilters = {}) {
     setFilters,
     handlePageChange,
     refresh: fetchQuotations,
-    actions: { createQuotation, updateQuotation, updateStatus, deleteQuotation },
+    actions: { createQuotation, updateQuotation, updateStatus, deleteQuotation, reopenQuotation, copyQuotation },
   };
 }
 
@@ -121,17 +161,22 @@ export function useQuotations(initialFilters: QuotationFilters = {}) {
 export function useQuotationDetails(quotationId: string | null) {
   const { toast } = useToast();
 
-  const [quotation, setQuotation] = useState<Quotation | null>(null);
-  const [items,     setItems]     = useState<QuotationItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [quotation,        setQuotation]        = useState<Quotation | null>(null);
+  const [items,            setItems]            = useState<QuotationItem[]>([]);
+  const [isLoading,        setIsLoading]        = useState(false);
+  const [hasPurchaseOrder, setHasPurchaseOrder] = useState(false);
 
   const fetchDetails = useCallback(async () => {
     if (!quotationId) return;
     try {
       setIsLoading(true);
-      const result = await QuotationService.getById(quotationId);
+      const [result, poExists] = await Promise.all([
+        QuotationService.getById(quotationId),
+        QuotationService.hasPurchaseOrder(quotationId),
+      ]);
       setQuotation(result.quotation);
       setItems(result.items);
+      setHasPurchaseOrder(poExists);
     } catch {
       toast({ title: 'Erro', description: 'Não foi possível carregar detalhes', variant: 'destructive' });
     } finally {
@@ -246,6 +291,7 @@ export function useQuotationDetails(quotationId: string | null) {
     items,
     isLoading,
     canEdit,
+    hasPurchaseOrder,
     refresh: fetchDetails,
     actions: { addItem, updateItem, deleteItem, addProposal, updateProposal, selectProposal, deleteProposal },
   };

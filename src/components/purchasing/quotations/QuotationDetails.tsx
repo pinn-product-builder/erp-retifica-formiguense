@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Plus, Pencil, Trash2, Loader2, CheckCircle2, ChevronDown,
+  Plus, Pencil, Trash2, Loader2, CheckCircle, CheckCircle2, ChevronDown,
   Download, MessageCircle, Send, X, Star, BarChart2, ShoppingCart,
 } from 'lucide-react';
 import { ProposalComparisonView } from './ProposalComparisonView';
@@ -48,6 +48,7 @@ interface QuotationDetailsProps {
   onSelectProposal: (proposalId: string, itemId: string) => Promise<boolean>;
   onDeleteProposal: (proposalId: string) => Promise<boolean>;
   onGeneratePurchaseOrders?: () => Promise<string[] | null>;
+  hasPurchaseOrder?: boolean;
 }
 
 export function QuotationDetails({
@@ -56,6 +57,7 @@ export function QuotationDetails({
   onStatusChange, onAddItem, onEditItem, onDeleteItem,
   onAddProposal, onEditProposal, onSelectProposal, onDeleteProposal,
   onGeneratePurchaseOrders,
+  hasPurchaseOrder = false,
 }: QuotationDetailsProps) {
   const canEdit = EDITABLE_STATUSES.includes(quotation.status);
 
@@ -74,9 +76,11 @@ export function QuotationDetails({
     items.length > 0 &&
     items.every(item => (item.proposals ?? []).some(p => p.is_selected));
 
-  // Botão disponível quando responded ou approved e todas propostas selecionadas
+  // Botão disponível quando responded/approved, todas propostas selecionadas
+  // e ainda não existe um pedido de compra gerado para esta cotação
   const canGeneratePO =
     !!onGeneratePurchaseOrders &&
+    !hasPurchaseOrder &&
     allSelected &&
     ['responded', 'approved'].includes(quotation.status);
 
@@ -182,14 +186,19 @@ export function QuotationDetails({
                 <BarChart2 className="w-3 h-3" />Comparar Propostas
               </Button>
             )}
-            {/* Gerar Pedido de Compra — disponível quando todas propostas estão selecionadas */}
+            {/* Gerar Pedido de Compra — disponível quando todas propostas estão selecionadas e PC ainda não foi gerado */}
             {canGeneratePO && (
               <Button size="sm" onClick={() => setGenerateOpen(true)}
                 className="h-8 text-xs gap-1 bg-green-600 hover:bg-green-700">
                 <ShoppingCart className="w-3 h-3" />Gerar Pedido de Compra
               </Button>
             )}
-            {!canGeneratePO && allSelected && !['responded', 'approved'].includes(quotation.status) && (
+            {hasPurchaseOrder && (
+              <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium self-center">
+                <CheckCircle className="w-3 h-3" />Pedido de compra gerado
+              </span>
+            )}
+            {!canGeneratePO && !hasPurchaseOrder && allSelected && !['responded', 'approved'].includes(quotation.status) && (
               <span className="text-xs text-muted-foreground italic self-center">
                 Mova para "Respondida" para gerar pedido
               </span>

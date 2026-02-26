@@ -33,6 +33,23 @@ export const STATUS_COLORS: Record<QuotationStatus, string> = {
   cancelled:         'bg-gray-100 text-gray-500 border-gray-200',
 };
 
+export type QuotationPurpose = 'stock' | 'budget';
+export type QuotationUrgency = 'normal' | 'media' | 'alta' | 'urgente';
+
+export const URGENCY_LABELS: Record<QuotationUrgency, string> = {
+  normal:  'Normal',
+  media:   'Média',
+  alta:    'Alta',
+  urgente: 'Urgente',
+};
+
+export const URGENCY_COLORS: Record<QuotationUrgency, string> = {
+  normal:  'bg-gray-100 text-gray-700',
+  media:   'bg-yellow-100 text-yellow-700',
+  alta:    'bg-orange-100 text-orange-700',
+  urgente: 'bg-red-100 text-red-700',
+};
+
 // ── Interfaces ────────────────────────────────────────────────────────────────
 export interface Quotation {
   id: string;
@@ -42,6 +59,11 @@ export interface Quotation {
   requested_date: string;
   due_date: string;
   status: QuotationStatus;
+  title?: string;
+  urgency?: QuotationUrgency;
+  purpose?: QuotationPurpose;
+  order_reference?: string;
+  budget_reference?: string;
   notes?: string;
   delivery_address?: Record<string, unknown>;
   created_at: string;
@@ -102,11 +124,16 @@ export interface SupplierSuggestion {
 
 // ── Zod Schemas ───────────────────────────────────────────────────────────────
 export const quotationHeaderSchema = z.object({
-  due_date: z
+  title:            z.string().min(2, 'Título obrigatório (mín. 2 caracteres)'),
+  due_date:         z
     .string()
     .min(1, 'Prazo obrigatório')
     .refine(v => new Date(v) >= new Date(new Date().toDateString()), 'Prazo deve ser hoje ou futuro'),
-  notes: z.string().optional(),
+  urgency:          z.enum(['normal', 'media', 'alta', 'urgente']).default('normal'),
+  purpose:          z.enum(['stock', 'budget']).default('stock'),
+  order_reference:  z.string().optional(),
+  budget_reference: z.string().optional(),
+  notes:            z.string().optional(),
   delivery_address: z
     .object({
       street: z.string().optional(),
@@ -321,6 +348,11 @@ export const QuotationService = {
         org_id:           orgId,
         requested_by:     userId,
         due_date:         data.due_date,
+        title:            data.title || null,
+        urgency:          data.urgency || 'normal',
+        purpose:          data.purpose || 'stock',
+        order_reference:  data.order_reference || null,
+        budget_reference: data.budget_reference || null,
         notes:            data.notes || null,
         delivery_address: data.delivery_address || null,
         quotation_number: '',
@@ -333,13 +365,19 @@ export const QuotationService = {
   },
 
   async update(id: string, data: Partial<QuotationHeaderFormData>): Promise<void> {
+    const updates: Record<string, unknown> = {};
+    if (data.due_date         !== undefined) updates.due_date         = data.due_date;
+    if (data.title            !== undefined) updates.title            = data.title || null;
+    if (data.urgency          !== undefined) updates.urgency          = data.urgency;
+    if (data.purpose          !== undefined) updates.purpose          = data.purpose;
+    if (data.order_reference  !== undefined) updates.order_reference  = data.order_reference || null;
+    if (data.budget_reference !== undefined) updates.budget_reference = data.budget_reference || null;
+    if (data.notes            !== undefined) updates.notes            = data.notes || null;
+    if (data.delivery_address !== undefined) updates.delivery_address = data.delivery_address || null;
+
     const { error } = await supabase
       .from('purchase_quotations')
-      .update({
-        due_date:         data.due_date,
-        notes:            data.notes || null,
-        delivery_address: data.delivery_address || null,
-      })
+      .update(updates)
       .eq('id', id);
     if (error) throw error;
   },
@@ -497,6 +535,121 @@ export const QuotationService = {
     const { data, error } = await query;
     if (error) throw error;
     return (data ?? []) as SupplierSuggestion[];
+  },
+
+  // ── Verificar se já existe PC para esta cotação ───────────────────────────
+  async hasPurchaseOrder(quotationId: string): Promise<boolean> {
+    const { count } = await supabase
+      .from('purchase_orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('quotation_id', quotationId)
+      .not('status', 'eq', 'cancelled');
+    return (count ?? 0) > 0;
+  },
+
+  // ── Reabrir Cotação (US-PUR-025) ──────────────────────────────────────────
+  REOPEN_REASONS: {
+    insufficient_proposals: 'Propostas insuficientes',
+    prices_too_high:        'Preços muito altos',
+    specification_change:   'Mudança de especificação',
+    deadline_extension:     'Extensão de prazo para fornecedores',
+    other:                  'Outro',
+  } as const,
+
+  canReopen(status: QuotationStatus): boolean {
+    return ['rejected', 'cancelled'].includes(status);
+  },
+
+  async reopenQuotation(
+    id: string,
+    newDueDate: string,
+    reason: string,
+    additionalNotes?: string
+  ): Promise<Quotation> {
+    const reasonLabel =
+      (QuotationService.REOPEN_REASONS as Record<string, string>)[reason] ?? reason;
+    const notesEntry = `[Reaberta — motivo: ${reasonLabel}]${additionalNotes ? ` ${additionalNotes}` : ''}`;
+
+    const { data: current } = await supabase
+      .from('purchase_quotations')
+      .select('notes')
+      .eq('id', id)
+      .single();
+
+    const existingNotes = (current as { notes?: string } | null)?.notes ?? '';
+    const mergedNotes   = existingNotes ? `${existingNotes}\n${notesEntry}` : notesEntry;
+
+    const { data, error } = await supabase
+      .from('purchase_quotations')
+      .update({ status: 'waiting_proposals', due_date: newDueDate, notes: mergedNotes })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Quotation;
+  },
+
+  // ── Copiar Cotação (US-PUR-026) ────────────────────────────────────────────
+  async copyQuotation(
+    originalId: string,
+    orgId: string,
+    userId: string,
+    newDueDate: string,
+    newTitle?: string,
+  ): Promise<Quotation> {
+    const { quotation: original, items } = await QuotationService.getById(originalId);
+
+    const copyNote = `Cópia de ${original.quotation_number}`;
+    const combinedNotes = original.notes
+      ? `${copyNote}\n${original.notes}`
+      : copyNote;
+
+    const { data: newQuotation, error: quotError } = await supabase
+      .from('purchase_quotations')
+      .insert({
+        org_id:           orgId,
+        requested_by:     userId,
+        due_date:         newDueDate,
+        title:            newTitle || original.title || null,
+        urgency:          original.urgency || 'normal',
+        purpose:          original.purpose || 'stock',
+        order_reference:  original.order_reference || null,
+        budget_reference: original.budget_reference || null,
+        notes:            combinedNotes,
+        delivery_address: original.delivery_address || null,
+        quotation_number: '',
+        status:           'draft',
+      })
+      .select()
+      .single();
+
+    if (quotError) throw quotError;
+
+    const newId = (newQuotation as Quotation).id;
+
+    if (items.length > 0) {
+      const itemsToInsert = items.map((item, idx) => ({
+        quotation_id:           newId,
+        part_id:                item.part_id || null,
+        part_code:              item.part_code || null,
+        part_name:              item.part_name,
+        quantity:               item.quantity,
+        description:            item.description,
+        specifications:         item.specifications || null,
+        suggested_supplier_ids: item.suggested_supplier_ids ?? [],
+        selected_supplier_ids:  item.selected_supplier_ids ?? [],
+        sort_order:             idx,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('purchase_quotation_items')
+        .insert(itemsToInsert);
+
+      if (itemsError) throw itemsError;
+    }
+
+    return newQuotation as Quotation;
   },
 
   // ── Exportação ────────────────────────────────────────────────────────────

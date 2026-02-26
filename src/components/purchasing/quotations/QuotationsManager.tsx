@@ -6,6 +6,8 @@ import { QuotationsList }          from './QuotationsList';
 import { QuotationForm }           from './QuotationForm';
 import { QuotationDetails }        from './QuotationDetails';
 import { ProposalComparisonView }  from './ProposalComparisonView';
+import { ReopenQuotationDialog }   from './ReopenQuotationDialog';
+import { CopyQuotationDialog }     from './CopyQuotationDialog';
 import type { Quotation } from '@/services/QuotationService';
 
 export function QuotationsManager() {
@@ -13,21 +15,29 @@ export function QuotationsManager() {
   const {
     quotations, count, totalPages, currentPage, isLoading, filters,
     setFilters, handlePageChange, refresh,
-    actions: { createQuotation, updateQuotation, updateStatus, deleteQuotation },
+    actions: { createQuotation, updateQuotation, updateStatus, deleteQuotation, reopenQuotation, copyQuotation },
   } = useQuotations();
 
   const [formOpen,       setFormOpen]       = useState(false);
   const [editTarget,     setEditTarget]     = useState<Quotation | null>(null);
   const [viewTarget,     setViewTarget]     = useState<Quotation | null>(null);
   const [compareTarget,  setCompareTarget]  = useState<Quotation | null>(null);
+  const [reopenTarget,   setReopenTarget]   = useState<Quotation | null>(null);
+  const [copyTarget,     setCopyTarget]     = useState<Quotation | null>(null);
 
   const {
     quotation: detailQuotation,
-    items:     detailItems,
-    isLoading: detailLoading,
-    actions:   detailActions,
-    refresh:   refreshDetails,
+    items:            detailItems,
+    isLoading:        detailLoading,
+    actions:          detailActions,
+    refresh:          refreshDetails,
+    hasPurchaseOrder: detailHasPurchaseOrder,
   } = useQuotationDetails(viewTarget?.id ?? null);
+
+  const {
+    items:     copyItems,
+    isLoading: copyItemsLoading,
+  } = useQuotationDetails(copyTarget?.id ?? null);
 
   const { generatePurchaseOrders } = useQuotationComparison(viewTarget?.id ?? null);
 
@@ -35,6 +45,8 @@ export function QuotationsManager() {
   const handleEdit    = (q: Quotation) => { setEditTarget(q); setFormOpen(true); };
   const handleView    = (q: Quotation) => setViewTarget(q);
   const handleCompare = (q: Quotation) => setCompareTarget(q);
+  const handleReopen  = (q: Quotation) => setReopenTarget(q);
+  const handleCopy    = (q: Quotation) => setCopyTarget(q);
 
   const handleFormSubmit = async (data: Parameters<typeof createQuotation>[0]) => {
     if (editTarget) {
@@ -54,6 +66,23 @@ export function QuotationsManager() {
   const handleCloseCompare = () => {
     setCompareTarget(null);
     refresh();
+  };
+
+  const handleReopenSuccess = (updated: Quotation) => {
+    setReopenTarget(null);
+    if (viewTarget?.id === updated.id) setViewTarget(updated);
+    refresh();
+  };
+
+  const handleCopyConfirm = async (dueDate: string, title?: string): Promise<boolean> => {
+    if (!copyTarget) return false;
+    const result = await copyQuotation(copyTarget.id, dueDate, title);
+    if (result) {
+      setCopyTarget(null);
+      setViewTarget(result);
+      return true;
+    }
+    return false;
   };
 
   const handlePurchaseOrdersCreated = () => {
@@ -77,6 +106,8 @@ export function QuotationsManager() {
         onView={handleView}
         onCompare={handleCompare}
         onDelete={deleteQuotation}
+        onReopen={handleReopen}
+        onCopy={handleCopy}
       />
 
       <QuotationForm
@@ -105,6 +136,7 @@ export function QuotationsManager() {
           onEditProposal={detailActions.updateProposal}
           onSelectProposal={detailActions.selectProposal}
           onDeleteProposal={detailActions.deleteProposal}
+          hasPurchaseOrder={detailHasPurchaseOrder}
           onGeneratePurchaseOrders={async () => {
             const poNumbers = await generatePurchaseOrders();
             if (poNumbers) {
@@ -124,6 +156,28 @@ export function QuotationsManager() {
           quotationId={compareTarget.id}
           quotationNumber={compareTarget.quotation_number}
           onPurchaseOrdersCreated={handlePurchaseOrdersCreated}
+        />
+      )}
+
+      {/* Reabrir cotação (US-PUR-025) */}
+      {reopenTarget && (
+        <ReopenQuotationDialog
+          open={!!reopenTarget}
+          onOpenChange={v => { if (!v) setReopenTarget(null); }}
+          quotation={reopenTarget}
+          onSuccess={handleReopenSuccess}
+        />
+      )}
+
+      {/* Copiar cotação (US-PUR-026) */}
+      {copyTarget && (
+        <CopyQuotationDialog
+          open={!!copyTarget}
+          onOpenChange={v => { if (!v) setCopyTarget(null); }}
+          quotation={copyTarget}
+          items={copyItems}
+          isLoadingItems={copyItemsLoading}
+          onConfirm={handleCopyConfirm}
         />
       )}
     </>
