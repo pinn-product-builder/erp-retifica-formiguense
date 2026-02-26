@@ -1,11 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { ChevronsUpDown, Check, Plus } from 'lucide-react';
-import { useEngineTypes } from '@/hooks/useEngineTypes';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +7,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { Check, ChevronsUpDown, Plus, Loader2 } from 'lucide-react';
+import { useEngineTypes } from '@/hooks/useEngineTypes';
 import { EngineTypeForm } from '@/components/operations/EngineTypeForm';
 
 interface EngineTypeSelectProps {
@@ -28,20 +32,21 @@ export function EngineTypeSelect({
   onChange,
   placeholder = 'Selecione um tipo de motor...',
   disabled = false,
-  className = ''
+  className = '',
 }: EngineTypeSelectProps) {
   const { engineTypes, loading, fetchEngineTypes } = useEngineTypes();
-  const [open, setOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   React.useEffect(() => {
     fetchEngineTypes();
   }, [fetchEngineTypes]);
 
-  const selectedEngineType = useMemo(() => {
-    return engineTypes.find((et) => et.id === value);
-  }, [engineTypes, value]);
+  const selectedEngineType = useMemo(
+    () => engineTypes.find((et) => et.id === value),
+    [engineTypes, value]
+  );
 
   const filtered = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -54,6 +59,12 @@ export function EngineTypeSelect({
     );
   }, [engineTypes, searchTerm]);
 
+  const handleSelect = (engineTypeId: string) => {
+    onChange(value === engineTypeId ? undefined : engineTypeId);
+    setSearchDialogOpen(false);
+    setSearchTerm('');
+  };
+
   const handleCreateSuccess = async (createdId?: string) => {
     setCreateDialogOpen(false);
     await fetchEngineTypes();
@@ -62,93 +73,116 @@ export function EngineTypeSelect({
     }
   };
 
+  const handleOpenSearch = () => {
+    setSearchTerm('');
+    setSearchDialogOpen(true);
+  };
+
   return (
     <>
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-            className={`${className || 'w-full justify-between'} cursor-pointer`}
-          disabled={disabled || loading}
-        >
+      <Button
+        type="button"
+        variant="outline"
+        role="combobox"
+        onClick={handleOpenSearch}
+        disabled={disabled || loading}
+        className={`${className || 'w-full justify-between'} cursor-pointer`}
+      >
+        <span className="truncate">
           {selectedEngineType ? selectedEngineType.name : placeholder}
+        </span>
+        {loading ? (
+          <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin opacity-50" />
+        ) : (
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-96" align="start">
-        <Command>
-          <CommandInput placeholder="Buscar tipo de motor..." value={searchTerm} onValueChange={setSearchTerm} />
-            <CommandEmpty>
-              <div className="flex flex-col items-center justify-center py-4 gap-2">
-                <p className="text-sm text-muted-foreground">Nenhum tipo de motor encontrado</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setOpen(false);
-                    setCreateDialogOpen(true);
-                  }}
-                  className="mt-2"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Criar novo tipo
-                </Button>
-              </div>
-            </CommandEmpty>
-          <ScrollArea className="h-64">
-            <CommandList>
+        )}
+      </Button>
+
+      <Dialog
+        open={searchDialogOpen}
+        onOpenChange={(open) => {
+          setSearchDialogOpen(open);
+          if (!open) setSearchTerm('');
+        }}
+      >
+        <DialogContent className="max-w-[95vw] sm:max-w-md p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-4 pt-4 pb-2">
+            <DialogTitle>Selecionar Tipo de Motor</DialogTitle>
+            <DialogDescription>
+              Busque pelo nome, descrição ou categoria
+            </DialogDescription>
+          </DialogHeader>
+
+          <Command className="border-0">
+            <CommandInput
+              placeholder="Buscar tipo de motor..."
+              value={searchTerm}
+              onValueChange={setSearchTerm}
+            />
+            <CommandList className="max-h-72 overflow-y-auto">
+              <CommandEmpty>
+                <div className="flex flex-col items-center justify-center py-6 gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum tipo de motor encontrado
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSearchDialogOpen(false);
+                      setCreateDialogOpen(true);
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Criar novo tipo
+                  </Button>
+                </div>
+              </CommandEmpty>
               <CommandGroup>
-                {loading ? (
-                  <div className="px-3 py-2 text-sm text-muted-foreground flex items-center justify-center">
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Carregando tipos de motor...
-                  </div>
-                ) : (
-                    <>
-                      {filtered.map((engineType) => {
-                    const checked = value === engineType.id;
-                    return (
-                      <CommandItem
-                        key={engineType.id}
-                        onSelect={() => {
-                          onChange(checked ? undefined : engineType.id);
-                          setOpen(false);
-                        }}
-                      >
-                        <div className="mr-2 flex h-4 w-4 items-center justify-center">
-                          <Check className={`h-4 w-4 ${checked ? 'opacity-100' : 'opacity-0'}`} />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{engineType.name}</span>
+                {filtered.map((engineType) => {
+                  const checked = value === engineType.id;
+                  return (
+                    <CommandItem
+                      key={engineType.id}
+                      value={`${engineType.id} ${engineType.name} ${engineType.description ?? ''} ${engineType.category ?? ''}`}
+                      onSelect={() => handleSelect(engineType.id)}
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-medium truncate">{engineType.name}</span>
                           {engineType.description && (
-                            <span className="text-xs text-muted-foreground">{engineType.description}</span>
+                            <span className="text-xs text-muted-foreground truncate">
+                              {engineType.description}
+                            </span>
                           )}
                         </div>
-                      </CommandItem>
-                    );
-                      })}
-                      <CommandItem
-                        onSelect={() => {
-                          setOpen(false);
-                          setCreateDialogOpen(true);
-                        }}
-                        className="border-t"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        <span className="font-medium">Criar novo tipo de motor</span>
-                      </CommandItem>
-                    </>
-                )}
+                        {checked && <Check className="h-4 w-4 text-primary ml-2 shrink-0" />}
+                      </div>
+                    </CommandItem>
+                  );
+                })}
               </CommandGroup>
             </CommandList>
-          </ScrollArea>
-        </Command>
-      </PopoverContent>
-    </Popover>
+            <div className="border-t p-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 text-sm"
+                onClick={() => {
+                  setSearchDialogOpen(false);
+                  setCreateDialogOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                Criar novo tipo de motor
+              </Button>
+            </div>
+          </Command>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-5xl lg:max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -170,4 +204,3 @@ export function EngineTypeSelect({
 }
 
 export default EngineTypeSelect;
-
