@@ -49,6 +49,15 @@ export function usePurchaseInvoices() {
         toast.warning('NF registrada com divergências — verifique as observações');
       } else {
         toast.success('Nota fiscal registrada e validada');
+        // US-PUR-037: gerar contas a pagar automaticamente para NFs validadas
+        if ((invoice.due_dates ?? []).length > 0) {
+          const supplierName = invoice.purchase_order?.supplier?.name ?? 'Fornecedor';
+          await PurchaseInvoiceService.generateAccountsPayable(
+            currentOrganization.id,
+            invoice,
+            supplierName,
+          );
+        }
       }
       await fetchInvoices();
       return invoice;

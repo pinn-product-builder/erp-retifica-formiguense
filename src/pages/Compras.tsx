@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Users, FileText, Package, Plus, Check, X } from 'lucide-react';
+import { ShoppingCart, Users, FileText, Package, Plus, Check, X, CalendarDays } from 'lucide-react';
 import { usePurchasing } from '@/hooks/usePurchasing';
 import { usePurchaseNeeds } from '@/hooks/usePurchaseNeeds';
 import { usePurchaseReceipts } from '@/hooks/usePurchaseReceipts';
@@ -16,6 +16,7 @@ import PurchaseNeedsManager from '@/components/purchasing/PurchaseNeedsManager';
 import ReceiptManager from '@/components/purchasing/ReceiptManager';
 import RequisitionForm from '@/components/purchasing/RequisitionForm';
 import { InvoicesManager } from '@/components/purchasing/invoices/InvoicesManager';
+import { DeliveryForecastView } from '@/components/purchasing/DeliveryForecastView';
 
 const STATUS_COLORS = {
   pending: 'bg-yellow-500/20 text-yellow-700',
@@ -159,10 +160,15 @@ export default function Compras() {
         else if (value === 'receipts')     fetchReceipts();
         else if (value === 'suppliers')    fetchSuppliers();
       }} className="space-y-4">
-        <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-3">
+        <TabsList className="w-full overflow-x-auto flex lg:grid lg:grid-cols-4">
           <TabsTrigger value="needs"        className="flex-shrink-0 text-xs sm:text-sm">Necessidades</TabsTrigger>
           <TabsTrigger value="requisitions" className="flex-shrink-0 text-xs sm:text-sm">Requisições</TabsTrigger>
           <TabsTrigger value="invoices"     className="flex-shrink-0 text-xs sm:text-sm">Notas Fiscais</TabsTrigger>
+          <TabsTrigger value="forecast"     className="flex-shrink-0 text-xs sm:text-sm gap-1.5">
+            <CalendarDays className="h-3.5 w-3.5 hidden sm:block" />
+            <span className="hidden sm:inline">Previsão</span>
+            <span className="sm:hidden">Prev.</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* Purchase Needs Tab */}
@@ -312,6 +318,11 @@ export default function Compras() {
         {/* Notas Fiscais */}
         <TabsContent value="invoices" className="space-y-4">
           <InvoicesManager />
+        </TabsContent>
+
+        {/* Forecast Tab — US-035 */}
+        <TabsContent value="forecast" className="space-y-4">
+          <DeliveryForecastView />
         </TabsContent>
 
         {/* Suppliers Tab */}

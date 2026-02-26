@@ -183,4 +183,36 @@ export const PurchaseInvoiceService = {
 
   checkDivergences,
   calcDueDates,
+
+  /**
+   * Gera contas a pagar para cada parcela da NF (US-PUR-037)
+   */
+  async generateAccountsPayable(
+    orgId:     string,
+    invoice:   PurchaseInvoice,
+    supplierName: string,
+  ): Promise<void> {
+    const dates = invoice.due_dates ?? [];
+    if (dates.length === 0) return;
+
+    const total   = invoice.total_invoice;
+    const n       = dates.length;
+    const base    = parseFloat((total / n).toFixed(2));
+    const adjust  = parseFloat((total - base * (n - 1)).toFixed(2));
+
+    const rows = dates.map((due_date, i) => ({
+      org_id:        orgId,
+      supplier_name: supplierName,
+      description:   `NF ${invoice.invoice_number} — Parcela ${i + 1}/${n}`,
+      amount:        i === n - 1 ? adjust : base,
+      due_date,
+      status:        'pending',
+      invoice_number: invoice.invoice_number,
+      notes:         `Pedido de compra vinculado: ${invoice.purchase_order?.po_number ?? invoice.purchase_order_id}`,
+    }));
+
+    const { error } = await (db().from('accounts_payable') as unknown as ReturnType<typeof supabase.from>)
+      .insert(rows);
+    if (error) console.error('Erro ao gerar contas a pagar:', error);
+  },
 };

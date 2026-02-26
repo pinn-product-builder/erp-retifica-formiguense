@@ -1,14 +1,21 @@
-import React from 'react';
-import { Package, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Package, CheckCircle, Clock, AlertCircle, RotateCcw, Plus, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useOrderMaterials } from '@/hooks/useOrderMaterials';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
+import { ConsumptionService } from '@/services/ConsumptionService';
+import { useOrganization } from '@/hooks/useOrganization';
+import { toast } from 'sonner';
 
 interface OrderMaterialsTabProps {
   orderId: string;
@@ -23,8 +30,68 @@ const STATUS_CONFIG = {
 };
 
 export function OrderMaterialsTab({ orderId }: OrderMaterialsTabProps) {
-  const { materials, loading, markAsSeparated, markAsApplied } = useOrderMaterials(orderId);
+  const { materials, loading, markAsSeparated, markAsApplied, fetchMaterials } = useOrderMaterials(orderId);
+  const { currentOrganization } = useOrganization();
   const [processingId, setProcessingId] = React.useState<string | null>(null);
+
+  // Estorno de consumo (US-036 AC05)
+  const [reversalTarget, setReversalTarget] = useState<{ id: string; name: string } | null>(null);
+  const [reversalReason,  setReversalReason]  = useState('');
+  const [reversing, setReversing] = useState(false);
+
+  // Consumo direto (US-036 AC01 - fora de reserva)
+  const [showDirectConsumption, setShowDirectConsumption] = useState(false);
+  const [directForm, setDirectForm] = useState({ partCode: '', partName: '', quantity: 1, notes: '' });
+  const [addingDirect, setAddingDirect] = useState(false);
+
+  const handleReversal = async () => {
+    if (!reversalTarget || !reversalReason.trim() || !currentOrganization?.id) return;
+    setReversing(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      await ConsumptionService.reverseConsumption({
+        orgId:      currentOrganization.id,
+        movementId: reversalTarget.id,
+        quantity:   1,
+        reversedBy: user?.id ?? '',
+        reason:     reversalReason,
+      });
+      toast.success('Estorno registrado com sucesso');
+      setReversalTarget(null);
+      setReversalReason('');
+      fetchMaterials();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao estornar consumo');
+    } finally {
+      setReversing(false);
+    }
+  };
+
+  const handleDirectConsumption = async () => {
+    if (!currentOrganization?.id || !directForm.partCode.trim() || !directForm.partName.trim()) return;
+    setAddingDirect(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      await ConsumptionService.recordDirectConsumption({
+        orgId:      currentOrganization.id,
+        orderId,
+        partId:     directForm.partCode,
+        partCode:   directForm.partCode,
+        partName:   directForm.partName,
+        quantity:   directForm.quantity,
+        consumedBy: user?.id ?? '',
+        notes:      directForm.notes || undefined,
+      });
+      toast.success('Consumo registrado com sucesso');
+      setShowDirectConsumption(false);
+      setDirectForm({ partCode: '', partName: '', quantity: 1, notes: '' });
+      fetchMaterials();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao registrar consumo');
+    } finally {
+      setAddingDirect(false);
+    }
+  };
 
   const handleMarkAsSeparated = async (reservationId: string) => {
     setProcessingId(reservationId);
@@ -121,10 +188,16 @@ export function OrderMaterialsTab({ orderId }: OrderMaterialsTabProps) {
       {/* Tabela de Materiais */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Materiais Reservados e Utilizados
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Materiais Reservados e Utilizados
+            </CardTitle>
+            <Button size="sm" variant="outline" onClick={() => setShowDirectConsumption(true)} className="h-8 text-xs gap-1">
+              <Plus className="h-3.5 w-3.5" />
+              Apontamento direto
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -170,30 +243,36 @@ export function OrderMaterialsTab({ orderId }: OrderMaterialsTabProps) {
                         : '-'}
                     </TableCell>
                     <TableCell>
-                      {material.source === 'reservation' && (
-                        <div className="flex gap-2">
-                          {material.status === 'reserved' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleMarkAsSeparated(material.id)}
-                              disabled={processingId === material.id}
-                            >
-                              {processingId === material.id ? 'Processando...' : 'Separar'}
-                            </Button>
-                          )}
-                          {material.status === 'separated' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleMarkAsApplied(material.id)}
-                              disabled={processingId === material.id}
-                            >
-                              {processingId === material.id ? 'Processando...' : 'Aplicar'}
-                            </Button>
-                          )}
-                        </div>
-                      )}
+                      <div className="flex gap-1.5 flex-wrap">
+                        {material.source === 'reservation' && (
+                          <>
+                            {material.status === 'reserved' && (
+                              <Button size="sm" variant="outline" className="h-7 text-xs"
+                                onClick={() => handleMarkAsSeparated(material.id)}
+                                disabled={processingId === material.id}
+                              >
+                                {processingId === material.id ? 'Processando...' : 'Separar'}
+                              </Button>
+                            )}
+                            {material.status === 'separated' && (
+                              <Button size="sm" variant="outline" className="h-7 text-xs"
+                                onClick={() => handleMarkAsApplied(material.id)}
+                                disabled={processingId === material.id}
+                              >
+                                {processingId === material.id ? 'Processando...' : 'Aplicar'}
+                              </Button>
+                            )}
+                          </>
+                        )}
+                        {(material.status === 'applied' || material.status === 'used') && (
+                          <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground gap-1"
+                            onClick={() => setReversalTarget({ id: material.id, name: material.part_name })}
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            Estornar
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -215,6 +294,110 @@ export function OrderMaterialsTab({ orderId }: OrderMaterialsTabProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Estorno — US-036 AC05 */}
+      <Dialog open={!!reversalTarget} onOpenChange={v => { if (!v) setReversalTarget(null); }}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm">
+              <RotateCcw className="h-4 w-4" />
+              Estornar Consumo — {reversalTarget?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Ao confirmar, a peça retornará ao estoque e o custo da OS será ajustado.
+            </p>
+            <div className="space-y-1.5">
+              <Label className="text-sm">Justificativa <span className="text-destructive">*</span></Label>
+              <Textarea
+                placeholder="Ex: Peça não utilizada, peça trocada por outra..."
+                value={reversalReason}
+                onChange={e => setReversalReason(e.target.value)}
+                rows={3}
+                className="text-sm"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setReversalTarget(null)}>Cancelar</Button>
+            <Button size="sm" variant="destructive"
+              onClick={handleReversal}
+              disabled={!reversalReason.trim() || reversing}
+            >
+              {reversing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
+              Confirmar Estorno
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Consumo Direto — US-036 AC01 */}
+      <Dialog open={showDirectConsumption} onOpenChange={setShowDirectConsumption}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm">
+              <Plus className="h-4 w-4" />
+              Apontamento de Consumo Direto
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Registre o consumo de peças que não foram previamente reservadas para esta OS.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Código da Peça *</Label>
+                <Input
+                  value={directForm.partCode}
+                  onChange={e => setDirectForm(f => ({ ...f, partCode: e.target.value }))}
+                  placeholder="Ex: PART-001"
+                  className="text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Quantidade *</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={directForm.quantity}
+                  onChange={e => setDirectForm(f => ({ ...f, quantity: Number(e.target.value) }))}
+                  className="text-sm"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Nome da Peça *</Label>
+              <Input
+                value={directForm.partName}
+                onChange={e => setDirectForm(f => ({ ...f, partName: e.target.value }))}
+                placeholder="Ex: Rolamento 6205"
+                className="text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Observações</Label>
+              <Textarea
+                value={directForm.notes}
+                onChange={e => setDirectForm(f => ({ ...f, notes: e.target.value }))}
+                placeholder="Opcional..."
+                rows={2}
+                className="text-sm"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowDirectConsumption(false)}>Cancelar</Button>
+            <Button size="sm"
+              onClick={handleDirectConsumption}
+              disabled={!directForm.partCode.trim() || !directForm.partName.trim() || directForm.quantity < 1 || addingDirect}
+            >
+              {addingDirect ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
+              Registrar Consumo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

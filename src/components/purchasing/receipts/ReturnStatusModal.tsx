@@ -7,12 +7,15 @@ import { Input }    from '@/components/ui/input';
 import { Label }    from '@/components/ui/label';
 import { Badge }    from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, RotateCcw } from 'lucide-react';
+import { Loader2, RotateCcw, CreditCard } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { useSupplierReturns } from '@/hooks/useSupplierReturns';
 import {
   RETURN_STATUS_LABELS, RETURN_STATUS_COLORS,
   type ReturnStatus, type SupplierReturn,
 } from '@/services/SupplierReturnService';
+import { SupplierCreditService } from '@/services/SupplierCreditService';
 
 const NEXT_STATUSES: Record<ReturnStatus, ReturnStatus[]> = {
   pendente:  ['enviada', 'recusada'],
@@ -32,6 +35,7 @@ export function ReturnStatusModal({
   open, onOpenChange, supplierReturn, onSuccess,
 }: ReturnStatusModalProps) {
   const { updateStatus } = useSupplierReturns();
+  const { currentOrganization } = useOrganization();
   const [newStatus,        setNewStatus]        = useState<ReturnStatus | ''>('');
   const [creditNoteNumber, setCreditNoteNumber] = useState('');
   const [creditNoteDate,   setCreditNoteDate]   = useState('');
@@ -45,14 +49,30 @@ export function ReturnStatusModal({
   const handleSave = async () => {
     if (!newStatus) return;
     setSaving(true);
-    const ok = await updateStatus(
-      supplierReturn.id,
-      newStatus,
-      needsCreditNote ? creditNoteNumber || undefined : undefined,
-      needsCreditNote ? creditNoteDate   || undefined : undefined,
-    );
-    setSaving(false);
-    if (ok) { onSuccess?.(); onOpenChange(false); }
+    try {
+      const ok = await updateStatus(
+        supplierReturn.id,
+        newStatus,
+        needsCreditNote ? creditNoteNumber || undefined : undefined,
+        needsCreditNote ? creditNoteDate   || undefined : undefined,
+      );
+
+      if (ok && newStatus === 'aceita' && currentOrganization?.id && supplierReturn.total_amount > 0) {
+        const { data: { user } } = await supabase.auth.getUser();
+        await SupplierCreditService.createFromReturn({
+          orgId:       currentOrganization.id,
+          supplierId:  supplierReturn.supplier_id,
+          returnId:    supplierReturn.id,
+          amount:      supplierReturn.total_amount,
+          description: `Crédito por devolução ${supplierReturn.return_number}${creditNoteNumber ? ` — NC ${creditNoteNumber}` : ''}`,
+          createdBy:   user?.id ?? '',
+        });
+      }
+
+      if (ok) { onSuccess?.(); onOpenChange(false); }
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
