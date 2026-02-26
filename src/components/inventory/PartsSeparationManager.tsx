@@ -9,26 +9,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
-import { 
-  Package, 
-  CheckCircle, 
-  Clock, 
-  AlertTriangle, 
+import {
+  Package,
+  CheckCircle,
+  Clock,
+  AlertTriangle,
   Search,
   User,
   Calendar,
-  Wrench
+  Wrench,
 } from 'lucide-react';
 
-// Função para formatar valores monetários
-const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('pt-BR', {
+const formatCurrency = (value: number): string =>
+  new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    maximumFractionDigits: 2,
   }).format(value);
-};
 
 interface PartsReservation {
   id: string;
@@ -36,39 +34,74 @@ interface PartsReservation {
   part_code: string;
   part_name: string;
   quantity_reserved: number;
-  quantity_separated: number;
-  quantity_applied: number;
-  unit_cost: number;
-  reservation_status: string;
-  reserved_at: string;
-  separated_at?: string;
-  separated_by?: string;
-  notes?: string;
+  quantity_separated: number | null;
+  quantity_applied: number | null;
+  unit_cost: number | null;
+  reservation_status: string | null;
+  reserved_at: string | null;
+  separated_at?: string | null;
+  separated_by?: string | null;
+  notes?: string | null;
   order?: {
     order_number: string;
-    customer?: {
-      name: string;
-    };
-  };
+    customer?: { name: string } | null;
+  } | null;
 }
 
-const STATUS_CONFIG = {
-  reserved: {
-    label: 'Reservado',
-    color: 'bg-yellow-100 text-yellow-800',
-    icon: Clock
-  },
-  separated: {
-    label: 'Separado',
-    color: 'bg-blue-100 text-blue-800', 
-    icon: Package
-  },
-  applied: {
-    label: 'Aplicado',
-    color: 'bg-green-100 text-green-800',
-    icon: CheckCircle
-  }
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ComponentType<{ className?: string }> }> = {
+  reserved: { label: 'Reservado', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+  separated: { label: 'Separado', color: 'bg-blue-100 text-blue-800', icon: Package },
+  applied: { label: 'Aplicado', color: 'bg-green-100 text-green-800', icon: CheckCircle },
 };
+
+async function fetchReservationsFromDB(orgId: string): Promise<PartsReservation[]> {
+  const { data, error } = await supabase
+    .from('parts_reservations')
+    .select(`
+      *,
+      order:orders(
+        order_number,
+        customer:customers(name)
+      )
+    `)
+    .eq('org_id', orgId)
+    .order('reserved_at', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as unknown as PartsReservation[];
+}
+
+async function separatePartInDB(
+  reservationId: string,
+  orgId: string,
+  quantityReserved: number,
+  notes: string
+): Promise<void> {
+  const { data: userData } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from('parts_reservations')
+    .update({
+      quantity_separated: quantityReserved,
+      reservation_status: 'separated',
+      separated_at: new Date().toISOString(),
+      separated_by: userData.user?.id ?? null,
+      notes: notes || null,
+    } as unknown as Record<string, unknown>)
+    .eq('id', reservationId)
+    .eq('org_id', orgId);
+
+  if (error) throw error;
+}
+
+function getPriorityBorderColor(reservation: PartsReservation): string {
+  if (!reservation.reserved_at) return 'border-l-green-500';
+  const reservedDays = Math.floor(
+    (Date.now() - new Date(reservation.reserved_at).getTime()) / (1000 * 60 * 60 * 24)
+  );
+  if (reservedDays > 3) return 'border-l-red-500';
+  if (reservedDays > 1) return 'border-l-yellow-500';
+  return 'border-l-green-500';
+}
 
 export default function PartsSeparationManager() {
   const [reservations, setReservations] = useState<PartsReservation[]>([]);
@@ -80,32 +113,14 @@ export default function PartsSeparationManager() {
   const { currentOrganization } = useOrganization();
   const { toast } = useToast();
 
-  const fetchReservations = useCallback(async () => {
+  const loadReservations = useCallback(async () => {
     if (!currentOrganization?.id) return;
-
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('parts_reservations')
-        .select(`
-          *,
-          order:orders(
-            order_number,
-            customer:customers(name)
-          )
-        `)
-        .eq('org_id', currentOrganization.id)
-        .order('reserved_at', { ascending: false });
-
-      if (error) throw error;
-      setReservations(data || []);
-    } catch (error) {
-      console.error('Erro ao buscar reservas:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar reservas de peças",
-        variant: "destructive"
-      });
+      const data = await fetchReservationsFromDB(currentOrganization.id);
+      setReservations(data);
+    } catch {
+      toast({ title: 'Erro', description: 'Erro ao carregar reservas de peças', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -113,130 +128,102 @@ export default function PartsSeparationManager() {
 
   useEffect(() => {
     if (currentOrganization?.id) {
-      fetchReservations();
+      loadReservations();
     }
-  }, [currentOrganization?.id, fetchReservations]);
+  }, [currentOrganization?.id, loadReservations]);
 
   const handleSeparatePart = async () => {
-    if (!separatingItem) return;
-
+    if (!separatingItem || !currentOrganization?.id) return;
     try {
-      const { error } = await supabase
-        .from('parts_reservations')
-        .update({
-          quantity_separated: separatingItem.quantity_reserved,
-          reservation_status: 'separated',
-          separated_at: new Date().toISOString(),
-          separated_by: (await supabase.auth.getUser()).data.user?.id,
-          notes: separationNotes
-        })
-        .eq('id', separatingItem.id)
-        .eq('org_id', currentOrganization?.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Peça separada com sucesso"
-      });
-
+      await separatePartInDB(
+        separatingItem.id,
+        currentOrganization.id,
+        separatingItem.quantity_reserved,
+        separationNotes
+      );
+      toast({ title: 'Sucesso', description: 'Peça separada com sucesso' });
       setSeparatingItem(null);
       setSeparationNotes('');
-      fetchReservations();
-    } catch (error) {
-      console.error('Erro ao separar peça:', error);
-      toast({
-        title: "Erro", 
-        description: "Erro ao separar peça",
-        variant: "destructive"
-      });
+      await loadReservations();
+    } catch {
+      toast({ title: 'Erro', description: 'Erro ao separar peça', variant: 'destructive' });
     }
   };
 
-  const filteredReservations = reservations.filter(reservation => {
-    const matchesSearch = 
-      reservation.part_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reservation.part_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reservation.order?.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reservation.order?.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = selectedStatus === 'all' || reservation.reservation_status === selectedStatus;
-    
+  const filteredReservations = reservations.filter((r) => {
+    const matchesSearch =
+      r.part_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.part_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.order?.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.order?.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus === 'all' || r.reservation_status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadge = (status: string) => {
-    const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG];
-    if (!config) return null;
-    
-    const Icon = config.icon;
+  const stats = {
+    reserved: reservations.filter((r) => r.reservation_status === 'reserved').length,
+    separated: reservations.filter((r) => r.reservation_status === 'separated').length,
+    applied: reservations.filter((r) => r.reservation_status === 'applied').length,
+    overdue: reservations.filter((r) => {
+      if (r.reservation_status !== 'reserved' || !r.reserved_at) return false;
+      return (Date.now() - new Date(r.reserved_at).getTime()) / (1000 * 60 * 60 * 24) > 3;
+    }).length,
+  };
+
+  const getStatusBadge = (status: string | null) => {
+    if (!status) return null;
+    const cfg = STATUS_CONFIG[status];
+    if (!cfg) return null;
+    const Icon = cfg.icon;
     return (
-      <Badge className={config.color}>
+      <Badge className={cfg.color}>
         <Icon className="w-3 h-3 mr-1" />
-        {config.label}
+        {cfg.label}
       </Badge>
     );
   };
 
-  const getPriorityColor = (reservation: PartsReservation) => {
-    const reservedDays = Math.floor(
-      (new Date().getTime() - new Date(reservation.reserved_at).getTime()) / (1000 * 60 * 60 * 24)
-    );
-    
-    if (reservedDays > 3) return 'border-l-red-500';
-    if (reservedDays > 1) return 'border-l-yellow-500';
-    return 'border-l-green-500';
-  };
-
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">Carregando reservas...</p>
-          </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+          <p className="mt-2 text-muted-foreground">Carregando reservas...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">Separação de Peças</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-lg sm:text-xl font-semibold">Separação de Peças</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Gerencie a separação física das peças reservadas para ordens de serviço
           </p>
         </div>
       </div>
 
-      {/* Filtros */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
-              <Label htmlFor="search">Buscar</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
                 <Input
-                  id="search"
                   placeholder="Buscar por peça, código, OS ou cliente..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-9 h-9 text-sm"
                 />
               </div>
             </div>
-            <div className="sm:w-48">
-              <Label htmlFor="status">Status</Label>
+            <div className="sm:w-44">
               <select
-                id="status"
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                className="w-full h-9 px-3 py-2 border border-input rounded-md bg-background text-sm"
               >
                 <option value="all">Todos os Status</option>
                 <option value="reserved">Reservado</option>
@@ -248,170 +235,118 @@ export default function PartsSeparationManager() {
         </CardContent>
       </Card>
 
-      {/* Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="w-5 h-5 text-yellow-600" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        {[
+          { label: 'Reservadas', value: stats.reserved, bgColor: 'bg-yellow-100', iconColor: 'text-yellow-600', Icon: Clock },
+          { label: 'Separadas', value: stats.separated, bgColor: 'bg-blue-100', iconColor: 'text-blue-600', Icon: Package },
+          { label: 'Aplicadas', value: stats.applied, bgColor: 'bg-green-100', iconColor: 'text-green-600', Icon: CheckCircle },
+          { label: 'Atrasadas', value: stats.overdue, bgColor: 'bg-red-100', iconColor: 'text-red-600', Icon: AlertTriangle },
+        ].map(({ label, value, bgColor, iconColor, Icon }) => (
+          <Card key={label}>
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className={`p-1.5 sm:p-2 ${bgColor} rounded-lg flex-shrink-0`}>
+                  <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${iconColor}`} />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{label}</p>
+                  <p className="text-xl sm:text-2xl font-bold">{value}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Reservadas</p>
-                <p className="text-2xl font-bold">
-                  {reservations.filter(r => r.reservation_status === 'reserved').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Package className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Separadas</p>
-                <p className="text-2xl font-bold">
-                  {reservations.filter(r => r.reservation_status === 'separated').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Aplicadas</p>
-                <p className="text-2xl font-bold">
-                  {reservations.filter(r => r.reservation_status === 'applied').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Atrasadas</p>
-                <p className="text-2xl font-bold">
-                  {reservations.filter(r => {
-                    const days = Math.floor(
-                      (new Date().getTime() - new Date(r.reserved_at).getTime()) / (1000 * 60 * 60 * 24)
-                    );
-                    return r.reservation_status === 'reserved' && days > 3;
-                  }).length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Lista de Reservas */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {filteredReservations.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
-              <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhuma reserva encontrada</h3>
-              <p className="text-muted-foreground">
-                {searchTerm || selectedStatus !== 'all' 
+              <Package className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <h3 className="text-base font-medium mb-1">Nenhuma reserva encontrada</h3>
+              <p className="text-sm text-muted-foreground">
+                {searchTerm || selectedStatus !== 'all'
                   ? 'Tente ajustar os filtros de busca'
-                  : 'Não há peças reservadas no momento'
-                }
+                  : 'Não há peças reservadas no momento'}
               </p>
             </CardContent>
           </Card>
         ) : (
           filteredReservations.map((reservation) => (
-            <Card key={reservation.id} className={`border-l-4 ${getPriorityColor(reservation)}`}>
-              <CardContent className="p-4">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  <div className="flex-1 space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                      <h3 className="font-semibold text-lg">{reservation.part_name}</h3>
+            <Card key={reservation.id} className={`border-l-4 ${getPriorityBorderColor(reservation)}`}>
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-semibold text-sm sm:text-base">{reservation.part_name}</h3>
                       {getStatusBadge(reservation.reservation_status)}
                     </div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Package className="w-4 h-4 text-muted-foreground" />
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs sm:text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <Package className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                         <span className="text-muted-foreground">Código:</span>
-                        <span className="font-medium">{reservation.part_code}</span>
+                        <span className="font-medium truncate">{reservation.part_code}</span>
                       </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Wrench className="w-4 h-4 text-muted-foreground" />
+                      <div className="flex items-center gap-1.5">
+                        <Wrench className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                         <span className="text-muted-foreground">OS:</span>
-                        <span className="font-medium">{reservation.order?.order_number}</span>
+                        <span className="font-medium truncate">{reservation.order?.order_number ?? '—'}</span>
                       </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-muted-foreground" />
+                      <div className="flex items-center gap-1.5">
+                        <User className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                         <span className="text-muted-foreground">Cliente:</span>
-                        <span className="font-medium">{reservation.order?.customer?.name}</span>
+                        <span className="font-medium truncate">{reservation.order?.customer?.name ?? '—'}</span>
                       </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Reservado:</span>
-                        <span className="font-medium">
-                          {new Date(reservation.reserved_at).toLocaleDateString('pt-BR')}
-                        </span>
-                      </div>
+                      {reservation.reserved_at && (
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground">Reservado:</span>
+                          <span className="font-medium whitespace-nowrap">
+                            {new Date(reservation.reserved_at).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-4 text-sm">
+                    <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
                       <div>
-                        <span className="text-muted-foreground">Qtd. Reservada:</span>
-                        <span className="font-medium ml-1">{reservation.quantity_reserved}</span>
+                        <span className="text-muted-foreground">Qtd. Reservada: </span>
+                        <span className="font-medium">{reservation.quantity_reserved}</span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Qtd. Separada:</span>
-                        <span className="font-medium ml-1">{reservation.quantity_separated}</span>
+                        <span className="text-muted-foreground">Qtd. Separada: </span>
+                        <span className="font-medium">{reservation.quantity_separated ?? 0}</span>
                       </div>
-                      <div>
-                        <span className="text-muted-foreground">Valor Unit.:</span>
-                        <span className="font-medium ml-1">
-                          {formatCurrency(reservation.unit_cost)}
-                        </span>
-                      </div>
+                      {reservation.unit_cost != null && (
+                        <div>
+                          <span className="text-muted-foreground">Valor Unit.: </span>
+                          <span className="font-medium whitespace-nowrap">
+                            {formatCurrency(reservation.unit_cost)}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {reservation.notes && (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Observações:</span>
-                        <p className="mt-1 text-foreground">{reservation.notes}</p>
-                      </div>
+                      <p className="text-xs text-muted-foreground">{reservation.notes}</p>
                     )}
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex flex-row lg:flex-col gap-2 flex-shrink-0">
                     {reservation.reservation_status === 'reserved' && (
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button 
+                          <Button
+                            size="sm"
+                            className="gap-2"
                             onClick={() => setSeparatingItem(reservation)}
-                            className="w-full sm:w-auto"
                           >
-                            <Package className="w-4 h-4 mr-2" />
-                            Separar Peça
+                            <Package className="w-3.5 h-3.5" />
+                            Separar
                           </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="max-w-[95vw] sm:max-w-md">
                           <DialogHeader>
                             <DialogTitle>Separar Peça</DialogTitle>
                           </DialogHeader>
@@ -432,7 +367,7 @@ export default function PartsSeparationManager() {
                               <Label htmlFor="notes">Observações da Separação</Label>
                               <Textarea
                                 id="notes"
-                                placeholder="Adicione observações sobre a separação (localização, condição, etc.)"
+                                placeholder="Localização, condição, etc."
                                 value={separationNotes}
                                 onChange={(e) => setSeparationNotes(e.target.value)}
                                 rows={3}
@@ -442,8 +377,8 @@ export default function PartsSeparationManager() {
                               <Button onClick={handleSeparatePart} className="flex-1">
                                 Confirmar Separação
                               </Button>
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 onClick={() => {
                                   setSeparatingItem(null);
                                   setSeparationNotes('');

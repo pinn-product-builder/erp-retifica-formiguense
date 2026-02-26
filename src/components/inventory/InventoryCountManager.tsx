@@ -13,6 +13,13 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -177,6 +184,7 @@ export default function InventoryCountManager() {
 
   const [newCountData, setNewCountData] = useState({
     count_date: new Date().toISOString().split('T')[0],
+    count_type: 'total' as 'total' | 'partial' | 'cyclic',
     notes: '',
   });
 
@@ -190,8 +198,9 @@ export default function InventoryCountManager() {
 
   const handleCreateCount = async () => {
     const count = await createCount({
-      ...newCountData,
-      count_type: 'total',
+      count_date: newCountData.count_date,
+      notes: newCountData.notes,
+      count_type: newCountData.count_type === 'partial' ? 'partial' : newCountData.count_type === 'cyclic' ? 'cyclic' : 'total',
       include_all_parts: true,
     });
 
@@ -199,6 +208,7 @@ export default function InventoryCountManager() {
       setShowCreateDialog(false);
       setNewCountData({
         count_date: new Date().toISOString().split('T')[0],
+        count_type: 'total' as const,
         notes: '',
       });
     }
@@ -256,16 +266,39 @@ export default function InventoryCountManager() {
               <DialogTitle>Nova Contagem de Inventário</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="count_date">Data da Contagem</Label>
-                <Input
-                  id="count_date"
-                  type="date"
-                  value={newCountData.count_date}
-                  onChange={(e) =>
-                    setNewCountData({ ...newCountData, count_date: e.target.value })
-                  }
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="count_date">Data da Contagem</Label>
+                  <Input
+                    id="count_date"
+                    type="date"
+                    value={newCountData.count_date}
+                    onChange={(e) =>
+                      setNewCountData({ ...newCountData, count_date: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="count_type">Tipo de Contagem</Label>
+                  <Select
+                    value={newCountData.count_type}
+                    onValueChange={(v) =>
+                      setNewCountData({
+                        ...newCountData,
+                        count_type: v as typeof newCountData.count_type,
+                      })
+                    }
+                  >
+                    <SelectTrigger id="count_type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="total">Total — Todo o estoque</SelectItem>
+                      <SelectItem value="partial">Parcial — Grupo de itens</SelectItem>
+                      <SelectItem value="cyclic">Cíclico — Rotativo por categoria</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div>
                 <Label htmlFor="notes">Observações</Label>
@@ -280,8 +313,10 @@ export default function InventoryCountManager() {
                 />
               </div>
               <Alert>
-                <AlertDescription>
-                  Todas as peças do estoque serão incluídas nesta contagem.
+                <AlertDescription className="text-xs">
+                  {newCountData.count_type === 'total' && 'Todas as peças do estoque serão incluídas nesta contagem.'}
+                  {newCountData.count_type === 'partial' && 'Um grupo selecionado de peças será incluído.'}
+                  {newCountData.count_type === 'cyclic' && 'Contagem rotativa por categoria para manter acurácia contínua.'}
                 </AlertDescription>
               </Alert>
               <Button onClick={handleCreateCount} disabled={loading} className="w-full">

@@ -1,262 +1,181 @@
-// @ts-nocheck
 import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useToast } from '@/hooks/use-toast';
+import {
+  inventoryService,
+  type InventoryPart,
+  type PartFilters,
+  type CreatePartInput,
+  type UpdatePartInput,
+  type PaginatedResult,
+} from '@/services/InventoryService';
+import type { Database } from '@/integrations/supabase/types';
 
-export type ComponentType = 'bloco' | 'cabecote' | 'virabrequim' | 'pistao' | 'biela' | 'comando' | 'eixo';
+export type ComponentType = Database['public']['Enums']['engine_component'];
 export type PartStatus = 'disponivel' | 'reservado' | 'usado' | 'pendente';
 
-export interface PartInventory {
-  id: string;
-  order_id?: string | null;
-  part_name: string;
-  part_code?: string | null;
-  quantity: number;
-  unit_cost: number;
-  supplier?: string | null;
-  component?: ComponentType | null;
+export type PartInventory = InventoryPart & {
   macro_component_id?: string | null;
-  status: PartStatus;
-  separated_at?: string | null;
-  applied_at?: string | null;
-  notes?: string | null;
-  created_at: string;
-  org_id?: string | null;
-}
+};
 
-export interface CreatePartData {
-  part_name: string;
-  part_code?: string;
-  quantity: number;
-  unit_cost: number;
-  supplier?: string;
-  component?: ComponentType;
+export type CreatePartData = Omit<CreatePartInput, never> & {
   macro_component_id?: string;
-  status?: PartStatus;
-  notes?: string;
-}
+};
+
+const PAGE_SIZE = 20;
 
 export function usePartsInventory() {
   const [parts, setParts] = useState<PartInventory[]>([]);
+  const [pagination, setPagination] = useState<Omit<PaginatedResult<PartInventory>, 'data'>>({
+    count: 0,
+    page: 1,
+    pageSize: PAGE_SIZE,
+    totalPages: 1,
+  });
   const [loading, setLoading] = useState(false);
   const { currentOrganization } = useOrganization();
   const { toast } = useToast();
 
-  const fetchParts = useCallback(async (filters?: {
-    status?: string;
-    component?: string;
-    search?: string;
-  }) => {
-    if (!currentOrganization?.id) return;
-
-    try {
-      setLoading(true);
-
-      let query = supabase
-        .from('parts_inventory')
-        .select('*')
-        .eq('org_id', currentOrganization.id)
-        .order('created_at', { ascending: false });
-
-      // Aplicar filtros
-      if (filters?.status && filters.status !== 'todos') {
-        query = query.eq('status', filters.status);
-      }
-
-      if (filters?.component && filters.component !== 'todos') {
-        query = query.eq('component', filters.component as unknown);
-      }
-
-      if (filters?.search) {
-        query = query.or(`part_name.ilike.%${filters.search}%,part_code.ilike.%${filters.search}%`);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      setParts((data || []) as PartInventory[]);
-    } catch (error) {
-      console.error('Error fetching parts:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível carregar o estoque',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [currentOrganization?.id, toast]);
-
-  const createPart = async (partData: CreatePartData): Promise<boolean> => {
-    if (!currentOrganization?.id) return false;
-
-    try {
-      setLoading(true);
-
-      const { error } = await supabase
-        .from('parts_inventory')
-        .insert({
-          ...partData,
-          org_id: currentOrganization.id,
-          status: partData.status || 'disponivel',
+  const fetchParts = useCallback(
+    async (filters?: PartFilters, page = 1) => {
+      if (!currentOrganization?.id) return;
+      try {
+        setLoading(true);
+        const result = await inventoryService.listParts(
+          currentOrganization.id,
+          filters,
+          page,
+          PAGE_SIZE
+        );
+        setParts(result.data as PartInventory[]);
+        setPagination({
+          count: result.count,
+          page: result.page,
+          pageSize: result.pageSize,
+          totalPages: result.totalPages,
         });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Peça adicionada',
-        description: `${partData.part_name} foi adicionada ao estoque`,
-      });
-
-      await fetchParts();
-      return true;
-    } catch (error) {
-      console.error('Error creating part:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível adicionar a peça',
-        variant: 'destructive',
-      });
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updatePart = async (partId: string, partData: Partial<CreatePartData>): Promise<boolean> => {
-    if (!currentOrganization?.id) return false;
-
-    try {
-      setLoading(true);
-
-      const { error } = await supabase
-        .from('parts_inventory')
-        .update(partData)
-        .eq('id', partId)
-        .eq('org_id', currentOrganization.id);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Peça atualizada',
-        description: 'As informações da peça foram atualizadas',
-      });
-
-      await fetchParts();
-      return true;
-    } catch (error) {
-      console.error('Error updating part:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar a peça',
-        variant: 'destructive',
-      });
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deletePart = async (partId: string): Promise<boolean> => {
-    if (!currentOrganization?.id) return false;
-
-    try {
-      setLoading(true);
-
-      const { error } = await supabase
-        .from('parts_inventory')
-        .delete()
-        .eq('id', partId)
-        .eq('org_id', currentOrganization.id);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Peça removida',
-        description: 'A peça foi removida do estoque',
-      });
-
-      await fetchParts();
-      return true;
-    } catch (error) {
-      console.error('Error deleting part:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível remover a peça',
-        variant: 'destructive',
-      });
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateQuantity = async (partId: string, newQuantity: number): Promise<boolean> => {
-    if (!currentOrganization?.id) return false;
-
-    try {
-      setLoading(true);
-
-      const { error } = await supabase
-        .from('parts_inventory')
-        .update({ quantity: newQuantity })
-        .eq('id', partId)
-        .eq('org_id', currentOrganization.id);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Quantidade atualizada',
-        description: `Quantidade alterada para ${newQuantity}`,
-      });
-
-      await fetchParts();
-      return true;
-    } catch (error) {
-      console.error('Error updating quantity:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível atualizar a quantidade',
-        variant: 'destructive',
-      });
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getAvailableParts = useCallback(async (component?: string, macroComponentId?: string): Promise<PartInventory[]> => {
-    if (!currentOrganization?.id) return [];
-
-    try {
-      let query = supabase
-        .from('parts_inventory')
-        .select('*')
-        .eq('org_id', currentOrganization.id)
-        .eq('status', 'disponivel')
-        .gt('quantity', 0)
-        .order('part_name');
-
-      if (component) {
-        query = query.eq('component', component as unknown);
+      } catch {
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível carregar o estoque',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
       }
+    },
+    [currentOrganization?.id, toast]
+  );
 
-      if (macroComponentId) {
-        query = query.eq('macro_component_id', macroComponentId);
+  const createPart = useCallback(
+    async (partData: CreatePartData): Promise<boolean> => {
+      if (!currentOrganization?.id) return false;
+      try {
+        setLoading(true);
+        const { macro_component_id: _ignored, ...rest } = partData;
+        await inventoryService.createPart(currentOrganization.id, rest as CreatePartInput);
+        toast({ title: 'Peça adicionada', description: `${partData.part_name} foi adicionada ao estoque` });
+        await fetchParts();
+        return true;
+      } catch {
+        toast({ title: 'Erro', description: 'Não foi possível adicionar a peça', variant: 'destructive' });
+        return false;
+      } finally {
+        setLoading(false);
       }
+    },
+    [currentOrganization?.id, fetchParts, toast]
+  );
 
-      const { data, error } = await query;
+  const updatePart = useCallback(
+    async (partId: string, partData: Partial<CreatePartData>): Promise<boolean> => {
+      if (!currentOrganization?.id) return false;
+      try {
+        setLoading(true);
+        const { macro_component_id: _ignored, ...rest } = partData;
+        await inventoryService.updatePart(partId, currentOrganization.id, rest as UpdatePartInput);
+        toast({ title: 'Peça atualizada', description: 'As informações da peça foram atualizadas' });
+        await fetchParts();
+        return true;
+      } catch {
+        toast({ title: 'Erro', description: 'Não foi possível atualizar a peça', variant: 'destructive' });
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [currentOrganization?.id, fetchParts, toast]
+  );
 
-      if (error) throw error;
+  const deletePart = useCallback(
+    async (partId: string): Promise<boolean> => {
+      if (!currentOrganization?.id) return false;
+      try {
+        setLoading(true);
+        await inventoryService.deletePart(partId, currentOrganization.id);
+        toast({ title: 'Peça removida', description: 'A peça foi removida do estoque' });
+        await fetchParts();
+        return true;
+      } catch {
+        toast({ title: 'Erro', description: 'Não foi possível remover a peça', variant: 'destructive' });
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [currentOrganization?.id, fetchParts, toast]
+  );
 
-      return (data || []) as PartInventory[];
-    } catch (error) {
-      console.error('Error fetching available parts:', error);
-      return [];
-    }
-  }, [currentOrganization?.id]);
+  const updateQuantity = useCallback(
+    async (partId: string, newQuantity: number): Promise<boolean> => {
+      if (!currentOrganization?.id) return false;
+      try {
+        setLoading(true);
+        await inventoryService.updatePart(partId, currentOrganization.id, { quantity: newQuantity });
+        toast({ title: 'Quantidade atualizada', description: `Quantidade alterada para ${newQuantity}` });
+        await fetchParts();
+        return true;
+      } catch {
+        toast({ title: 'Erro', description: 'Não foi possível atualizar a quantidade', variant: 'destructive' });
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [currentOrganization?.id, fetchParts, toast]
+  );
+
+  const clonePart = useCallback(
+    async (partId: string): Promise<boolean> => {
+      if (!currentOrganization?.id) return false;
+      try {
+        setLoading(true);
+        const cloned = await inventoryService.clonePart(partId, currentOrganization.id);
+        toast({ title: 'Peça clonada', description: `${cloned.part_name} foi criada` });
+        await fetchParts();
+        return true;
+      } catch {
+        toast({ title: 'Erro', description: 'Não foi possível clonar a peça', variant: 'destructive' });
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [currentOrganization?.id, fetchParts, toast]
+  );
+
+  const getAvailableParts = useCallback(
+    async (component?: string, _macroComponentId?: string): Promise<PartInventory[]> => {
+      if (!currentOrganization?.id) return [];
+      try {
+        const data = await inventoryService.getAvailableParts(currentOrganization.id, component);
+        return data as PartInventory[];
+      } catch {
+        return [];
+      }
+    },
+    [currentOrganization?.id]
+  );
 
   useEffect(() => {
     if (currentOrganization?.id) {
@@ -266,13 +185,14 @@ export function usePartsInventory() {
 
   return {
     parts,
+    pagination,
     loading,
     fetchParts,
     createPart,
     updatePart,
     deletePart,
     updateQuantity,
+    clonePart,
     getAvailableParts,
   };
 }
-
