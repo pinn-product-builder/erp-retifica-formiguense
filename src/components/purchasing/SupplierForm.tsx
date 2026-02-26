@@ -61,11 +61,11 @@ export function SupplierForm({
           address_jsonb:          supplier.address_jsonb,
           payment_terms:          supplier.payment_terms ?? '',
           payment_methods:        supplier.payment_methods ?? ['boleto'],
-          credit_limit:           supplier.credit_limit,
-          discount_percentage:    supplier.discount_percentage,
+          credit_limit:           supplier.credit_limit ?? undefined,
+          discount_percentage:    supplier.discount_percentage ?? undefined,
           categories:             supplier.categories ?? [],
           delivery_days:          supplier.delivery_days ?? 0,
-          is_active:              supplier.is_active,
+          is_active:              supplier.is_active ?? true,
           notes:                  supplier.notes ?? '',
         }
       : {

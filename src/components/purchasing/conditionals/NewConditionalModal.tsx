@@ -30,6 +30,7 @@ import { Plus, Trash2, Clock, Building2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { useSuppliersList } from '@/hooks/useSuppliers';
 import type { CreateConditionalOrderData } from '@/services/ConditionalOrderService';
+import { PartSearchInput } from './PartSearchInput';
 
 interface ConditionalItem {
   id: string;
@@ -79,7 +80,7 @@ export function NewConditionalModal({
   };
 
   const updateItem = (id: string, field: keyof ConditionalItem, value: string | number) => {
-    setItems(items.map((i) => (i.id === id ? { ...i, [field]: value } : i)));
+    setItems(prev => prev.map((i) => (i.id === id ? { ...i, [field]: value } : i)));
   };
 
   const validate = () => {
@@ -234,11 +235,18 @@ export function NewConditionalModal({
                       />
                     </TableCell>
                     <TableCell className="py-2">
-                      <Input
+                      <PartSearchInput
                         value={item.part_name}
-                        onChange={(e) => updateItem(item.id, 'part_name', e.target.value)}
-                        className="min-w-[120px] h-8 text-xs"
+                        onChange={(v) => updateItem(item.id, 'part_name', v)}
+                        onSelectPart={({ name, code, unit_cost }) => {
+                          setItems(prev => prev.map(i =>
+                            i.id === item.id
+                              ? { ...i, part_name: name, part_code: code, unit_price: unit_cost > 0 ? unit_cost : i.unit_price }
+                              : i
+                          ));
+                        }}
                         placeholder="Nome da peça"
+                        className="min-w-[150px] h-8 text-xs"
                       />
                     </TableCell>
                     <TableCell className="py-2">

@@ -336,6 +336,23 @@ export const ConditionalOrderService = {
     return (data ?? []) as ConditionalExtension[];
   },
 
+  async searchParts(
+    orgId: string,
+    query: string,
+    limit = 10,
+  ): Promise<{ id: string; part_name: string; part_code: string | null; quantity: number; unit_cost: number }[]> {
+    if (!query || query.length < 2) return [];
+    const { data, error } = await supabase
+      .from('parts_inventory')
+      .select('id, part_name, part_code, quantity, unit_cost')
+      .eq('org_id', orgId)
+      .or(`part_name.ilike.%${query}%,part_code.ilike.%${query}%`)
+      .order('part_name', { ascending: true })
+      .limit(limit);
+    if (error) throw error;
+    return (data ?? []) as { id: string; part_name: string; part_code: string | null; quantity: number; unit_cost: number }[];
+  },
+
   async markOverdue(orgId: string): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
 

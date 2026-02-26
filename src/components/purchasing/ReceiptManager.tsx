@@ -25,7 +25,15 @@ import {
   Eye,
   Plus,
   Gift,
+  ChevronRight,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { usePurchaseReceipts } from '@/hooks/usePurchaseReceipts';
 import { useSupplierReturns } from '@/hooks/useSupplierReturns';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -97,6 +105,9 @@ export default function ReceiptManager() {
 
   const [selectedReturn, setSelectedReturn] = useState<SupplierReturn | null>(null);
   const [showReturnStatusModal, setShowReturnStatusModal] = useState(false);
+
+  const [showPOSelector, setShowPOSelector] = useState(false);
+  const [poSelectorSearch, setPOSelectorSearch] = useState('');
 
   const [nfOrderId,   setNfOrderId]   = useState('');
   const [nfOrderNo,   setNfOrderNo]   = useState('');
@@ -244,7 +255,7 @@ export default function ReceiptManager() {
             <Gift className="h-4 w-4" />
             <span className="hidden sm:inline">Bonificação</span>
           </Button>
-          <Button onClick={() => { setSelectedPO(null); setShowReceiveModal(true); }} className="gap-1.5 flex-1 sm:flex-none">
+          <Button onClick={() => { setPOSelectorSearch(''); setShowPOSelector(true); }} className="gap-1.5 flex-1 sm:flex-none">
             <Plus className="h-4 w-4" />
             Novo Recebimento
           </Button>
@@ -680,6 +691,89 @@ export default function ReceiptManager() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* PO Selector Modal */}
+      <Dialog open={showPOSelector} onOpenChange={setShowPOSelector}>
+        <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Selecionar Pedido de Compra
+            </DialogTitle>
+            <DialogDescription>
+              Escolha o pedido para registrar o recebimento
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por número ou fornecedor..."
+              value={poSelectorSearch}
+              onChange={e => setPOSelectorSearch(e.target.value)}
+              className="pl-9"
+              autoFocus
+            />
+          </div>
+
+          <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
+            {pendingPOs
+              .filter(po => {
+                const q = poSelectorSearch.toLowerCase();
+                return (
+                  po.po_number.toLowerCase().includes(q) ||
+                  po.supplier.name.toLowerCase().includes(q)
+                );
+              })
+              .map(po => (
+                <button
+                  key={po.id}
+                  type="button"
+                  className="w-full text-left rounded-lg border p-3 hover:bg-accent transition-colors group"
+                  onClick={() => {
+                    setSelectedPO(po.id);
+                    setShowPOSelector(false);
+                    setShowReceiveModal(true);
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">{po.po_number}</span>
+                        <Badge className={`text-[10px] ${PO_STATUS_COLORS[po.status] ?? 'bg-gray-100 text-gray-700'}`}>
+                          {PO_STATUS_LABELS[po.status] ?? po.status}
+                        </Badge>
+                        {isOverdue(po) && (
+                          <Badge variant="destructive" className="text-[10px]">
+                            <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />Atrasado
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                        <span>{po.supplier.name}</span>
+                        <span>{formatCurrency(po.total_value)}</span>
+                        {po.expected_delivery && (
+                          <span>Prev. {new Date(po.expected_delivery).toLocaleDateString('pt-BR')}</span>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground flex-shrink-0" />
+                  </div>
+                </button>
+              ))}
+
+            {pendingPOs.filter(po => {
+              const q = poSelectorSearch.toLowerCase();
+              return po.po_number.toLowerCase().includes(q) || po.supplier.name.toLowerCase().includes(q);
+            }).length === 0 && (
+              <div className="py-8 text-center text-muted-foreground text-sm">
+                <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                {poSelectorSearch ? 'Nenhum pedido encontrado' : 'Nenhum pedido pendente de recebimento'}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Receive Order Modal */}
       {selectedPO && (

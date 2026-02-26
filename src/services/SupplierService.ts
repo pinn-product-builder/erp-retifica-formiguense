@@ -241,11 +241,18 @@ export const SupplierService = {
     excludeId?: string
   ): Promise<boolean> {
     const clean = document.replace(/\D/g, '');
+    if (!clean || clean.length !== 14) return false;
+
+    const formatted = clean.replace(
+      /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+      '$1.$2.$3/$4-$5',
+    );
+
     let query = supabase
       .from('suppliers')
       .select('id')
       .eq('org_id', orgId)
-      .eq('document', clean);
+      .or(`document.eq.${clean},document.eq.${formatted},cnpj.eq.${clean}`);
 
     if (excludeId) {
       query = query.neq('id', excludeId);

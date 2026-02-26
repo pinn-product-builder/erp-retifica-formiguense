@@ -85,10 +85,13 @@ export function useSuppliers(initialFilters: SupplierFilters = {}) {
     if (!orgId) return null;
 
     if (formData.document) {
-      const isDuplicate = await SupplierService.checkDuplicateCNPJ(formData.document, orgId, id);
-      if (isDuplicate) {
-        toast.error('CNPJ já cadastrado para outro fornecedor');
-        return null;
+      const clean = formData.document.replace(/\D/g, '');
+      if (clean.length === 14) {
+        const isDuplicate = await SupplierService.checkDuplicateCNPJ(formData.document, orgId, id);
+        if (isDuplicate) {
+          toast.error('Este CNPJ já está cadastrado em outro fornecedor. Verifique os cadastros duplicados.');
+          return null;
+        }
       }
     }
 
