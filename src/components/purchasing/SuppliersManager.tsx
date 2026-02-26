@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,7 +17,9 @@ import { Label } from '@/components/ui/label';
 import {
   Plus, Search, RefreshCw, Users,
   Building2, Package, History, ShoppingCart, Star,
+  FileSignature, ExternalLink, AlertTriangle, CheckCircle2,
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { SupplierCard } from './SupplierCard';
@@ -25,6 +27,9 @@ import { SupplierForm } from './SupplierForm';
 import { SupplierProductsTab } from './SupplierProductsTab';
 import { SupplierEvaluationTab } from './SupplierEvaluationTab';
 import { SUPPLIER_CATEGORIES, type Supplier } from '@/services/SupplierService';
+import { useOrganization } from '@/hooks/useOrganization';
+import { supabase } from '@/integrations/supabase/client';
+import { formatCurrency } from '@/lib/utils';
 
 // ─── Modal de Detalhes ────────────────────────────────────────────────────────
 function SupplierDetailsModal({
@@ -55,138 +60,163 @@ function SupplierDetailsModal({
           </div>
         </DialogHeader>
 
-        <Tabs defaultValue="info">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="info" className="text-xs sm:text-sm">
-              <Building2 className="w-3.5 h-3.5 mr-1 sm:mr-1.5" />
-              <span className="hidden sm:inline">Informações</span>
-              <span className="sm:hidden">Info</span>
-            </TabsTrigger>
-            <TabsTrigger value="evaluation" className="text-xs sm:text-sm">
-              <Star className="w-3.5 h-3.5 mr-1 sm:mr-1.5" />
-              <span className="hidden sm:inline">Avaliação</span>
-              <span className="sm:hidden">Nota</span>
-            </TabsTrigger>
-            <TabsTrigger value="products" className="text-xs sm:text-sm">
-              <Package className="w-3.5 h-3.5 mr-1 sm:mr-1.5" />
-              <span className="hidden sm:inline">Produtos</span>
-              <span className="sm:hidden">Prod.</span>
-            </TabsTrigger>
-            <TabsTrigger value="history" className="text-xs sm:text-sm">
-              <History className="w-3.5 h-3.5 mr-1 sm:mr-1.5" />
-              <span className="hidden sm:inline">Histórico</span>
-              <span className="sm:hidden">Hist.</span>
-            </TabsTrigger>
-          </TabsList>
+        <SupplierDetailTabs supplier={supplier} />
 
-          {/* Aba info */}
-          <TabsContent value="info" className="mt-4 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground">Razão Social</p>
-                <p className="text-sm font-medium">{supplier.legal_name ?? supplier.name}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">CNPJ</p>
-                <p className="text-sm font-mono">{supplier.document ?? supplier.cnpj ?? '—'}</p>
-              </div>
-              {supplier.email && (
-                <div>
-                  <p className="text-xs text-muted-foreground">E-mail</p>
-                  <p className="text-sm">{supplier.email}</p>
-                </div>
-              )}
-              {supplier.phone && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Telefone</p>
-                  <p className="text-sm">{supplier.phone}</p>
-                </div>
-              )}
-              {supplier.whatsapp && (
-                <div>
-                  <p className="text-xs text-muted-foreground">WhatsApp</p>
-                  <p className="text-sm">{supplier.whatsapp}</p>
-                </div>
-              )}
-              {supplier.contact_person && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Contato</p>
-                  <p className="text-sm">{supplier.contact_person}</p>
-                </div>
-              )}
-              {supplier.payment_terms && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Prazo de Pagamento</p>
-                  <p className="text-sm">{supplier.payment_terms}</p>
-                </div>
-              )}
-              {supplier.delivery_days > 0 && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Prazo de Entrega</p>
-                  <p className="text-sm">{supplier.delivery_days} dias</p>
-                </div>
-              )}
-            </div>
-
-            {supplier.address_jsonb && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Endereço</p>
-                <p className="text-sm">
-                  {supplier.address_jsonb.street}, {supplier.address_jsonb.number}
-                  {supplier.address_jsonb.complement && `, ${supplier.address_jsonb.complement}`}
-                  {' — '}{supplier.address_jsonb.neighborhood}, {supplier.address_jsonb.city}/{supplier.address_jsonb.state}
-                  {' — '}{supplier.address_jsonb.postal_code}
-                </p>
-              </div>
-            )}
-
-            {(supplier.categories?.length ?? 0) > 0 && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Categorias</p>
-                <div className="flex flex-wrap gap-1">
-                  {(supplier.categories ?? []).map(v => {
-                    const cat = SUPPLIER_CATEGORIES.find(c => c.value === v);
-                    return (
-                      <span key={v} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-secondary">
-                        {cat?.label ?? v}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {supplier.notes && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Observações</p>
-                <p className="text-sm text-muted-foreground">{supplier.notes}</p>
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Aba avaliação */}
-          <TabsContent value="evaluation" className="mt-4">
-            <SupplierEvaluationTab
-              supplierId={supplier.id}
-              currentRating={supplier.rating}
-            />
-          </TabsContent>
-
-          {/* Aba produtos */}
-          <TabsContent value="products" className="mt-4">
-            <SupplierProductsTab supplier={supplier} />
-          </TabsContent>
-
-          {/* Aba histórico */}
-          <TabsContent value="history" className="mt-4">
-            <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
-              <ShoppingCart className="w-5 h-5" />
-              <p className="text-sm">Histórico de compras em breve</p>
-            </div>
-          </TabsContent>
-        </Tabs>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface SupplierContract {
+  id:           string;
+  contract_number: string;
+  status:       string;
+  start_date:   string;
+  end_date:     string;
+  description?: string;
+  total_value?: number;
+}
+
+const CONTRACT_STATUS_COLORS: Record<string, string> = {
+  active:    'bg-green-100 text-green-700 border-green-200',
+  expiring:  'bg-orange-100 text-orange-700 border-orange-200',
+  expired:   'bg-red-100 text-red-700 border-red-200',
+  draft:     'bg-gray-100 text-gray-700 border-gray-200',
+  cancelled: 'bg-gray-100 text-gray-600 border-gray-200',
+};
+const CONTRACT_STATUS_LABELS: Record<string, string> = {
+  active: 'Ativo', expiring: 'Vencendo', expired: 'Expirado', draft: 'Rascunho', cancelled: 'Cancelado',
+};
+
+function SupplierDetailTabs({ supplier }: { supplier: Supplier }) {
+  const { currentOrganization } = useOrganization();
+  const [contracts, setContracts] = useState<SupplierContract[]>([]);
+  const [loadingContracts, setLoadingContracts] = useState(false);
+
+  const fetchContracts = useCallback(async () => {
+    if (!currentOrganization?.id) return;
+    setLoadingContracts(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase as any;
+    const { data } = await db
+      .from('supplier_contracts')
+      .select('id, contract_number, status, start_date, end_date, description, total_value')
+      .eq('supplier_id', supplier.id)
+      .eq('org_id', currentOrganization.id)
+      .order('start_date', { ascending: false })
+      .limit(20);
+    setContracts((data ?? []) as SupplierContract[]);
+    setLoadingContracts(false);
+  }, [currentOrganization?.id, supplier.id]);
+
+  return (
+    <Tabs defaultValue="info" onValueChange={(v) => { if (v === 'contracts') fetchContracts(); }}>
+      <TabsList className="grid w-full grid-cols-5">
+        <TabsTrigger value="info" className="text-xs sm:text-sm">
+          <Building2 className="w-3.5 h-3.5 mr-1 sm:mr-1.5" />
+          <span className="hidden sm:inline">Informações</span>
+          <span className="sm:hidden">Info</span>
+        </TabsTrigger>
+        <TabsTrigger value="evaluation" className="text-xs sm:text-sm">
+          <Star className="w-3.5 h-3.5 mr-1 sm:mr-1.5" />
+          <span className="hidden sm:inline">Avaliação</span>
+          <span className="sm:hidden">Nota</span>
+        </TabsTrigger>
+        <TabsTrigger value="products" className="text-xs sm:text-sm">
+          <Package className="w-3.5 h-3.5 mr-1 sm:mr-1.5" />
+          <span className="hidden sm:inline">Produtos</span>
+          <span className="sm:hidden">Prod.</span>
+        </TabsTrigger>
+        <TabsTrigger value="contracts" className="text-xs sm:text-sm">
+          <FileSignature className="w-3.5 h-3.5 mr-1 sm:mr-1.5" />
+          <span className="hidden sm:inline">Contratos</span>
+          <span className="sm:hidden">Contr.</span>
+        </TabsTrigger>
+        <TabsTrigger value="history" className="text-xs sm:text-sm">
+          <History className="w-3.5 h-3.5 mr-1 sm:mr-1.5" />
+          <span className="hidden sm:inline">Histórico</span>
+          <span className="sm:hidden">Hist.</span>
+        </TabsTrigger>
+      </TabsList>
+
+      {/* Aba info — reutiliza JSX inline */}
+      <TabsContent value="info" className="mt-4 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground">Razão Social</p>
+            <p className="text-sm font-medium">{supplier.legal_name ?? supplier.name}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">CNPJ</p>
+            <p className="text-sm font-mono">{supplier.document ?? supplier.cnpj ?? '—'}</p>
+          </div>
+          {supplier.email && <div><p className="text-xs text-muted-foreground">E-mail</p><p className="text-sm">{supplier.email}</p></div>}
+          {supplier.phone && <div><p className="text-xs text-muted-foreground">Telefone</p><p className="text-sm">{supplier.phone}</p></div>}
+          {supplier.contact_person && <div><p className="text-xs text-muted-foreground">Contato</p><p className="text-sm">{supplier.contact_person}</p></div>}
+        </div>
+      </TabsContent>
+
+      <TabsContent value="evaluation" className="mt-4">
+        <SupplierEvaluationTab supplierId={supplier.id} currentRating={supplier.rating} />
+      </TabsContent>
+
+      <TabsContent value="products" className="mt-4">
+        <SupplierProductsTab supplier={supplier} />
+      </TabsContent>
+
+      {/* Aba contratos — US-042 */}
+      <TabsContent value="contracts" className="mt-4 space-y-3">
+        {loadingContracts ? (
+          <div className="text-center py-6 text-muted-foreground text-sm">Carregando...</div>
+        ) : contracts.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <FileSignature className="h-10 w-10 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">Nenhum contrato cadastrado para este fornecedor.</p>
+          </div>
+        ) : (
+          contracts.map((c) => {
+            const daysLeft = Math.ceil((new Date(c.end_date).getTime() - Date.now()) / 86400000);
+            return (
+              <div key={c.id} className="rounded-lg border p-3 space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2 justify-between">
+                  <span className="font-medium text-sm">{c.contract_number}</span>
+                  <Badge variant="outline" className={`text-[10px] ${CONTRACT_STATUS_COLORS[c.status] ?? ''}`}>
+                    {CONTRACT_STATUS_LABELS[c.status] ?? c.status}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                  <span>{new Date(c.start_date + 'T12:00:00').toLocaleDateString('pt-BR')} → {new Date(c.end_date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                  {c.total_value ? <span>{formatCurrency(c.total_value)}</span> : null}
+                </div>
+                {daysLeft > 0 && daysLeft <= 30 && (
+                  <p className="text-[10px] text-orange-600 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" /> Vence em {daysLeft} dias
+                  </p>
+                )}
+                {daysLeft <= 0 && (
+                  <p className="text-[10px] text-red-600 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" /> Contrato vencido
+                  </p>
+                )}
+                {c.status === 'active' && daysLeft > 30 && (
+                  <p className="text-[10px] text-green-600 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Em vigor
+                  </p>
+                )}
+                {c.description && <p className="text-xs text-muted-foreground truncate">{c.description}</p>}
+              </div>
+            );
+          })
+        )}
+      </TabsContent>
+
+      <TabsContent value="history" className="mt-4">
+        <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground">
+          <ShoppingCart className="w-5 h-5" />
+          <p className="text-sm">Histórico de compras em breve</p>
+        </div>
+      </TabsContent>
+    </Tabs>
   );
 }
 

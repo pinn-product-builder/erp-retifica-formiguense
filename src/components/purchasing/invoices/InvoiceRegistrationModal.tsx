@@ -28,6 +28,8 @@ import {
   Plus,
   Trash2,
   Info,
+  Upload,
+  X,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { useOrganization } from '@/contexts/OrganizationContext';
@@ -40,6 +42,7 @@ import {
   checkDivergences,
   TOLERANCE_PCT,
 } from '@/services/PurchaseInvoiceService';
+import { parseNFeXml, NFeData, NFeItem } from '@/services/NFeXmlService';
 
 interface SimpleOrder {
   id:          string;
@@ -105,7 +108,49 @@ export function InvoiceRegistrationModal({
     },
   });
 
-  const [dueDateInputs, setDueDateInputs] = useState<string[]>(['']);
+  const [dueDateInputs,  setDueDateInputs]  = useState<string[]>(['']);
+  const [nfeData,        setNfeData]        = useState<NFeData | null>(null);
+  const [xmlError,       setXmlError]       = useState<string | null>(null);
+  const [importingXml,   setImportingXml]   = useState(false);
+
+  const handleXmlImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportingXml(true);
+    setXmlError(null);
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const xml  = ev.target?.result as string;
+        const data = parseNFeXml(xml);
+        setNfeData(data);
+
+        setValue('invoice_number',  data.numero);
+        setValue('invoice_series',  data.serie);
+        setValue('issue_date',      data.data_emissao || todayStr());
+        setValue('access_key',      data.chave_acesso);
+        setValue('total_products',  data.totais.valor_produtos);
+        setValue('total_freight',   data.totais.valor_frete);
+        setValue('total_taxes',     data.totais.valor_icms + data.totais.valor_ipi);
+        setValue('total_discount',  data.totais.valor_desconto);
+        setValue('total_invoice',   data.totais.valor_total);
+
+        if (data.duplicatas.length > 0) {
+          setDueDateInputs(data.duplicatas.map((d) => d.vencimento).filter(Boolean));
+          setValue('due_dates', data.duplicatas.map((d) => d.vencimento).filter(Boolean));
+        }
+      } catch (err) {
+        setXmlError(err instanceof Error ? err.message : 'Erro ao processar XML');
+      } finally {
+        setImportingXml(false);
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+    e.target.value = '';
+  };
+
+  const nfeItemRows: NFeItem[] = nfeData?.itens ?? [];
 
   useEffect(() => {
     if (!open || !needsOrderSelect || !currentOrganization?.id) return;
@@ -195,6 +240,67 @@ export function InvoiceRegistrationModal({
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto py-2 px-1">
+          {/* Importação XML NF-e — US-043 */}
+          <div className="mb-4">
+            <label className="block">
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${nfeData ? 'border-green-400 bg-green-50/60' : 'border-muted hover:border-primary/50 hover:bg-muted/40'}`}>
+                {importingXml ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                ) : nfeData ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                ) : (
+                  <Upload className="h-4 w-4 text-muted-foreground" />
+                )}
+                <div className="flex-1 min-w-0">
+                  {nfeData ? (
+                    <p className="text-xs font-medium text-green-700 truncate">
+                      XML importado — NF {nfeData.numero} · {nfeData.emitente.razao_social}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium">Importar XML da NF-e</span>{' '}
+                      (opcional — preenche o formulário automaticamente)
+                    </p>
+                  )}
+                </div>
+                {nfeData && (
+                  <button type="button" onClick={(e) => { e.preventDefault(); setNfeData(null); setXmlError(null); }}
+                    className="p-0.5 rounded hover:bg-green-200 text-green-700">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              <input type="file" accept=".xml,application/xml,text/xml" className="sr-only" onChange={handleXmlImport} />
+            </label>
+            {xmlError && (
+              <p className="mt-1 text-xs text-destructive flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />{xmlError}
+              </p>
+            )}
+          </div>
+
+          {/* Itens do XML para comparação visual */}
+          {nfeItemRows.length > 0 && (
+            <div className="mb-4 rounded-lg border bg-muted/20 p-3 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Itens da NF-e ({nfeItemRows.length})
+              </p>
+              <div className="space-y-1 max-h-36 overflow-y-auto">
+                {nfeItemRows.map((item, i) => (
+                  <div key={i} className="flex items-start justify-between text-xs gap-2 py-0.5">
+                    <span className="text-muted-foreground flex-1 truncate">{item.codigo} — {item.descricao}</span>
+                    <span className="whitespace-nowrap font-medium">
+                      {item.quantidade} {item.unidade} × {formatCurrency(item.valor_unitario)}
+                    </span>
+                    <span className="whitespace-nowrap font-semibold w-20 text-right">
+                      {formatCurrency(item.valor_total)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <form id="nf-form" onSubmit={handleSubmit(onSubmit)} className="space-y-5">
 
             {/* Seleção de pedido (quando não pré-selecionado) */}

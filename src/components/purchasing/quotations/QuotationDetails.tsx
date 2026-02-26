@@ -30,8 +30,10 @@ import {
   type ProposalFormData,
   type QuotationItemFormData,
 } from '@/services/QuotationService';
-import { QuotationItemModal } from './QuotationItemModal';
-import { ProposalModal }      from './ProposalModal';
+import { QuotationItemModal }        from './QuotationItemModal';
+import { ProposalModal }             from './ProposalModal';
+import { PriceAlertBadge }          from './PriceAlertBadge';
+import { NegotiationHistoryModal }   from './NegotiationHistoryModal';
 
 interface QuotationDetailsProps {
   open:             boolean;
@@ -61,15 +63,16 @@ export function QuotationDetails({
 }: QuotationDetailsProps) {
   const canEdit = EDITABLE_STATUSES.includes(quotation.status);
 
-  const [addItemOpen,      setAddItemOpen]      = useState(false);
-  const [editItem,         setEditItem]          = useState<QuotationItem | null>(null);
-  const [deleteItemId,     setDeleteItemId]      = useState<string | null>(null);
-  const [addProposalItem,  setAddProposalItem]   = useState<QuotationItem | null>(null);
-  const [editProposal,     setEditProposal]      = useState<{ proposal: QuotationProposal; item: QuotationItem } | null>(null);
-  const [deleteProposalId, setDeleteProposalId]  = useState<string | null>(null);
-  const [compareOpen,      setCompareOpen]       = useState(false);
-  const [generateOpen,     setGenerateOpen]      = useState(false);
-  const [generating,       setGenerating]        = useState(false);
+  const [addItemOpen,          setAddItemOpen]          = useState(false);
+  const [editItem,             setEditItem]             = useState<QuotationItem | null>(null);
+  const [deleteItemId,         setDeleteItemId]         = useState<string | null>(null);
+  const [addProposalItem,      setAddProposalItem]      = useState<QuotationItem | null>(null);
+  const [editProposal,         setEditProposal]         = useState<{ proposal: QuotationProposal; item: QuotationItem } | null>(null);
+  const [deleteProposalId,     setDeleteProposalId]     = useState<string | null>(null);
+  const [compareOpen,          setCompareOpen]          = useState(false);
+  const [generateOpen,         setGenerateOpen]         = useState(false);
+  const [generating,           setGenerating]           = useState(false);
+  const [negotiationSupplier,  setNegotiationSupplier]  = useState<{ id: string; name: string } | null>(null);
 
   // Todas as propostas selecionadas: cada item precisa ter ao menos 1 proposta marcada
   const allSelected =
@@ -314,6 +317,10 @@ export function QuotationDetails({
                                     </td>
                                     <td className="px-3 py-2 text-right whitespace-nowrap font-semibold">
                                       {proposal.unit_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                      <PriceAlertBadge
+                                        itemName={item.part_name}
+                                        currentPrice={proposal.unit_price}
+                                      />
                                     </td>
                                     <td className="px-3 py-2 text-right whitespace-nowrap">
                                       {proposal.total_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -333,6 +340,14 @@ export function QuotationDetails({
                                           title="Editar proposta"
                                           onClick={() => setEditProposal({ proposal, item })}>
                                           <Pencil className="w-3 h-3" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-primary hover:text-primary"
+                                          title="Histórico de negociações"
+                                          onClick={() => setNegotiationSupplier({
+                                            id:   proposal.supplier_id,
+                                            name: proposal.supplier_trade_name ?? proposal.supplier_name ?? '—',
+                                          })}>
+                                          <BarChart2 className="w-3 h-3" />
                                         </Button>
                                         <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive"
                                           title="Remover proposta"
@@ -470,6 +485,15 @@ export function QuotationDetails({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Histórico de Negociações — US-041 */}
+      <NegotiationHistoryModal
+        open={!!negotiationSupplier}
+        onOpenChange={(v) => { if (!v) setNegotiationSupplier(null); }}
+        quotationId={quotation.id}
+        supplierId={negotiationSupplier?.id}
+        supplierName={negotiationSupplier?.name}
+      />
     </>
   );
 }

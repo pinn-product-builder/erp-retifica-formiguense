@@ -24,6 +24,7 @@ import {
   MoreHorizontal,
   Eye,
   Plus,
+  Gift,
 } from 'lucide-react';
 import { usePurchaseReceipts } from '@/hooks/usePurchaseReceipts';
 import { useSupplierReturns } from '@/hooks/useSupplierReturns';
@@ -38,6 +39,7 @@ import { SupplierReturnModal } from './SupplierReturnModal';
 import { RETURN_STATUS_LABELS, RETURN_STATUS_COLORS } from '@/services/SupplierReturnService';
 import { QualityInspectionModal, type QuarantineItem } from './receipts/QualityInspectionModal';
 import { LabelPrintModal, type LabelItem } from './receipts/LabelPrintModal';
+import { BonusReceiptModal } from './receipts/BonusReceiptModal';
 import { ReturnStatusModal } from './receipts/ReturnStatusModal';
 import { type SupplierReturn } from '@/services/SupplierReturnService';
 import { InvoiceRegistrationModal } from './invoices/InvoiceRegistrationModal';
@@ -81,6 +83,7 @@ export default function ReceiptManager() {
 
   const [selectedPO, setSelectedPO]                     = useState<string | null>(null);
   const [showReceiveModal, setShowReceiveModal]           = useState(false);
+  const [showBonusModal,   setShowBonusModal]             = useState(false);
   const [selectedPOForDetails, setSelectedPOForDetails]   = useState<string | null>(null);
   const [showDetailsModal, setShowDetailsModal]           = useState(false);
   const [selectedReceiptForReturn, setSelectedReceiptForReturn] = useState<string | null>(null);
@@ -236,10 +239,16 @@ export default function ReceiptManager() {
           </h1>
           <p className="text-sm text-muted-foreground">Gerencie o recebimento de materiais e pedidos de compra</p>
         </div>
-        <Button onClick={() => { setSelectedPO(null); setShowReceiveModal(true); }} className="gap-1.5 w-full sm:w-auto">
-          <Plus className="h-4 w-4" />
-          Novo Recebimento
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => setShowBonusModal(true)} className="gap-1.5 flex-1 sm:flex-none">
+            <Gift className="h-4 w-4" />
+            <span className="hidden sm:inline">Bonificação</span>
+          </Button>
+          <Button onClick={() => { setSelectedPO(null); setShowReceiveModal(true); }} className="gap-1.5 flex-1 sm:flex-none">
+            <Plus className="h-4 w-4" />
+            Novo Recebimento
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -733,6 +742,13 @@ export default function ReceiptManager() {
         onOpenChange={setShowReturnStatusModal}
         supplierReturn={selectedReturn}
         onSuccess={() => { loadData(); setSelectedReturn(null); }}
+      />
+
+      {/* Bonus Receipt Modal — US-040 */}
+      <BonusReceiptModal
+        open={showBonusModal}
+        onOpenChange={setShowBonusModal}
+        onSuccess={() => loadData()}
       />
     </div>
   );

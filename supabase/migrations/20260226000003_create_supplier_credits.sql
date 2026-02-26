@@ -39,14 +39,14 @@ ALTER TABLE supplier_credit_usage  ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "org_isolation_supplier_credits" ON supplier_credits
   USING (org_id IN (
-    SELECT org_id FROM organization_members WHERE user_id = auth.uid()
+    SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
   ));
 
 CREATE POLICY "org_isolation_supplier_credit_usage" ON supplier_credit_usage
   USING (credit_id IN (
     SELECT id FROM supplier_credits
     WHERE org_id IN (
-      SELECT org_id FROM organization_members WHERE user_id = auth.uid()
+      SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
     )
   ));
 

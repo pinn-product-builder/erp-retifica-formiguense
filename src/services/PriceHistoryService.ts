@@ -231,4 +231,36 @@ export const PriceHistoryService = {
       supplier_names: supplierNames,
     };
   },
+
+  /**
+   * Retorna a média de preço para um item por nome (últimos 12 meses). US-PUR-045.
+   */
+  async getAvgPriceForItem(
+    orgId:    string,
+    itemName: string,
+  ): Promise<number> {
+    const startDate = getDateMonthsAgo(12);
+
+    const { data: orders } = await db
+      .from('purchase_orders')
+      .select('id')
+      .eq('org_id', orgId)
+      .gte('order_date', startDate)
+      .not('status', 'in', '("cancelled","draft")');
+
+    const orderIds = ((orders ?? []) as { id: string }[]).map((o) => o.id);
+    if (orderIds.length === 0) return 0;
+
+    const { data: items } = await db
+      .from('purchase_order_items')
+      .select('unit_price')
+      .in('po_id', orderIds)
+      .ilike('item_name', `%${itemName}%`);
+
+    const prices = ((items ?? []) as { unit_price: number }[])
+      .map((i) => Number(i.unit_price))
+      .filter((p) => p > 0);
+    if (prices.length === 0) return 0;
+    return prices.reduce((a, b) => a + b, 0) / prices.length;
+  },
 };
