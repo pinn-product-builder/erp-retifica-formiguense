@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,7 @@ import {
   Settings,
   AlertCircle,
   Loader2,
+  Package,
 } from 'lucide-react';
 import {
   Pagination,
@@ -36,13 +37,8 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { useStockConfig, type StockConfig, type UpsertStockConfigInput } from '@/hooks/useStockConfig';
+import { usePartsInventory, type PartInventory } from '@/hooks/usePartsInventory';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
-
-const ABC_LABELS: Record<string, string> = {
-  A: 'A — Alto giro',
-  B: 'B — Médio giro',
-  C: 'C — Baixo giro',
-};
 
 interface ConfigFormState {
   part_code: string;
@@ -69,6 +65,123 @@ const DEFAULT_FORM: ConfigFormState = {
   is_critical: false,
   abc_classification: '',
 };
+
+function PartSelector({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: { part_code: string; part_name: string } | null;
+  onChange: (part: PartInventory) => void;
+  disabled?: boolean;
+}) {
+  const { parts } = usePartsInventory();
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    if (!q) return parts.slice(0, 30);
+    return parts
+      .filter(
+        (p) =>
+          p.part_name.toLowerCase().includes(q) ||
+          (p.part_code ?? '').toLowerCase().includes(q)
+      )
+      .slice(0, 30);
+  }, [parts, query]);
+
+  const handleSelect = (part: PartInventory) => {
+    onChange(part);
+    setQuery('');
+    setOpen(false);
+  };
+
+  if (disabled && value) {
+    return (
+      <div className="flex items-center gap-2 p-2.5 border rounded-md bg-muted">
+        <Package className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        <div className="min-w-0">
+          <p className="text-sm font-medium truncate">{value.part_name}</p>
+          {value.part_code && (
+            <p className="text-xs text-muted-foreground">{value.part_code}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+        <Input
+          placeholder={value ? value.part_name : 'Buscar peça por nome ou código...'}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          className="pl-9 h-9 text-sm"
+          autoComplete="off"
+        />
+        {value && !query && (
+          <span className="absolute left-9 top-1/2 -translate-y-1/2 text-sm truncate max-w-[calc(100%-5rem)] pointer-events-none text-foreground">
+            {value.part_name}
+            {value.part_code && (
+              <span className="text-muted-foreground ml-1 font-mono text-xs">({value.part_code})</span>
+            )}
+          </span>
+        )}
+      </div>
+
+      {open && (
+        <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-56 overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="p-3 text-center text-sm text-muted-foreground">
+              Nenhuma peça encontrada
+            </div>
+          ) : (
+            filtered.map((part) => (
+              <button
+                key={part.id}
+                type="button"
+                className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent hover:text-accent-foreground transition-colors"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleSelect(part);
+                }}
+              >
+                <Package className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <span className="text-sm truncate block">{part.part_name}</span>
+                  {part.part_code && (
+                    <span className="font-mono text-xs text-muted-foreground">{part.part_code}</span>
+                  )}
+                </div>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  Qtd: {part.quantity}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ConfigFormDialog({
   open,
@@ -100,13 +213,26 @@ function ConfigFormDialog({
       : DEFAULT_FORM
   );
 
+  const handlePartSelect = (part: PartInventory) => {
+    setForm((prev) => ({
+      ...prev,
+      part_code: part.part_code ?? part.id,
+      part_name: part.part_name,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.part_code || !form.part_name) return;
     await onSave({
       ...form,
       abc_classification: form.abc_classification || undefined,
     });
   };
+
+  const selectedPart = form.part_code
+    ? { part_code: form.part_code, part_name: form.part_name }
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -115,26 +241,20 @@ function ConfigFormDialog({
           <DialogTitle>{config ? 'Editar Configuração' : 'Nova Configuração'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="part_code">Código da Peça <span className="text-red-500">*</span></Label>
-              <Input
-                id="part_code"
-                value={form.part_code}
-                onChange={(e) => setForm({ ...form, part_code: e.target.value })}
+          <div>
+            <Label>
+              Peça <span className="text-red-500">*</span>
+            </Label>
+            <div className="mt-1.5">
+              <PartSelector
+                value={selectedPart}
+                onChange={handlePartSelect}
                 disabled={!!config}
-                required
               />
             </div>
-            <div className="sm:col-span-1">
-              <Label htmlFor="part_name">Nome da Peça <span className="text-red-500">*</span></Label>
-              <Input
-                id="part_name"
-                value={form.part_name}
-                onChange={(e) => setForm({ ...form, part_name: e.target.value })}
-                required
-              />
-            </div>
+            {!form.part_code && (
+              <p className="text-xs text-red-500 mt-1">Selecione uma peça</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

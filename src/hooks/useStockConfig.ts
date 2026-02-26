@@ -92,7 +92,11 @@ export function useStockConfig() {
     if (!currentOrganization?.id) return 0;
     try {
       setLoading(true);
-      const created = await stockConfigService.syncFromInventory(currentOrganization.id);
+      const { data: userData } = await supabase.auth.getUser();
+      const created = await stockConfigService.syncFromInventory(
+        currentOrganization.id,
+        userData.user?.id ?? ''
+      );
       if (created.length > 0) {
         toast({ title: `${created.length} peças sincronizadas`, description: 'Configurações padrão criadas para novas peças' });
       } else {

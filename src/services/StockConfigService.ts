@@ -141,7 +141,7 @@ class StockConfigService {
     return count;
   }
 
-  async syncFromInventory(orgId: string): Promise<StockConfig[]> {
+  async syncFromInventory(orgId: string, userId: string): Promise<StockConfig[]> {
     const { data: parts, error } = await supabase
       .from('parts_inventory')
       .select('part_code, part_name')
@@ -160,6 +160,7 @@ class StockConfigService {
 
     if (toCreate.length === 0) return [];
 
+    const now = new Date().toISOString();
     const rows = toCreate.map((p) => ({
       org_id: orgId,
       part_code: p.part_code!,
@@ -168,15 +169,27 @@ class StockConfigService {
       maximum_stock: 10,
       reorder_point: 2,
       safety_stock: 1,
+      updated_by: userId,
+      last_updated: now,
     }));
 
-    const { data: created, error: insertError } = await supabase
-      .from('parts_stock_config')
-      .insert(rows)
-      .select();
+    const created: StockConfig[] = [];
 
-    if (insertError) throw insertError;
-    return (created ?? []) as StockConfig[];
+    for (const row of rows) {
+      const { data, error: insertError } = await supabase
+        .from('parts_stock_config')
+        .insert(row)
+        .select()
+        .single();
+
+      if (insertError) {
+        if (insertError.code === '23505') continue;
+        throw insertError;
+      }
+      if (data) created.push(data as StockConfig);
+    }
+
+    return created;
   }
 }
 
