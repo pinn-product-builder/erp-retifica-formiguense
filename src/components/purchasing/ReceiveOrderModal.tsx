@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, Package, Upload, Star, ChevronUp, ChevronDown, FileText, X, Loader2, ExternalLink, Eye, EyeOff, History, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { AlertCircle, Package, Star, ChevronUp, ChevronDown, FileText, X, Loader2, Eye, EyeOff, History, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { usePurchaseReceipts } from '@/hooks/usePurchaseReceipts';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -73,17 +73,11 @@ export function ReceiveOrderModal({
   const { createReceipt, evaluateSupplier, loading } = usePurchaseReceipts();
   const { currentOrganization } = useOrganization();
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadedFileName, setUploadedFileName] = useState('');
 
   const [purchaseOrder, setPurchaseOrder] = useState<PurchaseOrder | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [receiptData, setReceiptData] = useState({
     receipt_date: new Date().toISOString().split('T')[0],
-    invoice_number: '',
-    invoice_date: '',
-    invoice_url: '',
     notes: '',
   });
   
@@ -216,45 +210,6 @@ export function ReceiveOrderModal({
     }
   };
 
-  const handleInvoiceUpload = async (file: File) => {
-    if (!currentOrganization?.id) return;
-
-    const ext = file.name.split('.').pop() ?? 'pdf';
-    const timestamp = Date.now();
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path = `purchase-receipts/${currentOrganization.id}/${timestamp}-${safeName}`;
-
-    setIsUploading(true);
-    try {
-      const { error: uploadError } = await supabase.storage
-        .from('order-documents')
-        .upload(path, file, { contentType: file.type, upsert: false });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from('order-documents')
-        .getPublicUrl(path);
-
-      const publicUrl = urlData?.publicUrl ?? '';
-
-      if (!publicUrl) {
-        const { data: signedData, error: signedError } = await supabase.storage
-          .from('order-documents')
-          .createSignedUrl(path, 60 * 60 * 24 * 365);
-        if (signedError) throw signedError;
-        setReceiptData(prev => ({ ...prev, invoice_url: signedData.signedUrl }));
-      } else {
-        setReceiptData(prev => ({ ...prev, invoice_url: publicUrl }));
-      }
-
-      setUploadedFileName(file.name);
-    } catch (err) {
-      console.error('Erro no upload da NF:', err);
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
   const excessItems = orderItems.filter(item => {
     const remaining = item.quantity - item.received_quantity;
@@ -279,9 +234,6 @@ export function ReceiveOrderModal({
     const receipt = await createReceipt({
       purchase_order_id: purchaseOrderId,
       receipt_date: receiptData.receipt_date,
-      invoice_number: receiptData.invoice_number || undefined,
-      invoice_date: receiptData.invoice_date || undefined,
-      invoice_url: receiptData.invoice_url || undefined,
       notes: receiptData.notes || undefined,
       items,
     });
@@ -713,7 +665,7 @@ export function ReceiveOrderModal({
           )}
 
           {/* Receipt Data */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label>Data do Recebimento *</Label>
               <Input
@@ -722,89 +674,6 @@ export function ReceiveOrderModal({
                 onChange={(e) => setReceiptData(prev => ({ ...prev, receipt_date: e.target.value }))}
               />
             </div>
-            
-            <div>
-              <Label>Número da Nota Fiscal</Label>
-              <Input
-                value={receiptData.invoice_number}
-                onChange={(e) => setReceiptData(prev => ({ ...prev, invoice_number: e.target.value }))}
-                placeholder="Ex: NF-123456"
-              />
-            </div>
-            
-            <div>
-              <Label>Data da Nota Fiscal</Label>
-              <Input
-                type="date"
-                value={receiptData.invoice_date}
-                onChange={(e) => setReceiptData(prev => ({ ...prev, invoice_date: e.target.value }))}
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label>Nota Fiscal (PDF, imagem)</Label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.xml"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleInvoiceUpload(file);
-              }}
-            />
-            {receiptData.invoice_url ? (
-              <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/40">
-                <FileText className="h-4 w-4 text-blue-600 shrink-0" />
-                <span className="text-sm truncate flex-1 min-w-0">
-                  {uploadedFileName || 'Arquivo anexado'}
-                </span>
-                <a
-                  href={receiptData.invoice_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0"
-                >
-                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Button>
-                </a>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive shrink-0"
-                  onClick={() => {
-                    setReceiptData(prev => ({ ...prev, invoice_url: '' }));
-                    setUploadedFileName('');
-                    if (fileInputRef.current) fileInputRef.current.value = '';
-                  }}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full mt-1"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Enviando arquivo...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Anexar NF (PDF, imagem, XML)
-                  </>
-                )}
-              </Button>
-            )}
           </div>
 
           {/* Alerts */}

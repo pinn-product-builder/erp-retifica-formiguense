@@ -38,6 +38,8 @@ import { SupplierReturnModal } from './SupplierReturnModal';
 import { RETURN_STATUS_LABELS, RETURN_STATUS_COLORS } from '@/services/SupplierReturnService';
 import { QualityInspectionModal, type QuarantineItem } from './receipts/QualityInspectionModal';
 import { LabelPrintModal, type LabelItem } from './receipts/LabelPrintModal';
+import { ReturnStatusModal } from './receipts/ReturnStatusModal';
+import { type SupplierReturn } from '@/services/SupplierReturnService';
 import { InvoiceRegistrationModal } from './invoices/InvoiceRegistrationModal';
 
 interface PendingPO {
@@ -89,6 +91,9 @@ export default function ReceiptManager() {
   const [showInspectionModal, setShowInspectionModal]           = useState(false);
   const [labelItems,    setLabelItems]    = useState<LabelItem[]>([]);
   const [showLabelModal, setShowLabelModal] = useState(false);
+
+  const [selectedReturn, setSelectedReturn] = useState<SupplierReturn | null>(null);
+  const [showReturnStatusModal, setShowReturnStatusModal] = useState(false);
 
   const [nfOrderId,   setNfOrderId]   = useState('');
   const [nfOrderNo,   setNfOrderNo]   = useState('');
@@ -605,12 +610,13 @@ export default function ReceiptManager() {
                     <TableHead className="hidden sm:table-cell">Data</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredReturns.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                         <RotateCcw className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
                         Nenhuma devolução registrada
                       </TableCell>
@@ -618,7 +624,12 @@ export default function ReceiptManager() {
                   ) : (
                     filteredReturns.map(ret => (
                       <TableRow key={ret.id} className="hover:bg-muted/50">
-                        <TableCell className="font-medium text-xs sm:text-sm">{ret.return_number}</TableCell>
+                        <TableCell className="font-medium text-xs sm:text-sm">
+                          {ret.return_number}
+                          {ret.credit_note_number && (
+                            <p className="text-[10px] text-muted-foreground mt-0.5">NC: {ret.credit_note_number}</p>
+                          )}
+                        </TableCell>
                         <TableCell className="hidden sm:table-cell text-xs sm:text-sm">{ret.supplier?.name ?? '—'}</TableCell>
                         <TableCell className="hidden md:table-cell text-xs sm:text-sm text-muted-foreground">
                           {ret.receipt?.receipt_number ?? '—'}
@@ -633,6 +644,23 @@ export default function ReceiptManager() {
                           <Badge className={`text-[10px] sm:text-xs ${RETURN_STATUS_COLORS[ret.status]}`}>
                             {RETURN_STATUS_LABELS[ret.status]}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => { setSelectedReturn(ret as SupplierReturn); setShowReturnStatusModal(true); }}
+                              >
+                                <RotateCcw className="h-4 w-4 mr-2" />
+                                Atualizar Status
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))
@@ -697,6 +725,14 @@ export default function ReceiptManager() {
         open={showLabelModal}
         onOpenChange={setShowLabelModal}
         items={labelItems}
+      />
+
+      {/* Return Status Modal */}
+      <ReturnStatusModal
+        open={showReturnStatusModal}
+        onOpenChange={setShowReturnStatusModal}
+        supplierReturn={selectedReturn}
+        onSuccess={() => { loadData(); setSelectedReturn(null); }}
       />
     </div>
   );
