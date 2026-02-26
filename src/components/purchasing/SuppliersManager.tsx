@@ -73,7 +73,7 @@ interface SupplierContract {
   status:       string;
   start_date:   string;
   end_date:     string;
-  description?: string;
+  notes?: string;
   total_value?: number;
 }
 
@@ -100,7 +100,7 @@ function SupplierDetailTabs({ supplier }: { supplier: Supplier }) {
     const db = supabase as any;
     const { data } = await db
       .from('supplier_contracts')
-      .select('id, contract_number, status, start_date, end_date, description, total_value')
+      .select('id, contract_number, status, start_date, end_date, notes, total_value')
       .eq('supplier_id', supplier.id)
       .eq('org_id', currentOrganization.id)
       .order('start_date', { ascending: false })
@@ -203,7 +203,7 @@ function SupplierDetailTabs({ supplier }: { supplier: Supplier }) {
                     <CheckCircle2 className="h-3 w-3" /> Em vigor
                   </p>
                 )}
-                {c.description && <p className="text-xs text-muted-foreground truncate">{c.description}</p>}
+                {c.notes && <p className="text-xs text-muted-foreground truncate">{c.notes}</p>}
               </div>
             );
           })

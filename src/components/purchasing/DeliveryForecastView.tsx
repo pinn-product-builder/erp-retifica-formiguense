@@ -10,6 +10,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { formatCurrency } from '@/lib/utils';
+import { PURCHASE_STATUS } from '@/utils/statusTranslations';
 import { format, addDays, startOfWeek, endOfWeek, isToday, isPast, parseISO, isSameDay, addWeeks, subWeeks } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -248,7 +249,7 @@ export function DeliveryForecastView() {
                       </div>
                     </div>
                     <Badge variant="outline" className="text-[10px] sm:text-xs flex-shrink-0 self-start sm:self-auto">
-                      {po.status}
+                      {PURCHASE_STATUS[po.status] ?? po.status}
                     </Badge>
                   </div>
                 </CardContent>

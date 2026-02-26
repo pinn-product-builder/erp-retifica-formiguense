@@ -61,13 +61,13 @@ export function validateCNPJ(cnpj: string): boolean {
 
 // ─── Schema Zod ──────────────────────────────────────────────────────────────
 const addressSchema = z.object({
-  street:       z.string().min(3, 'Endereço é obrigatório'),
-  number:       z.string().min(1, 'Número é obrigatório'),
+  street:       z.string().optional(),
+  number:       z.string().optional(),
   complement:   z.string().optional(),
-  neighborhood: z.string().min(2, 'Bairro é obrigatório'),
-  city:         z.string().min(2, 'Cidade é obrigatória'),
-  state:        z.string().length(2, 'UF deve ter 2 caracteres'),
-  postal_code:  z.string().regex(/^\d{5}-?\d{3}$/, 'CEP inválido'),
+  neighborhood: z.string().optional(),
+  city:         z.string().optional(),
+  state:        z.string().max(2).optional(),
+  postal_code:  z.string().optional(),
 }).optional();
 
 export const supplierSchema = z.object({
@@ -80,16 +80,16 @@ export const supplierSchema = z.object({
   state_registration:      z.string().optional(),
   municipal_registration:  z.string().optional(),
   email:                   z.string().email('Email inválido').optional().or(z.literal('')),
-  phone:                   z.string().min(10, 'Telefone inválido').max(15),
+  phone:                   z.string().optional().or(z.literal('')),
   whatsapp:                z.string().optional(),
   website:                 z.string().url('URL inválida').optional().or(z.literal('')),
   contact_person:          z.string().optional(),
   address_jsonb:           addressSchema,
   payment_terms:           z.string().optional(),
-  payment_methods:         z.array(z.string()).min(1, 'Selecione ao menos um método'),
+  payment_methods:         z.array(z.string()).default([]),
   credit_limit:            z.number().min(0).optional(),
   discount_percentage:     z.number().min(0).max(100).optional(),
-  categories:              z.array(z.string()).min(1, 'Selecione ao menos uma categoria'),
+  categories:              z.array(z.string()).default([]),
   delivery_days:           z.number().int().min(0).optional(),
   is_active:               z.boolean().default(true),
   notes:                   z.string().optional(),

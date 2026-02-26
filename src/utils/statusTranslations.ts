@@ -58,11 +58,18 @@ export const WORKFLOW_STATUS: Record<string, string> = {
 // Status de Compras
 export const PURCHASE_STATUS: Record<string, string> = {
   pending: 'Pendente',
+  pending_approval: 'Aguardando Aprovação',
   ordered: 'Pedido',
+  approved: 'Aprovado',
+  sent: 'Enviado',
+  confirmed: 'Confirmado',
+  in_transit: 'Em Trânsito',
+  delivered: 'Entregue',
   received: 'Recebido',
   cancelled: 'Cancelado',
   in_progress: 'Em Andamento',
-  completed: 'Concluído'
+  completed: 'Concluído',
+  draft: 'Rascunho',
 };
 
 // Status de Contas a Pagar/Receber

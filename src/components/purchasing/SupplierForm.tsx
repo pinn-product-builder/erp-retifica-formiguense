@@ -1,6 +1,7 @@
 import React from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,9 +78,22 @@ export function SupplierForm({
   const selectedCategories = watch('categories') ?? [];
   const selectedMethods    = watch('payment_methods') ?? [];
 
-  const handleFormSubmit = async (data: SupplierFormData) => {
+  const handleFormSubmit = async (rawData: SupplierFormData) => {
+    const addr = rawData.address_jsonb;
+    const hasAddress = addr && (addr.street?.trim() || addr.city?.trim() || addr.postal_code?.trim());
+    const data: SupplierFormData = hasAddress
+      ? rawData
+      : { ...rawData, address_jsonb: undefined };
     const result = await onSubmit(data);
     if (result) onSuccess(result);
+  };
+
+  const handleInvalidSubmit = (errs: FieldErrors<SupplierFormData>) => {
+    const messages = Object.values(errs)
+      .map(e => (typeof e?.message === 'string' ? e.message : null))
+      .filter(Boolean);
+    const first = messages[0] ?? 'Verifique os campos obrigatórios';
+    toast.error(first);
   };
 
   const toggleCategory = (value: string) => {
@@ -100,28 +114,37 @@ export function SupplierForm({
 
   const busy = isSubmitting || isLoading;
 
+  const hasGeneralErrors  = !!(errors.trade_name || errors.legal_name || errors.document || errors.email || errors.phone);
+  const hasAddressErrors  = !!(errors.address_jsonb);
+  const hasCommercialErrors = !!(errors.payment_methods || errors.credit_limit || errors.discount_percentage);
+  const hasCategoryErrors = !!(errors.categories);
+
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit, handleInvalidSubmit)} className="space-y-4">
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="grid w-full grid-cols-4 h-auto">
-          <TabsTrigger value="general"   className="flex items-center gap-1 text-xs sm:text-sm py-2">
+          <TabsTrigger value="general" className="relative flex items-center gap-1 text-xs sm:text-sm py-2">
             <Building2 className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Dados Gerais</span>
             <span className="sm:hidden">Geral</span>
+            {hasGeneralErrors && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-destructive" />}
           </TabsTrigger>
-          <TabsTrigger value="address"   className="flex items-center gap-1 text-xs sm:text-sm py-2">
+          <TabsTrigger value="address" className="relative flex items-center gap-1 text-xs sm:text-sm py-2">
             <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Endereço</span>
             <span className="sm:hidden">End.</span>
+            {hasAddressErrors && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-destructive" />}
           </TabsTrigger>
-          <TabsTrigger value="commercial" className="flex items-center gap-1 text-xs sm:text-sm py-2">
+          <TabsTrigger value="commercial" className="relative flex items-center gap-1 text-xs sm:text-sm py-2">
             <CreditCard className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Comercial</span>
             <span className="sm:hidden">Com.</span>
+            {hasCommercialErrors && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-destructive" />}
           </TabsTrigger>
-          <TabsTrigger value="categories" className="flex items-center gap-1 text-xs sm:text-sm py-2">
+          <TabsTrigger value="categories" className="relative flex items-center gap-1 text-xs sm:text-sm py-2">
             <Tag className="w-3 h-3 sm:w-4 sm:h-4" />
             <span>Categorias</span>
+            {hasCategoryErrors && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-destructive" />}
           </TabsTrigger>
         </TabsList>
 
