@@ -50,6 +50,7 @@ const PedidosCompra  = lazy(() => import('@/pages/PedidosCompra'));
 const Condicionais = lazy(() => import('@/pages/Condicionais'));
 const Recebimentos = lazy(() => import('@/pages/Recebimentos'));
 const Contratos = lazy(() => import('@/pages/Contratos'));
+const DashboardCompras = lazy(() => import('@/pages/DashboardCompras'));
 const OrdensServico = lazy(() => import('@/pages/OrdensServico'));
 const GestaoFuncionarios = lazy(() => import('@/pages/GestaoFuncionarios'));
 const GestaoUsuarios = lazy(() => import('@/pages/GestaoUsuarios'));
@@ -84,6 +85,7 @@ function AppContent() {
             <Route path="/estoque" element={<ProfileProtectedRoute><Layout><Estoque /></Layout></ProfileProtectedRoute>} />
             <Route path="/pcp" element={<ProfileProtectedRoute><Layout><PCP /></Layout></ProfileProtectedRoute>} />
             <Route path="/ordens-servico" element={<ProfileProtectedRoute><Layout><OrdensServico /></Layout></ProfileProtectedRoute>} />
+            <Route path="/dashboard-compras" element={<ProfileProtectedRoute><Layout><DashboardCompras /></Layout></ProfileProtectedRoute>} />
             <Route path="/compras" element={<ProfileProtectedRoute><Layout><Compras /></Layout></ProfileProtectedRoute>} />
             <Route path="/relatorios-compras" element={<ProfileProtectedRoute><Layout><RelatoriosCompras /></Layout></ProfileProtectedRoute>} />
             <Route path="/fornecedores" element={<ProfileProtectedRoute><Layout><Fornecedores /></Layout></ProfileProtectedRoute>} />

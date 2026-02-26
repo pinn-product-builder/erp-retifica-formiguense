@@ -32,6 +32,7 @@ import {
   RefreshCw,
   ScrollText,
   BarChart3,
+  LayoutDashboard,
 } from "lucide-react";
 
 import {
@@ -145,6 +146,11 @@ const peopleItems = [
 
 // Estoque & Inventário
 const inventoryItems = [
+  {
+    title: "Dashboard",
+    url: "/dashboard-compras",
+    icon: LayoutDashboard,
+  },
   {
     title: "Estoque/Peças",
     url: "/estoque",
