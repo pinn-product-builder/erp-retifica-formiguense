@@ -1,6 +1,12 @@
-// @ts-nocheck
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -73,6 +79,7 @@ const ReservationManager: React.FC<ReservationManagerProps> = ({
 }) => {
   const {
     reservations,
+    pagination,
     loading,
     fetchReservations,
     reservePartsFromBudget,
@@ -91,38 +98,52 @@ const ReservationManager: React.FC<ReservationManagerProps> = ({
   const [cancelReason, setCancelReason] = useState("");
   const [extensionDays, setExtensionDays] = useState(7);
   const [expiringReservations, setExpiringReservations] = useState<PartReservation[]>([]);
-  const [stats, setStats] = useState<unknown>(null);
+  const [stats, setStats] = useState<{
+    active: number;
+    applied: number;
+    expired: number;
+    totalQuantityReserved: number;
+  } | null>(null);
 
-  // Filtrar reservas
-  const filteredReservations = reservations.filter(reservation => {
-    const matchesSearch = 
-      reservation.part?.part_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reservation.part?.part_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reservation.order?.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reservation.budget?.budget_number?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'todos' || reservation.reservation_status === statusFilter;
-    const matchesOrder = !orderId || reservation.order_id === orderId;
-    const matchesBudget = !budgetId || reservation.budget_id === budgetId;
-    const matchesPart = !partId || reservation.part_id === partId;
+  const buildFilters = useCallback(
+    (status: string) => ({
+      status: status !== 'todos' ? status : undefined,
+      order_id: orderId,
+      budget_id: budgetId,
+      part_id: partId,
+    }),
+    [orderId, budgetId, partId]
+  );
 
-    return matchesSearch && matchesStatus && matchesOrder && matchesBudget && matchesPart;
+  const filteredReservations = reservations.filter((r) => {
+    if (!searchTerm) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      (r.part?.part_name ?? r.part_name ?? '').toLowerCase().includes(q) ||
+      (r.part?.part_code ?? r.part_code ?? '').toLowerCase().includes(q) ||
+      (r.order?.order_number ?? '').toLowerCase().includes(q) ||
+      (r.budget?.budget_number ?? '').toLowerCase().includes(q)
+    );
   });
 
-  // Carregar dados ao montar
+  const handleStatusChange = useCallback(
+    (value: string) => {
+      setStatusFilter(value);
+      fetchReservations(buildFilters(value), 1);
+    },
+    [fetchReservations, buildFilters]
+  );
+
   useEffect(() => {
     const loadData = async () => {
-      await fetchReservations({ order_id: orderId, budget_id: budgetId, part_id: partId });
-      
+      await fetchReservations(buildFilters(statusFilter), 1);
       const [expiring, statistics] = await Promise.all([
         getExpiringReservations(7),
         getReservationStats()
       ]);
-      
       setExpiringReservations(expiring as PartReservation[]);
-      setStats(statistics);
+      setStats(statistics as typeof stats);
     };
-    
     loadData();
   }, [orderId, budgetId, partId]);
 
@@ -322,7 +343,7 @@ const ReservationManager: React.FC<ReservationManagerProps> = ({
             />
           </div>
           
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-48">
               <Filter className="w-4 h-4 mr-2" />
               <SelectValue />
@@ -353,10 +374,15 @@ const ReservationManager: React.FC<ReservationManagerProps> = ({
       {/* Tabela de Reservas */}
       <Card>
         <CardHeader>
-          <CardTitle>Reservas de Peças</CardTitle>
-          <CardDescription>
-            {filteredReservations.length} {filteredReservations.length === 1 ? 'reserva' : 'reservas'} encontrada{filteredReservations.length !== 1 ? 's' : ''}
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+            <CardTitle className="text-base sm:text-lg">Reservas de Peças</CardTitle>
+            {pagination.count > 0 && (
+              <CardDescription>
+                Mostrando {(pagination.page - 1) * pagination.pageSize + 1}–
+                {Math.min(pagination.page * pagination.pageSize, pagination.count)} de {pagination.count}
+              </CardDescription>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -486,6 +512,34 @@ const ReservationManager: React.FC<ReservationManagerProps> = ({
             <p className="text-center text-muted-foreground py-8">
               Nenhuma reserva encontrada.
             </p>
+          )}
+
+          {pagination.totalPages > 1 && (
+            <div className="mt-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => fetchReservations(buildFilters(statusFilter), pagination.page - 1)}
+                      aria-disabled={pagination.page <= 1}
+                      className={pagination.page <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <span className="text-sm px-4 py-2">
+                      Página {pagination.page} de {pagination.totalPages}
+                    </span>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => fetchReservations(buildFilters(statusFilter), pagination.page + 1)}
+                      aria-disabled={pagination.page >= pagination.totalPages}
+                      className={pagination.page >= pagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
         </CardContent>
       </Card>

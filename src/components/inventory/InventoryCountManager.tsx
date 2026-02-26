@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -165,6 +172,7 @@ function CountItemRow({ item, onUpdate, isCompleted, canEdit }: CountItemRowProp
 export default function InventoryCountManager() {
   const {
     counts,
+    pagination: countsPagination,
     currentCount,
     countItems,
     loading,
@@ -351,7 +359,15 @@ export default function InventoryCountManager() {
       {!error && (
         <Card>
           <CardHeader>
-            <CardTitle>Contagens de Inventário</CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+              <CardTitle className="text-base sm:text-lg">Contagens de Inventário</CardTitle>
+              {countsPagination.count > 0 && (
+                <CardDescription>
+                  Mostrando {(countsPagination.page - 1) * countsPagination.pageSize + 1}–
+                  {Math.min(countsPagination.page * countsPagination.pageSize, countsPagination.count)} de {countsPagination.count}
+                </CardDescription>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {loading && !counts.length ? (
@@ -429,6 +445,34 @@ export default function InventoryCountManager() {
                 );
               })}
             </div>
+            )}
+
+            {countsPagination.totalPages > 1 && (
+              <div className="mt-4">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => fetchCounts(undefined, countsPagination.page - 1)}
+                        aria-disabled={countsPagination.page <= 1}
+                        className={countsPagination.page <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    <PaginationItem>
+                      <span className="text-sm px-4 py-2">
+                        Página {countsPagination.page} de {countsPagination.totalPages}
+                      </span>
+                    </PaginationItem>
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => fetchCounts(undefined, countsPagination.page + 1)}
+                        aria-disabled={countsPagination.page >= countsPagination.totalPages}
+                        className={countsPagination.page >= countsPagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
             )}
           </CardContent>
         </Card>

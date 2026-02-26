@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -91,7 +98,7 @@ const DEFAULT_FORM: MovementFormData = {
 };
 
 export default function MovementManager() {
-  const { movements, loading, fetchMovements, createMovement, fetchStockAlerts } = useInventoryMovements();
+  const { movements, pagination, loading, fetchMovements, createMovement, fetchStockAlerts } = useInventoryMovements();
   const { parts, fetchParts } = usePartsInventory();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -464,7 +471,15 @@ export default function MovementManager() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base sm:text-lg">Movimentações Recentes</CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+            <CardTitle className="text-base sm:text-lg">Movimentações de Estoque</CardTitle>
+            {pagination.count > 0 && (
+              <CardDescription>
+                Mostrando {(pagination.page - 1) * pagination.pageSize + 1}–
+                {Math.min(pagination.page * pagination.pageSize, pagination.count)} de {pagination.count}
+              </CardDescription>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-2 sm:space-y-3">
@@ -475,7 +490,7 @@ export default function MovementManager() {
                 <p className="text-sm text-muted-foreground">Crie sua primeira movimentação de estoque</p>
               </div>
             ) : (
-              movements.slice(0, 10).map((movement: InventoryMovement) => {
+              movements.map((movement: InventoryMovement) => {
                 const approvalStatus = (movement.approval_status ?? 'approved') as string;
                 const StatusIcon = STATUS_ICONS[approvalStatus] ?? Clock;
                 const movementTypeCfg = MOVEMENT_TYPES.find((t) => t.value === movement.movement_type);
@@ -521,6 +536,34 @@ export default function MovementManager() {
               })
             )}
           </div>
+
+          {pagination.totalPages > 1 && (
+            <div className="mt-4">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => fetchMovements(undefined, pagination.page - 1)}
+                      aria-disabled={pagination.page <= 1}
+                      className={pagination.page <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <span className="text-sm px-4 py-2">
+                      Página {pagination.page} de {pagination.totalPages}
+                    </span>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => fetchMovements(undefined, pagination.page + 1)}
+                      aria-disabled={pagination.page >= pagination.totalPages}
+                      className={pagination.page >= pagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
