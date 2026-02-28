@@ -177,6 +177,19 @@ export function usePartsInventory() {
     [currentOrganization?.id]
   );
 
+  const getPartsForSelection = useCallback(
+    async (search?: string): Promise<PartInventory[]> => {
+      if (!currentOrganization?.id) return [];
+      try {
+        const data = await inventoryService.getAllParts(currentOrganization.id, search ? { search } : undefined);
+        return data as PartInventory[];
+      } catch {
+        return [];
+      }
+    },
+    [currentOrganization?.id]
+  );
+
   useEffect(() => {
     if (currentOrganization?.id) {
       fetchParts();
@@ -194,5 +207,6 @@ export function usePartsInventory() {
     updateQuantity,
     clonePart,
     getAvailableParts,
+    getPartsForSelection,
   };
 }

@@ -1,0 +1,360 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import {
+  TrendingUp,
+  Layers,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Clock,
+} from 'lucide-react';
+import { useCostMethod } from '@/hooks/useCostMethod';
+import {
+  COST_METHOD_LABELS,
+  type CostMethod,
+  type CostMethodChange,
+  type CostLayer,
+} from '@/services/CostMethodService';
+import { StatCard } from '@/components/StatCard';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { useAuth } from '@/hooks/useAuth';
+
+const formatCurrency = (v: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
+function CostMethodBadge({ method }: { method: CostMethod }) {
+  const colors: Record<CostMethod, string> = {
+    moving_avg: 'bg-blue-100 text-blue-800',
+    fifo: 'bg-purple-100 text-purple-800',
+    specific_id: 'bg-teal-100 text-teal-800',
+  };
+  return (
+    <Badge className={`${colors[method]} text-xs`}>{COST_METHOD_LABELS[method]}</Badge>
+  );
+}
+
+function CostLayerRow({ layer, index }: { layer: CostLayer; index: number }) {
+  const formatDate = (d: string) => new Date(d).toLocaleDateString('pt-BR');
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-2 sm:p-3 border rounded-lg text-xs sm:text-sm hover:bg-muted/30">
+      <div className="flex items-center gap-1">
+        <span className="text-muted-foreground">#{index + 1}</span>
+        <span>{formatDate(layer.entry_date)}</span>
+      </div>
+      <div>
+        <span className="text-muted-foreground sm:hidden">Orig.: </span>
+        {layer.quantity_original} un
+      </div>
+      <div>
+        <span className="text-muted-foreground sm:hidden">Rest.: </span>
+        <span className={layer.quantity_remaining === 0 ? 'text-muted-foreground line-through' : 'font-medium'}>
+          {layer.quantity_remaining} un
+        </span>
+      </div>
+      <div>
+        <span className="text-muted-foreground sm:hidden">C.Unit.: </span>
+        {formatCurrency(layer.unit_cost)}
+      </div>
+      <div className="font-medium">
+        <span className="text-muted-foreground sm:hidden">Total: </span>
+        {formatCurrency(layer.total_cost)}
+      </div>
+    </div>
+  );
+}
+
+function PendingChangeCard({
+  change,
+  onApprove,
+  onReject,
+}: {
+  change: CostMethodChange;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+}) {
+  const formatDate = (d: string) => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <Card className="border-l-4 border-l-yellow-400">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="space-y-2 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Clock className="w-3.5 h-3.5 text-yellow-600" />
+              <span className="text-xs sm:text-sm font-medium">Solicitação de Alteração</span>
+              <Badge className="bg-yellow-100 text-yellow-800 text-xs">Pendente</Badge>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <CostMethodBadge method={change.old_method as CostMethod} />
+              <span className="text-muted-foreground">→</span>
+              <CostMethodBadge method={change.new_method as CostMethod} />
+            </div>
+            <p className="text-xs text-muted-foreground italic">"{change.justification}"</p>
+            <p className="text-xs text-muted-foreground">{formatDate(change.created_at)}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" className="h-7 gap-1 text-xs bg-green-600 hover:bg-green-700" onClick={() => onApprove(change.id)}>
+              <CheckCircle className="w-3 h-3" />
+              Aprovar
+            </Button>
+            <Button size="sm" variant="destructive" className="h-7 gap-1 text-xs" onClick={() => onReject(change.id)}>
+              <XCircle className="w-3 h-3" />
+              Rejeitar
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function CostMethodManager() {
+  const { layers, pagination, pendingChanges, summary, loading, fetchLayers, approveMethodChange, rejectMethodChange, requestMethodChange } =
+    useCostMethod();
+
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<CostMethod>('moving_avg');
+  const [justification, setJustification] = useState('');
+  const [partIdInput, setPartIdInput] = useState('');
+  const { currentOrganization } = useOrganization();
+  const { user } = useAuth();
+
+  const handleApprove = async (changeId: string) => {
+    if (!user?.id) return;
+    await approveMethodChange(changeId, user.id);
+  };
+
+  const handleReject = async (changeId: string) => {
+    if (!user?.id) return;
+    await rejectMethodChange(changeId, user.id);
+  };
+
+  const handleRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id || !partIdInput) return;
+    const success = await requestMethodChange(
+      partIdInput, 'moving_avg', selectedMethod, justification, user.id
+    );
+    if (success) {
+      setIsRequestDialogOpen(false);
+      setJustification('');
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {summary && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          <StatCard title="Camadas FIFO" value={summary.total_layers} icon={Layers} subtitle="Camadas ativas" />
+          <StatCard title="Qtd. Total" value={summary.total_quantity} icon={TrendingUp} subtitle="Em camadas" />
+          <StatCard title="Custo Total" value={formatCurrency(summary.total_cost)} icon={TrendingUp} subtitle="Valor em estoque" />
+          <StatCard title="Custo Médio" value={formatCurrency(summary.avg_cost)} icon={TrendingUp} subtitle="Por unidade" />
+        </div>
+      )}
+
+      <Tabs defaultValue="layers" className="space-y-4">
+        <TabsList className="w-full grid grid-cols-2 h-9">
+          <TabsTrigger value="layers" className="text-xs sm:text-sm">
+            <Layers className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+            Camadas de Custo
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="text-xs sm:text-sm">
+            <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+            Aprovações
+            {pendingChanges.length > 0 && (
+              <Badge className="ml-1.5 bg-yellow-500 text-white text-xs px-1.5 py-0 h-4">{pendingChanges.length}</Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="layers" className="space-y-4">
+          <Card>
+            <CardHeader className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base sm:text-lg">Camadas de Custo (FIFO)</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm mt-0.5">
+                    Camadas de custo por ordem de entrada — método PEPS
+                  </CardDescription>
+                </div>
+                <Button size="sm" className="gap-1.5 self-start" onClick={() => setIsRequestDialogOpen(true)}>
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Solicitar Alteração de Método</span>
+                  <span className="sm:hidden">Solicitar</span>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-3 sm:p-4 pt-0">
+              {summary && summary.next_layer_cost !== null && (
+                <div className="mb-3 p-2.5 rounded-lg bg-blue-50 border border-blue-200 text-xs sm:text-sm text-blue-800">
+                  Próxima saída consumirá a camada mais antiga ao custo de{' '}
+                  <strong>{formatCurrency(summary.next_layer_cost)}/un</strong>
+                </div>
+              )}
+
+              <div className="hidden sm:grid sm:grid-cols-5 gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground border-b mb-2">
+                <span>Data Entrada</span>
+                <span>Qtd. Original</span>
+                <span>Qtd. Restante</span>
+                <span>Custo Unit.</span>
+                <span>Total</span>
+              </div>
+
+              {loading ? (
+                <p className="text-center text-sm text-muted-foreground py-8">Carregando camadas...</p>
+              ) : layers.length === 0 ? (
+                <div className="flex flex-col items-center py-10 gap-2">
+                  <Layers className="w-8 h-8 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma camada de custo. Selecione uma peça com método FIFO para ver as camadas.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {layers.map((layer, i) => (
+                    <CostLayerRow key={layer.id} layer={layer} index={i} />
+                  ))}
+                </div>
+              )}
+
+              {pagination.totalPages > 1 && (
+                <Pagination className="mt-3">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => layers.length > 0 && fetchLayers(layers[0].part_id, pagination.page - 1)}
+                        aria-disabled={pagination.page <= 1}
+                        className={pagination.page <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    <PaginationItem>
+                      <span className="text-xs px-3 py-2">Página {pagination.page} de {pagination.totalPages}</span>
+                    </PaginationItem>
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => layers.length > 0 && fetchLayers(layers[0].part_id, pagination.page + 1)}
+                        aria-disabled={pagination.page >= pagination.totalPages}
+                        className={pagination.page >= pagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pending" className="space-y-4">
+          <Card>
+            <CardHeader className="p-3 sm:p-4">
+              <CardTitle className="text-base sm:text-lg">Solicitações Pendentes</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                Aprovações de alteração de método de custeio
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-3 sm:p-4 pt-0">
+              {pendingChanges.length === 0 ? (
+                <div className="flex flex-col items-center py-10 gap-2">
+                  <CheckCircle className="w-8 h-8 text-green-500" />
+                  <p className="text-sm text-muted-foreground">Nenhuma solicitação pendente</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {pendingChanges.map((change) => (
+                    <PendingChangeCard
+                      key={change.id}
+                      change={change}
+                      onApprove={handleApprove}
+                      onReject={handleReject}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Solicitar Alteração de Método</DialogTitle>
+            <DialogDescription>
+              A alteração requer aprovação gerencial e será registrada em auditoria
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleRequestSubmit} className="space-y-4">
+            <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-xs text-yellow-800 space-y-1">
+              <p className="font-medium">Atenção:</p>
+              <ul className="list-disc list-inside space-y-0.5">
+                <li>Requer aprovação gerencial</li>
+                <li>Será registrada em log de auditoria</li>
+                <li>Afetará o CMV a partir da data de alteração</li>
+                <li>Não altera o histórico retroativamente</li>
+              </ul>
+            </div>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm">Novo Método *</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(Object.keys(COST_METHOD_LABELS) as CostMethod[]).map((method) => (
+                    <button
+                      key={method}
+                      type="button"
+                      className={`p-2.5 rounded-lg border text-xs text-center transition-all ${
+                        selectedMethod === method
+                          ? 'border-primary bg-primary/10 text-primary font-medium'
+                          : 'border-border hover:bg-muted/50'
+                      }`}
+                      onClick={() => setSelectedMethod(method)}
+                    >
+                      {COST_METHOD_LABELS[method]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm">Justificativa *</Label>
+                <Textarea
+                  value={justification}
+                  onChange={(e) => setJustification(e.target.value)}
+                  placeholder="Descreva o motivo da alteração..."
+                  required
+                  className="text-sm resize-none"
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setIsRequestDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" size="sm" disabled={!justification.trim()}>
+                Solicitar Alteração
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

@@ -44,6 +44,9 @@ import {
   LayoutDashboard,
   Bell,
   Settings,
+  Warehouse,
+  Layers,
+  Calculator,
 } from 'lucide-react';
 import { StatCard } from '@/components/StatCard';
 import { usePartsInventory, type PartInventory } from '@/hooks/usePartsInventory';
@@ -56,6 +59,10 @@ import PartsSeparationManager from '@/components/inventory/PartsSeparationManage
 import { InventoryDashboard } from '@/components/inventory/InventoryDashboard';
 import StockAlertsManager from '@/components/inventory/StockAlertsManager';
 import StockConfigManager from '@/components/inventory/StockConfigManager';
+import WarehousesManager from '@/components/inventory/WarehousesManager';
+import BatchesManager from '@/components/inventory/BatchesManager';
+import CostMethodManager from '@/components/inventory/CostMethodManager';
+import AccountingManager from '@/components/inventory/AccountingManager';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
 
 const formatCurrency = (value: number): string =>
@@ -234,7 +241,7 @@ const Estoque = () => {
         onValueChange={handleTabChange}
         className="space-y-4"
       >
-        <TabsList className="w-full overflow-x-auto flex sm:grid sm:grid-cols-4 md:grid-cols-8 h-auto">
+        <TabsList className="w-full overflow-x-auto flex h-auto">
           {[
             { value: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', short: 'Dash' },
             { value: 'inventory', icon: Package, label: 'Inventário', short: 'Inv.' },
@@ -244,6 +251,10 @@ const Estoque = () => {
             { value: 'counts', icon: CheckCircle, label: 'Inv. Físico', short: 'Fís.' },
             { value: 'alerts', icon: Bell, label: 'Alertas', short: 'Alert.' },
             { value: 'config', icon: Settings, label: 'Configurações', short: 'Config.' },
+            { value: 'warehouses', icon: Warehouse, label: 'Depósitos', short: 'Dep.' },
+            { value: 'batches', icon: Layers, label: 'Lotes', short: 'Lotes' },
+            { value: 'cost', icon: Calculator, label: 'Custeio', short: 'Cust.' },
+            { value: 'accounting', icon: BookOpen, label: 'Contábil', short: 'Cont.' },
           ].map(({ value, icon: Icon, label, short }) => (
             <TabsTrigger
               key={value}
@@ -540,6 +551,22 @@ const Estoque = () => {
 
         <TabsContent value="config" className="space-y-4">
           <StockConfigManager />
+        </TabsContent>
+
+        <TabsContent value="warehouses" className="space-y-4">
+          <WarehousesManager />
+        </TabsContent>
+
+        <TabsContent value="batches" className="space-y-4">
+          <BatchesManager />
+        </TabsContent>
+
+        <TabsContent value="cost" className="space-y-4">
+          <CostMethodManager />
+        </TabsContent>
+
+        <TabsContent value="accounting" className="space-y-4">
+          <AccountingManager />
         </TabsContent>
       </Tabs>
 
