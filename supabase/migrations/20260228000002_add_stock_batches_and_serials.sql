@@ -52,25 +52,25 @@ alter table stock_batches enable row level security;
 alter table stock_serials enable row level security;
 
 create policy "stock_batches_org_select" on stock_batches
-  for select using (org_id = (select org_id from profiles where id = auth.uid()));
+  for select using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "stock_batches_org_insert" on stock_batches
-  for insert with check (org_id = (select org_id from profiles where id = auth.uid()));
+  for insert with check (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "stock_batches_org_update" on stock_batches
-  for update using (org_id = (select org_id from profiles where id = auth.uid()));
+  for update using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "stock_batches_org_delete" on stock_batches
-  for delete using (org_id = (select org_id from profiles where id = auth.uid()));
+  for delete using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "stock_serials_org_select" on stock_serials
-  for select using (org_id = (select org_id from profiles where id = auth.uid()));
+  for select using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "stock_serials_org_insert" on stock_serials
-  for insert with check (org_id = (select org_id from profiles where id = auth.uid()));
+  for insert with check (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "stock_serials_org_update" on stock_serials
-  for update using (org_id = (select org_id from profiles where id = auth.uid()));
+  for update using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "stock_serials_org_delete" on stock_serials
-  for delete using (org_id = (select org_id from profiles where id = auth.uid()));
+  for delete using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));

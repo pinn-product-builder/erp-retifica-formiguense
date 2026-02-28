@@ -38,41 +38,41 @@ alter table warehouses enable row level security;
 alter table warehouse_locations enable row level security;
 
 create policy "warehouses_org_select" on warehouses
-  for select using (org_id = (select org_id from profiles where id = auth.uid()));
+  for select using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "warehouses_org_insert" on warehouses
-  for insert with check (org_id = (select org_id from profiles where id = auth.uid()));
+  for insert with check (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "warehouses_org_update" on warehouses
-  for update using (org_id = (select org_id from profiles where id = auth.uid()));
+  for update using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "warehouses_org_delete" on warehouses
-  for delete using (org_id = (select org_id from profiles where id = auth.uid()));
+  for delete using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "warehouse_locations_org_select" on warehouse_locations
   for select using (
     warehouse_id in (
-      select id from warehouses where org_id = (select org_id from profiles where id = auth.uid())
+      select id from warehouses where org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1)
     )
   );
 
 create policy "warehouse_locations_org_insert" on warehouse_locations
   for insert with check (
     warehouse_id in (
-      select id from warehouses where org_id = (select org_id from profiles where id = auth.uid())
+      select id from warehouses where org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1)
     )
   );
 
 create policy "warehouse_locations_org_update" on warehouse_locations
   for update using (
     warehouse_id in (
-      select id from warehouses where org_id = (select org_id from profiles where id = auth.uid())
+      select id from warehouses where org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1)
     )
   );
 
 create policy "warehouse_locations_org_delete" on warehouse_locations
   for delete using (
     warehouse_id in (
-      select id from warehouses where org_id = (select org_id from profiles where id = auth.uid())
+      select id from warehouses where org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1)
     )
   );

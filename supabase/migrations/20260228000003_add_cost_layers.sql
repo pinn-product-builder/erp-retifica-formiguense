@@ -48,28 +48,28 @@ alter table cost_details enable row level security;
 alter table cost_method_changes enable row level security;
 
 create policy "cost_layers_org_select" on cost_layers
-  for select using (org_id = (select org_id from profiles where id = auth.uid()));
+  for select using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "cost_layers_org_insert" on cost_layers
-  for insert with check (org_id = (select org_id from profiles where id = auth.uid()));
+  for insert with check (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "cost_layers_org_update" on cost_layers
-  for update using (org_id = (select org_id from profiles where id = auth.uid()));
+  for update using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "cost_method_changes_org_select" on cost_method_changes
-  for select using (org_id = (select org_id from profiles where id = auth.uid()));
+  for select using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "cost_method_changes_org_insert" on cost_method_changes
-  for insert with check (org_id = (select org_id from profiles where id = auth.uid()));
+  for insert with check (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "cost_method_changes_org_update" on cost_method_changes
-  for update using (org_id = (select org_id from profiles where id = auth.uid()));
+  for update using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "cost_details_movement_select" on cost_details
   for select using (
     movement_id in (
       select id from inventory_movements
-      where org_id = (select org_id from profiles where id = auth.uid())
+      where org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1)
     )
   );
 
@@ -77,6 +77,6 @@ create policy "cost_details_movement_insert" on cost_details
   for insert with check (
     movement_id in (
       select id from inventory_movements
-      where org_id = (select org_id from profiles where id = auth.uid())
+      where org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1)
     )
   );

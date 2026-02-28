@@ -241,32 +241,48 @@ const Estoque = () => {
         onValueChange={handleTabChange}
         className="space-y-4"
       >
-        <TabsList className="w-full overflow-x-auto flex h-auto">
-          {[
-            { value: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', short: 'Dash' },
-            { value: 'inventory', icon: Package, label: 'Inventário', short: 'Inv.' },
-            { value: 'movements', icon: TrendingUp, label: 'Movimentações', short: 'Mov.' },
-            { value: 'reservations', icon: BookOpen, label: 'Reservas', short: 'Res.' },
-            { value: 'separation', icon: Archive, label: 'Separação', short: 'Sep.' },
-            { value: 'counts', icon: CheckCircle, label: 'Inv. Físico', short: 'Fís.' },
-            { value: 'alerts', icon: Bell, label: 'Alertas', short: 'Alert.' },
-            { value: 'config', icon: Settings, label: 'Configurações', short: 'Config.' },
-            { value: 'warehouses', icon: Warehouse, label: 'Depósitos', short: 'Dep.' },
-            { value: 'batches', icon: Layers, label: 'Lotes', short: 'Lotes' },
-            { value: 'cost', icon: Calculator, label: 'Custeio', short: 'Cust.' },
-            { value: 'accounting', icon: BookOpen, label: 'Contábil', short: 'Cont.' },
-          ].map(({ value, icon: Icon, label, short }) => (
-            <TabsTrigger
-              key={value}
-              value={value}
-              className="flex items-center gap-1 sm:gap-2 flex-shrink-0 text-xs sm:text-sm px-2 sm:px-3"
-            >
-              <Icon className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="hidden md:inline">{label}</span>
-              <span className="inline md:hidden">{short}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="space-y-1">
+          <TabsList className="w-full grid grid-cols-6 h-auto">
+            {[
+              { value: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', short: 'Dash' },
+              { value: 'inventory', icon: Package, label: 'Inventário', short: 'Inv.' },
+              { value: 'movements', icon: TrendingUp, label: 'Movimentações', short: 'Mov.' },
+              { value: 'reservations', icon: BookOpen, label: 'Reservas', short: 'Res.' },
+              { value: 'separation', icon: Archive, label: 'Separação', short: 'Sep.' },
+              { value: 'counts', icon: CheckCircle, label: 'Inv. Físico', short: 'Fís.' },
+            ].map(({ value, icon: Icon, label, short }) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                className="flex items-center justify-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-1 sm:px-2 py-1.5"
+              >
+                <Icon className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="hidden sm:inline truncate">{label}</span>
+                <span className="sm:hidden">{short}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          <TabsList className="w-full grid grid-cols-6 h-auto">
+            {[
+              { value: 'alerts', icon: Bell, label: 'Alertas', short: 'Alert.' },
+              { value: 'config', icon: Settings, label: 'Configurações', short: 'Config.' },
+              { value: 'warehouses', icon: Warehouse, label: 'Depósitos', short: 'Dep.' },
+              { value: 'batches', icon: Layers, label: 'Lotes', short: 'Lotes' },
+              { value: 'cost', icon: Calculator, label: 'Custeio', short: 'Cust.' },
+              { value: 'accounting', icon: BookOpen, label: 'Contábil', short: 'Cont.' },
+            ].map(({ value, icon: Icon, label, short }) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                className="flex items-center justify-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-1 sm:px-2 py-1.5"
+              >
+                <Icon className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="hidden sm:inline truncate">{label}</span>
+                <span className="sm:hidden">{short}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
         <TabsContent value="dashboard" className="space-y-4">
           <InventoryDashboard />

@@ -61,25 +61,25 @@ alter table stock_accounting_entries enable row level security;
 alter table stock_provisions enable row level security;
 
 create policy "stock_accounting_config_org_select" on stock_accounting_config
-  for select using (org_id = (select org_id from profiles where id = auth.uid()));
+  for select using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "stock_accounting_config_org_all" on stock_accounting_config
-  for all using (org_id = (select org_id from profiles where id = auth.uid()));
+  for all using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "stock_accounting_entries_org_select" on stock_accounting_entries
-  for select using (org_id = (select org_id from profiles where id = auth.uid()));
+  for select using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "stock_accounting_entries_org_insert" on stock_accounting_entries
-  for insert with check (org_id = (select org_id from profiles where id = auth.uid()));
+  for insert with check (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "stock_accounting_entries_org_update" on stock_accounting_entries
-  for update using (org_id = (select org_id from profiles where id = auth.uid()));
+  for update using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "stock_provisions_org_select" on stock_provisions
-  for select using (org_id = (select org_id from profiles where id = auth.uid()));
+  for select using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "stock_provisions_org_insert" on stock_provisions
-  for insert with check (org_id = (select org_id from profiles where id = auth.uid()));
+  for insert with check (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
 
 create policy "stock_provisions_org_update" on stock_provisions
-  for update using (org_id = (select org_id from profiles where id = auth.uid()));
+  for update using (org_id = (select organization_id from organization_users where user_id = auth.uid() and is_active = true limit 1));
