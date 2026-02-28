@@ -11,8 +11,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Loader2 } from 'lucide-react';
-import { ContractRow } from '@/services/ContractService';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Loader2, Trash2 } from 'lucide-react';
+import { ContractRow, ContractItem } from '@/services/ContractService';
+import { ContractItemPartSelect } from './ContractItemPartSelect';
+
+interface ContractItemForm {
+  part_code: string;
+  part_name: string;
+  agreed_price: string;
+  min_quantity: string;
+  max_quantity: string;
+}
 
 interface EditContractModalProps {
   open: boolean;
@@ -26,6 +43,7 @@ interface EditContractModalProps {
     renewal_notice_days: number;
     auto_renew: boolean;
     notes?: string | null;
+    items?: Array<{ part_code?: string; part_name: string; agreed_price: number; min_quantity?: number; max_quantity?: number }>;
   }) => Promise<boolean>;
 }
 
@@ -39,6 +57,7 @@ export function EditContractModal({ open, onOpenChange, contract, onSave }: Edit
     auto_renew: false,
     notes: '',
   });
+  const [items, setItems] = useState<ContractItemForm[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -52,12 +71,53 @@ export function EditContractModal({ open, onOpenChange, contract, onSave }: Edit
         auto_renew: contract.auto_renew,
         notes: contract.notes ?? '',
       });
+      setItems(
+        (contract.items ?? []).map((i: ContractItem) => ({
+          part_code: i.part_code ?? '',
+          part_name: i.part_name,
+          agreed_price: String(i.agreed_price ?? 0),
+          min_quantity: i.min_quantity != null ? String(i.min_quantity) : '',
+          max_quantity: i.max_quantity != null ? String(i.max_quantity) : '',
+        }))
+      );
     }
   }, [contract]);
+
+  const addItemFromPart = (part: { part_code: string; part_name: string; agreed_price: number }) => {
+    setItems((prev) => [
+      ...prev,
+      {
+        part_code: part.part_code,
+        part_name: part.part_name,
+        agreed_price: String(part.agreed_price),
+        min_quantity: '',
+        max_quantity: '',
+      },
+    ]);
+  };
+
+  const updateItem = (index: number, field: keyof ContractItemForm, value: string) => {
+    setItems((prev) =>
+      prev.map((it, i) => (i === index ? { ...it, [field]: value } : it))
+    );
+  };
+
+  const removeItem = (index: number) => {
+    setItems((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async () => {
     if (!contract) return;
     setIsSubmitting(true);
+    const itemsPayload = items
+      .filter((i) => i.part_name.trim() && !Number.isNaN(parseFloat(i.agreed_price)))
+      .map((i) => ({
+        part_code: i.part_code.trim() || undefined,
+        part_name: i.part_name.trim(),
+        agreed_price: parseFloat(i.agreed_price),
+        min_quantity: i.min_quantity ? parseFloat(i.min_quantity) : undefined,
+        max_quantity: i.max_quantity ? parseFloat(i.max_quantity) : undefined,
+      }));
     const ok = await onSave(contract.id, {
       start_date: form.start_date,
       end_date: form.end_date,
@@ -66,6 +126,7 @@ export function EditContractModal({ open, onOpenChange, contract, onSave }: Edit
       renewal_notice_days: parseInt(form.renewal_notice_days),
       auto_renew: form.auto_renew,
       notes: form.notes || null,
+      items: itemsPayload,
     });
     setIsSubmitting(false);
     if (ok) onOpenChange(false);
@@ -154,6 +215,65 @@ export function EditContractModal({ open, onOpenChange, contract, onSave }: Edit
               checked={form.auto_renew}
               onCheckedChange={(checked) => setForm({ ...form, auto_renew: checked })}
             />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <Label>Itens do Contrato</Label>
+              <ContractItemPartSelect
+                onSelect={addItemFromPart}
+                excludePartCodes={items.map((i) => i.part_code).filter(Boolean)}
+                className="sm:w-64"
+              />
+            </div>
+            {items.length > 0 ? (
+              <div className="rounded-md border overflow-x-auto max-h-48 overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Código</TableHead>
+                      <TableHead className="text-xs">Descrição</TableHead>
+                      <TableHead className="text-xs text-right">Preço Acordado</TableHead>
+                      <TableHead className="text-xs w-10"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((item, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell className="p-2 text-xs">{item.part_code || '—'}</TableCell>
+                        <TableCell className="p-2 text-xs">{item.part_name}</TableCell>
+                        <TableCell className="p-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min={0}
+                            value={item.agreed_price}
+                            onChange={(e) => updateItem(idx, 'agreed_price', e.target.value)}
+                            placeholder="0"
+                            className="h-7 text-xs text-right"
+                          />
+                        </TableCell>
+                        <TableCell className="p-2 w-10">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive"
+                            onClick={() => removeItem(idx)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground py-2">
+                Nenhum item. Selecione peças do estoque para adicionar ao contrato.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

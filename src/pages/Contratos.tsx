@@ -56,6 +56,7 @@ import {
 } from '@/services/ContractService';
 import { EditContractModal } from '@/components/purchasing/contracts/EditContractModal';
 import { RenewContractModal } from '@/components/purchasing/contracts/RenewContractModal';
+import { ContractItemPartSelect } from '@/components/purchasing/contracts/ContractItemPartSelect';
 import {
   Table,
   TableBody,
@@ -92,6 +93,7 @@ export default function Contratos() {
     updateContract,
     renewContract,
     cancelContract,
+    activateContract,
   } = useContracts({
     page: currentPage,
     pageSize: ITEMS_PER_PAGE,
@@ -111,9 +113,17 @@ export default function Contratos() {
     auto_renew: false,
     notes: '',
   });
+  const [newFormItems, setNewFormItems] = useState<Array<{ part_code: string; part_name: string; agreed_price: string }>>([]);
 
   const handleCreateContract = async () => {
     if (!newForm.supplier_id || !newForm.start_date || !newForm.end_date) return;
+    const itemsPayload = newFormItems
+      .filter((i) => i.part_name.trim() && !Number.isNaN(parseFloat(i.agreed_price)))
+      .map((i) => ({
+        part_code: i.part_code.trim() || undefined,
+        part_name: i.part_name.trim(),
+        agreed_price: parseFloat(i.agreed_price),
+      }));
     const ok = await createContract({
       supplier_id: newForm.supplier_id,
       start_date: newForm.start_date,
@@ -123,10 +133,12 @@ export default function Contratos() {
       renewal_notice_days: parseInt(newForm.renewal_notice_days),
       auto_renew: newForm.auto_renew,
       notes: newForm.notes || null,
+      items: itemsPayload,
     });
     if (ok) {
       setNewModalOpen(false);
       setNewForm({ supplier_id: '', start_date: '', end_date: '', payment_days: '30', discount_percentage: '', renewal_notice_days: '30', auto_renew: false, notes: '' });
+      setNewFormItems([]);
     }
   };
 
@@ -146,6 +158,14 @@ export default function Contratos() {
     await cancelContract(contractId);
     setDetailsOpen(false);
     setSelectedContract(null);
+  };
+
+  const handleActivate = async (contract: ContractRow) => {
+    const ok = await activateContract(contract.id);
+    if (ok) {
+      setDetailsOpen(false);
+      setSelectedContract(null);
+    }
   };
 
   const handleView = (contract: ContractRow) => {
@@ -350,6 +370,12 @@ export default function Contratos() {
                                     <Edit className="h-4 w-4 mr-2" />
                                     Editar
                                   </DropdownMenuItem>
+                                  {contract.status === 'draft' && (
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleActivate(contract); }}>
+                                      <CheckCircle className="h-4 w-4 mr-2" />
+                                      Ativar
+                                    </DropdownMenuItem>
+                                  )}
                                   {['expiring', 'expired'].includes(contract.status) && (
                                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRenew(contract); }}>
                                       <RefreshCw className="h-4 w-4 mr-2" />
@@ -534,6 +560,12 @@ export default function Contratos() {
                     <Edit className="h-3.5 w-3.5 mr-1.5" />
                     Editar
                   </Button>
+                  {selectedContract.status === 'draft' && (
+                    <Button size="sm" onClick={() => handleActivate(selectedContract)} disabled={isSaving}>
+                      {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
+                      Ativar
+                    </Button>
+                  )}
                   {['expiring', 'expired'].includes(selectedContract.status) && (
                     <Button size="sm" onClick={() => handleRenew(selectedContract)}>
                       <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
@@ -609,6 +641,53 @@ export default function Contratos() {
                 <p className="text-xs text-muted-foreground">Renovar ao expirar</p>
               </div>
               <Switch checked={newForm.auto_renew} onCheckedChange={(v) => setNewForm({ ...newForm, auto_renew: v })} />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Itens (opcional na criação, obrigatório para ativar)</Label>
+              <ContractItemPartSelect
+                onSelect={(part) =>
+                  setNewFormItems((prev) => [
+                    ...prev,
+                    { part_code: part.part_code, part_name: part.part_name, agreed_price: String(part.agreed_price) },
+                  ])
+                }
+                excludePartCodes={newFormItems.map((i) => i.part_code).filter(Boolean)}
+                className="w-full"
+              />
+              {newFormItems.length > 0 && (
+                <div className="space-y-2 mt-2">
+                  {newFormItems.map((item, idx) => (
+                    <div key={idx} className="flex gap-2 items-center p-2 rounded-md border bg-muted/30">
+                      <div className="flex-1 min-w-0 text-sm truncate">
+                        {item.part_code ? `${item.part_code} - ` : ''}{item.part_name}
+                      </div>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        placeholder="Preço"
+                        value={item.agreed_price}
+                        onChange={(e) =>
+                          setNewFormItems((prev) =>
+                            prev.map((it, i) => (i === idx ? { ...it, agreed_price: e.target.value } : it))
+                          )
+                        }
+                        className="w-24 h-8 text-sm"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive shrink-0"
+                        onClick={() => setNewFormItems((prev) => prev.filter((_, i) => i !== idx))}
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

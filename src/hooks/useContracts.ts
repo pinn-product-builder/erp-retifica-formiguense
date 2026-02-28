@@ -72,7 +72,12 @@ export function useContracts(opts: UseContractsOptions = {}) {
     }
   };
 
-  const updateContract = async (contractId: string, payload: Partial<ContractFormData>): Promise<boolean> => {
+  const updateContract = async (
+    contractId: string,
+    payload: Partial<ContractFormData> & {
+      items?: Array<{ part_code?: string; part_name: string; agreed_price: number; min_quantity?: number; max_quantity?: number }>;
+    }
+  ): Promise<boolean> => {
     setIsSaving(true);
     try {
       await ContractService.update(contractId, payload);
@@ -130,6 +135,33 @@ export function useContracts(opts: UseContractsOptions = {}) {
     }
   };
 
+  const activateContract = async (contractId: string): Promise<boolean> => {
+    setIsSaving(true);
+    try {
+      const result = await ContractService.activate(contractId);
+      if (!result.success) {
+        toast({
+          title: 'Não foi possível ativar',
+          description: result.error,
+          variant: 'destructive',
+        });
+        return false;
+      }
+      toast({ title: 'Contrato ativado com sucesso' });
+      await fetchContracts();
+      return true;
+    } catch (err) {
+      toast({
+        title: 'Erro ao ativar contrato',
+        description: err instanceof Error ? err.message : String(err),
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return {
     contracts,
     totalCount,
@@ -141,5 +173,6 @@ export function useContracts(opts: UseContractsOptions = {}) {
     updateContract,
     renewContract,
     cancelContract,
+    activateContract,
   };
 }

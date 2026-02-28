@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, addDays, format } from 'date-fns';
 
 export const contractFormSchema = z.object({
   supplier_id: z.string().min(1, 'Fornecedor obrigatório'),
@@ -92,8 +92,13 @@ export const ContractService = {
   ): Promise<PaginatedContracts> {
     const page = opts.page ?? 1;
     const pageSize = opts.pageSize ?? 10;
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const todayPlus90 = format(addDays(new Date(), 90), 'yyyy-MM-dd');
+
+    const isExpiringFilter = opts.status === 'expiring';
+    const fetchSize = isExpiringFilter ? 500 : pageSize;
+    const from = isExpiringFilter ? 0 : (page - 1) * pageSize;
+    const to = isExpiringFilter ? fetchSize - 1 : from + pageSize - 1;
 
     let query = supabase
       .from('supplier_contracts')
@@ -102,25 +107,48 @@ export const ContractService = {
         { count: 'exact' },
       )
       .eq('org_id', orgId)
-      .order('created_at', { ascending: false })
+      .order(isExpiringFilter ? 'end_date' : 'created_at', { ascending: isExpiringFilter })
       .range(from, to);
 
     if (opts.search) {
       query = query.or(`contract_number.ilike.%${opts.search}%`);
     }
     if (opts.status && opts.status !== 'all') {
-      query = query.eq('status', opts.status);
+      if (opts.status === 'expiring') {
+        query = query
+          .eq('status', 'active')
+          .gt('end_date', today)
+          .lte('end_date', todayPlus90);
+      } else if (opts.status === 'expired') {
+        query = query.eq('status', 'active').lt('end_date', today);
+      } else {
+        query = query.eq('status', opts.status);
+      }
     }
 
     const { data, error, count } = await query;
     if (error) throw error;
 
-    const rows = (data ?? []).map((r) => ({
+    let rows = (data ?? []).map((r) => ({
       ...r,
       status: computeStatus(r as ContractRow),
       items: (r.items as ContractItem[]) ?? [],
       supplier: r.supplier as { name: string; cnpj?: string | null } | null,
     })) as ContractRow[];
+
+    if (isExpiringFilter) {
+      rows = rows.filter((r) => r.status === 'expiring');
+      const totalCount = rows.length;
+      const start = (page - 1) * pageSize;
+      const paginatedRows = rows.slice(start, start + pageSize);
+      return {
+        data: paginatedRows,
+        count: totalCount,
+        page,
+        pageSize,
+        totalPages: Math.ceil(totalCount / pageSize) || 1,
+      };
+    }
 
     return {
       data: rows,
@@ -167,8 +195,9 @@ export const ContractService = {
 
     if (error) throw error;
 
-    if ((payload.items ?? []).length > 0) {
-      const itemsToInsert = (payload.items ?? []).map((item) => ({
+    const itemsList = payload.items ?? [];
+    if (itemsList.length > 0) {
+      const itemsToInsert = itemsList.map((item) => ({
         contract_id: contract.id,
         part_code: item.part_code ?? null,
         part_name: item.part_name,
@@ -182,6 +211,12 @@ export const ContractService = {
         .insert(itemsToInsert);
 
       if (itemsError) throw itemsError;
+
+      const totalValue = itemsList.reduce((sum, i) => sum + (i.agreed_price || 0), 0);
+      await supabase
+        .from('supplier_contracts')
+        .update({ total_value: totalValue })
+        .eq('id', contract.id);
     }
 
     const result = await this.getById(contract.id);
@@ -191,14 +226,46 @@ export const ContractService = {
 
   async update(
     contractId: string,
-    payload: Partial<ContractFormData> & { status?: ContractStatus },
+    payload: Partial<ContractFormData> & {
+      status?: ContractStatus;
+      items?: Array<{ part_code?: string; part_name: string; agreed_price: number; min_quantity?: number; max_quantity?: number }>;
+    },
   ): Promise<void> {
-    const { error } = await supabase
-      .from('supplier_contracts')
-      .update({ ...payload, updated_at: new Date().toISOString() })
-      .eq('id', contractId);
-
-    if (error) throw error;
+    const { items, ...rest } = payload;
+    const updatePayload = { ...rest, updated_at: new Date().toISOString() };
+    if (Object.keys(updatePayload).length > 1) {
+      const { error } = await supabase
+        .from('supplier_contracts')
+        .update(updatePayload)
+        .eq('id', contractId);
+      if (error) throw error;
+    }
+    if (items !== undefined) {
+      const { error: delError } = await supabase
+        .from('supplier_contract_items')
+        .delete()
+        .eq('contract_id', contractId);
+      if (delError) throw delError;
+      if (items.length > 0) {
+        const itemsToInsert = items.map((item) => ({
+          contract_id: contractId,
+          part_code: item.part_code ?? null,
+          part_name: item.part_name,
+          agreed_price: item.agreed_price,
+          min_quantity: item.min_quantity ?? null,
+          max_quantity: item.max_quantity ?? null,
+        }));
+        const { error: insError } = await supabase
+          .from('supplier_contract_items')
+          .insert(itemsToInsert);
+        if (insError) throw insError;
+      }
+      const totalValue = items.reduce((sum, i) => sum + (i.agreed_price || 0), 0);
+      await supabase
+        .from('supplier_contracts')
+        .update({ total_value: totalValue, updated_at: new Date().toISOString() })
+        .eq('id', contractId);
+    }
   },
 
   async renew(
@@ -263,5 +330,29 @@ export const ContractService = {
 
   async cancel(contractId: string): Promise<void> {
     await this.update(contractId, { status: 'cancelled' });
+  },
+
+  async activate(contractId: string): Promise<{ success: boolean; error?: string }> {
+    const contract = await this.getById(contractId);
+    if (!contract) return { success: false, error: 'Contrato não encontrado' };
+    if (contract.status !== 'draft') {
+      return { success: false, error: 'Apenas contratos em rascunho podem ser ativados' };
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = new Date(contract.end_date);
+    endDate.setHours(0, 0, 0, 0);
+    if (endDate < today) {
+      return { success: false, error: 'Não é possível ativar contrato com data de término já vencida' };
+    }
+    const startDate = new Date(contract.start_date);
+    if (startDate > endDate) {
+      return { success: false, error: 'Data de início não pode ser posterior à data de término' };
+    }
+    if (!contract.items || contract.items.length === 0) {
+      return { success: false, error: 'Adicione pelo menos um item ao contrato antes de ativar. Use Editar para adicionar itens.' };
+    }
+    await this.update(contractId, { status: 'active' });
+    return { success: true };
   },
 };
