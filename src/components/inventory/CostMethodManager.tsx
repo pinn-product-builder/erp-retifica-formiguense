@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -26,6 +27,7 @@ import {
   XCircle,
   AlertTriangle,
   Clock,
+  Search,
 } from 'lucide-react';
 import { useCostMethod } from '@/hooks/useCostMethod';
 import {
@@ -34,6 +36,7 @@ import {
   type CostMethodChange,
   type CostLayer,
 } from '@/services/CostMethodService';
+import { inventoryService } from '@/services/InventoryService';
 import { StatCard } from '@/components/StatCard';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -127,16 +130,70 @@ function PendingChangeCard({
   );
 }
 
+interface PartOption {
+  id: string;
+  part_name: string;
+  part_code: string | null;
+  cost_method: string;
+}
+
 export default function CostMethodManager() {
   const { layers, pagination, pendingChanges, summary, loading, fetchLayers, approveMethodChange, rejectMethodChange, requestMethodChange } =
     useCostMethod();
 
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
-  const [selectedMethod, setSelectedMethod] = useState<CostMethod>('moving_avg');
+  const [selectedMethod, setSelectedMethod] = useState<CostMethod>('fifo');
   const [justification, setJustification] = useState('');
-  const [partIdInput, setPartIdInput] = useState('');
+  const [partSearch, setPartSearch] = useState('');
+  const [partOptions, setPartOptions] = useState<PartOption[]>([]);
+  const [selectedPart, setSelectedPart] = useState<PartOption | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
   const { currentOrganization } = useOrganization();
   const { user } = useAuth();
+
+  const searchParts = useCallback(async (term: string) => {
+    if (!currentOrganization?.id || term.length < 2) {
+      setPartOptions([]);
+      return;
+    }
+    try {
+      setSearchLoading(true);
+      const result = await inventoryService.getAllParts(currentOrganization.id, { search: term });
+      setPartOptions(result.map((p) => ({
+        id: p.id,
+        part_name: p.part_name,
+        part_code: p.part_code,
+        cost_method: (p as unknown as { cost_method?: string }).cost_method ?? 'moving_avg',
+      })));
+    } catch {
+      setPartOptions([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [currentOrganization?.id]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => searchParts(partSearch), 300);
+    return () => clearTimeout(timer);
+  }, [partSearch, searchParts]);
+
+  const handleOpenDialog = () => {
+    setSelectedPart(null);
+    setPartSearch('');
+    setPartOptions([]);
+    setJustification('');
+    setSelectedMethod('fifo');
+    setIsRequestDialogOpen(true);
+  };
+
+  const handleSelectPart = (part: PartOption) => {
+    setSelectedPart(part);
+    setPartSearch(`${part.part_code ? part.part_code + ' — ' : ''}${part.part_name}`);
+    setPartOptions([]);
+    const current = part.cost_method as CostMethod;
+    const options = (Object.keys(COST_METHOD_LABELS) as CostMethod[]).filter((m) => m !== current);
+    setSelectedMethod(options[0] ?? 'fifo');
+  };
 
   const handleApprove = async (changeId: string) => {
     if (!user?.id) return;
@@ -150,13 +207,16 @@ export default function CostMethodManager() {
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.id || !partIdInput) return;
+    if (!user?.id || !selectedPart || !justification.trim()) return;
+    const currentMethod = selectedPart.cost_method as CostMethod;
     const success = await requestMethodChange(
-      partIdInput, 'moving_avg', selectedMethod, justification, user.id
+      selectedPart.id, currentMethod, selectedMethod, justification, user.id
     );
     if (success) {
       setIsRequestDialogOpen(false);
       setJustification('');
+      setSelectedPart(null);
+      setPartSearch('');
     }
   };
 
@@ -196,7 +256,7 @@ export default function CostMethodManager() {
                     Camadas de custo por ordem de entrada — método PEPS
                   </CardDescription>
                 </div>
-                <Button size="sm" className="gap-1.5 self-start" onClick={() => setIsRequestDialogOpen(true)}>
+                <Button size="sm" className="gap-1.5 self-start" onClick={handleOpenDialog}>
                   <AlertTriangle className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Solicitar Alteração de Método</span>
                   <span className="sm:hidden">Solicitar</span>
@@ -294,7 +354,10 @@ export default function CostMethodManager() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
+      <Dialog open={isRequestDialogOpen} onOpenChange={(open) => {
+        setIsRequestDialogOpen(open);
+        if (!open) { setSelectedPart(null); setPartSearch(''); setPartOptions([]); }
+      }}>
         <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Solicitar Alteração de Método</DialogTitle>
@@ -312,43 +375,104 @@ export default function CostMethodManager() {
                 <li>Não altera o histórico retroativamente</li>
               </ul>
             </div>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm">Novo Método *</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(Object.keys(COST_METHOD_LABELS) as CostMethod[]).map((method) => (
+
+            <div className="space-y-1.5">
+              <Label className="text-xs sm:text-sm">Peça *</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={partSearch}
+                  onChange={(e) => {
+                    setPartSearch(e.target.value);
+                    if (selectedPart) setSelectedPart(null);
+                  }}
+                  placeholder="Buscar por nome ou código..."
+                  className="pl-9 h-9 text-sm"
+                />
+              </div>
+              {searchLoading && (
+                <p className="text-xs text-muted-foreground px-1">Buscando...</p>
+              )}
+              {partOptions.length > 0 && (
+                <div className="border rounded-md max-h-40 overflow-y-auto divide-y shadow-sm">
+                  {partOptions.map((part) => (
                     <button
-                      key={method}
+                      key={part.id}
                       type="button"
-                      className={`p-2.5 rounded-lg border text-xs text-center transition-all ${
-                        selectedMethod === method
-                          ? 'border-primary bg-primary/10 text-primary font-medium'
-                          : 'border-border hover:bg-muted/50'
-                      }`}
-                      onClick={() => setSelectedMethod(method)}
+                      className="w-full text-left px-3 py-2 hover:bg-muted/50 transition-colors"
+                      onClick={() => handleSelectPart(part)}
                     >
-                      {COST_METHOD_LABELS[method]}
+                      <p className="text-xs sm:text-sm font-medium truncate">{part.part_name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {part.part_code && (
+                          <span className="text-xs text-muted-foreground font-mono">{part.part_code}</span>
+                        )}
+                        <CostMethodBadge method={(part.cost_method as CostMethod) || 'moving_avg'} />
+                      </div>
                     </button>
                   ))}
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm">Justificativa *</Label>
-                <Textarea
-                  value={justification}
-                  onChange={(e) => setJustification(e.target.value)}
-                  placeholder="Descreva o motivo da alteração..."
-                  required
-                  className="text-sm resize-none"
-                  rows={3}
-                />
+              )}
+              {selectedPart && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 border">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{selectedPart.part_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Método atual: <CostMethodBadge method={(selectedPart.cost_method as CostMethod) || 'moving_avg'} />
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs sm:text-sm">Novo Método *</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.keys(COST_METHOD_LABELS) as CostMethod[]).map((method) => {
+                  const isCurrent = selectedPart?.cost_method === method;
+                  return (
+                    <button
+                      key={method}
+                      type="button"
+                      disabled={isCurrent}
+                      className={`p-2.5 rounded-lg border text-xs text-center transition-all ${
+                        isCurrent
+                          ? 'border-border bg-muted/50 text-muted-foreground cursor-not-allowed opacity-50'
+                          : selectedMethod === method
+                          ? 'border-primary bg-primary/10 text-primary font-medium'
+                          : 'border-border hover:bg-muted/50'
+                      }`}
+                      onClick={() => !isCurrent && setSelectedMethod(method)}
+                    >
+                      {COST_METHOD_LABELS[method]}
+                      {isCurrent && <span className="block text-[10px] mt-0.5">(atual)</span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs sm:text-sm">Justificativa *</Label>
+              <Textarea
+                value={justification}
+                onChange={(e) => setJustification(e.target.value)}
+                placeholder="Descreva o motivo da alteração..."
+                required
+                className="text-sm resize-none"
+                rows={3}
+              />
+            </div>
+
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => setIsRequestDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" size="sm" disabled={!justification.trim()}>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!selectedPart || !justification.trim() || selectedPart.cost_method === selectedMethod}
+              >
                 Solicitar Alteração
               </Button>
             </div>
