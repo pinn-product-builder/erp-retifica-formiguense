@@ -37,7 +37,6 @@ import {
   type CostLayer,
 } from '@/services/CostMethodService';
 import { inventoryService } from '@/services/InventoryService';
-import { StatCard } from '@/components/StatCard';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -138,44 +137,72 @@ interface PartOption {
 }
 
 export default function CostMethodManager() {
-  const { layers, pagination, pendingChanges, summary, loading, fetchLayers, approveMethodChange, rejectMethodChange, requestMethodChange } =
+  const { layers, pagination, pendingChanges, summary, loading, fetchLayers, fetchSummary, approveMethodChange, rejectMethodChange, requestMethodChange } =
     useCostMethod();
 
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<CostMethod>('fifo');
   const [justification, setJustification] = useState('');
+
+  // Buscador do dialog de solicitação
   const [partSearch, setPartSearch] = useState('');
   const [partOptions, setPartOptions] = useState<PartOption[]>([]);
   const [selectedPart, setSelectedPart] = useState<PartOption | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  // Buscador da aba de camadas
+  const [layerPartSearch, setLayerPartSearch] = useState('');
+  const [layerPartOptions, setLayerPartOptions] = useState<PartOption[]>([]);
+  const [selectedLayerPart, setSelectedLayerPart] = useState<PartOption | null>(null);
+  const [layerSearchLoading, setLayerSearchLoading] = useState(false);
+
   const { currentOrganization } = useOrganization();
   const { user } = useAuth();
 
-  const searchParts = useCallback(async (term: string) => {
+  const doSearchParts = useCallback(async (
+    term: string,
+    setOptions: (opts: PartOption[]) => void,
+    setLoading: (v: boolean) => void
+  ) => {
     if (!currentOrganization?.id || term.length < 2) {
-      setPartOptions([]);
+      setOptions([]);
       return;
     }
     try {
-      setSearchLoading(true);
+      setLoading(true);
       const result = await inventoryService.getAllParts(currentOrganization.id, { search: term });
-      setPartOptions(result.map((p) => ({
+      setOptions(result.map((p) => ({
         id: p.id,
         part_name: p.part_name,
         part_code: p.part_code,
         cost_method: (p as unknown as { cost_method?: string }).cost_method ?? 'moving_avg',
       })));
     } catch {
-      setPartOptions([]);
+      setOptions([]);
     } finally {
-      setSearchLoading(false);
+      setLoading(false);
     }
   }, [currentOrganization?.id]);
 
+  // Debounce para busca no dialog
   useEffect(() => {
-    const timer = setTimeout(() => searchParts(partSearch), 300);
+    const timer = setTimeout(() => doSearchParts(partSearch, setPartOptions, setSearchLoading), 300);
     return () => clearTimeout(timer);
-  }, [partSearch, searchParts]);
+  }, [partSearch, doSearchParts]);
+
+  // Debounce para busca na aba de camadas
+  useEffect(() => {
+    const timer = setTimeout(() => doSearchParts(layerPartSearch, setLayerPartOptions, setLayerSearchLoading), 300);
+    return () => clearTimeout(timer);
+  }, [layerPartSearch, doSearchParts]);
+
+  const handleSelectLayerPart = useCallback((part: PartOption) => {
+    setSelectedLayerPart(part);
+    setLayerPartSearch(`${part.part_code ? part.part_code + ' — ' : ''}${part.part_name}`);
+    setLayerPartOptions([]);
+    fetchLayers(part.id);
+    fetchSummary(part.id);
+  }, [fetchLayers, fetchSummary]);
 
   const handleOpenDialog = () => {
     setSelectedPart(null);
@@ -222,15 +249,6 @@ export default function CostMethodManager() {
 
   return (
     <div className="space-y-4">
-      {summary && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-          <StatCard title="Camadas FIFO" value={summary.total_layers} icon={Layers} subtitle="Camadas ativas" />
-          <StatCard title="Qtd. Total" value={summary.total_quantity} icon={TrendingUp} subtitle="Em camadas" />
-          <StatCard title="Custo Total" value={formatCurrency(summary.total_cost)} icon={TrendingUp} subtitle="Valor em estoque" />
-          <StatCard title="Custo Médio" value={formatCurrency(summary.avg_cost)} icon={TrendingUp} subtitle="Por unidade" />
-        </div>
-      )}
-
       <Tabs defaultValue="layers" className="space-y-4">
         <TabsList className="w-full grid grid-cols-2 h-9">
           <TabsTrigger value="layers" className="text-xs sm:text-sm">
@@ -263,61 +281,148 @@ export default function CostMethodManager() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-3 sm:p-4 pt-0">
-              {summary && summary.next_layer_cost !== null && (
-                <div className="mb-3 p-2.5 rounded-lg bg-blue-50 border border-blue-200 text-xs sm:text-sm text-blue-800">
+            <CardContent className="p-3 sm:p-4 pt-0 space-y-3">
+
+              {/* Seletor de peça */}
+              <div className="space-y-1.5">
+                <Label className="text-xs sm:text-sm font-medium">Selecionar Peça</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    value={layerPartSearch}
+                    onChange={(e) => {
+                      setLayerPartSearch(e.target.value);
+                      if (selectedLayerPart) setSelectedLayerPart(null);
+                    }}
+                    placeholder="Buscar peça por nome ou código..."
+                    className="pl-9 h-9 text-sm"
+                  />
+                </div>
+                {layerSearchLoading && (
+                  <p className="text-xs text-muted-foreground px-1">Buscando...</p>
+                )}
+                {layerPartOptions.length > 0 && (
+                  <div className="border rounded-md max-h-40 overflow-y-auto divide-y shadow-sm">
+                    {layerPartOptions.map((part) => (
+                      <button
+                        key={part.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-muted/50 transition-colors"
+                        onClick={() => handleSelectLayerPart(part)}
+                      >
+                        <p className="text-xs sm:text-sm font-medium truncate">{part.part_name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {part.part_code && (
+                            <span className="text-xs text-muted-foreground font-mono">{part.part_code}</span>
+                          )}
+                          <CostMethodBadge method={(part.cost_method as CostMethod) || 'moving_avg'} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {selectedLayerPart && (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 border text-xs">
+                    <Layers className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                    <span className="font-medium truncate">{selectedLayerPart.part_name}</span>
+                    <CostMethodBadge method={(selectedLayerPart.cost_method as CostMethod) || 'moving_avg'} />
+                  </div>
+                )}
+              </div>
+
+              {/* Stats rápidas da peça selecionada */}
+              {summary && selectedLayerPart && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 rounded-lg bg-muted/30 border text-xs">
+                  <div>
+                    <p className="text-muted-foreground">Camadas</p>
+                    <p className="font-semibold">{summary.total_layers}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Qtd. Total</p>
+                    <p className="font-semibold">{summary.total_quantity} un</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Custo Total</p>
+                    <p className="font-semibold whitespace-nowrap">{formatCurrency(summary.total_cost)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Custo Médio</p>
+                    <p className="font-semibold whitespace-nowrap">{formatCurrency(summary.avg_cost)}/un</p>
+                  </div>
+                </div>
+              )}
+
+              {summary && summary.next_layer_cost !== null && selectedLayerPart && (
+                <div className="p-2.5 rounded-lg bg-blue-50 border border-blue-200 text-xs sm:text-sm text-blue-800">
                   Próxima saída consumirá a camada mais antiga ao custo de{' '}
                   <strong>{formatCurrency(summary.next_layer_cost)}/un</strong>
                 </div>
               )}
 
-              <div className="hidden sm:grid sm:grid-cols-5 gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground border-b mb-2">
-                <span>Data Entrada</span>
-                <span>Qtd. Original</span>
-                <span>Qtd. Restante</span>
-                <span>Custo Unit.</span>
-                <span>Total</span>
-              </div>
-
-              {loading ? (
-                <p className="text-center text-sm text-muted-foreground py-8">Carregando camadas...</p>
-              ) : layers.length === 0 ? (
+              {/* Tabela de camadas */}
+              {!selectedLayerPart ? (
                 <div className="flex flex-col items-center py-10 gap-2">
-                  <Layers className="w-8 h-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    Nenhuma camada de custo. Selecione uma peça com método FIFO para ver as camadas.
+                  <Search className="w-8 h-8 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground text-center">
+                    Busque e selecione uma peça acima para visualizar as camadas de custo FIFO
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {layers.map((layer, i) => (
-                    <CostLayerRow key={layer.id} layer={layer} index={i} />
-                  ))}
-                </div>
-              )}
+                <>
+                  <div className="hidden sm:grid sm:grid-cols-5 gap-2 px-3 py-1.5 text-xs font-medium text-muted-foreground border-b">
+                    <span>Data Entrada</span>
+                    <span>Qtd. Original</span>
+                    <span>Qtd. Restante</span>
+                    <span>Custo Unit.</span>
+                    <span>Total</span>
+                  </div>
 
-              {pagination.totalPages > 1 && (
-                <Pagination className="mt-3">
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() => layers.length > 0 && fetchLayers(layers[0].part_id, pagination.page - 1)}
-                        aria-disabled={pagination.page <= 1}
-                        className={pagination.page <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                      />
-                    </PaginationItem>
-                    <PaginationItem>
-                      <span className="text-xs px-3 py-2">Página {pagination.page} de {pagination.totalPages}</span>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() => layers.length > 0 && fetchLayers(layers[0].part_id, pagination.page + 1)}
-                        aria-disabled={pagination.page >= pagination.totalPages}
-                        className={pagination.page >= pagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+                  {loading ? (
+                    <p className="text-center text-sm text-muted-foreground py-8">Carregando camadas...</p>
+                  ) : layers.length === 0 ? (
+                    <div className="flex flex-col items-center py-8 gap-2">
+                      <Layers className="w-8 h-8 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground text-center">
+                        Nenhuma camada encontrada para esta peça.
+                        {selectedLayerPart.cost_method !== 'fifo' && (
+                          <span className="block mt-1 text-yellow-700">
+                            Esta peça usa método <strong>{COST_METHOD_LABELS[selectedLayerPart.cost_method as CostMethod]}</strong> — camadas só existem para peças com método FIFO.
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {layers.map((layer, i) => (
+                        <CostLayerRow key={layer.id} layer={layer} index={i} />
+                      ))}
+                    </div>
+                  )}
+
+                  {pagination.totalPages > 1 && (
+                    <Pagination className="mt-3">
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => selectedLayerPart && fetchLayers(selectedLayerPart.id, pagination.page - 1)}
+                            aria-disabled={pagination.page <= 1}
+                            className={pagination.page <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                        <PaginationItem>
+                          <span className="text-xs px-3 py-2">Página {pagination.page} de {pagination.totalPages}</span>
+                        </PaginationItem>
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() => selectedLayerPart && fetchLayers(selectedLayerPart.id, pagination.page + 1)}
+                            aria-disabled={pagination.page >= pagination.totalPages}
+                            className={pagination.page >= pagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
