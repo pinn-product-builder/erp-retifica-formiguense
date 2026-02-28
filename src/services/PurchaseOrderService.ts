@@ -126,6 +126,22 @@ export const purchaseOrderUpdateSchema = z.object({
 
 export type POUpdateData = z.infer<typeof purchaseOrderUpdateSchema>;
 
+export interface POItemEdit {
+  id?:               string;
+  item_name:         string;
+  description?:      string;
+  quantity:          number;
+  unit_price:        number;
+  total_price:       number;
+  received_quantity?: number;
+  part_id?:          string;
+}
+
+export interface POFullUpdateData extends POUpdateData {
+  items?:  POItemEdit[];
+  reason?: string;
+}
+
 // ── Service ───────────────────────────────────────────────────────────────────
 export const PurchaseOrderService = {
 
@@ -140,7 +156,10 @@ export const PurchaseOrderService = {
 
     let query = supabase
       .from('purchase_orders')
-      .select('*, supplier:suppliers(id, name, cnpj, email, phone, contact_person)', { count: 'exact' })
+      .select(
+        '*, supplier:suppliers(id, name, cnpj, email, phone, contact_person), items:purchase_order_items(id, item_name, quantity, unit_price, total_price, received_quantity, part_id)',
+        { count: 'exact' },
+      )
       .eq('org_id', orgId)
       .order('created_at', { ascending: false })
       .range(from, to);
@@ -200,6 +219,68 @@ export const PurchaseOrderService = {
       .update({ ...payload, updated_at: new Date().toISOString() })
       .eq('id', id);
     if (error) throw error;
+  },
+
+  async updateFull(id: string, data: POFullUpdateData): Promise<void> {
+    const { items, reason: _reason, ...rest } = data;
+    const payload = purchaseOrderUpdateSchema.parse(rest);
+    const { error: poError } = await supabase
+      .from('purchase_orders')
+      .update({ ...payload, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (poError) throw poError;
+
+    if (!items) return;
+
+    const { data: existingItems, error: fetchErr } = await supabase
+      .from('purchase_order_items')
+      .select('id, received_quantity')
+      .eq('po_id', id);
+    if (fetchErr) throw fetchErr;
+
+    const existingIds = new Set((existingItems ?? []).map(i => i.id));
+    const incomingIds = new Set(items.filter(i => i.id).map(i => i.id!));
+
+    const toDelete = (existingItems ?? []).filter(
+      e => !incomingIds.has(e.id) && (e.received_quantity ?? 0) === 0,
+    );
+
+    if (toDelete.length > 0) {
+      const { error: delErr } = await supabase
+        .from('purchase_order_items')
+        .delete()
+        .in('id', toDelete.map(d => d.id));
+      if (delErr) throw delErr;
+    }
+
+    for (const item of items) {
+      if (item.id && existingIds.has(item.id)) {
+        const { error: updErr } = await supabase
+          .from('purchase_order_items')
+          .update({
+            item_name:   item.item_name,
+            description: item.description ?? null,
+            quantity:    item.quantity,
+            unit_price:  item.unit_price,
+            total_price: item.total_price,
+          })
+          .eq('id', item.id);
+        if (updErr) throw updErr;
+      } else if (!item.id) {
+        const { error: insErr } = await supabase
+          .from('purchase_order_items')
+          .insert({
+            po_id:       id,
+            item_name:   item.item_name,
+            description: item.description ?? null,
+            quantity:    item.quantity,
+            unit_price:  item.unit_price,
+            total_price: item.total_price,
+            part_id:     item.part_id ?? null,
+          });
+        if (insErr) throw insErr;
+      }
+    }
   },
 
   async approve(id: string, userId: string): Promise<void> {

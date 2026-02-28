@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Calculator } from 'lucide-react';
 import { usePurchasing, Supplier, PurchaseOrder, PurchaseOrderItem } from '@/hooks/usePurchasing';
+import { POItemPartSelect } from '@/components/purchasing/POItemPartSelect';
 import { QuotationService, type Quotation, type QuotationForPO } from '@/services/QuotationService';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
@@ -230,11 +231,23 @@ export default function PurchaseOrderForm({
       [field]: value 
     };
 
-    // Recalculate total price for the item
     if (field === 'quantity' || field === 'unit_price') {
       updatedItems[index].total_price = updatedItems[index].quantity * updatedItems[index].unit_price;
     }
 
+    setFormData(prev => ({ ...prev, items: updatedItems }));
+  };
+
+  const handleSelectPartForItem = (index: number, part: { part_id: string; item_name: string; unit_price: number }) => {
+    const updatedItems = [...formData.items];
+    const qty = updatedItems[index].quantity || 1;
+    updatedItems[index] = {
+      ...updatedItems[index],
+      part_id:     part.part_id,
+      item_name:   part.item_name,
+      unit_price:  part.unit_price,
+      total_price: +(qty * part.unit_price).toFixed(2),
+    };
     setFormData(prev => ({ ...prev, items: updatedItems }));
   };
 
@@ -451,11 +464,12 @@ export default function PurchaseOrderForm({
                   <CardContent className="p-4">
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                       <div className="md:col-span-2">
-                        <Label className="text-xs">Nome do Item *</Label>
-                        <Input
-                          value={item.item_name || ''}
-                          onChange={(e) => handleItemChange(index, 'item_name', e.target.value)}
-                          placeholder="Ex: Rolamento SKF 6203"
+                        <Label className="text-xs">Peça / Item *</Label>
+                        <POItemPartSelect
+                          value={item.item_name || undefined}
+                          onSelect={part => handleSelectPartForItem(index, part)}
+                          onClear={() => handleItemChange(index, 'item_name', '')}
+                          className="mt-0.5"
                         />
                       </div>
                       

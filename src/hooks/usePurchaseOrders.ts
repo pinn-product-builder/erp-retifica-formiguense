@@ -8,6 +8,7 @@ import {
   PaginatedPOs,
   POFilters,
   POUpdateData,
+  POFullUpdateData,
   POStats,
 } from '@/services/PurchaseOrderService';
 import { PurchaseOrderApprovalService } from '@/services/PurchaseOrderApprovalService';
@@ -69,6 +70,18 @@ export function usePurchaseOrders() {
   const update = async (id: string, data: POUpdateData): Promise<boolean> => {
     try {
       await PurchaseOrderService.update(id, data);
+      toast({ title: 'Pedido atualizado com sucesso' });
+      refresh();
+      return true;
+    } catch (err) {
+      toast({ title: 'Erro ao atualizar pedido', description: String(err), variant: 'destructive' });
+      return false;
+    }
+  };
+
+  const updateFull = async (id: string, data: POFullUpdateData): Promise<boolean> => {
+    try {
+      await PurchaseOrderService.updateFull(id, data);
       toast({ title: 'Pedido atualizado com sucesso' });
       refresh();
       return true;
@@ -163,6 +176,7 @@ export function usePurchaseOrders() {
     setPage,
     refresh,
     update,
+    updateFull,
     approve,
     sendForApproval,
     send,

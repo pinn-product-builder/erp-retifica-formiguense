@@ -18,7 +18,7 @@ export function PurchaseOrdersManager() {
     stats,
     setFilters,
     setPage,
-    update,
+    updateFull,
     approve,
     sendForApproval,
     send,
@@ -120,7 +120,7 @@ export function PurchaseOrdersManager() {
         }}
         order={editTarget}
         onSave={async (id, data) => {
-          const ok = await update(id, data);
+          const ok = await updateFull(id, data);
           if (ok && detailOrder?.id === id) refreshDetail();
           return ok;
         }}
