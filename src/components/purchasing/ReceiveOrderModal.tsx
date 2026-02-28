@@ -219,7 +219,13 @@ export function ReceiveOrderModal({
   const hasExcess = excessItems.length > 0;
 
   const handleReceive = async () => {
-    const items = Object.values(receiptItems).filter(item => item.received_quantity > 0);
+    const items = Object.values(receiptItems)
+      .filter(item => item.received_quantity > 0)
+      .map(item => {
+        const orderItem = orderItems.find(o => o.id === item.purchase_order_item_id);
+        const remaining = orderItem ? Math.max(0, orderItem.quantity - orderItem.received_quantity) : undefined;
+        return { ...item, remaining_quantity: remaining };
+      });
 
     if (items.length === 0) {
       alert('Informe pelo menos um item a receber');

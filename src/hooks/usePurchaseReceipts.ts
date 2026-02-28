@@ -76,6 +76,8 @@ export interface CreateReceiptData {
     received_quantity: number;
     approved_quantity: number;
     rejected_quantity: number;
+    /** Quantidade que ainda faltava receber neste item (para detectar recebimento parcial) */
+    remaining_quantity?: number;
     divergence_reason?: string;
     rejection_reason?: string;
     unit_cost?: number;
@@ -180,7 +182,7 @@ export function usePurchaseReceipts() {
           supplier:suppliers(name)
         `)
         .eq('org_id', currentOrganization.id)
-        .in('status', ['confirmed', 'in_transit'])
+        .in('status', ['confirmed', 'in_transit', 'partially_received'])
         .order('expected_delivery', { ascending: true });
 
       if (posError) throw posError;
@@ -306,11 +308,18 @@ export function usePurchaseReceipts() {
         0
       );
 
-      // Verificar se há divergências
+      // Verificar se há divergências de qualidade (rejeições)
       const hasDivergence = receiptData.items.some(
         item => item.received_quantity !== item.approved_quantity + item.rejected_quantity ||
                 item.rejected_quantity > 0
       );
+
+      // Determinar se é um recebimento parcial (recebeu menos do que o restante do pedido)
+      const isPartialReceipt = receiptData.items.some(item =>
+        item.remaining_quantity !== undefined && item.received_quantity < item.remaining_quantity
+      );
+
+      const receiptStatus = (hasDivergence || isPartialReceipt) ? 'partial' : 'completed';
 
       // Criar recebimento
       const { data: receipt, error: receiptError } = await supabase
@@ -324,7 +333,7 @@ export function usePurchaseReceipts() {
           invoice_date: receiptData.invoice_date,
           invoice_url: receiptData.invoice_url,
           total_value: totalValue,
-          status: hasDivergence ? 'partial' : 'completed',
+          status: receiptStatus,
           has_divergence: hasDivergence,
           notes: receiptData.notes,
           received_by: userData.user?.id,

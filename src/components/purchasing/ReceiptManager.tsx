@@ -69,15 +69,17 @@ interface PendingPO {
 }
 
 const PO_STATUS_COLORS: Record<string, string> = {
-  confirmed:  'bg-green-100 text-green-700 border-green-200',
-  in_transit: 'bg-purple-100 text-purple-700 border-purple-200',
-  delivered:  'bg-emerald-100 text-emerald-700 border-emerald-200',
+  confirmed:           'bg-green-100 text-green-700 border-green-200',
+  in_transit:          'bg-purple-100 text-purple-700 border-purple-200',
+  delivered:           'bg-emerald-100 text-emerald-700 border-emerald-200',
+  partially_received:  'bg-yellow-100 text-yellow-700 border-yellow-200',
 };
 
 const PO_STATUS_LABELS: Record<string, string> = {
-  confirmed:  'Confirmado',
-  in_transit: 'Em Trânsito',
-  delivered:  'Entregue',
+  confirmed:           'Confirmado',
+  in_transit:          'Em Trânsito',
+  delivered:           'Entregue',
+  partially_received:  'Parcialmente Recebido',
 };
 
 export default function ReceiptManager() {
@@ -447,10 +449,17 @@ export default function ReceiptManager() {
                       </div>
 
                       <div className="flex flex-wrap gap-2 flex-shrink-0">
-                        {(po.status === 'confirmed' || po.status === 'in_transit') && (
-                          <Button size="sm" onClick={() => { setSelectedPO(po.id); setShowReceiveModal(true); }} className="gap-1.5">
+                        {(po.status === 'confirmed' || po.status === 'in_transit' || po.status === 'partially_received') && (
+                          <Button
+                            size="sm"
+                            onClick={() => { setSelectedPO(po.id); setShowReceiveModal(true); }}
+                            className="gap-1.5"
+                            variant={po.status === 'partially_received' ? 'outline' : 'default'}
+                          >
                             <Package className="h-3.5 w-3.5" />
-                            <span className="hidden sm:inline">Receber Mercadoria</span>
+                            <span className="hidden sm:inline">
+                              {po.status === 'partially_received' ? 'Continuar Recebimento' : 'Receber Mercadoria'}
+                            </span>
                             <span className="sm:hidden">Receber</span>
                           </Button>
                         )}
