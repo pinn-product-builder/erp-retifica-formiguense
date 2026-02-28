@@ -30,7 +30,7 @@ export interface CreateNegotiationInput {
   notes?:                 string;
 }
 
-const db = () => supabase as unknown as { from: (t: string) => ReturnType<typeof supabase.from> };
+const db = () => supabase as any;
 
 export const NegotiationService = {
   async listByOrg(orgId: string): Promise<NegotiationRound[]> {

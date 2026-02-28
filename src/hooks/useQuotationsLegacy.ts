@@ -34,7 +34,7 @@ export interface Quotation {
   status: string;
   created_at: string;
   updated_at: string;
-  supplier?: { id: string; name: string; trade_name?: string };
+  supplier?: { id: string; name: string; trade_name?: string; delivery_days?: number; rating?: number };
   items?: LegacyQuotationItem[];
 }
 

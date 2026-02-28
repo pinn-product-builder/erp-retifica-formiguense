@@ -534,7 +534,7 @@ export const QuotationService = {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data ?? []) as SupplierSuggestion[];
+    return (data ?? []) as unknown as SupplierSuggestion[];
   },
 
   // ── Verificar se já existe PC para esta cotação ───────────────────────────
@@ -605,7 +605,7 @@ export const QuotationService = {
       ? `${copyNote}\n${original.notes}`
       : copyNote;
 
-    const { data: newQuotation, error: quotError } = await supabase
+    const { data: newQuotation, error: quotError } = await (supabase as any)
       .from('purchase_quotations')
       .insert({
         org_id:           orgId,

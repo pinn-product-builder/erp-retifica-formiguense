@@ -212,7 +212,7 @@ export const usePurchasing = () => {
 
     try {
       const { data: reqData, error: reqError } = await supabase
-        .from('purchase_requisitions' as unknown)
+        .from('purchase_requisitions' as any)
         .insert({
           department: requisition.department || null,
           priority: requisition.priority || 'medium',
@@ -227,7 +227,7 @@ export const usePurchasing = () => {
       if (reqError) throw reqError;
 
       if (items.length > 0) {
-        const requisitionId = (reqData as unknown)?.id;
+        const requisitionId = (reqData as any)?.id;
         if (!requisitionId) throw new Error('Requisition ID not found');
         
         const { error: itemsError } = await supabase
@@ -325,7 +325,7 @@ export const usePurchasing = () => {
       if (orderError) throw orderError;
 
       if (items.length > 0) {
-        const orderIdToUse = (orderData as unknown)?.id;
+        const orderIdToUse = (orderData as any)?.id;
         if (!orderIdToUse) throw new Error('Order ID not found');
         
         const { error: itemsError } = await supabase

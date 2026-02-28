@@ -213,8 +213,8 @@ class ReservationService {
     orderId: string,
     parts: Array<{ part_code: string; quantity: number }>
   ): Promise<{ success: boolean; consumed: unknown[]; errors: unknown[] }> {
-    // @ts-expect-error - RPC function not in generated types
-    const { data, error } = await supabase.rpc('consume_reserved_parts', {
+    
+    const { data, error } = await (supabase as any).rpc('consume_reserved_parts', {
       p_order_id: orderId,
       p_parts: parts,
     });
@@ -226,8 +226,8 @@ class ReservationService {
     reservationId: string,
     reason?: string
   ): Promise<{ success: boolean; error?: string; quantity_released?: number }> {
-    // @ts-expect-error - RPC function not in generated types
-    const { data, error } = await supabase.rpc('cancel_reservation', {
+    
+    const { data, error } = await (supabase as any).rpc('cancel_reservation', {
       p_reservation_id: reservationId,
       p_reason: reason ?? null,
     });
@@ -239,8 +239,8 @@ class ReservationService {
     reservationId: string,
     additionalDays: number
   ): Promise<{ success: boolean; error?: string; new_expires_at?: string }> {
-    // @ts-expect-error - RPC function not in generated types
-    const { data, error } = await supabase.rpc('extend_reservation', {
+    
+    const { data, error } = await (supabase as any).rpc('extend_reservation', {
       p_reservation_id: reservationId,
       p_additional_days: additionalDays,
     });
@@ -252,8 +252,8 @@ class ReservationService {
     reservationId: string,
     quantityToSeparate: number
   ): Promise<{ success: boolean; error?: string; quantity_separated?: number }> {
-    // @ts-expect-error - RPC function not in generated types
-    const { data, error } = await supabase.rpc('separate_reserved_parts', {
+    
+    const { data, error } = await (supabase as any).rpc('separate_reserved_parts', {
       p_reservation_id: reservationId,
       p_quantity_to_separate: quantityToSeparate,
     });

@@ -37,8 +37,19 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import 'dayjs/locale/pt-br';
-import { useQuotations, type CreateQuotationData, type QuotationItem } from '@/hooks/useQuotations';
+import { useQuotations } from '@/hooks/useQuotations';
 import { usePurchasing } from '@/hooks/usePurchasing';
+
+// Tipo local para itens do formulário (sistema legado)
+interface FormQuotationItem {
+  item_name: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  part_id?: string;
+}
+type QuotationItem = FormQuotationItem;
 import { useSupplierEvaluation, type SuggestedSupplier } from '@/hooks/useSupplierEvaluation';
 import { type PurchaseNeed } from '@/hooks/usePurchaseNeeds';
 
@@ -62,7 +73,7 @@ interface QuotationFormProps {
 }
 
 export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: QuotationFormProps) {
-  const { createQuotation, loading } = useQuotations();
+  const { actions: { createQuotation }, isLoading: loading } = useQuotations();
   const { requisitions, suppliers, fetchRequisitions, fetchSuppliers } = usePurchasing();
   const { suggestSuppliersForPart } = useSupplierEvaluation();
 
@@ -309,7 +320,7 @@ export default function QuotationForm({ onSuccess, onCancel, purchaseNeed }: Quo
       return;
     }
 
-    const quotationData: CreateQuotationData = {
+    const quotationData: Record<string, unknown> = {
       ...formData,
       requisition_id: purchaseNeed ? undefined : formData.requisition_id || undefined,
       delivery_time: formData.delivery_time ? parseInt(formData.delivery_time) : undefined,

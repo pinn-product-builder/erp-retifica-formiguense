@@ -1284,6 +1284,183 @@ export type Database = {
         }
         Relationships: []
       }
+      cost_details: {
+        Row: {
+          amount: number
+          cost_type: string
+          created_at: string
+          description: string | null
+          id: string
+          movement_id: string
+        }
+        Insert: {
+          amount?: number
+          cost_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          movement_id: string
+        }
+        Update: {
+          amount?: number
+          cost_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          movement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_details_movement_id_fkey"
+            columns: ["movement_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_details_movement_id_fkey"
+            columns: ["movement_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_movements_with_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cost_layers: {
+        Row: {
+          batch_id: string | null
+          created_at: string
+          entry_date: string
+          id: string
+          movement_id: string | null
+          org_id: string
+          part_id: string
+          quantity_original: number
+          quantity_remaining: number
+          total_cost: number
+          unit_cost: number
+        }
+        Insert: {
+          batch_id?: string | null
+          created_at?: string
+          entry_date?: string
+          id?: string
+          movement_id?: string | null
+          org_id: string
+          part_id: string
+          quantity_original: number
+          quantity_remaining: number
+          total_cost?: number
+          unit_cost: number
+        }
+        Update: {
+          batch_id?: string | null
+          created_at?: string
+          entry_date?: string
+          id?: string
+          movement_id?: string | null
+          org_id?: string
+          part_id?: string
+          quantity_original?: number
+          quantity_remaining?: number
+          total_cost?: number
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_layers_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "stock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_layers_movement_id_fkey"
+            columns: ["movement_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_layers_movement_id_fkey"
+            columns: ["movement_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_movements_with_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_layers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_layers_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts_inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cost_method_changes: {
+        Row: {
+          approved_by: string | null
+          created_at: string
+          id: string
+          justification: string
+          new_method: string
+          old_method: string
+          org_id: string
+          part_id: string
+          requested_by: string
+          resolved_at: string | null
+          status: string
+        }
+        Insert: {
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          justification: string
+          new_method: string
+          old_method: string
+          org_id: string
+          part_id: string
+          requested_by: string
+          resolved_at?: string | null
+          status?: string
+        }
+        Update: {
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          justification?: string
+          new_method?: string
+          old_method?: string
+          org_id?: string
+          part_id?: string
+          requested_by?: string
+          resolved_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_method_changes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_method_changes_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts_inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null
@@ -2760,10 +2937,14 @@ export type Database = {
           approval_status: string | null
           approved_at: string | null
           approved_by: string | null
+          batch_id: string | null
           budget_id: string | null
           created_at: string
           created_by: string | null
+          dest_location_id: string | null
+          dest_warehouse_id: string | null
           id: string
+          location_id: string | null
           metadata: Json | null
           movement_type: string
           new_quantity: number
@@ -2776,16 +2957,23 @@ export type Database = {
           reason: string
           rejection_reason: string | null
           requires_approval: boolean | null
+          serial_id: string | null
+          transfer_group_id: string | null
           unit_cost: number | null
+          warehouse_id: string | null
         }
         Insert: {
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          batch_id?: string | null
           budget_id?: string | null
           created_at?: string
           created_by?: string | null
+          dest_location_id?: string | null
+          dest_warehouse_id?: string | null
           id?: string
+          location_id?: string | null
           metadata?: Json | null
           movement_type: string
           new_quantity: number
@@ -2798,16 +2986,23 @@ export type Database = {
           reason: string
           rejection_reason?: string | null
           requires_approval?: boolean | null
+          serial_id?: string | null
+          transfer_group_id?: string | null
           unit_cost?: number | null
+          warehouse_id?: string | null
         }
         Update: {
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          batch_id?: string | null
           budget_id?: string | null
           created_at?: string
           created_by?: string | null
+          dest_location_id?: string | null
+          dest_warehouse_id?: string | null
           id?: string
+          location_id?: string | null
           metadata?: Json | null
           movement_type?: string
           new_quantity?: number
@@ -2820,14 +3015,45 @@ export type Database = {
           reason?: string
           rejection_reason?: string | null
           requires_approval?: boolean | null
+          serial_id?: string | null
+          transfer_group_id?: string | null
           unit_cost?: number | null
+          warehouse_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_movements_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "stock_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inventory_movements_budget_id_fkey"
             columns: ["budget_id"]
             isOneToOne: false
             referencedRelation: "detailed_budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_dest_location_id_fkey"
+            columns: ["dest_location_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_dest_warehouse_id_fkey"
+            columns: ["dest_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_locations"
             referencedColumns: ["id"]
           },
           {
@@ -2849,6 +3075,20 @@ export type Database = {
             columns: ["part_id"]
             isOneToOne: false
             referencedRelation: "parts_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_serial_id_fkey"
+            columns: ["serial_id"]
+            isOneToOne: false
+            referencedRelation: "stock_serials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]
@@ -4036,6 +4276,24 @@ export type Database = {
           },
         ]
       }
+      org_return_counters: {
+        Row: {
+          last_seq: number
+          org_id: string
+          year_month: string
+        }
+        Insert: {
+          last_seq?: number
+          org_id: string
+          year_month: string
+        }
+        Update: {
+          last_seq?: number
+          org_id?: string
+          year_month?: string
+        }
+        Relationships: []
+      }
       organization_themes: {
         Row: {
           accent_color: string
@@ -4179,8 +4437,14 @@ export type Database = {
         Row: {
           applied_at: string | null
           component: Database["public"]["Enums"]["engine_component"] | null
+          cost_method: string
+          cost_method_changed_at: string | null
+          cost_method_changed_by: string | null
+          cost_method_locked: boolean
           created_at: string
+          expiry_alert_days: number
           id: string
+          location_id: string | null
           macro_component_id: string | null
           notes: string | null
           order_id: string | null
@@ -4188,16 +4452,26 @@ export type Database = {
           part_code: string | null
           part_name: string
           quantity: number
+          requires_batch: boolean
+          requires_serial: boolean
           separated_at: string | null
+          shelf_life_days: number | null
           status: string | null
           supplier: string | null
           unit_cost: number | null
+          warehouse_id: string | null
         }
         Insert: {
           applied_at?: string | null
           component?: Database["public"]["Enums"]["engine_component"] | null
+          cost_method?: string
+          cost_method_changed_at?: string | null
+          cost_method_changed_by?: string | null
+          cost_method_locked?: boolean
           created_at?: string
+          expiry_alert_days?: number
           id?: string
+          location_id?: string | null
           macro_component_id?: string | null
           notes?: string | null
           order_id?: string | null
@@ -4205,16 +4479,26 @@ export type Database = {
           part_code?: string | null
           part_name: string
           quantity?: number
+          requires_batch?: boolean
+          requires_serial?: boolean
           separated_at?: string | null
+          shelf_life_days?: number | null
           status?: string | null
           supplier?: string | null
           unit_cost?: number | null
+          warehouse_id?: string | null
         }
         Update: {
           applied_at?: string | null
           component?: Database["public"]["Enums"]["engine_component"] | null
+          cost_method?: string
+          cost_method_changed_at?: string | null
+          cost_method_changed_by?: string | null
+          cost_method_locked?: boolean
           created_at?: string
+          expiry_alert_days?: number
           id?: string
+          location_id?: string | null
           macro_component_id?: string | null
           notes?: string | null
           order_id?: string | null
@@ -4222,12 +4506,23 @@ export type Database = {
           part_code?: string | null
           part_name?: string
           quantity?: number
+          requires_batch?: boolean
+          requires_serial?: boolean
           separated_at?: string | null
+          shelf_life_days?: number | null
           status?: string | null
           supplier?: string | null
           unit_cost?: number | null
+          warehouse_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "parts_inventory_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "warehouse_locations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "parts_inventory_macro_component_id_fkey"
             columns: ["macro_component_id"]
@@ -4240,6 +4535,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parts_inventory_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]
@@ -6626,6 +6928,129 @@ export type Database = {
           },
         ]
       }
+      stock_accounting_config: {
+        Row: {
+          created_at: string
+          credit_account: string
+          debit_account: string
+          description_template: string | null
+          id: string
+          is_active: boolean
+          movement_type: string
+          org_id: string
+          reason_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          credit_account: string
+          debit_account: string
+          description_template?: string | null
+          id?: string
+          is_active?: boolean
+          movement_type: string
+          org_id: string
+          reason_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          credit_account?: string
+          debit_account?: string
+          description_template?: string | null
+          id?: string
+          is_active?: boolean
+          movement_type?: string
+          org_id?: string
+          reason_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_accounting_config_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_accounting_entries: {
+        Row: {
+          amount: number
+          competencia: string
+          created_at: string
+          credit_account: string
+          debit_account: string
+          description: string | null
+          entry_date: string
+          id: string
+          movement_id: string | null
+          org_id: string
+          posted_at: string | null
+          posted_by: string | null
+          reference: string | null
+          reversed_at: string | null
+          reversed_by: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          competencia: string
+          created_at?: string
+          credit_account: string
+          debit_account: string
+          description?: string | null
+          entry_date: string
+          id?: string
+          movement_id?: string | null
+          org_id: string
+          posted_at?: string | null
+          posted_by?: string | null
+          reference?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          competencia?: string
+          created_at?: string
+          credit_account?: string
+          debit_account?: string
+          description?: string | null
+          entry_date?: string
+          id?: string
+          movement_id?: string | null
+          org_id?: string
+          posted_at?: string | null
+          posted_by?: string | null
+          reference?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_accounting_entries_movement_id_fkey"
+            columns: ["movement_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_accounting_entries_movement_id_fkey"
+            columns: ["movement_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_movements_with_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_accounting_entries_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_alerts: {
         Row: {
           acknowledged_at: string | null
@@ -6681,6 +7106,237 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_batches: {
+        Row: {
+          batch_number: string
+          best_before_date: string | null
+          created_at: string
+          expiry_date: string | null
+          id: string
+          manufacturing_date: string | null
+          notes: string | null
+          org_id: string
+          part_id: string
+          purchase_receipt_id: string | null
+          quantity: number
+          quarantine_reason: string | null
+          quarantine_until: string | null
+          reserved_quantity: number
+          status: string
+          supplier_id: string | null
+          unit_cost: number | null
+        }
+        Insert: {
+          batch_number: string
+          best_before_date?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          manufacturing_date?: string | null
+          notes?: string | null
+          org_id: string
+          part_id: string
+          purchase_receipt_id?: string | null
+          quantity?: number
+          quarantine_reason?: string | null
+          quarantine_until?: string | null
+          reserved_quantity?: number
+          status?: string
+          supplier_id?: string | null
+          unit_cost?: number | null
+        }
+        Update: {
+          batch_number?: string
+          best_before_date?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          manufacturing_date?: string | null
+          notes?: string | null
+          org_id?: string
+          part_id?: string
+          purchase_receipt_id?: string | null
+          quantity?: number
+          quarantine_reason?: string | null
+          quarantine_until?: string | null
+          reserved_quantity?: number
+          status?: string
+          supplier_id?: string | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_batches_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_batches_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts_inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_provisions: {
+        Row: {
+          accounting_entry_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          batch_id: string | null
+          cost_before: number
+          created_at: string
+          evidence: Json | null
+          id: string
+          org_id: string
+          part_id: string
+          provision_amount: number
+          provision_date: string
+          provision_type: string
+          reversal_amount: number
+          status: string
+          vrl: number
+        }
+        Insert: {
+          accounting_entry_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          batch_id?: string | null
+          cost_before: number
+          created_at?: string
+          evidence?: Json | null
+          id?: string
+          org_id: string
+          part_id: string
+          provision_amount: number
+          provision_date: string
+          provision_type: string
+          reversal_amount?: number
+          status?: string
+          vrl: number
+        }
+        Update: {
+          accounting_entry_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          batch_id?: string | null
+          cost_before?: number
+          created_at?: string
+          evidence?: Json | null
+          id?: string
+          org_id?: string
+          part_id?: string
+          provision_amount?: number
+          provision_date?: string
+          provision_type?: string
+          reversal_amount?: number
+          status?: string
+          vrl?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_provisions_accounting_entry_id_fkey"
+            columns: ["accounting_entry_id"]
+            isOneToOne: false
+            referencedRelation: "stock_accounting_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_provisions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "stock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_provisions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_provisions_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts_inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_serials: {
+        Row: {
+          batch_id: string | null
+          created_at: string
+          current_location_id: string | null
+          id: string
+          notes: string | null
+          org_id: string
+          part_id: string
+          purchase_receipt_id: string | null
+          sale_order_id: string | null
+          serial_number: string
+          sold_at: string | null
+          status: string
+          warranty_expires_at: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          created_at?: string
+          current_location_id?: string | null
+          id?: string
+          notes?: string | null
+          org_id: string
+          part_id: string
+          purchase_receipt_id?: string | null
+          sale_order_id?: string | null
+          serial_number: string
+          sold_at?: string | null
+          status?: string
+          warranty_expires_at?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          created_at?: string
+          current_location_id?: string | null
+          id?: string
+          notes?: string | null
+          org_id?: string
+          part_id?: string
+          purchase_receipt_id?: string | null
+          sale_order_id?: string | null
+          serial_number?: string
+          sold_at?: string | null
+          status?: string
+          warranty_expires_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_serials_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "stock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_serials_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_serials_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts_inventory"
             referencedColumns: ["id"]
           },
         ]
@@ -8612,6 +9268,91 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_sectors_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warehouse_locations: {
+        Row: {
+          aisle: string | null
+          bin: string | null
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          max_capacity: number | null
+          rack: string | null
+          warehouse_id: string
+        }
+        Insert: {
+          aisle?: string | null
+          bin?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_capacity?: number | null
+          rack?: string | null
+          warehouse_id: string
+        }
+        Update: {
+          aisle?: string | null
+          bin?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_capacity?: number | null
+          rack?: string | null
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_locations_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      warehouses: {
+        Row: {
+          address: string | null
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          org_id: string
+        }
+        Insert: {
+          address?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          org_id: string
+        }
+        Update: {
+          address?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouses_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"

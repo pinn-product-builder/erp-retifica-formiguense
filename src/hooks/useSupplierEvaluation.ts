@@ -118,8 +118,8 @@ export const useSupplierEvaluation = () => {
     try {
       setLoading(true);
       
-      let query = supabase
-        .from('supplier_evaluations' as unknown)
+      let query = (supabase as any)
+        .from('supplier_evaluations')
         .select(`
           *,
           supplier:suppliers(id, name, rating),
@@ -213,8 +213,8 @@ export const useSupplierEvaluation = () => {
     try {
       setLoading(true);
       
-      const { error } = await supabase
-        .from('supplier_evaluations' as unknown)
+      const { error } = await (supabase as any)
+        .from('supplier_evaluations')
         .insert({
           org_id: currentOrganization.id,
           supplier_id: supplierId,
@@ -263,8 +263,8 @@ export const useSupplierEvaluation = () => {
     try {
       setLoading(true);
       
-      const { error } = await supabase
-        .from('supplier_contacts' as unknown)
+      const { error } = await (supabase as any)
+        .from('supplier_contacts')
         .insert({
           org_id: currentOrganization.id,
           supplier_id: supplierId,
@@ -397,7 +397,7 @@ export const useSupplierEvaluation = () => {
     if (!currentOrganization?.id) return [];
 
     try {
-      const { data, error } = await supabase.rpc('suggest_suppliers_for_part' as unknown, {
+      const { data, error } = await (supabase as any).rpc('suggest_suppliers_for_part', {
         p_org_id: currentOrganization.id,
         p_part_code: partCode,
         p_category: category,
@@ -452,8 +452,8 @@ export const useSupplierEvaluation = () => {
     if (!currentOrganization?.id) return null;
 
     try {
-      const { data: evaluations, error } = await supabase
-        .from('supplier_evaluations' as unknown)
+      const { data: evaluations, error } = await (supabase as any)
+        .from('supplier_evaluations')
         .select('*')
         .eq('supplier_id', supplierId)
         .eq('org_id', currentOrganization.id);
@@ -463,7 +463,7 @@ export const useSupplierEvaluation = () => {
         return null;
       }
 
-      const typedEvaluations = (evaluations || []) as unknown[];
+      const typedEvaluations = (evaluations || []) as any[];
 
       const stats = {
         totalEvaluations: typedEvaluations.length,
