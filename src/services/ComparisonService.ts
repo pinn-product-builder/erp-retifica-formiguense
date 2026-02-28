@@ -170,7 +170,7 @@ export const ComparisonService = {
       const totalValue = items.reduce((sum, r) => sum + r.total_price, 0);
 
       // Cria o PO
-      const { data: po, error: poErr } = await supabase
+      const { data: po, error: poErr } = await (supabase as any)
         .from('purchase_orders')
         .insert({
           org_id:           orgId,

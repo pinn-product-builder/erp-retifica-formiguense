@@ -64,7 +64,7 @@ function KPISkeleton() {
 }
 
 export function PurchasingDashboard() {
-  const { isLoading, data, filters, fetch, setPeriod, applyFilters, printReport } =
+  const { isLoading, data, filters, fetchAll: fetch, setPeriod, applyFilters, printReport } =
     usePurchasingReports();
 
   const [localStart, setLocalStart] = useState('');

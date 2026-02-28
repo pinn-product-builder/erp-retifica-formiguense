@@ -63,7 +63,7 @@ export function InvoicesManager() {
     try {
       const newStatus: PurchaseInvoice['status'] = decision === 'accept' ? 'validated' : 'pending';
       const notes = `[${decision === 'accept' ? 'Aceito' : 'Recusado'}] ${justification}`;
-      await (supabase as unknown as { from: (t: string) => ReturnType<typeof supabase.from> })
+      await (supabase as any)
         .from('purchase_invoices')
         .update({ status: newStatus, validation_notes: notes })
         .eq('id', analyzeInvoice.id)

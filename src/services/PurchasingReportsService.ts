@@ -424,7 +424,7 @@ export const PurchasingReportsService = {
           }, 0) / approvedWithDelay.length
         : 0;
 
-    const flags: AuditFlag[] = [
+    const flags = [
       { type: 'Sem cotação',       count: ordersWithoutQuotation,                                           severity: 'high'   },
       { type: 'Aprovação tardia',  count: approvedWithDelay.filter(r => {
           const d = (new Date(r.approved_at!).getTime() - new Date(r.created_at).getTime()) / 86_400_000;
@@ -445,7 +445,7 @@ export const PurchasingReportsService = {
         severity:      (r.quotation_id == null ? 'high' : 'medium') as 'high' | 'medium' | 'low',
       }));
 
-    return { totalOrders, ordersWithQuotation, ordersWithoutQuotation, emergencyRate, avgApprovalDays, flags, flaggedOrders };
+    return { totalOrders, ordersWithQuotation, ordersWithoutQuotation, emergencyRate, avgApprovalDays, flags: flags as AuditFlag[], flaggedOrders };
   },
 
   buildPrintHTML(

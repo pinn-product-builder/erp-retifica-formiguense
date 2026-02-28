@@ -96,7 +96,7 @@ export const ApprovalThresholdService = {
     }
 
     const { data, error } = await supabase
-      .from('approval_thresholds' as never)
+      .from('approval_thresholds' as any)
       .insert({
         org_id:        orgId,
         min_value:     validated.min_value,
@@ -110,7 +110,7 @@ export const ApprovalThresholdService = {
       .single();
 
     if (error) throw error;
-    return data as ApprovalThreshold;
+    return data as unknown as ApprovalThreshold;
   },
 
   async update(
@@ -134,7 +134,7 @@ export const ApprovalThresholdService = {
     }
 
     const { data, error } = await supabase
-      .from('approval_thresholds' as never)
+      .from('approval_thresholds' as any)
       .update({
         min_value:     validated.min_value,
         max_value:     validated.max_value,
@@ -148,12 +148,12 @@ export const ApprovalThresholdService = {
       .single();
 
     if (error) throw error;
-    return data as ApprovalThreshold;
+    return data as unknown as ApprovalThreshold;
   },
 
   async remove(id: string): Promise<void> {
     const { error } = await supabase
-      .from('approval_thresholds' as never)
+      .from('approval_thresholds' as any)
       .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq('id', id);
     if (error) throw error;
@@ -161,8 +161,8 @@ export const ApprovalThresholdService = {
 
   async getApprovalTypeForValue(orgId: string, value: number): Promise<ApprovalType> {
     const { data, error } = await supabase.rpc(
-      'get_approval_level_for_value' as never,
-      { p_org_id: orgId, p_value: value } as never,
+      'get_approval_level_for_value' as any,
+      { p_org_id: orgId, p_value: value } as any,
     );
     if (error || !data) {
       if (value < 1000) return 'auto';

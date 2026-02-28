@@ -107,13 +107,11 @@ export function calcDueDates(issueDate: string, paymentCondition: string): strin
   });
 }
 
-const db = () => supabase as unknown as {
-  from: (t: string) => Record<string, unknown>;
-};
+const db = () => supabase as any;
 
 export const PurchaseInvoiceService = {
   async list(orgId: string): Promise<PurchaseInvoice[]> {
-    const { data, error } = await (db().from('purchase_invoices') as unknown as ReturnType<typeof supabase.from>)
+    const { data, error } = await db().from('purchase_invoices')
       .select(`
         *,
         purchase_order:purchase_orders(po_number, total_value, supplier:suppliers(name))
@@ -127,7 +125,7 @@ export const PurchaseInvoiceService = {
   },
 
   async getByOrder(purchaseOrderId: string): Promise<PurchaseInvoice[]> {
-    const { data, error } = await (db().from('purchase_invoices') as unknown as ReturnType<typeof supabase.from>)
+    const { data, error } = await db().from('purchase_invoices')
       .select('*')
       .eq('purchase_order_id', purchaseOrderId)
       .order('created_at', { ascending: false }) as unknown as { data: PurchaseInvoice[] | null; error: unknown };
@@ -154,7 +152,7 @@ export const PurchaseInvoiceService = {
       ? calcDueDates(validated.issue_date, validated.payment_condition)
       : (validated.due_dates ?? []);
 
-    const { data, error } = await (db().from('purchase_invoices') as unknown as ReturnType<typeof supabase.from>)
+    const { data, error } = await db().from('purchase_invoices')
       .insert({
         org_id:            orgId,
         created_by:        userId,
@@ -211,8 +209,8 @@ export const PurchaseInvoiceService = {
       notes:         `Pedido de compra vinculado: ${invoice.purchase_order?.po_number ?? invoice.purchase_order_id}`,
     }));
 
-    const { error } = await (db().from('accounts_payable') as unknown as ReturnType<typeof supabase.from>)
-      .insert(rows);
+    const { error } = await db().from('accounts_payable')
+      .insert(rows as any);
     if (error) console.error('Erro ao gerar contas a pagar:', error);
   },
 };
