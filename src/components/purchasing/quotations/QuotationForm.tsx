@@ -280,9 +280,15 @@ export function QuotationForm({ open, onOpenChange, quotation, onSubmit }: Quota
     setLoadingBudgets(false);
   };
 
+  useEffect(() => {
+    if (!open) {
+      reset();
+      resetWizard();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const handleClose = () => {
-    reset();
-    resetWizard();
     onOpenChange(false);
   };
 
