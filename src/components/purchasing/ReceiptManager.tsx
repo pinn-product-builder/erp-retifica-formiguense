@@ -81,7 +81,7 @@ const PO_STATUS_LABELS: Record<string, string> = {
 };
 
 export default function ReceiptManager() {
-  const { receipts, loading, fetchReceipts, fetchPendingPOs } = usePurchaseReceipts();
+  const { receipts, loading, fetchReceipts, fetchPendingPOs, fetchReceiptById } = usePurchaseReceipts();
   const { returns, fetchReturns } = useSupplierReturns();
   const { currentOrganization } = useOrganization();
 
@@ -166,17 +166,19 @@ export default function ReceiptManager() {
     setShowNfModal(true);
   };
 
-  const handleOpenLabelModal = (receipt: typeof receipts[0]) => {
+  const handleOpenLabelModal = async (receipt: typeof receipts[0]) => {
+    const full = await fetchReceiptById(receipt.id);
+    const source = full ?? receipt;
     setLabelItems(
-      (receipt.items ?? []).map(i => ({
-        receipt_item_id:   i.id,
-        item_name:         i.purchase_order_item?.item_name ?? 'Item',
-        part_code:         '',
-        received_quantity: i.received_quantity,
-        lot_number:        i.lot_number,
-        receipt_date:      receipt.receipt_date,
-        supplier_name:     receipt.purchase_order?.supplier?.name,
-        po_number:         receipt.purchase_order?.po_number,
+      (source.items ?? []).map(i => ({
+        receipt_item_id:    i.id,
+        item_name:          i.purchase_order_item?.item_name ?? 'Item',
+        part_code:          '',
+        received_quantity:  i.received_quantity,
+        lot_number:         i.lot_number,
+        receipt_date:       source.receipt_date,
+        supplier_name:      source.purchase_order?.supplier?.name,
+        po_number:          source.purchase_order?.po_number,
         warehouse_location: i.warehouse_location,
       })),
     );

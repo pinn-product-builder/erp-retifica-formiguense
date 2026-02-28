@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -122,9 +122,13 @@ export function LabelPrintModal({ open, onOpenChange, items }: LabelPrintModalPr
   const printRef = useRef<HTMLDivElement>(null);
 
   const [labelSize, setLabelSize] = useState<LabelSize>('medium');
-  const [counts, setCounts]       = useState<LabelCounts>(() =>
-    Object.fromEntries(items.map(i => [i.receipt_item_id, 1])),
-  );
+  const [counts, setCounts]       = useState<LabelCounts>({});
+
+  useEffect(() => {
+    if (open && items.length > 0) {
+      setCounts(Object.fromEntries(items.map(i => [i.receipt_item_id, 1])));
+    }
+  }, [open, items]);
 
   const updateCount = (id: string, value: number) =>
     setCounts(prev => ({ ...prev, [id]: Math.max(1, value) }));
@@ -155,7 +159,7 @@ export function LabelPrintModal({ open, onOpenChange, items }: LabelPrintModalPr
   <div class="labels-grid" style="font-size: ${sizeStyle.fontSize}">
     ${labelHtml}
   </div>
-  <script>window.onload = () => { window.print(); window.close(); }<\/script>
+  <script>window.onload = () => { window.print(); window.close(); }</script>
 </body>
 </html>`);
     printWindow.document.close();
