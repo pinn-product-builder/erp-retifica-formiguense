@@ -78,7 +78,7 @@ export function ContractItemPartSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-        <Command>
+        <Command shouldFilter={false}>
           <CommandInput
             placeholder="Buscar por código ou nome..."
             value={search}
