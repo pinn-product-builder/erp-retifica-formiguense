@@ -145,13 +145,13 @@ export default function Contratos() {
   const handleEdit = (contract: ContractRow) => {
     setContractToEdit(contract);
     setDetailsOpen(false);
-    setEditOpen(true);
+    setTimeout(() => setEditOpen(true), 150);
   };
 
   const handleRenew = (contract: ContractRow) => {
     setContractToRenew(contract);
     setDetailsOpen(false);
-    setRenewOpen(true);
+    setTimeout(() => setRenewOpen(true), 150);
   };
 
   const handleCancel = async (contractId: string) => {

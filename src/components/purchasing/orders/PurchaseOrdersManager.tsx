@@ -54,7 +54,8 @@ export function PurchaseOrdersManager() {
   const handleEditFromDetails = () => {
     if (detailOrder) {
       setEditTarget(detailOrder);
-      setEditOpen(true);
+      setDetailsOpen(false);
+      setTimeout(() => setEditOpen(true), 150);
     }
   };
 

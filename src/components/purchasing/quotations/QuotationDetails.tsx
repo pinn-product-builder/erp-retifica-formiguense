@@ -429,7 +429,7 @@ export function QuotationDetails({
         onOpenChange={setCompareOpen}
         quotationId={quotation.id}
         quotationNumber={quotation.quotation_number}
-        onPurchaseOrdersCreated={() => { setCompareOpen(false); onOpenChange(false); }}
+        onPurchaseOrdersCreated={() => { setCompareOpen(false); setTimeout(() => onOpenChange(false), 150); }}
       />
 
       {/* Confirmar exclusão de item */}

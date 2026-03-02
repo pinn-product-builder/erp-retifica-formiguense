@@ -296,7 +296,7 @@ export default function SuppliersManager() {
   const handleEdit = (supplier: Supplier) => {
     setEditing(supplier);
     setDetails(undefined);
-    setFormOpen(true);
+    setTimeout(() => setFormOpen(true), 150);
   };
 
   const handleFormSuccess = async () => {

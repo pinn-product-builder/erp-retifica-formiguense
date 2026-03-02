@@ -524,9 +524,9 @@ const SupplierEvaluation: React.FC<SupplierEvaluationProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    setIsDetailsDialogOpen(false);
                     setContactForm({ ...contactForm });
-                    setIsContactDialogOpen(true);
+                    setIsDetailsDialogOpen(false);
+                    setTimeout(() => setIsContactDialogOpen(true), 150);
                   }}
                 >
                   <Plus className="w-4 h-4 mr-2" />

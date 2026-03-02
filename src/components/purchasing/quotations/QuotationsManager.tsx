@@ -78,8 +78,9 @@ export function QuotationsManager() {
     if (!copyTarget) return false;
     const result = await copyQuotation(copyTarget.id, dueDate, title);
     if (result) {
+      const copied = result;
       setCopyTarget(null);
-      setViewTarget(result);
+      setTimeout(() => setViewTarget(copied), 150);
       return true;
     }
     return false;
