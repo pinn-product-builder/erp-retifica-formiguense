@@ -1,19 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import { ChevronsUpDown, Loader2, X } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Autocomplete, TextField, CircularProgress, Box, Typography } from '@mui/material';
 import { usePartsInventory, type PartInventory } from '@/hooks/usePartsInventory';
 import { cn } from '@/lib/utils';
 
@@ -25,10 +11,10 @@ export interface POSelectedPart {
 }
 
 interface POItemPartSelectProps {
-  value?:    string;
-  onSelect:  (part: POSelectedPart) => void;
-  onClear?:  () => void;
-  disabled?: boolean;
+  value?:     string;
+  onSelect:   (part: POSelectedPart) => void;
+  onClear?:   () => void;
+  disabled?:  boolean;
   className?: string;
 }
 
@@ -39,106 +25,97 @@ export function POItemPartSelect({
   disabled = false,
   className,
 }: POItemPartSelectProps) {
-  const [open, setOpen]     = useState(false);
-  const [search, setSearch] = useState('');
-  const [parts, setParts]   = useState<PartInventory[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [options, setOptions]   = useState<PartInventory[]>([]);
+  const [loading, setLoading]   = useState(false);
+  const [inputValue, setInputValue] = useState('');
 
   const { getPartsForSelection } = usePartsInventory();
 
-  useEffect(() => {
-    if (!open) return;
-    const load = async () => {
-      setLoading(true);
-      const data = await getPartsForSelection(search || undefined);
-      setParts(data);
-      setLoading(false);
-    };
-    load();
-  }, [getPartsForSelection, search, open]);
+  const fetchOptions = useCallback(async (search: string) => {
+    setLoading(true);
+    const data = await getPartsForSelection(search || undefined);
+    setOptions(data);
+    setLoading(false);
+  }, [getPartsForSelection]);
 
-  const handleSelect = (part: PartInventory) => {
+  const handleInputChange = (_: unknown, newInput: string) => {
+    setInputValue(newInput);
+    fetchOptions(newInput);
+  };
+
+  const handleChange = (_: unknown, selected: PartInventory | null) => {
+    if (!selected) {
+      onClear?.();
+      return;
+    }
     onSelect({
-      part_id:    part.id,
-      item_name:  part.part_name,
-      part_code:  part.part_code ?? undefined,
-      unit_price: part.unit_cost ?? 0,
+      part_id:    selected.id,
+      item_name:  selected.part_name,
+      part_code:  selected.part_code ?? undefined,
+      unit_price: selected.unit_cost ?? 0,
     });
-    setOpen(false);
-    setSearch('');
+    setInputValue('');
+    setOptions([]);
   };
 
   return (
-    <div className={cn('flex items-center gap-1', className)}>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            disabled={disabled}
-            className="h-7 flex-1 justify-between text-xs font-normal min-w-0 px-2"
-          >
-            <span className="truncate text-left">
-              {value || 'Selecionar peça...'}
-            </span>
-            <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80 p-0" align="start">
-          <Command shouldFilter={false}>
-            <CommandInput
-              placeholder="Buscar por código ou nome..."
-              value={search}
-              onValueChange={setSearch}
-              className="h-9"
-            />
-            <CommandList>
-              <CommandEmpty>
-                {loading ? (
-                  <div className="flex items-center justify-center py-6">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  'Nenhuma peça encontrada.'
-                )}
-              </CommandEmpty>
-              <CommandGroup>
-                {parts.map(part => (
-                  <CommandItem
-                    key={part.id}
-                    value={`${part.part_code ?? ''} ${part.part_name}`}
-                    onSelect={() => handleSelect(part)}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex flex-col min-w-0">
-                      <span className="font-medium truncate text-sm">
-                        {part.part_code ? `${part.part_code} — ` : ''}{part.part_name}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Custo: R$ {(part.unit_cost ?? 0).toFixed(2)}
-                      </span>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-
-      {value && onClear && !disabled && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
-          onClick={onClear}
-        >
-          <X className="h-3 w-3" />
-        </Button>
+    <Autocomplete
+      options={options}
+      loading={loading}
+      disabled={disabled}
+      inputValue={inputValue}
+      value={null}
+      filterOptions={(x) => x}
+      getOptionLabel={(opt) =>
+        typeof opt === 'string'
+          ? opt
+          : `${opt.part_code ? opt.part_code + ' — ' : ''}${opt.part_name}`
+      }
+      isOptionEqualToValue={(opt, val) => opt.id === val.id}
+      onInputChange={handleInputChange}
+      onChange={handleChange}
+      noOptionsText={inputValue.length < 1 ? 'Digite para buscar...' : 'Nenhuma peça encontrada.'}
+      loadingText="Buscando..."
+      className={cn(className)}
+      renderOption={(props, option) => (
+        <Box component="li" {...props} key={option.id}>
+          <Box>
+            <Typography variant="body2" fontWeight={500} noWrap>
+              {option.part_code ? `${option.part_code} — ` : ''}{option.part_name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Custo: R$ {(option.unit_cost ?? 0).toFixed(2)}
+            </Typography>
+          </Box>
+        </Box>
       )}
-    </div>
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          placeholder={value || 'Selecionar peça...'}
+          size="small"
+          InputProps={{
+            ...params.InputProps,
+            endAdornment: (
+              <>
+                {loading && <CircularProgress color="inherit" size={14} />}
+                {params.InputProps.endAdornment}
+              </>
+            ),
+          }}
+          sx={{
+            '& .MuiOutlinedInput-root': {
+              fontSize: '0.75rem',
+              minHeight: '28px',
+              padding: '0 8px !important',
+            },
+            '& .MuiInputBase-input': {
+              padding: '2px 4px !important',
+              fontSize: '0.75rem',
+            },
+          }}
+        />
+      )}
+    />
   );
 }
