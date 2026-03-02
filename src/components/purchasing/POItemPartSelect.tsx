@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Autocomplete, TextField, CircularProgress, Box, Typography } from '@mui/material';
 import { usePartsInventory, type PartInventory } from '@/hooks/usePartsInventory';
 import { cn } from '@/lib/utils';
@@ -77,18 +77,21 @@ export function POItemPartSelect({
       noOptionsText={inputValue.length < 1 ? 'Digite para buscar...' : 'Nenhuma peça encontrada.'}
       loadingText="Buscando..."
       className={cn(className)}
-      renderOption={(props, option) => (
-        <Box component="li" {...props} key={option.id}>
-          <Box>
-            <Typography variant="body2" fontWeight={500} noWrap>
-              {option.part_code ? `${option.part_code} — ` : ''}{option.part_name}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Custo: R$ {(option.unit_cost ?? 0).toFixed(2)}
-            </Typography>
+      renderOption={(props, option) => {
+        const { key, ...optionProps } = props as typeof props & { key: React.Key };
+        return (
+          <Box component="li" key={key} {...optionProps}>
+            <Box>
+              <Typography variant="body2" fontWeight={500} noWrap>
+                {option.part_code ? `${option.part_code} — ` : ''}{option.part_name}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Custo: R$ {(option.unit_cost ?? 0).toFixed(2)}
+              </Typography>
+            </Box>
           </Box>
-        </Box>
-      )}
+        );
+      }}
       renderInput={(params) => (
         <TextField
           {...params}

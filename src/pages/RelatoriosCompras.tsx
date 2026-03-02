@@ -11,10 +11,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import {
-  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
-} from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Autocomplete, TextField } from '@mui/material';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -22,7 +19,7 @@ import {
 import {
   FileDown, TrendingUp, TrendingDown, Building2, Package, Clock,
   DollarSign, AlertTriangle, CheckCircle, BarChart3, FileText, RefreshCw,
-  Printer, PieChart as PieChartIcon, ChevronsUpDown, Check, X, History,
+  Printer, PieChart as PieChartIcon, X, History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/utils';
@@ -83,7 +80,6 @@ export default function RelatoriosCompras() {
     selectItem, changePeriod: changeHistPeriod, clearSelection,
   } = usePriceHistory();
 
-  const [comboOpen, setComboOpen] = useState(false);
 
   const [localStart, setLocalStart] = useState('');
   const [localEnd,   setLocalEnd]   = useState('');
@@ -422,49 +418,23 @@ export default function RelatoriosCompras() {
             </CardHeader>
             <CardContent className="p-3 sm:p-4 pt-0 space-y-3">
               <div className="flex flex-col sm:flex-row gap-2">
-                <Popover open={comboOpen} onOpenChange={setComboOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={comboOpen}
-                      className="w-full sm:w-80 justify-between text-xs sm:text-sm h-9"
-                    >
-                      <span className="truncate">
-                        {selectedItem ?? 'Buscar item pelo nome...'}
-                      </span>
-                      <ChevronsUpDown className="w-3.5 h-3.5 opacity-50 flex-shrink-0 ml-2" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Buscar item..." className="text-xs" />
-                      <CommandList>
-                        <CommandEmpty>
-                          {isLoadingItems ? 'Carregando...' : 'Nenhum item encontrado.'}
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {allItems.map((item) => (
-                            <CommandItem
-                              key={item}
-                              value={item}
-                              onSelect={(val) => {
-                                selectItem(val);
-                                setComboOpen(false);
-                              }}
-                              className="text-xs"
-                            >
-                              <Check
-                                className={cn('mr-2 w-3.5 h-3.5', selectedItem === item ? 'opacity-100' : 'opacity-0')}
-                              />
-                              {item}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <Autocomplete
+                  options={allItems}
+                  loading={isLoadingItems}
+                  value={selectedItem ?? null}
+                  onChange={(_, val) => { if (val) selectItem(val); }}
+                  noOptionsText="Nenhum item encontrado."
+                  loadingText="Carregando..."
+                  sx={{ width: '100%', maxWidth: 320 }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      placeholder="Buscar item pelo nome..."
+                      size="small"
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.8125rem' } }}
+                    />
+                  )}
+                />
 
                 {selectedItem && (
                   <Button variant="ghost" size="sm" onClick={clearSelection} className="gap-1.5 h-9">
