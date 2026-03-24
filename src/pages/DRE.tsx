@@ -3,19 +3,17 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useFinancial } from '@/hooks/useFinancial';
+import { DreCategorizedService } from '@/services/financial/dreCategorizedService';
 import { 
   Calculator, TrendingUp, TrendingDown, DollarSign, 
   BarChart3, Calendar, FileText, Download
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { useOrganization } from '@/hooks/useOrganization';
 
 export default function DRE() {
   const { currentOrganization } = useOrganization();
   const orgId = currentOrganization?.id;
-  const { getMonthlyDRE, getCashFlow, loading } = useFinancial();
+  const [loading, setLoading] = useState(false);
   
   const [dreData, setDreData] = useState<Record<string, unknown>[]>([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -33,44 +31,25 @@ export default function DRE() {
   }, [selectedMonth, selectedYear, orgId]);
 
   const loadDREData = async () => {
-    const data = await getMonthlyDRE(selectedYear);
-    setDreData(data as unknown as Record<string, unknown>[]);
+    if (!orgId) return;
+    setLoading(true);
+    try {
+      const rows = await DreCategorizedService.computeYear(orgId, selectedYear);
+      setDreData(rows as unknown as Record<string, unknown>[]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadMonthlyData = async () => {
-    // Buscar dados do fluxo de caixa para o mês selecionado
-    const startDate = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-01`;
-    const endDate = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-31`;
-    
-    const cashFlowRes = await getCashFlow(startDate, endDate, 1, 500);
-    const cashFlowData = cashFlowRes.data as unknown as Record<string, unknown>[];
-
-    const income = cashFlowData
-      .filter((t) => t.transaction_type === 'income')
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-
-    const expenses = cashFlowData
-      .filter((t) => t.transaction_type === 'expense')
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-
-    // Simular divisão das despesas (em um sistema real, isso viria categorizado)
-    const directCosts = expenses * 0.4; // 40% custos diretos
-    const operationalExpenses = expenses * 0.6; // 60% despesas operacionais
-    
-    const grossProfit = income - directCosts;
-    const netProfit = grossProfit - operationalExpenses;
-    const profitMargin = income > 0 ? (netProfit / income) * 100 : 0;
-
-    setMonthlyData({
-      month: selectedMonth,
-      year: selectedYear,
-      total_revenue: income,
-      direct_costs: directCosts,
-      operational_expenses: operationalExpenses,
-      gross_profit: grossProfit,
-      net_profit: netProfit,
-      profit_margin: profitMargin
-    });
+    if (!orgId) return;
+    setLoading(true);
+    try {
+      const m = await DreCategorizedService.computeMonth(orgId, selectedYear, selectedMonth);
+      setMonthlyData(m);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -229,9 +208,15 @@ export default function DRE() {
                   
                   <div className="pl-4 space-y-1">
                     <div className="flex justify-between items-center text-sm">
-                      <span>(-) Custos Diretos</span>
+                      <span>(-) Custos dos serviços</span>
                       <span className="text-destructive">
                         {formatCurrency((monthlyData as Record<string, unknown>).direct_costs as number)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span>(-) Obrigações fiscais</span>
+                      <span className="text-destructive">
+                        {formatCurrency((monthlyData as Record<string, unknown>).tax_expenses as number)}
                       </span>
                     </div>
                   </div>
@@ -245,9 +230,15 @@ export default function DRE() {
                   
                   <div className="pl-4 space-y-1">
                     <div className="flex justify-between items-center text-sm">
-                      <span>(-) Despesas Operacionais</span>
+                      <span>(-) Despesas administrativas</span>
                       <span className="text-destructive">
                         {formatCurrency((monthlyData as Record<string, unknown>).operational_expenses as number)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span>(-) Retiradas de sócios</span>
+                      <span className="text-destructive">
+                        {formatCurrency((monthlyData as Record<string, unknown>).partner_withdrawals as number)}
                       </span>
                     </div>
                   </div>
@@ -302,7 +293,7 @@ export default function DRE() {
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>Nenhum dado de DRE encontrado para o ano selecionado</p>
-                  <p className="text-xs mt-1">Os dados são calculados automaticamente com base no fluxo de caixa</p>
+                  <p className="text-xs mt-1">Dados por contas pagas/recebidas e categorias de despesa</p>
                 </div>
               )}
             </div>

@@ -32,6 +32,8 @@ export const accountsReceivableCreateSchema = z
     installment_number: z.number().int().min(1).optional().nullable(),
     total_installments: z.number().int().min(1).optional().nullable(),
     cost_center_id: z.string().uuid().optional().nullable(),
+    source: z.enum(['budget', 'order', 'manual']).optional().nullable(),
+    source_id: z.string().uuid().optional().nullable(),
   })
   .superRefine((data, ctx) => {
     const due = new Date(data.due_date);
@@ -64,6 +66,9 @@ export const accountsReceivableInstallmentsSchema = z.object({
   installments: z.number().int().min(2).max(60),
   payment_method: paymentMethodSchema.optional().nullable(),
   notes: z.string().optional().nullable(),
+  source: z.enum(['budget', 'order', 'manual']).optional().nullable(),
+  source_id: z.string().uuid().optional().nullable(),
+  cost_center_id: z.string().uuid().optional().nullable(),
 });
 
 export const receiptRecordSchema = z.object({

@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { accountsPayableCreateSchema, type AccountsPayableCreateInput } from '@/services/financial/schemas';
 import type { PaginatedResult } from '@/services/financial/types';
+import { ApprovalApService } from '@/services/financial/approvalApService';
 
 type ApRow = Database['public']['Tables']['accounts_payable']['Row'];
 
@@ -11,6 +12,14 @@ export interface AccountsPayableListFilters {
   dueFrom?: string;
   dueTo?: string;
   search?: string;
+}
+
+export interface AccountsPayableOrgSummary {
+  all: number;
+  pending: number;
+  overdue: number;
+  paid: number;
+  pendingAmount: number;
 }
 
 export class AccountsPayableService {
@@ -35,23 +44,21 @@ export class AccountsPayableService {
     if (filters.dueFrom) q = q.gte('due_date', filters.dueFrom);
     if (filters.dueTo) q = q.lte('due_date', filters.dueTo);
 
+    const rawSearch = filters.search?.trim();
+    if (rawSearch) {
+      const inner = rawSearch.replace(/\*/g, '').replace(/,/g, ' ').trim();
+      if (inner.length > 0) {
+        const wrapped = `*%${inner}%*`;
+        q = q.or(`description.ilike.${wrapped},supplier_name.ilike.${wrapped}`);
+      }
+    }
+
     q = q.order('due_date', { ascending: true }).range(from, to);
 
     const { data, error, count } = await q;
     if (error) throw new Error(error.message);
 
-    let rows = (data ?? []) as (ApRow & Record<string, unknown>)[];
-    if (filters.search?.trim()) {
-      const t = filters.search.trim().toLowerCase();
-      rows = rows.filter((r) => {
-        const sup = r.suppliers as { name?: string } | null;
-        return (
-          r.description.toLowerCase().includes(t) ||
-          r.supplier_name.toLowerCase().includes(t) ||
-          (sup?.name?.toLowerCase().includes(t) ?? false)
-        );
-      });
-    }
+    const rows = (data ?? []) as (ApRow & Record<string, unknown>)[];
 
     const total = count ?? 0;
     return {
@@ -60,6 +67,21 @@ export class AccountsPayableService {
       page,
       pageSize,
       totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    };
+  }
+
+  static async getOrgSummary(orgId: string): Promise<AccountsPayableOrgSummary> {
+    const { data, error } = await supabase.rpc('accounts_payable_org_summary', {
+      p_org_id: orgId,
+    });
+    if (error) throw new Error(error.message);
+    const j = data as Record<string, unknown> | null;
+    return {
+      all: Number(j?.all ?? 0),
+      pending: Number(j?.pending ?? 0),
+      overdue: Number(j?.overdue ?? 0),
+      paid: Number(j?.paid ?? 0),
+      pendingAmount: Number(j?.pending_amount ?? 0),
     };
   }
 
@@ -88,6 +110,11 @@ export class AccountsPayableService {
       }
     }
 
+    let approvalStatus = v.approval_status;
+    if (approvalStatus === undefined || approvalStatus === null || approvalStatus === '') {
+      approvalStatus = await ApprovalApService.computeInitialApprovalStatus(orgId, v.amount);
+    }
+
     const row: Database['public']['Tables']['accounts_payable']['Insert'] = {
       org_id: orgId,
       supplier_id: v.supplier_id ?? null,
@@ -102,7 +129,7 @@ export class AccountsPayableService {
       notes: v.notes ?? null,
       cost_center_id: v.cost_center_id ?? null,
       purchase_order_id: v.purchase_order_id ?? null,
-      approval_status: v.approval_status ?? 'approved',
+      approval_status: approvalStatus,
       status: 'pending',
     };
 

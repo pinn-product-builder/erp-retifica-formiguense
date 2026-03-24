@@ -132,6 +132,8 @@ export class AccountsReceivableService {
       installment_number: v.installment_number ?? 1,
       total_installments: v.total_installments ?? 1,
       cost_center_id: v.cost_center_id ?? null,
+      source: v.source ?? null,
+      source_id: v.source_id ?? null,
       status: 'pending',
       created_by: userId,
       updated_by: userId,
@@ -170,6 +172,8 @@ export class AccountsReceivableService {
     const base = new Date(v.first_due_date);
     const per = Math.round((v.total_amount / v.installments) * 100) / 100;
     let remainder = v.total_amount - per * (v.installments - 1);
+    const src = v.source ?? null;
+    const srcId = v.source_id ?? null;
     const rows: Database['public']['Tables']['accounts_receivable']['Insert'][] = [];
     for (let i = 0; i < v.installments; i++) {
       const d = new Date(base);
@@ -187,6 +191,9 @@ export class AccountsReceivableService {
         notes: v.notes ?? null,
         installment_number: i + 1,
         total_installments: v.installments,
+        source: src,
+        source_id: srcId,
+        cost_center_id: v.cost_center_id ?? null,
         status: 'pending',
         created_by: userId,
         updated_by: userId,

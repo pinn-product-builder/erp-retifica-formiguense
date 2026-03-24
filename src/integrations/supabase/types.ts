@@ -136,6 +136,8 @@ export type Database = {
           org_id: string | null
           payment_date: string | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
+          source: string | null
+          source_id: string | null
           status: Database["public"]["Enums"]["payment_status"] | null
           total_installments: number | null
           updated_at: string | null
@@ -160,6 +162,8 @@ export type Database = {
           org_id?: string | null
           payment_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          source?: string | null
+          source_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"] | null
           total_installments?: number | null
           updated_at?: string | null
@@ -184,6 +188,8 @@ export type Database = {
           org_id?: string | null
           payment_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          source?: string | null
+          source_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"] | null
           total_installments?: number | null
           updated_at?: string | null
@@ -274,31 +280,67 @@ export type Database = {
       }
       approval_tiers_ap: {
         Row: {
+          approver_role: string | null
           created_at: string | null
           id: string
           max_amount: number
+          min_amount: number
           name: string
           org_id: string
           sequence_order: number
           updated_at: string | null
         }
         Insert: {
+          approver_role?: string | null
           created_at?: string | null
           id?: string
           max_amount: number
+          min_amount?: number
           name: string
           org_id: string
           sequence_order?: number
           updated_at?: string | null
         }
         Update: {
+          approver_role?: string | null
           created_at?: string | null
           id?: string
           max_amount?: number
+          min_amount?: number
           name?: string
           org_id?: string
           sequence_order?: number
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      accounts_payable_approval_events: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          org_id: string
+          payable_id: string
+          reason: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          org_id: string
+          payable_id: string
+          reason?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          org_id?: string
+          payable_id?: string
+          reason?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -812,10 +854,12 @@ export type Database = {
           account_type: string | null
           agency: string | null
           balance: number | null
-          bank_name: string
+          bank_name: string | null
           created_at: string | null
           id: string
           is_active: boolean | null
+          kind: string
+          name: string
           org_id: string | null
           updated_at: string | null
         }
@@ -824,10 +868,12 @@ export type Database = {
           account_type?: string | null
           agency?: string | null
           balance?: number | null
-          bank_name: string
+          bank_name?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          kind?: string
+          name: string
           org_id?: string | null
           updated_at?: string | null
         }
@@ -836,10 +882,12 @@ export type Database = {
           account_type?: string | null
           agency?: string | null
           balance?: number | null
-          bank_name?: string
+          bank_name?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          kind?: string
+          name?: string
           org_id?: string | null
           updated_at?: string | null
         }
@@ -10885,6 +10933,10 @@ export type Database = {
       }
     }
     Functions: {
+      accounts_payable_org_summary: {
+        Args: { p_org_id: string }
+        Returns: Json
+      }
       add_user_points: {
         Args: {
           p_action_type: string

@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { ApprovalApService } from '@/services/financial/approvalApService';
 import type { Database } from '@/integrations/supabase/types';
 
 type Row = Database['public']['Tables']['ap_recurring_schedules']['Row'];
@@ -49,6 +50,10 @@ export class ApRecurringService {
       supplierName = 'Recorrente';
     }
 
+    const approvalStatus = await ApprovalApService.computeInitialApprovalStatus(
+      orgId,
+      Number(sch.amount)
+    );
     const { error: e2 } = await supabase.from('accounts_payable').insert({
       org_id: orgId,
       supplier_id: sch.supplier_id,
@@ -59,7 +64,7 @@ export class ApRecurringService {
       due_date: sch.next_run_date,
       payment_method: sch.payment_method,
       status: 'pending',
-      approval_status: 'approved',
+      approval_status: approvalStatus,
     });
     if (e2) return { error: new Error(e2.message) };
 

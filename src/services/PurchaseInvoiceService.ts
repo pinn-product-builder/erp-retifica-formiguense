@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
+import { ApprovalApService } from '@/services/financial/approvalApService';
 
 export interface PurchaseInvoice {
   id:                string;
@@ -198,19 +199,23 @@ export const PurchaseInvoiceService = {
     const base    = parseFloat((total / n).toFixed(2));
     const adjust  = parseFloat((total - base * (n - 1)).toFixed(2));
 
-    const rows = dates.map((due_date, i) => ({
-      org_id:        orgId,
-      supplier_name: supplierName,
-      description:   `NF ${invoice.invoice_number} — Parcela ${i + 1}/${n}`,
-      amount:        i === n - 1 ? adjust : base,
-      due_date,
-      status:        'pending',
-      invoice_number: invoice.invoice_number,
-      notes:         `Pedido de compra vinculado: ${invoice.purchase_order?.po_number ?? invoice.purchase_order_id}`,
-    }));
+    const tiers = await ApprovalApService.listTiers(orgId);
+    const rows = dates.map((due_date, i) => {
+      const amount = i === n - 1 ? adjust : base;
+      return {
+        org_id: orgId,
+        supplier_name: supplierName,
+        description: `NF ${invoice.invoice_number} — Parcela ${i + 1}/${n}`,
+        amount,
+        due_date,
+        status: 'pending' as const,
+        invoice_number: invoice.invoice_number,
+        notes: `Pedido de compra vinculado: ${invoice.purchase_order?.po_number ?? invoice.purchase_order_id}`,
+        approval_status: ApprovalApService.initialApprovalStatusWithTiers(tiers, amount),
+      };
+    });
 
-    const { error } = await db().from('accounts_payable')
-      .insert(rows as any);
+    const { error } = await db().from('accounts_payable').insert(rows as never);
     if (error) console.error('Erro ao gerar contas a pagar:', error);
   },
 };

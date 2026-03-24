@@ -21,7 +21,7 @@ export class CashFlowService {
       .select(
         `*,
         expense_categories (name),
-        bank_accounts (bank_name, account_number)`,
+        bank_accounts (*)`,
         { count: 'exact' }
       )
       .eq('org_id', orgId)

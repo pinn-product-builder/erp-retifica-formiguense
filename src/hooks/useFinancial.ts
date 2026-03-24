@@ -149,6 +149,30 @@ export const useFinancial = () => {
     [orgId, handleError]
   );
 
+  const getAccountsPayableOrgSummary = useCallback(async () => {
+    if (!orgId) {
+      return {
+        all: 0,
+        pending: 0,
+        overdue: 0,
+        paid: 0,
+        pendingAmount: 0,
+      };
+    }
+    try {
+      return await AccountsPayableService.getOrgSummary(orgId);
+    } catch (error) {
+      handleError(error, 'Erro ao carregar resumo de contas a pagar');
+      return {
+        all: 0,
+        pending: 0,
+        overdue: 0,
+        paid: 0,
+        pendingAmount: 0,
+      };
+    }
+  }, [orgId, handleError]);
+
   const createAccountsPayable = useCallback(
     async (payable: AccountsPayable) => {
       if (!orgId) return null;
@@ -396,6 +420,7 @@ export const useFinancial = () => {
     createAccountsReceivable,
     updateAccountsReceivable,
     getAccountsPayable,
+    getAccountsPayableOrgSummary,
     createAccountsPayable,
     updateAccountsPayable,
     getCashFlow,

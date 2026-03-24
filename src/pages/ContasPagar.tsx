@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useFinancial, AccountsPayable } from '@/hooks/useFinancial';
+import { useOrganization } from '@/hooks/useOrganization';
+import { CostCenterSelect } from '@/components/financial/CostCenterSelect';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Plus, AlertTriangle, Calendar, DollarSign, 
@@ -17,21 +18,41 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { isAccountsPayableApprovedForPayment } from '@/services/financial/approvalApService';
+import type { AccountsPayableOrgSummary } from '@/services/financial/accountsPayableService';
+import type { Database } from '@/integrations/supabase/types';
+
+const ITEMS_PER_PAGE = 10;
+
+const emptySummary: AccountsPayableOrgSummary = {
+  all: 0,
+  pending: 0,
+  overdue: 0,
+  paid: 0,
+  pendingAmount: 0,
+};
 
 export default function ContasPagar() {
-  const { 
-    getAccountsPayable, 
-    createAccountsPayable, 
-    updateAccountsPayable, 
+  const { currentOrganization } = useOrganization();
+  const orgId = currentOrganization?.id ?? '';
+  const {
+    getAccountsPayable,
+    getAccountsPayableOrgSummary,
+    createAccountsPayable,
+    updateAccountsPayable,
     getExpenseCategories,
-    loading 
+    loading,
   } = useFinancial();
-  
+
   const [payables, setPayables] = useState<Record<string, unknown>[]>([]);
   const [categories, setCategories] = useState<Record<string, unknown>[]>([]);
   const [selectedTab, setSelectedTab] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [listMeta, setListMeta] = useState({ count: 0, totalPages: 1 });
+  const [summary, setSummary] = useState<AccountsPayableOrgSummary>(emptySummary);
   const [editingPayable, setEditingPayable] = useState<Record<string, unknown> | null>(null);
 
   const [formData, setFormData] = useState<Partial<AccountsPayable>>({
@@ -42,20 +63,67 @@ export default function ContasPagar() {
     status: 'pending',
     payment_method: undefined,
     invoice_number: '',
-    notes: ''
+    notes: '',
+    cost_center_id: undefined,
   });
 
   useEffect(() => {
-    loadData();
-  }, []);
+    const t = window.setTimeout(() => setDebouncedSearch(searchTerm.trim()), 350);
+    return () => window.clearTimeout(t);
+  }, [searchTerm]);
 
-  const loadData = async () => {
-    const [payablesRes, categoriesData] = await Promise.all([
-      getAccountsPayable(1, 200),
-      getExpenseCategories()
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedTab, debouncedSearch]);
+
+  useEffect(() => {
+    if (!orgId) return;
+    void (async () => {
+      const categoriesData = await getExpenseCategories();
+      setCategories(categoriesData);
+    })();
+  }, [orgId, getExpenseCategories]);
+
+  useEffect(() => {
+    if (!orgId) return;
+    void (async () => {
+      const s = await getAccountsPayableOrgSummary();
+      setSummary(s);
+    })();
+  }, [orgId, getAccountsPayableOrgSummary]);
+
+  useEffect(() => {
+    if (!orgId) return;
+    void (async () => {
+      const statusFilter: Database['public']['Enums']['payment_status'] | undefined =
+        selectedTab === 'all'
+          ? undefined
+          : (selectedTab as Database['public']['Enums']['payment_status']);
+      const payablesRes = await getAccountsPayable(currentPage, ITEMS_PER_PAGE, {
+        status: statusFilter,
+        search: debouncedSearch || undefined,
+      });
+      setPayables(payablesRes.data as unknown as Record<string, unknown>[]);
+      setListMeta({ count: payablesRes.count, totalPages: payablesRes.totalPages });
+    })();
+  }, [orgId, currentPage, selectedTab, debouncedSearch, getAccountsPayable]);
+
+  const refreshAll = async () => {
+    if (!orgId) return;
+    const statusFilter: Database['public']['Enums']['payment_status'] | undefined =
+      selectedTab === 'all'
+        ? undefined
+        : (selectedTab as Database['public']['Enums']['payment_status']);
+    const [payablesRes, s] = await Promise.all([
+      getAccountsPayable(currentPage, ITEMS_PER_PAGE, {
+        status: statusFilter,
+        search: debouncedSearch || undefined,
+      }),
+      getAccountsPayableOrgSummary(),
     ]);
     setPayables(payablesRes.data as unknown as Record<string, unknown>[]);
-    setCategories(categoriesData);
+    setListMeta({ count: payablesRes.count, totalPages: payablesRes.totalPages });
+    setSummary(s);
   };
 
   const formatCurrency = (value: number) => {
@@ -85,18 +153,6 @@ export default function ContasPagar() {
     }
   };
 
-  const filteredPayables = payables.filter(payable => {
-    const matchesSearch = ((payable as Record<string, unknown>).supplier_name as string).toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         ((payable as Record<string, unknown>).description as string).toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (selectedTab === 'all') return matchesSearch;
-    if (selectedTab === 'pending') return matchesSearch && (payable as Record<string, unknown>).status as string === 'pending';
-    if (selectedTab === 'overdue') return matchesSearch && (payable as Record<string, unknown>).status as string === 'overdue';
-    if (selectedTab === 'paid') return matchesSearch && (payable as Record<string, unknown>).status as string === 'paid';
-    
-    return matchesSearch;
-  });
-
   const resetForm = () => {
     setFormData({
       supplier_name: '',
@@ -106,7 +162,8 @@ export default function ContasPagar() {
       status: 'pending',
       payment_method: undefined,
       invoice_number: '',
-      notes: ''
+      notes: '',
+      cost_center_id: undefined,
     });
     setEditingPayable(null);
   };
@@ -145,9 +202,10 @@ export default function ContasPagar() {
         status: 'pending',
         payment_method: undefined,
         invoice_number: '',
-        notes: ''
+        notes: '',
+        cost_center_id: undefined,
       });
-      loadData();
+      void refreshAll();
     } catch (error) {
       toast.error('Erro ao salvar conta a pagar');
     }
@@ -165,25 +223,36 @@ export default function ContasPagar() {
       status: payable.status as 'pending' | 'paid' | 'overdue' | 'cancelled',
       payment_method: payable.payment_method as 'cash' | 'pix' | 'credit_card' | 'debit_card' | 'bank_transfer' | 'check' | undefined,
       invoice_number: payable.invoice_number as string || '',
-      notes: payable.notes as string || ''
+      notes: payable.notes as string || '',
+      cost_center_id: (payable.cost_center_id as string | null) ?? undefined,
     });
     setIsModalOpen(true);
   };
 
   const handleMarkAsPaid = async (payable: Record<string, unknown>) => {
+    const ap = payable.approval_status as string | null | undefined;
+    if (!isAccountsPayableApprovedForPayment(ap)) {
+      toast.error('Aprove o título antes de marcar como pago.');
+      return;
+    }
     await updateAccountsPayable(payable.id as string, {
       status: 'paid',
-      payment_date: new Date().toISOString().split('T')[0]
+      payment_date: new Date().toISOString().split('T')[0],
     });
-    loadData();
+    void refreshAll();
   };
 
-  const totals = {
-    all: payables.length,
-    pending: payables.filter(p => p.status === 'pending').length,
-    overdue: payables.filter(p => p.status === 'overdue').length,
-    paid: payables.filter(p => p.status === 'paid').length,
-    totalAmount: payables.filter(p => p.status === 'pending').reduce((sum, p) => sum + Number(p.amount), 0)
+  const approvalBadgeClass = (approvalStatus: string | null | undefined) => {
+    if (approvalStatus == null || approvalStatus === '' || approvalStatus === 'approved') return '';
+    if (approvalStatus === 'rejected') return 'bg-destructive text-destructive-foreground';
+    return 'bg-secondary text-secondary-foreground';
+  };
+
+  const approvalBadgeLabel = (approvalStatus: string | null | undefined) => {
+    if (approvalStatus == null || approvalStatus === '' || approvalStatus === 'approved') return '';
+    if (approvalStatus === 'rejected') return 'Rejeitado';
+    if (approvalStatus === 'pending_approval' || approvalStatus === 'awaiting_approval') return 'Aguardando aprovação';
+    return approvalStatus;
   };
 
   return (
@@ -196,19 +265,22 @@ export default function ContasPagar() {
         
         <Dialog open={isModalOpen} onOpenChange={handleModalChange}>
           <DialogTrigger asChild>
-            <Button onClick={() => {
-              setEditingPayable(null);
-              setFormData({
-                supplier_name: '',
-                description: '',
-                amount: 0,
-                due_date: '',
-                status: 'pending',
-                payment_method: undefined,
-                invoice_number: '',
-                notes: ''
-              });
-            }}>
+            <Button
+              onClick={() => {
+                setEditingPayable(null);
+                setFormData({
+                  supplier_name: '',
+                  description: '',
+                  amount: 0,
+                  due_date: '',
+                  status: 'pending',
+                  payment_method: undefined,
+                  invoice_number: '',
+                  notes: '',
+                  cost_center_id: undefined,
+                });
+              }}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Nova Conta a Pagar
             </Button>
@@ -287,7 +359,7 @@ export default function ContasPagar() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Label htmlFor="category">Categoria</Label>
                   <Select 
@@ -307,7 +379,18 @@ export default function ContasPagar() {
                   </Select>
                 </div>
 
-                <div>
+                <CostCenterSelect
+                  orgId={orgId}
+                  value={(formData.cost_center_id as string) ?? ''}
+                  onValueChange={(id) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      cost_center_id: id || undefined,
+                    }))
+                  }
+                />
+
+                <div className="sm:col-span-2">
                   <Label htmlFor="payment_method">Forma de Pagamento</Label>
                   <Select 
                     value={formData.payment_method} 
@@ -359,7 +442,7 @@ export default function ContasPagar() {
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totals.all}</div>
+            <div className="text-2xl font-bold">{summary.all}</div>
           </CardContent>
         </Card>
 
@@ -369,7 +452,7 @@ export default function ContasPagar() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-warning">{totals.pending}</div>
+            <div className="text-2xl font-bold text-warning">{summary.pending}</div>
           </CardContent>
         </Card>
 
@@ -379,18 +462,18 @@ export default function ContasPagar() {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{totals.overdue}</div>
+            <div className="text-2xl font-bold text-destructive">{summary.overdue}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
+            <CardTitle className="text-sm font-medium">Valor pendente</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">
-              {formatCurrency(totals.totalAmount)}
+              {formatCurrency(summary.pendingAmount)}
             </div>
           </CardContent>
         </Card>
@@ -411,25 +494,47 @@ export default function ContasPagar() {
 
       {/* Tabs com contas */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList>
-          <TabsTrigger value="all">Todas ({totals.all})</TabsTrigger>
-          <TabsTrigger value="pending">Pendentes ({totals.pending})</TabsTrigger>
-          <TabsTrigger value="overdue">Vencidas ({totals.overdue})</TabsTrigger>
-          <TabsTrigger value="paid">Pagas ({totals.paid})</TabsTrigger>
+        <TabsList className="flex w-full overflow-x-auto h-auto p-1 gap-1">
+          <TabsTrigger value="all" className="text-xs sm:text-sm flex-shrink-0">
+            Todas ({summary.all})
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="text-xs sm:text-sm flex-shrink-0">
+            Pendentes ({summary.pending})
+          </TabsTrigger>
+          <TabsTrigger value="overdue" className="text-xs sm:text-sm flex-shrink-0">
+            Vencidas ({summary.overdue})
+          </TabsTrigger>
+          <TabsTrigger value="paid" className="text-xs sm:text-sm flex-shrink-0">
+            Pagas ({summary.paid})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value={selectedTab} className="space-y-4">
           <Card>
             <CardContent className="p-0">
               <div className="space-y-1">
-                {filteredPayables.map((payable, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border-b last:border-b-0">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-medium">{(payable as Record<string, unknown>).supplier_name as string}</h3>
+                {payables.map((payable) => (
+                  <div
+                    key={payable.id as string}
+                    className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border-b last:border-b-0"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h3 className="font-medium truncate">
+                          {(payable as Record<string, unknown>).supplier_name as string}
+                        </h3>
                         <Badge className={getStatusColor((payable as Record<string, unknown>).status as string)}>
                           {getStatusText((payable as Record<string, unknown>).status as string)}
                         </Badge>
+                        {approvalBadgeLabel((payable as Record<string, unknown>).approval_status as string) ? (
+                          <Badge
+                            className={approvalBadgeClass(
+                              (payable as Record<string, unknown>).approval_status as string
+                            )}
+                          >
+                            {approvalBadgeLabel((payable as Record<string, unknown>).approval_status as string)}
+                          </Badge>
+                        ) : null}
                       </div>
                       <p className="text-sm text-muted-foreground mb-1">
                         {(payable as Record<string, unknown>).description as string}
@@ -468,26 +573,68 @@ export default function ContasPagar() {
                         >
                           Editar
                         </Button>
-                        {payable.status === 'pending' && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleMarkAsPaid(payable)}
-                            className="bg-success hover:bg-success/90"
-                          >
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Pagar
-                          </Button>
-                        )}
+                        {payable.status === 'pending' &&
+                          isAccountsPayableApprovedForPayment(
+                            (payable as Record<string, unknown>).approval_status as string
+                          ) && (
+                            <Button
+                              size="sm"
+                              onClick={() => void handleMarkAsPaid(payable)}
+                              className="bg-success hover:bg-success/90"
+                            >
+                              <CheckCircle className="h-3 w-3 sm:mr-1" />
+                              <span className="hidden sm:inline">Pagar</span>
+                            </Button>
+                          )}
+                        {payable.status === 'pending' &&
+                          !isAccountsPayableApprovedForPayment(
+                            (payable as Record<string, unknown>).approval_status as string
+                          ) && (
+                            <span className="text-xs text-muted-foreground max-w-[10rem] sm:max-w-none">
+                              Aprovação necessária
+                            </span>
+                          )}
                       </div>
                     </div>
                   </div>
                 ))}
                 
-                {filteredPayables.length === 0 && (
+                {payables.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     Nenhuma conta a pagar encontrada
                   </div>
                 )}
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-3 sm:px-4 py-3 border-t text-xs sm:text-sm text-muted-foreground">
+                <span>
+                  Mostrando{' '}
+                  {listMeta.count === 0
+                    ? 0
+                    : (currentPage - 1) * ITEMS_PER_PAGE + 1}{' '}
+                  a {Math.min(currentPage * ITEMS_PER_PAGE, listMeta.count)} de {listMeta.count} itens
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    disabled={currentPage <= 1 || loading}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    disabled={currentPage >= listMeta.totalPages || loading}
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                  >
+                    Próxima
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -24,7 +24,11 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { History, Loader2, Wallet } from 'lucide-react';
 import { FinancialPageShell } from '@/components/financial/FinancialPageShell';
-import { FinancialAsyncCombobox } from '@/components/financial/FinancialAsyncCombobox';
+import {
+  FinancialAsyncCombobox,
+  type FinancialAsyncComboboxProps,
+} from '@/components/financial/FinancialAsyncCombobox';
+import { CostCenterSelect } from '@/components/financial/CostCenterSelect';
 import { useFinancial } from '@/hooks/useFinancial';
 import { useOrganization } from '@/hooks/useOrganization';
 import { CustomerLookupService } from '@/services/financial/customerLookupService';
@@ -38,6 +42,18 @@ import { cn } from '@/lib/utils';
 type ArRow = Database['public']['Tables']['accounts_receivable']['Row'];
 type CustomerRow = Database['public']['Tables']['customers']['Row'];
 type Pm = Database['public']['Enums']['payment_method'];
+
+function CustomerArCombobox(props: FinancialAsyncComboboxProps<CustomerRow>) {
+  return <FinancialAsyncCombobox {...props} />;
+}
+
+function OrderArCombobox(props: FinancialAsyncComboboxProps<OrderWithDetails>) {
+  return <FinancialAsyncCombobox {...props} />;
+}
+
+function BudgetArCombobox(props: FinancialAsyncComboboxProps<BudgetListItem>) {
+  return <FinancialAsyncCombobox {...props} />;
+}
 
 const METHOD_LABELS: Record<string, string> = {
   cash: 'Dinheiro',
@@ -118,6 +134,7 @@ export default function ContasReceber() {
     payment_method: '' as Pm | '',
     notes: '',
     invoice_number: '',
+    cost_center_id: '',
   });
 
   const [installForm, setInstallForm] = useState({
@@ -232,6 +249,7 @@ export default function ContasReceber() {
       payment_method: '',
       notes: '',
       invoice_number: '',
+      cost_center_id: '',
     });
     setDialogOpen(true);
   };
@@ -250,6 +268,7 @@ export default function ContasReceber() {
       invoice_number: form.invoice_number || null,
       installment_number: 1,
       total_installments: 1,
+      cost_center_id: form.cost_center_id || null,
     };
     if (selectedRow) {
       await updateAccountsReceivable(selectedRow.id as string, payload);
@@ -272,6 +291,7 @@ export default function ContasReceber() {
       installments: Number(installForm.installments),
       payment_method: (form.payment_method || undefined) as Pm | undefined,
       notes: form.notes || null,
+      cost_center_id: form.cost_center_id || null,
     });
     if (ok) {
       setInstallDialogOpen(false);
@@ -392,7 +412,7 @@ export default function ContasReceber() {
             </div>
           </div>
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <FinancialAsyncCombobox<CustomerRow>
+            <CustomerArCombobox
               label="Cliente"
               value={customerOpt}
               onChange={setCustomerOpt}
@@ -407,7 +427,7 @@ export default function ContasReceber() {
               emptyText="Digite para buscar cliente"
               listZIndexClass="z-[100]"
             />
-            <FinancialAsyncCombobox<OrderWithDetails>
+            <OrderArCombobox
               label="OS"
               value={orderOpt}
               onChange={setOrderOpt}
@@ -422,7 +442,7 @@ export default function ContasReceber() {
               emptyText="Digite para buscar OS"
               listZIndexClass="z-[100]"
             />
-            <FinancialAsyncCombobox<BudgetListItem>
+            <BudgetArCombobox
               label="Orçamento"
               value={budgetOpt}
               onChange={setBudgetOpt}
@@ -592,7 +612,7 @@ export default function ContasReceber() {
               void submitForm();
             }}
           >
-            <FinancialAsyncCombobox<CustomerRow>
+            <CustomerArCombobox
               label="Cliente"
               required
               value={customerOpt}
@@ -607,7 +627,7 @@ export default function ContasReceber() {
               getOptionLabel={(o) => o.name}
             />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FinancialAsyncCombobox<OrderWithDetails>
+              <OrderArCombobox
                 label="OS (opcional)"
                 value={orderOpt}
                 onChange={setOrderOpt}
@@ -620,7 +640,7 @@ export default function ContasReceber() {
                 loading={orderLoading}
                 getOptionLabel={(o) => `${o.order_number} — ${o.customer?.name ?? ''}`}
               />
-              <FinancialAsyncCombobox<BudgetListItem>
+              <BudgetArCombobox
                 label="Orçamento (opcional)"
                 value={budgetOpt}
                 onChange={setBudgetOpt}
@@ -696,6 +716,12 @@ export default function ContasReceber() {
                 />
               </div>
             </div>
+            <CostCenterSelect
+              orgId={orgId}
+              value={form.cost_center_id}
+              onValueChange={(id) => setForm((f) => ({ ...f, cost_center_id: id }))}
+              id="ar-cost-center"
+            />
             <div className="space-y-2">
               <Label htmlFor="ar-notes">Observações</Label>
               <Textarea
@@ -730,7 +756,7 @@ export default function ContasReceber() {
               void submitInstall();
             }}
           >
-            <FinancialAsyncCombobox<CustomerRow>
+            <CustomerArCombobox
               label="Cliente"
               required
               value={customerOpt}

@@ -19,6 +19,16 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
+function cashFlowBankLabel(ba: unknown): string {
+  if (!ba || typeof ba !== 'object') return '';
+  const r = ba as Record<string, unknown>;
+  for (const key of ['name', 'bank_name'] as const) {
+    const v = r[key];
+    if (typeof v === 'string' && v.trim()) return v.trim();
+  }
+  return '';
+}
+
 export default function FluxoCaixa() {
   const { currentOrganization } = useOrganization();
   const orgIdReady = Boolean(currentOrganization?.id);
@@ -437,46 +447,49 @@ export default function FluxoCaixa() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="space-y-1">
-            {cashFlow.map((transaction, index) => (
-              <div key={index} className="flex items-center justify-between p-4 border-b last:border-b-0">
-                <div className="flex items-center gap-3">
-                  {transaction.transaction_type === 'income' ? (
-                    <TrendingUp className="h-4 w-4 text-success" />
-                  ) : (
-                    <TrendingDown className="h-4 w-4 text-destructive" />
-                  )}
-                  <div>
-                    <p className="font-medium">{transaction.description as string}</p>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {formatDateBR(transaction.transaction_date as string)}
-                      </span>
-                      {transaction.payment_method && (
-                        <span>• {paymentMethodLabel(transaction.payment_method as string)}</span>
-                      )}
-                      {(transaction.bank_accounts as Record<string, unknown>)?.bank_name as string && (
-                        <span>• {(transaction.bank_accounts as Record<string, unknown>).bank_name as string}</span>
-                      )}
+            {cashFlow.map((transaction, index) => {
+              const bankLbl = cashFlowBankLabel(transaction.bank_accounts);
+              return (
+                <div key={index} className="flex items-center justify-between p-4 border-b last:border-b-0">
+                  <div className="flex items-center gap-3">
+                    {transaction.transaction_type === 'income' ? (
+                      <TrendingUp className="h-4 w-4 text-success" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4 text-destructive" />
+                    )}
+                    <div>
+                      <p className="font-medium">{transaction.description as string}</p>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {formatDateBR(transaction.transaction_date as string)}
+                        </span>
+                        {transaction.payment_method && (
+                          <span>• {paymentMethodLabel(transaction.payment_method as string)}</span>
+                        )}
+                        {bankLbl ? <span>• {bankLbl}</span> : null}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {transaction.reconciled && (
+                      <Badge variant="outline" className="text-success border-success">
+                        Conciliado
+                      </Badge>
+                    )}
+                    <div
+                      className={`font-bold text-lg ${
+                        transaction.transaction_type === 'income' ? 'text-success' : 'text-destructive'
+                      }`}
+                    >
+                      {transaction.transaction_type === 'income' ? '+' : '-'}
+                      {formatCurrency(transaction.amount as number)}
                     </div>
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-2">
-                  {transaction.reconciled && (
-                    <Badge variant="outline" className="text-success border-success">
-                      Conciliado
-                    </Badge>
-                  )}
-                  <div className={`font-bold text-lg ${
-                    transaction.transaction_type === 'income' ? 'text-success' : 'text-destructive'
-                  }`}>
-                    {transaction.transaction_type === 'income' ? '+' : '-'}
-                    {formatCurrency(transaction.amount as number)}
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             
             {cashFlow.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">

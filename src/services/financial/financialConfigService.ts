@@ -51,14 +51,41 @@ export class FinancialConfigService {
     return { error: error ? new Error(error.message) : null };
   }
 
-  static async listBankAccounts(orgId: string): Promise<BaRow[]> {
-    const { data, error } = await supabase
-      .from('bank_accounts')
-      .select('*')
-      .eq('org_id', orgId)
-      .eq('is_active', true)
-      .order('bank_name');
+  static async listBankAccounts(orgId: string, activeOnly = true): Promise<BaRow[]> {
+    let q = supabase.from('bank_accounts').select('*').eq('org_id', orgId).order('bank_name');
+    if (activeOnly) q = q.eq('is_active', true);
+    const { data, error } = await q;
     if (error) throw new Error(error.message);
     return (data as BaRow[]) ?? [];
+  }
+
+  static async createBankAccount(
+    row: Database['public']['Tables']['bank_accounts']['Insert']
+  ): Promise<{ data: BaRow | null; error: Error | null }> {
+    const payload = {
+      ...row,
+      kind: row.kind ?? 'bank',
+      bank_name:
+        row.kind === 'cash'
+          ? row.bank_name ?? ''
+          : row.bank_name && row.bank_name.length > 0
+            ? row.bank_name
+            : 'Banco',
+    };
+    const { data, error } = await supabase.from('bank_accounts').insert(payload).select().single();
+    return { data: (data as BaRow | null) ?? null, error: error ? new Error(error.message) : null };
+  }
+
+  static async updateBankAccount(
+    id: string,
+    orgId: string,
+    patch: Database['public']['Tables']['bank_accounts']['Update']
+  ): Promise<{ error: Error | null }> {
+    const { error } = await supabase
+      .from('bank_accounts')
+      .update(patch)
+      .eq('id', id)
+      .eq('org_id', orgId);
+    return { error: error ? new Error(error.message) : null };
   }
 }

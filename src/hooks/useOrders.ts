@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
+import { ReceivableFromBudgetService } from '@/services/financial/receivableFromBudgetService';
 
 export interface OrderMaterial {
   id: string;
@@ -244,6 +245,22 @@ export function useOrders() {
           .eq('new_status', newStatus)
           .order('changed_at', { ascending: false })
           .limit(1);
+      }
+
+      if (newStatus === 'concluida') {
+        const { data: authData } = await supabase.auth.getUser();
+        const sync = await ReceivableFromBudgetService.syncOnOrderCompleted(
+          currentOrganization.id,
+          orderId,
+          authData.user?.id ?? null
+        );
+        if (sync.error) {
+          toast({
+            title: 'Aviso financeiro',
+            description: sync.error.message,
+            variant: 'destructive',
+          });
+        }
       }
 
       toast({

@@ -9,6 +9,7 @@ export { CustomerLookupService } from '@/services/financial/customerLookupServic
 export { SupplierLookupService } from '@/services/financial/supplierLookupService';
 export { BudgetLookupService } from '@/services/financial/budgetLookupService';
 export { DreService } from '@/services/financial/dreService';
+export { DreCategorizedService } from '@/services/financial/dreCategorizedService';
 export { CashClosingService } from '@/services/financial/cashClosingService';
 export { BankReconciliationService } from '@/services/financial/bankReconciliationService';
 export { PartnerWithdrawalService } from '@/services/financial/partnerWithdrawalService';
@@ -18,5 +19,8 @@ export { ApprovalApService } from '@/services/financial/approvalApService';
 export { FinancialReportService } from '@/services/financial/financialReportService';
 export { CardMachineService } from '@/services/financial/cardMachineService';
 export { OrderBillingService } from '@/services/financial/orderBillingService';
+export { ReceivableFromBudgetService } from '@/services/financial/receivableFromBudgetService';
+export { StatementImportService } from '@/services/financial/statementImportService';
+export { ReconciliationMatchingService } from '@/services/financial/reconciliationMatchingService';
 export * from '@/services/financial/schemas';
 export * from '@/services/financial/types';
