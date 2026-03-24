@@ -32,7 +32,7 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, onPointerDownOutside, onInteractOutside, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -44,21 +44,31 @@ const DialogContent = React.forwardRef<
       {...props}
       onPointerDownOutside={(e) => {
         const target = e.target;
-        if (
-          target instanceof HTMLElement &&
-          (target.closest('.MuiPickersPopper-root') || target.closest('.MuiPopper-root'))
-        ) {
-          e.preventDefault();
+        if (target instanceof HTMLElement) {
+          if (
+            target.closest('.MuiPickersPopper-root') ||
+            target.closest('.MuiPopper-root') ||
+            target.closest('[data-radix-select-content]') ||
+            target.closest('[role="listbox"]')
+          ) {
+            e.preventDefault();
+          }
         }
+        onPointerDownOutside?.(e);
       }}
       onInteractOutside={(e) => {
         const target = e.target;
-        if (
-          target instanceof HTMLElement &&
-          (target.closest('.MuiPickersPopper-root') || target.closest('.MuiPopper-root'))
-        ) {
-          e.preventDefault();
+        if (target instanceof HTMLElement) {
+          if (
+            target.closest('.MuiPickersPopper-root') ||
+            target.closest('.MuiPopper-root') ||
+            target.closest('[data-radix-select-content]') ||
+            target.closest('[role="listbox"]')
+          ) {
+            e.preventDefault();
+          }
         }
+        onInteractOutside?.(e);
       }}
     >
       <DialogPrimitive.Title className="sr-only">Dialog</DialogPrimitive.Title>

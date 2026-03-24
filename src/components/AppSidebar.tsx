@@ -4,7 +4,6 @@ import { NavLink, useLocation } from "react-router-dom";
 import { 
   Home, 
   Truck, 
-  ClipboardCheck, 
   Kanban, 
   DollarSign, 
   Building2, 
@@ -33,6 +32,11 @@ import {
   ScrollText,
   BarChart3,
   LayoutDashboard,
+  Wallet,
+  Landmark,
+  LineChart,
+  SlidersHorizontal,
+  ClipboardCheck,
 } from "lucide-react";
 
 import {
@@ -229,6 +233,41 @@ const financialItems = [
     title: "DRE Mensal",
     url: "/dre",
     icon: Calculator,
+  },
+  {
+    title: "Fechamento de caixa",
+    url: "/fechamento-caixa",
+    icon: Wallet,
+  },
+  {
+    title: "Conciliação bancária",
+    url: "/conciliacao-bancaria",
+    icon: Landmark,
+  },
+  {
+    title: "Fluxo projetado",
+    url: "/fluxo-projetado",
+    icon: LineChart,
+  },
+  {
+    title: "Config. financeiro",
+    url: "/config-financeiro",
+    icon: SlidersHorizontal,
+  },
+  {
+    title: "Relatórios financeiros",
+    url: "/relatorios-financeiros",
+    icon: BarChart3,
+  },
+  {
+    title: "Aprovação AP",
+    url: "/aprovacao-contas-pagar",
+    icon: ClipboardCheck,
+  },
+  {
+    title: "Retiradas sócios",
+    url: "/retiradas-socios",
+    icon: DollarSign,
   },
 ];
 

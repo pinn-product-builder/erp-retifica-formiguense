@@ -17,6 +17,8 @@ export type Database = {
       accounts_payable: {
         Row: {
           amount: number
+          approval_status: string
+          cost_center_id: string | null
           created_at: string | null
           description: string
           due_date: string
@@ -27,13 +29,17 @@ export type Database = {
           org_id: string | null
           payment_date: string | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
+          purchase_order_id: string | null
           status: Database["public"]["Enums"]["payment_status"] | null
           supplier_document: string | null
+          supplier_id: string | null
           supplier_name: string
           updated_at: string | null
         }
         Insert: {
           amount: number
+          approval_status?: string
+          cost_center_id?: string | null
           created_at?: string | null
           description: string
           due_date: string
@@ -44,13 +50,17 @@ export type Database = {
           org_id?: string | null
           payment_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          purchase_order_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"] | null
           supplier_document?: string | null
+          supplier_id?: string | null
           supplier_name: string
           updated_at?: string | null
         }
         Update: {
           amount?: number
+          approval_status?: string
+          cost_center_id?: string | null
           created_at?: string | null
           description?: string
           due_date?: string
@@ -61,8 +71,10 @@ export type Database = {
           org_id?: string | null
           payment_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          purchase_order_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"] | null
           supplier_document?: string | null
+          supplier_id?: string | null
           supplier_name?: string
           updated_at?: string | null
         }
@@ -81,13 +93,37 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "accounts_payable_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_payable_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_payable_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
         ]
       }
       accounts_receivable: {
         Row: {
           amount: number
           budget_id: string | null
+          competence_date: string | null
+          cost_center_id: string | null
           created_at: string | null
+          created_by: string | null
           customer_id: string
           discount: number | null
           due_date: string
@@ -103,11 +139,15 @@ export type Database = {
           status: Database["public"]["Enums"]["payment_status"] | null
           total_installments: number | null
           updated_at: string | null
+          updated_by: string | null
         }
         Insert: {
           amount: number
           budget_id?: string | null
+          competence_date?: string | null
+          cost_center_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           customer_id: string
           discount?: number | null
           due_date: string
@@ -123,11 +163,15 @@ export type Database = {
           status?: Database["public"]["Enums"]["payment_status"] | null
           total_installments?: number | null
           updated_at?: string | null
+          updated_by?: string | null
         }
         Update: {
           amount?: number
           budget_id?: string | null
+          competence_date?: string | null
+          cost_center_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           customer_id?: string
           discount?: number | null
           due_date?: string
@@ -143,6 +187,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["payment_status"] | null
           total_installments?: number | null
           updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -173,7 +218,167 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "accounts_receivable_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      ap_recurring_schedules: {
+        Row: {
+          amount: number
+          created_at: string | null
+          day_of_month: number
+          description_template: string
+          expense_category_id: string | null
+          id: string
+          is_active: boolean
+          next_run_date: string
+          org_id: string
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          supplier_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          day_of_month?: number
+          description_template?: string
+          expense_category_id?: string | null
+          id?: string
+          is_active?: boolean
+          next_run_date: string
+          org_id: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          supplier_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          day_of_month?: number
+          description_template?: string
+          expense_category_id?: string | null
+          id?: string
+          is_active?: boolean
+          next_run_date?: string
+          org_id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          supplier_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      approval_tiers_ap: {
+        Row: {
+          created_at: string | null
+          id: string
+          max_amount: number
+          name: string
+          org_id: string
+          sequence_order: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          max_amount: number
+          name: string
+          org_id: string
+          sequence_order?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          max_amount?: number
+          name?: string
+          org_id?: string
+          sequence_order?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      ar_renegotiations: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          new_amount: number
+          new_ar_id: string | null
+          org_id: string
+          original_amount: number
+          original_ar_id: string
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          new_amount: number
+          new_ar_id?: string | null
+          org_id: string
+          original_amount: number
+          original_ar_id: string
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          new_amount?: number
+          new_ar_id?: string | null
+          org_id?: string
+          original_amount?: number
+          original_ar_id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      receipt_history: {
+        Row: {
+          amount_received: number
+          created_at: string | null
+          discount_applied: number | null
+          id: string
+          late_fee_charged: number | null
+          notes: string | null
+          org_id: string
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          receivable_account_id: string
+          received_at: string
+          registered_by: string | null
+        }
+        Insert: {
+          amount_received: number
+          created_at?: string | null
+          discount_applied?: number | null
+          id?: string
+          late_fee_charged?: number | null
+          notes?: string | null
+          org_id: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          receivable_account_id: string
+          received_at: string
+          registered_by?: string | null
+        }
+        Update: {
+          amount_received?: number
+          created_at?: string | null
+          discount_applied?: number | null
+          id?: string
+          late_fee_charged?: number | null
+          notes?: string | null
+          org_id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          receivable_account_id?: string
+          received_at?: string
+          registered_by?: string | null
+        }
+        Relationships: []
       }
       achievement_configs: {
         Row: {
@@ -640,6 +845,129 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_reconciliation_items: {
+        Row: {
+          cash_flow_id: string | null
+          created_at: string | null
+          id: string
+          matched_amount: number
+          reconciliation_id: string
+          statement_line_id: string | null
+        }
+        Insert: {
+          cash_flow_id?: string | null
+          created_at?: string | null
+          id?: string
+          matched_amount?: number
+          reconciliation_id: string
+          statement_line_id?: string | null
+        }
+        Update: {
+          cash_flow_id?: string | null
+          created_at?: string | null
+          id?: string
+          matched_amount?: number
+          reconciliation_id?: string
+          statement_line_id?: string | null
+        }
+        Relationships: []
+      }
+      bank_reconciliations: {
+        Row: {
+          bank_account_id: string
+          created_at: string | null
+          id: string
+          org_id: string
+          statement_balance: number
+          statement_end_date: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          bank_account_id: string
+          created_at?: string | null
+          id?: string
+          org_id: string
+          statement_balance?: number
+          statement_end_date: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          bank_account_id?: string
+          created_at?: string | null
+          id?: string
+          org_id?: string
+          statement_balance?: number
+          statement_end_date?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      bank_statement_imports: {
+        Row: {
+          bank_account_id: string
+          created_by: string | null
+          file_format: string
+          file_name: string | null
+          id: string
+          imported_at: string | null
+          org_id: string
+        }
+        Insert: {
+          bank_account_id: string
+          created_by?: string | null
+          file_format?: string
+          file_name?: string | null
+          id?: string
+          imported_at?: string | null
+          org_id: string
+        }
+        Update: {
+          bank_account_id?: string
+          created_by?: string | null
+          file_format?: string
+          file_name?: string | null
+          id?: string
+          imported_at?: string | null
+          org_id?: string
+        }
+        Relationships: []
+      }
+      bank_statement_lines: {
+        Row: {
+          amount: number
+          balance_after: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          import_id: string
+          matched_cash_flow_id: string | null
+          transaction_date: string
+        }
+        Insert: {
+          amount: number
+          balance_after?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          import_id: string
+          matched_cash_flow_id?: string | null
+          transaction_date: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          import_id?: string
+          matched_cash_flow_id?: string | null
+          transaction_date?: string
+        }
+        Relationships: []
+      }
       budget_alerts: {
         Row: {
           alert_message: string
@@ -803,6 +1131,81 @@ export type Database = {
           },
         ]
       }
+      card_machine_configs: {
+        Row: {
+          created_at: string | null
+          fee_fixed: number | null
+          fee_percentage: number | null
+          id: string
+          is_active: boolean
+          name: string
+          org_id: string
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          settlement_days: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          fee_fixed?: number | null
+          fee_percentage?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          org_id: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          settlement_days?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          fee_fixed?: number | null
+          fee_percentage?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          org_id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          settlement_days?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      cash_closings: {
+        Row: {
+          closed_by: string | null
+          closing_date: string
+          counted_balance: number
+          created_at: string | null
+          difference_amount: number
+          expected_balance: number
+          id: string
+          notes: string | null
+          org_id: string
+        }
+        Insert: {
+          closed_by?: string | null
+          closing_date: string
+          counted_balance?: number
+          created_at?: string | null
+          difference_amount?: number
+          expected_balance?: number
+          id?: string
+          notes?: string | null
+          org_id: string
+        }
+        Update: {
+          closed_by?: string | null
+          closing_date?: string
+          counted_balance?: number
+          created_at?: string | null
+          difference_amount?: number
+          expected_balance?: number
+          id?: string
+          notes?: string | null
+          org_id?: string
+        }
+        Relationships: []
+      }
       cash_flow: {
         Row: {
           accounts_payable_id: string | null
@@ -810,11 +1213,13 @@ export type Database = {
           amount: number
           bank_account_id: string | null
           category_id: string | null
+          cost_center_id: string | null
           created_at: string | null
           description: string
           id: string
           notes: string | null
           order_id: string | null
+          org_id: string | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
           reconciled: boolean | null
           transaction_date: string
@@ -827,11 +1232,13 @@ export type Database = {
           amount: number
           bank_account_id?: string | null
           category_id?: string | null
+          cost_center_id?: string | null
           created_at?: string | null
           description: string
           id?: string
           notes?: string | null
           order_id?: string | null
+          org_id?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           reconciled?: boolean | null
           transaction_date: string
@@ -844,11 +1251,13 @@ export type Database = {
           amount?: number
           bank_account_id?: string | null
           category_id?: string | null
+          cost_center_id?: string | null
           created_at?: string | null
           description?: string
           id?: string
           notes?: string | null
           order_id?: string | null
+          org_id?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           reconciled?: boolean | null
           transaction_date?: string
@@ -891,6 +1300,20 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cash_flow_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_flow_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cash_flow_projection: {
@@ -901,6 +1324,7 @@ export type Database = {
           created_at: string | null
           id: string
           notes: string | null
+          org_id: string | null
           projected_balance: number | null
           projected_expenses: number | null
           projected_income: number | null
@@ -914,6 +1338,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           notes?: string | null
+          org_id?: string | null
           projected_balance?: number | null
           projected_expenses?: number | null
           projected_income?: number | null
@@ -927,6 +1352,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           notes?: string | null
+          org_id?: string | null
           projected_balance?: number | null
           projected_expenses?: number | null
           projected_income?: number | null
@@ -1283,6 +1709,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      cost_centers: {
+        Row: {
+          code: string
+          created_at: string | null
+          id: string
+          is_active: boolean
+          name: string
+          org_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          org_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          org_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_centers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cost_details: {
         Row: {
@@ -4832,6 +5296,42 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_withdrawals: {
+        Row: {
+          amount: number
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          dre_category: string
+          id: string
+          org_id: string
+          updated_at: string | null
+          withdrawal_date: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          dre_category?: string
+          id?: string
+          org_id: string
+          updated_at?: string | null
+          withdrawal_date: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          dre_category?: string
+          id?: string
+          org_id?: string
+          updated_at?: string | null
+          withdrawal_date?: string
+        }
+        Relationships: []
+      }
       performance_rankings: {
         Row: {
           created_at: string | null
@@ -8088,6 +8588,7 @@ export type Database = {
           blocked_reason: string | null
           brands: string[] | null
           categories: string[] | null
+          chart_account_code: string | null
           cnpj: string | null
           code: string | null
           contact_person: string | null
@@ -8132,6 +8633,7 @@ export type Database = {
           blocked_reason?: string | null
           brands?: string[] | null
           categories?: string[] | null
+          chart_account_code?: string | null
           cnpj?: string | null
           code?: string | null
           contact_person?: string | null
@@ -8176,6 +8678,7 @@ export type Database = {
           blocked_reason?: string | null
           brands?: string[] | null
           categories?: string[] | null
+          chart_account_code?: string | null
           cnpj?: string | null
           code?: string | null
           contact_person?: string | null
@@ -10650,6 +11153,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      refresh_accounts_receivable_overdue: {
+        Args: { p_org_id: string | null }
+        Returns: undefined
+      }
       recalculate_supplier_rating: {
         Args: { p_supplier_id: string }
         Returns: undefined
@@ -10832,7 +11339,13 @@ export type Database = {
         | "debit_card"
         | "bank_transfer"
         | "check"
-      payment_status: "pending" | "paid" | "overdue" | "cancelled"
+        | "boleto"
+      payment_status:
+        | "pending"
+        | "paid"
+        | "overdue"
+        | "cancelled"
+        | "renegotiated"
       period_status: "aberto" | "fechado" | "transmitido"
       status_transition_type:
         | "automatic"
@@ -11114,8 +11627,15 @@ export const Constants = {
         "debit_card",
         "bank_transfer",
         "check",
+        "boleto",
       ],
-      payment_status: ["pending", "paid", "overdue", "cancelled"],
+      payment_status: [
+        "pending",
+        "paid",
+        "overdue",
+        "cancelled",
+        "renegotiated",
+      ],
       period_status: ["aberto", "fechado", "transmitido"],
       status_transition_type: [
         "automatic",

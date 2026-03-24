@@ -50,11 +50,11 @@ export default function ContasPagar() {
   }, []);
 
   const loadData = async () => {
-    const [payablesData, categoriesData] = await Promise.all([
-      getAccountsPayable(),
+    const [payablesRes, categoriesData] = await Promise.all([
+      getAccountsPayable(1, 200),
       getExpenseCategories()
     ]);
-    setPayables(payablesData);
+    setPayables(payablesRes.data as unknown as Record<string, unknown>[]);
     setCategories(categoriesData);
   };
 

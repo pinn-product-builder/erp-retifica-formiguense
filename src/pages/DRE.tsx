@@ -10,8 +10,11 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useOrganization } from '@/hooks/useOrganization';
 
 export default function DRE() {
+  const { currentOrganization } = useOrganization();
+  const orgId = currentOrganization?.id;
   const { getMonthlyDRE, getCashFlow, loading } = useFinancial();
   
   const [dreData, setDreData] = useState<Record<string, unknown>[]>([]);
@@ -20,12 +23,14 @@ export default function DRE() {
   const [monthlyData, setMonthlyData] = useState<unknown>(null);
 
   useEffect(() => {
-    loadDREData();
-  }, [selectedYear]);
+    if (!orgId) return;
+    void loadDREData();
+  }, [selectedYear, orgId]);
 
   useEffect(() => {
-    loadMonthlyData();
-  }, [selectedMonth, selectedYear]);
+    if (!orgId) return;
+    void loadMonthlyData();
+  }, [selectedMonth, selectedYear, orgId]);
 
   const loadDREData = async () => {
     const data = await getMonthlyDRE(selectedYear);
@@ -37,13 +42,16 @@ export default function DRE() {
     const startDate = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-01`;
     const endDate = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-31`;
     
-    const cashFlowData = await getCashFlow(startDate, endDate);
-    
-    const income = cashFlowData.filter((t: unknown) => (t as Record<string, unknown>).transaction_type as string === 'income')
-      .reduce((sum: number, t: unknown) => sum + Number((t as Record<string, unknown>).amount as number), 0);
-    
-    const expenses = cashFlowData.filter((t: unknown) => (t as Record<string, unknown>).transaction_type as string === 'expense')
-      .reduce((sum: number, t: unknown) => sum + Number((t as Record<string, unknown>).amount as number), 0);
+    const cashFlowRes = await getCashFlow(startDate, endDate, 1, 500);
+    const cashFlowData = cashFlowRes.data as unknown as Record<string, unknown>[];
+
+    const income = cashFlowData
+      .filter((t) => t.transaction_type === 'income')
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+
+    const expenses = cashFlowData
+      .filter((t) => t.transaction_type === 'expense')
+      .reduce((sum, t) => sum + Number(t.amount), 0);
 
     // Simular divisão das despesas (em um sistema real, isso viria categorizado)
     const directCosts = expenses * 0.4; // 40% custos diretos

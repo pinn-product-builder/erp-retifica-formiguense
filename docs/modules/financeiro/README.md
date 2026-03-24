@@ -2,7 +2,7 @@
 
 **Epic:** Financeiro  
 **Versão:** 1.0  
-**Última atualização:** 2025-01-27
+**Última atualização:** 2026-02-05
 
 ---
 
@@ -37,16 +37,25 @@ Sistema completo de gestão financeira com controle de contas a pagar e receber,
 
 ## 🗂️ User Stories
 
-| ID | Título | Prioridade | Sprint | Status |
-|----|--------|------------|--------|--------|
-| US-FIN-001 | Contas a Receber | Alta | 10 | Backlog |
-| US-FIN-002 | Faturamento por OS | Alta | 10 | Backlog |
-| US-FIN-003 | Parcelamento | Média | 11 | Backlog |
-| US-FIN-004 | Contas a Pagar | Alta | 11 | Backlog |
-| US-FIN-005 | Fluxo de Caixa | Alta | 11 | Backlog |
-| US-FIN-006 | Conciliação Bancária | Média | 12 | Backlog |
-| US-FIN-007 | DRE | Média | 12 | Backlog |
-| US-FIN-008 | Projeção de Caixa | Baixa | 12 | Backlog |
+**Fonte canônica (definição de histórias e critérios de aceite):**  
+`erp-retifica-formiguense-development/docs/modules/financial/user-stories/`
+
+**Não usar** [`docs/modules/financeiro/user-stories/`](user-stories/) para definir escopo das histórias (material legado ou desalinhado). Ver também [`docs/modules/financial/README.md`](../financial/README.md).
+
+**Rastreamento rápido no app (não substitui os .md do repositório development):**
+
+| Rota / tela | Observação |
+|-------------|------------|
+| `/contas-pagar` | Contas a pagar |
+| `/contas-receber` | Contas a receber |
+| `/fluxo-caixa` | Fluxo de caixa |
+| `/conciliacao-bancaria` | Conciliação |
+| `/dre` | DRE |
+| `/fluxo-projetado` | Fluxo projetado |
+| `/relatorios-financeiros` | Relatórios financeiros |
+| `/config-financeiro` | Configurações (categorias, centros de custo, métodos de pagamento, etc.) |
+
+**RLS:** migrações `expense_categories_rls_*` e `cash_flow_rls_*` no Supabase devem estar aplicadas para cadastros e movimentações por organização.
 
 ---
 
@@ -403,12 +412,21 @@ CREATE TABLE cash_flow_projection (
 
 ## 🎨 Componentes UI
 
-### Páginas
-- `/financeiro` - Dashboard financeiro
-- `/financeiro/contas-receber` - Contas a receber
-- `/financeiro/contas-pagar` - Contas a pagar
-- `/financeiro/fluxo-caixa` - Fluxo de caixa
-- `/financeiro/dre` - Demonstrativo de resultados
+### Páginas (rotas reais no Vite/React)
+
+- `/financeiro` — Dashboard financeiro
+- `/contas-receber` — Contas a receber
+- `/contas-pagar` — Contas a pagar
+- `/fluxo-caixa` — Fluxo de caixa
+- `/dre` — DRE
+- `/fechamento-caixa` — Fechamento de caixa
+- `/conciliacao-bancaria` — Conciliação bancária
+- `/fluxo-projetado` — Fluxo projetado
+- `/config-financeiro` — Configurações (categorias, formas de pagamento / máquinas, centros de custo)
+- `/relatorios-financeiros` — Relatórios (aging, curva, alertas, export CSV)
+- `/aprovacao-contas-pagar` — Aprovação de contas a pagar
+- `/retiradas-socios` — Retiradas de sócios
+- `/modulo-fiscal` — Módulo fiscal (quando habilitado)
 
 ### Componentes
 - `FinancialDashboard` - Dashboard com KPIs
@@ -488,5 +506,5 @@ AND ba.org_id = current_org_id();
 
 ---
 
-**Status:** 📝 Em Documentação  
-**Próxima Revisão:** Q2 2025
+**Status:** Em evolução (app + documentação)  
+**Próxima Revisão:** conforme sprint financeiro

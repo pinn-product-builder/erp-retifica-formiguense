@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useFinancial, CashFlow } from '@/hooks/useFinancial';
+import { useOrganization } from '@/hooks/useOrganization';
+import { formatBRL, formatDateBR, paymentMethodLabel } from '@/lib/financialFormat';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -15,10 +17,11 @@ import {
   Calendar, PiggyBank, Filter, CheckCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 export default function FluxoCaixa() {
+  const { currentOrganization } = useOrganization();
+  const orgIdReady = Boolean(currentOrganization?.id);
   const { 
     getCashFlow, 
     createCashFlow, 
@@ -50,16 +53,17 @@ export default function FluxoCaixa() {
   });
 
   useEffect(() => {
+    if (!orgIdReady) return;
     loadData();
-  }, [dateFilter]);
+  }, [dateFilter, orgIdReady]);
 
   const loadData = async () => {
-    const [cashFlowData, bankAccountsData, categoriesData] = await Promise.all([
-      getCashFlow(dateFilter.start, dateFilter.end),
+    const [cashFlowRes, bankAccountsData, categoriesData] = await Promise.all([
+      getCashFlow(dateFilter.start, dateFilter.end, 1, 500),
       getBankAccounts(),
       getExpenseCategories()
     ]);
-    setCashFlow(cashFlowData as unknown as Record<string, unknown>[]);
+    setCashFlow(cashFlowRes.data as unknown as Record<string, unknown>[]);
     setBankAccounts(bankAccountsData);
     setCategories(categoriesData);
   };
@@ -85,12 +89,7 @@ export default function FluxoCaixa() {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
+  const formatCurrency = (value: number) => formatBRL(value);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -451,10 +450,10 @@ export default function FluxoCaixa() {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {format(new Date(transaction.transaction_date as string), 'dd/MM/yyyy', { locale: ptBR })}
+                        {formatDateBR(transaction.transaction_date as string)}
                       </span>
                       {transaction.payment_method && (
-                        <span>• {transaction.payment_method as string}</span>
+                        <span>• {paymentMethodLabel(transaction.payment_method as string)}</span>
                       )}
                       {(transaction.bank_accounts as Record<string, unknown>)?.bank_name as string && (
                         <span>• {(transaction.bank_accounts as Record<string, unknown>).bank_name as string}</span>

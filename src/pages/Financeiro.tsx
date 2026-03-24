@@ -11,10 +11,12 @@ import {
   AlertTriangle, CheckCircle, Clock, Building2,
   CreditCard, PiggyBank, Receipt, Target
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { useOrganization } from '@/hooks/useOrganization';
+import { formatDateBR } from '@/lib/financialFormat';
 
 export default function Financeiro() {
+  const { currentOrganization } = useOrganization();
+  const orgId = currentOrganization?.id;
   const { getFinancialKPIs, getAccountsReceivable, getAccountsPayable, getCashFlow, loading } = useFinancial();
   const [kpis, setKPIs] = useState<Record<string, unknown> | null>(null);
   const [receivables, setReceivables] = useState<Record<string, unknown>[]>([]);
@@ -22,21 +24,22 @@ export default function Financeiro() {
   const [cashFlow, setCashFlow] = useState<Record<string, unknown>[]>([]);
 
   useEffect(() => {
-    loadFinancialData();
-  }, []);
+    if (!orgId) return;
+    void loadFinancialData();
+  }, [orgId]);
 
   const loadFinancialData = async () => {
-    const [kpisData, receivablesData, payablesData, cashFlowData] = await Promise.all([
+    const [kpisData, receivablesRes, payablesRes, cashFlowRes] = await Promise.all([
       getFinancialKPIs(),
-      getAccountsReceivable(),
-      getAccountsPayable(),
-      getCashFlow()
+      getAccountsReceivable(1, 100),
+      getAccountsPayable(1, 100),
+      getCashFlow(undefined, undefined, 1, 10),
     ]);
 
     setKPIs(kpisData);
-    setReceivables(receivablesData);
-    setPayables(payablesData);
-    setCashFlow(cashFlowData.slice(0, 10)) as unknown as Record<string, unknown>[]; // Últimas 10 movimentações
+    setReceivables(receivablesRes.data as unknown as Record<string, unknown>[]);
+    setPayables(payablesRes.data as unknown as Record<string, unknown>[]);
+    setCashFlow(cashFlowRes.data as unknown as Record<string, unknown>[]);
   };
 
   const formatCurrency = (value: number) => {
@@ -242,7 +245,7 @@ export default function Financeiro() {
                       <div>
                         <p className="font-medium">{transaction.description as string}</p>
                         <p className="text-sm text-muted-foreground">
-                          {format(new Date(transaction.transaction_date as string), 'dd/MM/yyyy', { locale: ptBR })}
+                          {formatDateBR(transaction.transaction_date as string)}
                         </p>
                       </div>
                     </div>
@@ -272,7 +275,7 @@ export default function Financeiro() {
                       <div>
                         <p className="font-medium">{receivable.customers?.name as string}</p>
                         <p className="text-sm text-muted-foreground">
-                          Venc: {format(new Date(receivable.due_date as string), 'dd/MM/yyyy', { locale: ptBR })}
+                          Venc: {formatDateBR(receivable.due_date as string)}
                         </p>
                       </div>
                     </div>
@@ -302,7 +305,7 @@ export default function Financeiro() {
                       <div>
                         <p className="font-medium">{payable.supplier_name as string}</p>
                         <p className="text-sm text-muted-foreground">
-                          {payable.description as string} - Venc: {format(new Date(payable.due_date as string), 'dd/MM/yyyy', { locale: ptBR })}
+                          {payable.description as string} - Venc: {formatDateBR(payable.due_date as string)}
                         </p>
                       </div>
                     </div>
@@ -337,7 +340,7 @@ export default function Financeiro() {
                       <div>
                         <p className="font-medium">{transaction.description as string}</p>
                         <p className="text-sm text-muted-foreground">
-                          {format(new Date(transaction.transaction_date as string), 'dd/MM/yyyy', { locale: ptBR })}
+                          {formatDateBR(transaction.transaction_date as string)}
                           {transaction.payment_method && ` • ${transaction.payment_method}`}
                         </p>
                       </div>

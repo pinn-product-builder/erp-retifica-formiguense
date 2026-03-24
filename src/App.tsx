@@ -40,6 +40,13 @@ const ContasReceber = lazy(() => import('@/pages/ContasReceber'));
 const ContasPagar = lazy(() => import('@/pages/ContasPagar'));
 const FluxoCaixa = lazy(() => import('@/pages/FluxoCaixa'));
 const DRE = lazy(() => import('@/pages/DRE'));
+const FechamentoCaixa = lazy(() => import('@/pages/FechamentoCaixa'));
+const ConciliacaoBancaria = lazy(() => import('@/pages/ConciliacaoBancaria'));
+const FluxoProjetado = lazy(() => import('@/pages/FluxoProjetado'));
+const ConfigFinanceiro = lazy(() => import('@/pages/ConfigFinanceiro'));
+const RelatoriosFinanceiros = lazy(() => import('@/pages/RelatoriosFinanceiros'));
+const AprovacaoContasPagar = lazy(() => import('@/pages/AprovacaoContasPagar'));
+const RetiradasSocios = lazy(() => import('@/pages/RetiradasSocios'));
 const ModuloFiscal = lazy(() => import('@/pages/ModuloFiscal'));
 const PCP = lazy(() => import('@/pages/PCP'));
 const Compras = lazy(() => import('@/pages/Compras'));
@@ -112,6 +119,13 @@ function AppContent() {
             <Route path="/contas-pagar" element={<ProfileProtectedRoute><Layout><ContasPagar /></Layout></ProfileProtectedRoute>} />
             <Route path="/fluxo-caixa" element={<ProfileProtectedRoute><Layout><FluxoCaixa /></Layout></ProfileProtectedRoute>} />
             <Route path="/dre" element={<ProfileProtectedRoute><Layout><DRE /></Layout></ProfileProtectedRoute>} />
+            <Route path="/fechamento-caixa" element={<ProfileProtectedRoute><Layout><FechamentoCaixa /></Layout></ProfileProtectedRoute>} />
+            <Route path="/conciliacao-bancaria" element={<ProfileProtectedRoute><Layout><ConciliacaoBancaria /></Layout></ProfileProtectedRoute>} />
+            <Route path="/fluxo-projetado" element={<ProfileProtectedRoute><Layout><FluxoProjetado /></Layout></ProfileProtectedRoute>} />
+            <Route path="/config-financeiro" element={<ProfileProtectedRoute><Layout><ConfigFinanceiro /></Layout></ProfileProtectedRoute>} />
+            <Route path="/relatorios-financeiros" element={<ProfileProtectedRoute><Layout><RelatoriosFinanceiros /></Layout></ProfileProtectedRoute>} />
+            <Route path="/aprovacao-contas-pagar" element={<ProfileProtectedRoute><Layout><AprovacaoContasPagar /></Layout></ProfileProtectedRoute>} />
+            <Route path="/retiradas-socios" element={<ProfileProtectedRoute><Layout><RetiradasSocios /></Layout></ProfileProtectedRoute>} />
             <Route path="/modulo-fiscal" element={<ProfileProtectedRoute><Layout><ModuloFiscal /></Layout></ProfileProtectedRoute>} />
             <Route path="*" element={<ProtectedRoute><Layout><NotFound /></Layout></ProtectedRoute>} />
           </Routes>

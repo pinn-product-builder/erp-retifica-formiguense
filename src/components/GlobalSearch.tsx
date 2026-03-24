@@ -26,7 +26,12 @@ import {
   Shield,
   ClipboardList,
   Wrench,
-  Calendar
+  Calendar,
+  BarChart3,
+  Wallet,
+  Landmark,
+  LineChart,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,6 +77,13 @@ const allPages = [
   { title: "Contas a Pagar", url: "/contas-pagar", icon: CreditCard, category: "Financeiro" },
   { title: "Fluxo de Caixa", url: "/fluxo-caixa", icon: PiggyBank, category: "Financeiro" },
   { title: "DRE Mensal", url: "/dre", icon: Calculator, category: "Financeiro" },
+  { title: "Fechamento de caixa", url: "/fechamento-caixa", icon: Wallet, category: "Financeiro" },
+  { title: "Conciliação bancária", url: "/conciliacao-bancaria", icon: Landmark, category: "Financeiro" },
+  { title: "Fluxo projetado", url: "/fluxo-projetado", icon: LineChart, category: "Financeiro" },
+  { title: "Config. financeiro", url: "/config-financeiro", icon: SlidersHorizontal, category: "Financeiro" },
+  { title: "Relatórios financeiros", url: "/relatorios-financeiros", icon: BarChart3, category: "Financeiro" },
+  { title: "Aprovação contas a pagar", url: "/aprovacao-contas-pagar", icon: ClipboardCheck, category: "Financeiro" },
+  { title: "Retiradas de sócios", url: "/retiradas-socios", icon: DollarSign, category: "Financeiro" },
   { title: "Módulo Fiscal", url: "/modulo-fiscal", icon: Gavel, category: "Fiscal" },
   { title: "Gestão de Usuários", url: "/gestao-usuarios", icon: Users, category: "Administração" },
   { title: "Configurações", url: "/configuracoes", icon: Settings, category: "Administração" },
