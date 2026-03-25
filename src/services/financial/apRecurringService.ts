@@ -26,6 +26,15 @@ export class ApRecurringService {
     return { data: data as Row | null, error: error ? new Error(error.message) : null };
   }
 
+  static async remove(orgId: string, id: string): Promise<{ error: Error | null }> {
+    const { error } = await supabase
+      .from('ap_recurring_schedules')
+      .delete()
+      .eq('id', id)
+      .eq('org_id', orgId);
+    return { error: error ? new Error(error.message) : null };
+  }
+
   static async generateNextPayable(
     orgId: string,
     scheduleId: string
@@ -37,6 +46,11 @@ export class ApRecurringService {
       .eq('org_id', orgId)
       .single();
     if (e1 || !sch) return { error: new Error(e1?.message ?? 'Recorrência não encontrada') };
+
+    const cycleKey = sch.next_run_date.slice(0, 10);
+    if (sch.last_generated_cycle_key === cycleKey) {
+      return { error: null };
+    }
 
     let supplierName = '';
     if (sch.supplier_id) {
@@ -62,17 +76,21 @@ export class ApRecurringService {
       description: sch.description_template || 'Despesa recorrente',
       amount: sch.amount,
       due_date: sch.next_run_date,
+      competence_date: sch.next_run_date,
       payment_method: sch.payment_method,
       status: 'pending',
       approval_status: approvalStatus,
     });
     if (e2) return { error: new Error(e2.message) };
 
-    const next = new Date(sch.next_run_date);
+    const next = new Date(sch.next_run_date + 'T12:00:00');
     next.setMonth(next.getMonth() + 1);
     const { error: e3 } = await supabase
       .from('ap_recurring_schedules')
-      .update({ next_run_date: next.toISOString().slice(0, 10) })
+      .update({
+        next_run_date: next.toISOString().slice(0, 10),
+        last_generated_cycle_key: cycleKey,
+      })
       .eq('id', scheduleId);
     return { error: e3 ? new Error(e3.message) : null };
   }

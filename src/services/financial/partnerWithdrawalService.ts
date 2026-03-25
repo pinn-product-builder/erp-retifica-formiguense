@@ -20,4 +20,26 @@ export class PartnerWithdrawalService {
     const { data, error } = await supabase.from('partner_withdrawals').insert(row).select().single();
     return { data: data as Row | null, error: error ? new Error(error.message) : null };
   }
+
+  static async update(
+    orgId: string,
+    id: string,
+    patch: Database['public']['Tables']['partner_withdrawals']['Update']
+  ): Promise<{ error: Error | null }> {
+    const { error } = await supabase
+      .from('partner_withdrawals')
+      .update(patch)
+      .eq('id', id)
+      .eq('org_id', orgId);
+    return { error: error ? new Error(error.message) : null };
+  }
+
+  static async remove(orgId: string, id: string): Promise<{ error: Error | null }> {
+    const { error } = await supabase
+      .from('partner_withdrawals')
+      .delete()
+      .eq('id', id)
+      .eq('org_id', orgId);
+    return { error: error ? new Error(error.message) : null };
+  }
 }

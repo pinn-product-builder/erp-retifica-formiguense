@@ -36,9 +36,12 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/contexts/OrganizationContext";
 import {
-  ReceivableFromBudgetService,
-  type BudgetPaymentConditionInput,
-} from "@/services/financial/receivableFromBudgetService";
+  BudgetPaymentConditionSection,
+  buildBudgetPaymentConditionFromUi,
+  getDefaultBudgetPaymentConditionState,
+  type BudgetPaymentConditionUiState,
+} from "@/components/financial/BudgetPaymentConditionModal";
+import { useReceivableGeneration } from "@/hooks/useReceivableGeneration";
 
 // Função para formatar valores monetários
 const formatCurrency = (value: number): string => {
@@ -84,6 +87,7 @@ const BudgetApprovalModal = ({
   const { approveBudget, loading } = useDetailedBudgets();
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
+  const { generateFromApprovedBudget } = useReceivableGeneration();
   
   const [formData, setFormData] = useState({
     approval_type: '',
@@ -98,16 +102,9 @@ const BudgetApprovalModal = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [approvalDocument, setApprovalDocument] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string>('');
-  const [payKind, setPayKind] = useState<'avista' | 'parcelado' | 'sinal_saldo'>('avista');
-  const [firstDue, setFirstDue] = useState(() => new Date().toISOString().slice(0, 10));
-  const [competence, setCompetence] = useState(() => new Date().toISOString().slice(0, 10));
-  const [parcelN, setParcelN] = useState('2');
-  const [signalAmt, setSignalAmt] = useState('');
-  const [signalDue, setSignalDue] = useState(() => new Date().toISOString().slice(0, 10));
-  const [balanceDue, setBalanceDue] = useState(() => new Date().toISOString().slice(0, 10));
-  const [arPaymentMethod, setArPaymentMethod] = useState<
-    'cash' | 'pix' | 'credit_card' | 'debit_card' | 'bank_transfer' | 'check' | 'boleto'
-  >('pix');
+  const [paymentUi, setPaymentUi] = useState<BudgetPaymentConditionUiState>(() =>
+    getDefaultBudgetPaymentConditionState()
+  );
 
   // Preencher automaticamente o nome do cliente quando o orçamento for carregado
   useEffect(() => {
@@ -166,8 +163,8 @@ const BudgetApprovalModal = ({
       }
 
       if (formData.approval_type === 'total' || formData.approval_type === 'partial') {
-        if (payKind === 'parcelado') {
-          const n = Number(parcelN);
+        if (paymentUi.payKind === 'parcelado') {
+          const n = Number(paymentUi.parcelN);
           if (Number.isNaN(n) || n < 2 || n > 12) {
             toast({
               title: "Condição de pagamento",
@@ -177,8 +174,8 @@ const BudgetApprovalModal = ({
             return;
           }
         }
-        if (payKind === 'sinal_saldo') {
-          const sig = Number(String(signalAmt).replace(",", "."));
+        if (paymentUi.payKind === 'sinal_saldo') {
+          const sig = Number(String(paymentUi.signalAmt).replace(",", "."));
           if (Number.isNaN(sig) || sig <= 0) {
             toast({
               title: "Condição de pagamento",
@@ -210,10 +207,10 @@ const BudgetApprovalModal = ({
 
       if (
         (formData.approval_type === "total" || formData.approval_type === "partial") &&
-        payKind === "sinal_saldo" &&
+        paymentUi.payKind === "sinal_saldo" &&
         approvedAmount > 0
       ) {
-        const sig = Number(String(signalAmt).replace(",", "."));
+        const sig = Number(String(paymentUi.signalAmt).replace(",", "."));
         if (sig >= approvedAmount - 0.01) {
           toast({
             title: "Condição de pagamento",
@@ -310,30 +307,8 @@ const BudgetApprovalModal = ({
             .single();
           if (!ordErr && ordRow?.customer_id) {
             const { data: authData } = await supabase.auth.getUser();
-            let condition: BudgetPaymentConditionInput;
-            if (payKind === "avista") {
-              condition = {
-                kind: "avista",
-                first_due_date: firstDue,
-                competence_date: competence,
-              };
-            } else if (payKind === "parcelado") {
-              condition = {
-                kind: "parcelado",
-                first_due_date: firstDue,
-                competence_date: competence,
-                installments: Number(parcelN),
-              };
-            } else {
-              condition = {
-                kind: "sinal_saldo",
-                signal_amount: Number(String(signalAmt).replace(",", ".")),
-                signal_due_date: signalDue,
-                balance_due_date: balanceDue,
-                competence_date: competence,
-              };
-            }
-            const { error: arErr } = await ReceivableFromBudgetService.createForApprovedBudget({
+            const condition = buildBudgetPaymentConditionFromUi(paymentUi);
+            const { error: arErr } = await generateFromApprovedBudget({
               orgId: currentOrganization.id,
               userId: authData.user?.id ?? null,
               budgetId: budget.id,
@@ -341,7 +316,7 @@ const BudgetApprovalModal = ({
               customerId: ordRow.customer_id,
               approvedAmount,
               condition,
-              payment_method: arPaymentMethod,
+              payment_method: paymentUi.arPaymentMethod,
             });
             if (arErr) {
               toast({
@@ -407,14 +382,7 @@ const BudgetApprovalModal = ({
     setErrors({});
     setApprovalDocument(null);
     setFileError('');
-    setPayKind("avista");
-    setFirstDue(new Date().toISOString().slice(0, 10));
-    setCompetence(new Date().toISOString().slice(0, 10));
-    setParcelN("2");
-    setSignalAmt("");
-    setSignalDue(new Date().toISOString().slice(0, 10));
-    setBalanceDue(new Date().toISOString().slice(0, 10));
-    setArPaymentMethod("pix");
+    setPaymentUi(getDefaultBudgetPaymentConditionState());
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -600,110 +568,7 @@ const BudgetApprovalModal = ({
           )}
 
           {(formData.approval_type === "total" || formData.approval_type === "partial") && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base sm:text-lg">Condição de pagamento (contas a receber)</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Forma</Label>
-                  <Select
-                    value={payKind}
-                    onValueChange={(v) =>
-                      setPayKind(v as "avista" | "parcelado" | "sinal_saldo")
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="avista">À vista</SelectItem>
-                      <SelectItem value="parcelado">Parcelado</SelectItem>
-                      <SelectItem value="sinal_saldo">Sinal + saldo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label className="text-xs sm:text-sm">
-                      {payKind === "sinal_saldo" ? "Vencimento sinal" : "Primeiro vencimento"}
-                    </Label>
-                    <Input
-                      type="date"
-                      value={payKind === "sinal_saldo" ? signalDue : firstDue}
-                      onChange={(e) =>
-                        payKind === "sinal_saldo"
-                          ? setSignalDue(e.target.value)
-                          : setFirstDue(e.target.value)
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs sm:text-sm">Competência</Label>
-                    <Input
-                      type="date"
-                      value={competence}
-                      onChange={(e) => setCompetence(e.target.value)}
-                    />
-                  </div>
-                </div>
-                {payKind === "parcelado" && (
-                  <div className="space-y-2">
-                    <Label className="text-xs sm:text-sm">Parcelas (2–12)</Label>
-                    <Input
-                      inputMode="numeric"
-                      value={parcelN}
-                      onChange={(e) => setParcelN(e.target.value)}
-                    />
-                  </div>
-                )}
-                {payKind === "sinal_saldo" && (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label className="text-xs sm:text-sm">Valor do sinal</Label>
-                      <Input
-                        inputMode="decimal"
-                        placeholder="0,00"
-                        value={signalAmt}
-                        onChange={(e) => setSignalAmt(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs sm:text-sm">Vencimento saldo</Label>
-                      <Input
-                        type="date"
-                        value={balanceDue}
-                        onChange={(e) => setBalanceDue(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label className="text-xs sm:text-sm">Forma de recebimento</Label>
-                  <Select
-                    value={arPaymentMethod}
-                    onValueChange={(v) =>
-                      setArPaymentMethod(
-                        v as typeof arPaymentMethod
-                      )
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pix">PIX</SelectItem>
-                      <SelectItem value="boleto">Boleto</SelectItem>
-                      <SelectItem value="credit_card">Cartão crédito</SelectItem>
-                      <SelectItem value="debit_card">Cartão débito</SelectItem>
-                      <SelectItem value="bank_transfer">Transferência</SelectItem>
-                      <SelectItem value="cash">Dinheiro</SelectItem>
-                      <SelectItem value="check">Cheque</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
+            <BudgetPaymentConditionSection value={paymentUi} onChange={setPaymentUi} />
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

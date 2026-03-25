@@ -56,20 +56,41 @@ export const accountsReceivableCreateSchema = z
     }
   });
 
-export const accountsReceivableInstallmentsSchema = z.object({
-  customer_id: z.string().uuid(),
-  order_id: z.string().uuid().optional().nullable(),
-  budget_id: z.string().uuid().optional().nullable(),
-  total_amount: z.number().positive(),
-  first_due_date: z.string(),
-  competence_date: z.string(),
-  installments: z.number().int().min(2).max(60),
-  payment_method: paymentMethodSchema.optional().nullable(),
-  notes: z.string().optional().nullable(),
-  source: z.enum(['budget', 'order', 'manual']).optional().nullable(),
-  source_id: z.string().uuid().optional().nullable(),
-  cost_center_id: z.string().uuid().optional().nullable(),
-});
+export const accountsReceivableInstallmentsSchema = z
+  .object({
+    customer_id: z.string().uuid(),
+    order_id: z.string().uuid().optional().nullable(),
+    budget_id: z.string().uuid().optional().nullable(),
+    total_amount: z.number().positive(),
+    first_due_date: z.string(),
+    competence_date: z.string(),
+    installments: z.number().int().min(2).max(60),
+    payment_method: paymentMethodSchema.optional().nullable(),
+    notes: z.string().optional().nullable(),
+    source: z.enum(['budget', 'order', 'manual']).optional().nullable(),
+    source_id: z.string().uuid().optional().nullable(),
+    cost_center_id: z.string().uuid().optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    const due = new Date(data.first_due_date);
+    const comp = new Date(data.competence_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (due < today) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: '1º vencimento não pode ser anterior à data atual',
+        path: ['first_due_date'],
+      });
+    }
+    if (comp > due) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Competência não pode ser posterior ao vencimento',
+        path: ['competence_date'],
+      });
+    }
+  });
 
 export const receiptRecordSchema = z.object({
   receivable_account_id: z.string().uuid(),
@@ -81,21 +102,35 @@ export const receiptRecordSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
-export const accountsPayableCreateSchema = z.object({
-  supplier_id: z.string().uuid().optional().nullable(),
-  supplier_name: z.string().min(1),
-  supplier_document: z.string().optional().nullable(),
-  expense_category_id: z.string().uuid().optional().nullable(),
-  description: z.string().min(1),
-  amount: z.number().positive(),
-  due_date: z.string(),
-  payment_method: paymentMethodSchema.optional().nullable(),
-  invoice_number: z.string().optional().nullable(),
-  notes: z.string().optional().nullable(),
-  cost_center_id: z.string().uuid().optional().nullable(),
-  purchase_order_id: z.string().uuid().optional().nullable(),
-  approval_status: z.string().optional(),
-});
+export const accountsPayableCreateSchema = z
+  .object({
+    supplier_id: z.string().uuid().optional().nullable(),
+    supplier_name: z.string().min(1),
+    supplier_document: z.string().optional().nullable(),
+    expense_category_id: z.string().uuid().optional().nullable(),
+    description: z.string().min(1),
+    amount: z.number().positive(),
+    due_date: z.string(),
+    competence_date: z.string().optional().nullable(),
+    payment_method: paymentMethodSchema.optional().nullable(),
+    invoice_number: z.string().optional().nullable(),
+    notes: z.string().optional().nullable(),
+    cost_center_id: z.string().uuid().optional().nullable(),
+    purchase_order_id: z.string().uuid().optional().nullable(),
+    approval_status: z.string().optional(),
+    invoice_file_url: z.string().optional().nullable(),
+  })
+  .superRefine((data, ctx) => {
+    const comp = data.competence_date ? new Date(data.competence_date) : null;
+    const due = new Date(data.due_date);
+    if (comp && comp > due) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Competência não pode ser posterior ao vencimento',
+        path: ['competence_date'],
+      });
+    }
+  });
 
 export const cashFlowCreateSchema = z.object({
   transaction_type: z.enum(['income', 'expense']),

@@ -1,368 +1,250 @@
-// @ts-nocheck
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { useFinancial } from '@/hooks/useFinancial';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { 
-  TrendingUp, TrendingDown, DollarSign, Calendar, 
-  AlertTriangle, CheckCircle, Clock, Building2,
-  CreditCard, PiggyBank, Receipt, Target
-} from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { useOrganization } from '@/hooks/useOrganization';
-import { formatDateBR } from '@/lib/financialFormat';
+import { useArDueAlertsPanel } from '@/hooks/useArDueAlertsPanel';
+import type { FinancialKpis } from '@/services/financial/types';
+import type { DueWindowSummary } from '@/services/financial';
+import {
+  FinancialDueAlertsCard,
+  FinancialDashboardApTable,
+  FinancialDashboardArTable,
+  FinancialDashboardCashFlowTable,
+  FinancialDashboardPagination,
+  FinancialKpiCards,
+  FinancialReceivablePayableSummary,
+  FinancialAdvancedIndicators,
+  ArDueAlertsCard,
+} from '@/components/financial/dashboard';
+import type {
+  FinancialDashboardApRow,
+  FinancialDashboardArRow,
+  FinancialDashboardCfRow,
+} from '@/components/financial/dashboard/financialDashboardTypes';
 
-export default function Financeiro() {
+const PAGE_SIZE = 10;
+
+type ReceivableTotals = { open: number; overdue: number; received: number };
+
+function FinanceiroDashboard() {
+  const navigate = useNavigate();
   const { currentOrganization } = useOrganization();
-  const orgId = currentOrganization?.id;
-  const { getFinancialKPIs, getAccountsReceivable, getAccountsPayable, getCashFlow, loading } = useFinancial();
-  const [kpis, setKPIs] = useState<Record<string, unknown> | null>(null);
-  const [receivables, setReceivables] = useState<Record<string, unknown>[]>([]);
-  const [payables, setPayables] = useState<Record<string, unknown>[]>([]);
-  const [cashFlow, setCashFlow] = useState<Record<string, unknown>[]>([]);
+  const {
+    items: arDueItems,
+    loading: arDueLoading,
+    markRead: arMarkRead,
+    setInNegotiation: arSetNegotiation,
+    refresh: arDueRefresh,
+    canShow: canShowArDue,
+  } = useArDueAlertsPanel();
+  const {
+    getFinancialKPIs,
+    getReceivableTotals,
+    getAccountsReceivable,
+    getAccountsPayable,
+    getCashFlow,
+    syncAndGetDueWindowSummary,
+  } = useFinancial();
+
+  const [busy, setBusy] = useState(false);
+  const [kpis, setKpis] = useState<FinancialKpis | null>(null);
+  const [receivableTotals, setReceivableTotals] = useState<ReceivableTotals>({
+    open: 0,
+    overdue: 0,
+    received: 0,
+  });
+  const [arPage, setArPage] = useState(1);
+  const [apPage, setApPage] = useState(1);
+  const [cfPage, setCfPage] = useState(1);
+  const [arRows, setArRows] = useState<FinancialDashboardArRow[]>([]);
+  const [apRows, setApRows] = useState<FinancialDashboardApRow[]>([]);
+  const [cfRows, setCfRows] = useState<FinancialDashboardCfRow[]>([]);
+  const [arCount, setArCount] = useState(0);
+  const [apCount, setApCount] = useState(0);
+  const [cfCount, setCfCount] = useState(0);
+  const [arTotalPages, setArTotalPages] = useState(1);
+  const [apTotalPages, setApTotalPages] = useState(1);
+  const [cfTotalPages, setCfTotalPages] = useState(1);
+  const [dueSummary, setDueSummary] = useState<DueWindowSummary | null>(null);
+
+  const loadFinancialData = useCallback(async () => {
+    setBusy(true);
+    try {
+      const [kpisData, totals, receivablesRes, payablesRes, cashFlowRes, due] = await Promise.all([
+        getFinancialKPIs(),
+        getReceivableTotals(),
+        getAccountsReceivable(arPage, PAGE_SIZE),
+        getAccountsPayable(apPage, PAGE_SIZE),
+        getCashFlow(undefined, undefined, cfPage, PAGE_SIZE),
+        syncAndGetDueWindowSummary(),
+      ]);
+
+      setKpis(kpisData);
+      setReceivableTotals(totals);
+      setDueSummary(due);
+      setArRows((receivablesRes.data ?? []) as FinancialDashboardArRow[]);
+      setArCount(receivablesRes.count ?? 0);
+      setArTotalPages(receivablesRes.totalPages ?? 1);
+      setApRows((payablesRes.data ?? []) as FinancialDashboardApRow[]);
+      setApCount(payablesRes.count ?? 0);
+      setApTotalPages(payablesRes.totalPages ?? 1);
+      setCfRows((cashFlowRes.data ?? []) as FinancialDashboardCfRow[]);
+      setCfCount(cashFlowRes.count ?? 0);
+      setCfTotalPages(cashFlowRes.totalPages ?? 1);
+    } finally {
+      setBusy(false);
+    }
+  }, [
+    arPage,
+    apPage,
+    cfPage,
+    getAccountsPayable,
+    getAccountsReceivable,
+    getCashFlow,
+    getFinancialKPIs,
+    getReceivableTotals,
+    syncAndGetDueWindowSummary,
+  ]);
 
   useEffect(() => {
-    if (!orgId) return;
     void loadFinancialData();
-  }, [orgId]);
+  }, [loadFinancialData]);
 
-  const loadFinancialData = async () => {
-    const [kpisData, receivablesRes, payablesRes, cashFlowRes] = await Promise.all([
-      getFinancialKPIs(),
-      getAccountsReceivable(1, 100),
-      getAccountsPayable(1, 100),
-      getCashFlow(undefined, undefined, 1, 10),
-    ]);
-
-    setKPIs(kpisData);
-    setReceivables(receivablesRes.data as unknown as Record<string, unknown>[]);
-    setPayables(payablesRes.data as unknown as Record<string, unknown>[]);
-    setCashFlow(cashFlowRes.data as unknown as Record<string, unknown>[]);
+  const handleArDueNegotiate = async (alertId: string) => {
+    await arSetNegotiation(alertId);
+    navigate('/contas-receber?dueAlerts=1');
   };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid': return 'bg-success text-success-foreground';
-      case 'pending': return 'bg-warning text-warning-foreground';
-      case 'overdue': return 'bg-destructive text-destructive-foreground';
-      default: return 'bg-muted text-muted-foreground';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'paid': return 'Pago';
-      case 'pending': return 'Pendente';
-      case 'overdue': return 'Vencido';
-      case 'cancelled': return 'Cancelado';
-      default: return status;
-    }
-  };
-
-  if (loading && !kpis) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Carregando dados financeiros...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Dashboard Financeiro</h1>
-          <p className="text-muted-foreground">Visão geral das finanças da empresa</p>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Dashboard financeiro</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Visão geral das finanças da empresa</p>
         </div>
-        <Button onClick={loadFinancialData} disabled={loading} className="w-full sm:w-auto">
-          {loading ? 'Atualizando...' : 'Atualizar Dados'}
+        <Button
+          type="button"
+          onClick={() => void Promise.all([loadFinancialData(), canShowArDue ? arDueRefresh() : Promise.resolve()])}
+          disabled={busy}
+          className="w-full sm:w-auto h-9 sm:h-10"
+        >
+          {busy ? 'Atualizando…' : 'Atualizar dados'}
         </Button>
       </div>
 
-      {/* KPIs */}
-      {kpis && (
-        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Faturamento Mensal</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-success">
-                {formatCurrency(kpis.monthlyRevenue as number)}
-              </div>
-              <p className="text-xs text-muted-foreground">Receita do mês atual</p>
-            </CardContent>
-          </Card>
+      {kpis && <FinancialKpiCards kpis={kpis} />}
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Despesas Mensais</CardTitle>
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">
-                {formatCurrency(kpis.monthlyExpenses as number)}
-              </div>
-              <p className="text-xs text-muted-foreground">Gastos do mês atual</p>
-            </CardContent>
-          </Card>
+      {currentOrganization?.id ? (
+        <FinancialAdvancedIndicators orgId={currentOrganization.id} />
+      ) : null}
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Lucro Líquido</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${kpis.netProfit as number >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {formatCurrency(kpis.netProfit as number)}
-              </div>
-              <p className="text-xs text-muted-foreground">Receita - Despesas</p>
-            </CardContent>
-          </Card>
+      <FinancialDueAlertsCard summary={dueSummary} loading={busy && !dueSummary} />
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Contas Vencidas</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${kpis.overdueCount as number > 0 ? 'text-destructive' : 'text-success'}`}>
-                {kpis.overdueCount as number}
-              </div>
-              <p className="text-xs text-muted-foreground">Recebimentos em atraso</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {canShowArDue ? (
+        <ArDueAlertsCard
+          items={arDueItems}
+          loading={arDueLoading && arDueItems.length === 0}
+          onMarkRead={arMarkRead}
+          onNegotiate={handleArDueNegotiate}
+        />
+      ) : null}
 
-      {/* Tabs com módulos financeiros */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="w-full overflow-x-auto flex md:grid md:grid-cols-4">
-          <TabsTrigger value="overview" className="text-xs sm:text-sm flex-shrink-0">Visão Geral</TabsTrigger>
-          <TabsTrigger value="receivables" className="text-xs sm:text-sm flex-shrink-0">A Receber</TabsTrigger>
-          <TabsTrigger value="payables" className="text-xs sm:text-sm flex-shrink-0">A Pagar</TabsTrigger>
-          <TabsTrigger value="cashflow" className="text-xs sm:text-sm flex-shrink-0">Fluxo</TabsTrigger>
+        <TabsList className="w-full overflow-x-auto flex md:grid md:grid-cols-4 rounded-md">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm flex-shrink-0">
+            Visão geral
+          </TabsTrigger>
+          <TabsTrigger value="receivables" className="text-xs sm:text-sm flex-shrink-0">
+            A receber
+          </TabsTrigger>
+          <TabsTrigger value="payables" className="text-xs sm:text-sm flex-shrink-0">
+            A pagar
+          </TabsTrigger>
+          <TabsTrigger value="cashflow" className="text-xs sm:text-sm flex-shrink-0">
+            Fluxo
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-            {/* Resumo de recebíveis */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Receipt className="h-5 w-5" />
-                  Contas a Receber - Resumo
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {kpis && (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Total a Receber</span>
-                      <span className="font-bold text-success">
-                        {formatCurrency(kpis.totalReceivable as number)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Contas Vencidas</span>
-                      <span className="font-bold text-destructive">
-                        {kpis.overdueCount as number}
-                      </span>
-                    </div>
-                    <Progress 
-                      value={kpis.overdueCount as number > 0 ? (kpis.overdueCount as number / receivables.length) * 100 : 0} 
-                      className="w-full"
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          {kpis && (
+            <FinancialReceivablePayableSummary
+              kpis={kpis}
+              receivablePendingAmount={receivableTotals.open}
+              receivableOverdueAmount={receivableTotals.overdue}
+            />
+          )}
 
-            {/* Resumo de pagáveis */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Contas a Pagar - Resumo
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {kpis && (
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Total a Pagar</span>
-                      <span className="font-bold text-destructive">
-                        {formatCurrency(kpis.totalPayable as number)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Saldo Disponível</span>
-                      <span className={`font-bold ${kpis.cashBalance as number >= 0 ? 'text-success' : 'text-destructive'}`}>
-                        {formatCurrency(kpis.cashBalance as number)}
-                      </span>
-                    </div>
-                    <Progress 
-                      value={kpis.totalPayable as number > 0 ? Math.min((kpis.cashBalance as number / kpis.totalPayable as number) * 100, 100) : 100}
-                      className="w-full"
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Últimas movimentações */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Últimas Movimentações
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+                Últimas movimentações (fluxo de caixa)
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {cashFlow.map((transaction: Record<string, unknown>, index: number) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      {transaction.transaction_type === 'income' ? (
-                        <TrendingUp className="h-4 w-4 text-success" />
-                      ) : (
-                        <TrendingDown className="h-4 w-4 text-destructive" />
-                      )}
-                      <div>
-                        <p className="font-medium">{transaction.description as string}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatDateBR(transaction.transaction_date as string)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className={`font-bold ${
-                      transaction.transaction_type === 'income' ? 'text-success' : 'text-destructive'
-                    }`}>
-                      {transaction.transaction_type === 'income' ? '+' : '-'}
-                      {formatCurrency(transaction.amount as number)}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <CardContent className="min-w-0">
+              <FinancialDashboardCashFlowTable
+                embedded
+                rows={cfRows}
+                loading={busy && cfRows.length === 0}
+              />
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="receivables" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Contas a Receber</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {receivables.map((receivable, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <p className="font-medium">{receivable.customers?.name as string}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Venc: {formatDateBR(receivable.due_date as string)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={getStatusColor(receivable.status as string)}>
-                        {getStatusText(receivable.status as string)}
-                      </Badge>
-                      <span className="font-bold">{formatCurrency(receivable.amount as number)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <FinancialDashboardArTable rows={arRows} loading={busy && arRows.length === 0} />
+          <FinancialDashboardPagination
+            page={arPage}
+            totalPages={arTotalPages}
+            count={arCount}
+            pageSize={PAGE_SIZE}
+            onPageChange={setArPage}
+          />
         </TabsContent>
 
         <TabsContent value="payables" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Contas a Pagar</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {payables.map((payable, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <p className="font-medium">{payable.supplier_name as string}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {payable.description as string} - Venc: {formatDateBR(payable.due_date as string)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge className={getStatusColor(payable.status as string)}>
-                        {getStatusText(payable.status as string)}
-                      </Badge>
-                      <span className="font-bold">{formatCurrency(payable.amount as number)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <FinancialDashboardApTable rows={apRows} loading={busy && apRows.length === 0} />
+          <FinancialDashboardPagination
+            page={apPage}
+            totalPages={apTotalPages}
+            count={apCount}
+            pageSize={PAGE_SIZE}
+            onPageChange={setApPage}
+          />
         </TabsContent>
 
         <TabsContent value="cashflow" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Fluxo de Caixa</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {cashFlow.map((transaction, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      {transaction.transaction_type === 'income' ? (
-                        <TrendingUp className="h-4 w-4 text-success" />
-                      ) : (
-                        <TrendingDown className="h-4 w-4 text-destructive" />
-                      )}
-                      <div>
-                        <p className="font-medium">{transaction.description as string}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatDateBR(transaction.transaction_date as string)}
-                          {transaction.payment_method && ` • ${transaction.payment_method}`}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {transaction.reconciled && (
-                        <CheckCircle className="h-4 w-4 text-success" />
-                      )}
-                      <span className={`font-bold ${
-                        transaction.transaction_type === 'income' ? 'text-success' : 'text-destructive'
-                      }`}>
-                        {transaction.transaction_type === 'income' ? '+' : '-'}
-                        {formatCurrency(transaction.amount as number)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <FinancialDashboardCashFlowTable rows={cfRows} loading={busy && cfRows.length === 0} />
+          <FinancialDashboardPagination
+            page={cfPage}
+            totalPages={cfTotalPages}
+            count={cfCount}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCfPage}
+          />
         </TabsContent>
       </Tabs>
     </div>
   );
+}
+
+export default function Financeiro() {
+  const { currentOrganization } = useOrganization();
+  const orgId = currentOrganization?.id;
+
+  if (!orgId) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh] p-4 sm:p-6">
+        <p className="text-sm sm:text-base text-muted-foreground text-center">
+          Selecione uma organização para ver o dashboard financeiro.
+        </p>
+      </div>
+    );
+  }
+
+  return <FinanceiroDashboard key={orgId} />;
 }

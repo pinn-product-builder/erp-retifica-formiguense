@@ -93,6 +93,8 @@ export const supplierSchema = z.object({
   delivery_days:           z.number().int().min(0).optional(),
   is_active:               z.boolean().default(true),
   notes:                   z.string().optional(),
+  default_expense_category_id: z.string().optional(),
+  default_cost_center_id: z.string().optional(),
 });
 
 export type SupplierFormData = z.infer<typeof supplierSchema>;
@@ -148,6 +150,8 @@ export interface Supplier {
   last_purchase_date?: string;
   created_at: string;
   updated_at: string;
+  default_expense_category_id?: string | null;
+  default_cost_center_id?: string | null;
 }
 
 export interface SupplierFilters {
@@ -295,6 +299,8 @@ export const SupplierService = {
         notes:                  formData.notes || null,
         created_by:             createdBy ?? null,
         rating:                 5.0,
+        default_expense_category_id: formData.default_expense_category_id?.trim() || null,
+        default_cost_center_id: formData.default_cost_center_id?.trim() || null,
       })
       .select()
       .single();
@@ -333,6 +339,12 @@ export const SupplierService = {
     if (formData.delivery_days !== undefined) updates.delivery_days = formData.delivery_days ?? 0;
     if (formData.is_active     !== undefined) updates.is_active     = formData.is_active;
     if (formData.notes         !== undefined) updates.notes         = formData.notes || null;
+    if (formData.default_expense_category_id !== undefined) {
+      updates.default_expense_category_id = formData.default_expense_category_id?.trim() || null;
+    }
+    if (formData.default_cost_center_id !== undefined) {
+      updates.default_cost_center_id = formData.default_cost_center_id?.trim() || null;
+    }
 
     const { data, error } = await supabase
       .from('suppliers')

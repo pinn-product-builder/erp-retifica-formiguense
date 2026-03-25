@@ -5,6 +5,17 @@ import type { PaginatedResult } from '@/services/financial/types';
 type CustomerRow = Database['public']['Tables']['customers']['Row'];
 
 export class CustomerLookupService {
+  static async getById(orgId: string, id: string): Promise<CustomerRow | null> {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('org_id', orgId)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return (data as CustomerRow) ?? null;
+  }
+
   static async search(
     orgId: string,
     search: string,

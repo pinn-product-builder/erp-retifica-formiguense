@@ -38,6 +38,8 @@ const NotFound = lazy(() => import('@/pages/NotFound'));
 const Financeiro = lazy(() => import('@/pages/Financeiro'));
 const ContasReceber = lazy(() => import('@/pages/ContasReceber'));
 const ContasPagar = lazy(() => import('@/pages/ContasPagar'));
+const ApRecorrentes = lazy(() => import('@/pages/ApRecorrentes'));
+const InadimplenciaAging = lazy(() => import('@/pages/InadimplenciaAging'));
 const FluxoCaixa = lazy(() => import('@/pages/FluxoCaixa'));
 const DRE = lazy(() => import('@/pages/DRE'));
 const FechamentoCaixa = lazy(() => import('@/pages/FechamentoCaixa'));
@@ -117,6 +119,8 @@ function AppContent() {
             <Route path="/financeiro" element={<ProfileProtectedRoute><Layout><Financeiro /></Layout></ProfileProtectedRoute>} />
             <Route path="/contas-receber" element={<ProfileProtectedRoute><Layout><ContasReceber /></Layout></ProfileProtectedRoute>} />
             <Route path="/contas-pagar" element={<ProfileProtectedRoute><Layout><ContasPagar /></Layout></ProfileProtectedRoute>} />
+            <Route path="/ap-recorrentes" element={<ProfileProtectedRoute><Layout><ApRecorrentes /></Layout></ProfileProtectedRoute>} />
+            <Route path="/inadimplencia-aging" element={<ProfileProtectedRoute><Layout><InadimplenciaAging /></Layout></ProfileProtectedRoute>} />
             <Route path="/fluxo-caixa" element={<ProfileProtectedRoute><Layout><FluxoCaixa /></Layout></ProfileProtectedRoute>} />
             <Route path="/dre" element={<ProfileProtectedRoute><Layout><DRE /></Layout></ProfileProtectedRoute>} />
             <Route path="/fechamento-caixa" element={<ProfileProtectedRoute><Layout><FechamentoCaixa /></Layout></ProfileProtectedRoute>} />

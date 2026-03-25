@@ -37,42 +37,123 @@ export class FinancialReportService {
 
   static async dueCurve(
     orgId: string,
-    days: number
-  ): Promise<{ date: string; receivables: number; payables: number }[]> {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    const { data: ar } = await supabase
-      .from('accounts_receivable')
-      .select('due_date, amount, status')
-      .eq('org_id', orgId)
-      .gte('due_date', start.toISOString().slice(0, 10))
-      .lte('due_date', end.toISOString().slice(0, 10));
-    const { data: ap } = await supabase
-      .from('accounts_payable')
-      .select('due_date, amount, status')
-      .eq('org_id', orgId)
-      .gte('due_date', start.toISOString().slice(0, 10))
-      .lte('due_date', end.toISOString().slice(0, 10));
+    horizonDays: number,
+    costCenterId?: string | null
+  ): Promise<{
+    series: { date: string; receivables: number; payables: number }[];
+    buckets: { label: string; receivables: number; payables: number }[];
+    overdue: { receivables: number; payables: number };
+  }> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(today);
+    end.setDate(end.getDate() + Math.max(0, horizonDays));
+    const todayStr = today.toISOString().slice(0, 10);
+    const endStr = end.toISOString().slice(0, 10);
 
-    const map = new Map<string, { receivables: number; payables: number }>();
+    let arQ = supabase
+      .from('accounts_receivable')
+      .select('due_date, amount, status, cost_center_id')
+      .eq('org_id', orgId)
+      .in('status', ['pending', 'overdue', 'renegotiated'])
+      .lte('due_date', endStr);
+    if (costCenterId) arQ = arQ.eq('cost_center_id', costCenterId);
+    const { data: ar, error: arErr } = await arQ;
+    if (arErr) throw new Error(arErr.message);
+
+    let apQ = supabase
+      .from('accounts_payable')
+      .select('due_date, amount, status, cost_center_id')
+      .eq('org_id', orgId)
+      .in('status', ['pending', 'overdue', 'renegotiated'])
+      .lte('due_date', endStr);
+    if (costCenterId) apQ = apQ.eq('cost_center_id', costCenterId);
+    const { data: ap, error: apErr } = await apQ;
+    if (apErr) throw new Error(apErr.message);
+
+    const dayKeys: string[] = [];
+    for (let d = new Date(today); d <= end; d.setDate(d.getDate() + 1)) {
+      dayKeys.push(d.toISOString().slice(0, 10));
+    }
+    const byDay = new Map<string, { receivables: number; payables: number }>();
+    for (const k of dayKeys) byDay.set(k, { receivables: 0, payables: 0 });
+
+    const bucketDefs = [
+      { label: 'Vencidos', min: -Infinity, max: -1 },
+      { label: 'Hoje', min: 0, max: 0 },
+      { label: '1–30 dias', min: 1, max: 30 },
+      { label: '31–60 dias', min: 31, max: 60 },
+      { label: '61–90 dias', min: 61, max: 90 },
+      { label: 'Acima de 90 dias', min: 91, max: Infinity },
+    ];
+    const buckets = bucketDefs.map((b) => ({
+      label: b.label,
+      receivables: 0,
+      payables: 0,
+    }));
+
+    let overdueR = 0;
+    let overdueP = 0;
+
+    const addAr = (dueYmd: string, amt: number) => {
+      const due = new Date(dueYmd + 'T12:00:00');
+      const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
+      if (dueYmd < todayStr) {
+        overdueR += amt;
+        buckets[0].receivables += amt;
+        return;
+      }
+      if (dueYmd <= endStr) {
+        const cur = byDay.get(dueYmd) ?? { receivables: 0, payables: 0 };
+        cur.receivables += amt;
+        byDay.set(dueYmd, cur);
+      }
+      for (let i = 1; i < bucketDefs.length; i++) {
+        const b = bucketDefs[i];
+        if (diff >= b.min && diff <= b.max) {
+          buckets[i].receivables += amt;
+          break;
+        }
+      }
+    };
+
+    const addAp = (dueYmd: string, amt: number) => {
+      const due = new Date(dueYmd + 'T12:00:00');
+      const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
+      if (dueYmd < todayStr) {
+        overdueP += amt;
+        buckets[0].payables += amt;
+        return;
+      }
+      if (dueYmd <= endStr) {
+        const cur = byDay.get(dueYmd) ?? { receivables: 0, payables: 0 };
+        cur.payables += amt;
+        byDay.set(dueYmd, cur);
+      }
+      for (let i = 1; i < bucketDefs.length; i++) {
+        const b = bucketDefs[i];
+        if (diff >= b.min && diff <= b.max) {
+          buckets[i].payables += amt;
+          break;
+        }
+      }
+    };
+
     for (const r of ar ?? []) {
       if (r.status === 'paid' || r.status === 'cancelled') continue;
-      const d = r.due_date as string;
-      const cur = map.get(d) ?? { receivables: 0, payables: 0 };
-      cur.receivables += Number(r.amount);
-      map.set(d, cur);
+      addAr(r.due_date as string, Number(r.amount));
     }
     for (const p of ap ?? []) {
       if (p.status === 'paid' || p.status === 'cancelled') continue;
-      const d = p.due_date as string;
-      const cur = map.get(d) ?? { receivables: 0, payables: 0 };
-      cur.payables += Number(p.amount);
-      map.set(d, cur);
+      addAp(p.due_date as string, Number(p.amount));
     }
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, v]) => ({ date, receivables: v.receivables, payables: v.payables }));
+
+    const series = dayKeys.map((date) => {
+      const v = byDay.get(date) ?? { receivables: 0, payables: 0 };
+      return { date, receivables: v.receivables, payables: v.payables };
+    });
+
+    return { series, buckets, overdue: { receivables: overdueR, payables: overdueP } };
   }
 
   static async upcomingAlerts(

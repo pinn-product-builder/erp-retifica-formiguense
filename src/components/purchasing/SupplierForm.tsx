@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm, Controller, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -9,7 +9,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Building2, MapPin, CreditCard, Tag } from 'lucide-react';
+import { Loader2, Building2, MapPin, CreditCard, Tag, Landmark } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { CostCenterSelect } from '@/components/financial/CostCenterSelect';
+import { FinancialConfigService } from '@/services/financial/financialConfigService';
 import {
   supplierSchema,
   type SupplierFormData,
@@ -22,6 +31,7 @@ import {
 
 interface SupplierFormProps {
   supplier?: Supplier;
+  orgId?: string;
   onSuccess: (supplier: Supplier) => void;
   onCancel: () => void;
   onSubmit: (data: SupplierFormData) => Promise<Supplier | null>;
@@ -30,6 +40,7 @@ interface SupplierFormProps {
 
 export function SupplierForm({
   supplier,
+  orgId,
   onSuccess,
   onCancel,
   onSubmit,
@@ -67,13 +78,30 @@ export function SupplierForm({
           delivery_days:          supplier.delivery_days ?? 0,
           is_active:              supplier.is_active ?? true,
           notes:                  supplier.notes ?? '',
+          default_expense_category_id: supplier.default_expense_category_id ?? '',
+          default_cost_center_id: supplier.default_cost_center_id ?? '',
         }
       : {
           is_active:       true,
           payment_methods: ['boleto'],
           categories:      [],
+          default_expense_category_id: '',
+          default_cost_center_id: '',
         },
   });
+
+  const [expenseCats, setExpenseCats] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    if (!orgId) {
+      setExpenseCats([]);
+      return;
+    }
+    void FinancialConfigService.listExpenseCategories(orgId).then((rows) => {
+      setExpenseCats(
+        rows.map((r) => ({ id: r.id as string, name: (r.name as string) ?? '' }))
+      );
+    });
+  }, [orgId]);
 
   const selectedCategories = watch('categories') ?? [];
   const selectedMethods    = watch('payment_methods') ?? [];
@@ -122,7 +150,7 @@ export function SupplierForm({
   return (
     <form onSubmit={handleSubmit(handleFormSubmit, handleInvalidSubmit)} className="space-y-4">
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-auto">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto gap-1">
           <TabsTrigger value="general" className="relative flex items-center gap-1 text-xs sm:text-sm py-2">
             <Building2 className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Dados Gerais</span>
@@ -140,6 +168,11 @@ export function SupplierForm({
             <span className="hidden sm:inline">Comercial</span>
             <span className="sm:hidden">Com.</span>
             {hasCommercialErrors && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-destructive" />}
+          </TabsTrigger>
+          <TabsTrigger value="financial" className="relative flex items-center gap-1 text-xs sm:text-sm py-2">
+            <Landmark className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Financeiro</span>
+            <span className="sm:hidden">Fin.</span>
           </TabsTrigger>
           <TabsTrigger value="categories" className="relative flex items-center gap-1 text-xs sm:text-sm py-2">
             <Tag className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -461,6 +494,56 @@ export function SupplierForm({
               <Label htmlFor="is_active" className="cursor-pointer">Fornecedor ativo</Label>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="financial" className="space-y-4 pt-4">
+          {orgId ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Categoria de despesa padrão</Label>
+                <Controller
+                  name="default_expense_category_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || '__none__'}
+                      onValueChange={(v) => field.onChange(v === '__none__' ? '' : v)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Opcional" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Nenhuma</SelectItem>
+                        {expenseCats.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+              <Controller
+                name="default_cost_center_id"
+                control={control}
+                render={({ field }) => (
+                  <CostCenterSelect
+                    orgId={orgId}
+                    value={field.value ?? ''}
+                    onValueChange={field.onChange}
+                    label="Centro de custo padrão"
+                    id="sup-def-cc"
+                  />
+                )}
+              />
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Selecione uma organização para classificação financeira.</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Usado como sugestão em conciliação bancária e em novas contas a pagar vinculadas ao fornecedor.
+          </p>
         </TabsContent>
 
         {/* ── ABA CATEGORIAS ── */}

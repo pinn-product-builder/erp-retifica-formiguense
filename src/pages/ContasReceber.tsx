@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -12,18 +13,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { History, Loader2, Wallet } from 'lucide-react';
+import { History, Pencil, Wallet } from 'lucide-react';
 import { FinancialPageShell } from '@/components/financial/FinancialPageShell';
+import { AccountsReceivableListTable } from '@/components/financial/accounts-receivable/AccountsReceivableListTable';
+import { RenegotiationDialog } from '@/components/financial/accounts-receivable/RenegotiationDialog';
+import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
 import {
   FinancialAsyncCombobox,
   type FinancialAsyncComboboxProps,
@@ -36,8 +33,14 @@ import { OrderService, type OrderWithDetails } from '@/services/OrderService';
 import { BudgetLookupService, type BudgetListItem } from '@/services/financial/budgetLookupService';
 import type { Database } from '@/integrations/supabase/types';
 import type { AccountsReceivableListFilters } from '@/services/financial/types';
-import { formatBRL, formatDateBR } from '@/lib/financialFormat';
+import { formatBRL, formatDateBR, paymentMethodLabel } from '@/lib/financialFormat';
+import { FinancialConfigService } from '@/services/financial/financialConfigService';
 import { cn } from '@/lib/utils';
+import { getDueAlertCalendarDates } from '@/lib/dueAlertDates';
+import { ArRenegotiationService } from '@/services/financial/arRenegotiationService';
+import type { ReceivableSettlementSnapshot } from '@/services/financial/receiptHistoryService';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 type ArRow = Database['public']['Tables']['accounts_receivable']['Row'];
 type CustomerRow = Database['public']['Tables']['customers']['Row'];
@@ -65,6 +68,10 @@ const METHOD_LABELS: Record<string, string> = {
   boleto: 'Boleto',
 };
 
+type PmCatalogRow = Database['public']['Tables']['payment_methods']['Row'];
+
+const FALLBACK_PM_KEYS = Object.keys(METHOD_LABELS) as Pm[];
+
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pendente',
   paid: 'Pago',
@@ -80,7 +87,9 @@ function statusBadgeClass(status: string) {
 }
 
 export default function ContasReceber() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { currentOrganization } = useOrganization();
+  const { user } = useAuth();
   const orgId = currentOrganization?.id ?? '';
   const {
     loading,
@@ -90,6 +99,7 @@ export default function ContasReceber() {
     updateAccountsReceivable,
     listReceiptHistory,
     recordReceiptPayment,
+    getReceivableSettlementSnapshot,
     createInstallmentPlan,
   } = useFinancial();
 
@@ -101,11 +111,14 @@ export default function ContasReceber() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dueFrom, setDueFrom] = useState('');
   const [dueTo, setDueTo] = useState('');
+  const [dueAlertFilter, setDueAlertFilter] = useState(false);
+  const [pmCatalog, setPmCatalog] = useState<PmCatalogRow[]>([]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [installDialogOpen, setInstallDialogOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentSnapshot, setPaymentSnapshot] = useState<ReceivableSettlementSnapshot | null>(null);
   const [selectedRow, setSelectedRow] = useState<(ArRow & Record<string, unknown>) | null>(null);
   const [historyRows, setHistoryRows] = useState<Record<string, unknown>[]>([]);
 
@@ -153,16 +166,36 @@ export default function ContasReceber() {
     notes: '',
   });
 
+  const [renegOpen, setRenegOpen] = useState(false);
+  const [renegForm, setRenegForm] = useState({
+    installments: '3',
+    first_due_date: '',
+    competence_date: '',
+    reason: '',
+  });
+
   const buildFilters = useCallback((): AccountsReceivableListFilters => {
     const f: AccountsReceivableListFilters = {};
     if (statusFilter !== 'all') f.status = statusFilter as AccountsReceivableListFilters['status'];
-    if (dueFrom) f.dueFrom = dueFrom;
-    if (dueTo) f.dueTo = dueTo;
+    if (dueAlertFilter) f.dueOnDates = getDueAlertCalendarDates();
+    else {
+      if (dueFrom) f.dueFrom = dueFrom;
+      if (dueTo) f.dueTo = dueTo;
+    }
     if (customerOpt) f.customerId = customerOpt.id;
     if (orderOpt) f.orderId = orderOpt.id;
     if (budgetOpt) f.budgetId = budgetOpt.id;
     return f;
-  }, [statusFilter, dueFrom, dueTo, customerOpt, orderOpt, budgetOpt]);
+  }, [statusFilter, dueFrom, dueTo, dueAlertFilter, customerOpt, orderOpt, budgetOpt]);
+
+  useEffect(() => {
+    if (searchParams.get('dueAlerts') === '1') setDueAlertFilter(true);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!orgId) return;
+    void FinancialConfigService.listPaymentMethodsForContext(orgId, 'receivable').then(setPmCatalog);
+  }, [orgId]);
 
   const load = useCallback(async () => {
     if (!orgId) return;
@@ -234,6 +267,67 @@ export default function ContasReceber() {
     return () => clearTimeout(t);
   }, [budgetFilterInput, budgetDialogInput, dialogOpen, orgId]);
 
+  const openEdit = async (row: ArRow & Record<string, unknown>) => {
+    if (row.status === 'paid' || row.status === 'cancelled') {
+      toast.error('Não é possível editar título pago ou cancelado');
+      return;
+    }
+    if (!orgId) return;
+    setSelectedRow(row);
+    const cust = await CustomerLookupService.getById(orgId, row.customer_id as string);
+    setCustomerOpt(cust);
+    setCustomerDialogInput(cust?.name ?? '');
+    setOrderOpt(null);
+    setBudgetOpt(null);
+    setOrderDialogInput('');
+    setBudgetDialogInput('');
+    setForm({
+      amount: String(row.amount),
+      due_date: (row.due_date as string) ?? '',
+      competence_date: (row.competence_date as string) ?? (row.due_date as string) ?? '',
+      payment_method: (row.payment_method as Pm) || '',
+      notes: (row.notes as string) || '',
+      invoice_number: (row.invoice_number as string) || '',
+      cost_center_id: (row.cost_center_id as string) || '',
+    });
+    setDialogOpen(true);
+  };
+
+  const openRenegotiate = (row: ArRow & Record<string, unknown>) => {
+    if (row.status === 'paid' || row.status === 'cancelled') {
+      toast.error('Título não elegível');
+      return;
+    }
+    setSelectedRow(row);
+    setRenegForm({
+      installments: '3',
+      first_due_date: new Date().toISOString().slice(0, 10),
+      competence_date: new Date().toISOString().slice(0, 10),
+      reason: '',
+    });
+    setRenegOpen(true);
+  };
+
+  const submitRenegotiate = async () => {
+    if (!orgId || !selectedRow) return;
+    const res = await ArRenegotiationService.rescheduleOpenBalance({
+      orgId,
+      userId: user?.id ?? null,
+      receivableIds: [selectedRow.id as string],
+      newInstallments: Number(renegForm.installments),
+      firstDueDate: renegForm.first_due_date,
+      competenceDate: renegForm.competence_date || renegForm.first_due_date,
+      reason: renegForm.reason || null,
+    });
+    if (res.error) {
+      toast.error(res.error.message);
+      return;
+    }
+    toast.success('Renegociação registrada');
+    setRenegOpen(false);
+    void load();
+  };
+
   const openNew = () => {
     setSelectedRow(null);
     setCustomerOpt(null);
@@ -271,7 +365,11 @@ export default function ContasReceber() {
       cost_center_id: form.cost_center_id || null,
     };
     if (selectedRow) {
-      await updateAccountsReceivable(selectedRow.id as string, payload);
+      await updateAccountsReceivable(selectedRow.id as string, {
+        ...payload,
+        installment_number: (selectedRow.installment_number as number) ?? 1,
+        total_installments: (selectedRow.total_installments as number) ?? 1,
+      } as never);
     } else {
       await createAccountsReceivable(payload);
     }
@@ -306,10 +404,14 @@ export default function ContasReceber() {
     setHistoryOpen(true);
   };
 
-  const openPayment = (row: ArRow & Record<string, unknown>) => {
+  const openPayment = async (row: ArRow & Record<string, unknown>) => {
     setSelectedRow(row);
+    const snap = await getReceivableSettlementSnapshot(row.id as string);
+    setPaymentSnapshot(snap);
+    const defaultAmt =
+      snap && snap.remaining > 0 ? String(snap.remaining).replace('.', ',') : String(row.amount);
     setPayForm({
-      amount_received: String(row.amount),
+      amount_received: defaultAmt,
       received_at: new Date().toISOString().slice(0, 10),
       payment_method: (row.payment_method as Pm) || '',
       late_fee_charged: '0',
@@ -337,6 +439,144 @@ export default function ContasReceber() {
   };
 
   const fmt = (n: number) => formatBRL(n);
+
+  const arColumns: ResponsiveTableColumn<ArRow & Record<string, unknown>>[] = [
+      {
+        key: 'customer',
+        header: 'Cliente',
+        mobileLabel: 'Cliente',
+        priority: 1,
+        render: (row) => (row.customers as { name?: string } | null)?.name ?? '—',
+      },
+      {
+        key: 'order',
+        header: 'OS',
+        mobileLabel: 'OS',
+        priority: 3,
+        render: (row) => (row.orders as { order_number?: string } | null)?.order_number ?? '—',
+      },
+      {
+        key: 'amount',
+        header: 'Valor',
+        mobileLabel: 'Valor',
+        priority: 2,
+        minWidth: 110,
+        render: (row) => <span className="whitespace-nowrap font-medium">{fmt(Number(row.amount))}</span>,
+      },
+      {
+        key: 'due',
+        header: 'Vencimento',
+        mobileLabel: 'Venc.',
+        priority: 4,
+        render: (row) => formatDateBR(row.due_date as string),
+      },
+      {
+        key: 'comp',
+        header: 'Competência',
+        hideInMobile: true,
+        priority: 5,
+        render: (row) => formatDateBR((row.competence_date as string) ?? null),
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        mobileLabel: 'Status',
+        priority: 6,
+        render: (row) => {
+          const st = row.status as string;
+          return (
+            <Badge variant="outline" className={cn('text-xs', statusBadgeClass(st))}>
+              {STATUS_LABELS[st] ?? st}
+            </Badge>
+          );
+        },
+      },
+      {
+        key: 'audit',
+        header: 'Auditoria',
+        hideInMobile: true,
+        priority: 8,
+        render: (row) => (
+          <span className="text-muted-foreground text-xs">
+            {(row.created_by as string)?.slice(0, 8) ?? '—'} /{' '}
+            {(row.updated_by as string)?.slice(0, 8) ?? '—'}
+          </span>
+        ),
+      },
+      {
+        key: 'actions',
+        header: 'Ações',
+        mobileLabel: 'Ações',
+        priority: 7,
+        minWidth: 140,
+        render: (row) => (
+          <TooltipProvider delayDuration={300}>
+            <div className="flex flex-wrap justify-end gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 sm:h-8 sm:w-8"
+                    onClick={() => void openHistory(row)}
+                  >
+                    <History className="h-3 w-3 sm:h-4 sm:h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Histórico</TooltipContent>
+              </Tooltip>
+              {row.status !== 'paid' && row.status !== 'cancelled' && (
+                <>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 sm:h-8 sm:w-8"
+                        onClick={() => void openEdit(row)}
+                      >
+                        <Pencil className="h-3 w-3 sm:h-4 sm:h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Editar</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 sm:h-8 sm:w-8"
+                        onClick={() => openRenegotiate(row)}
+                      >
+                        <span className="text-xs font-semibold">R</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Renegociar</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 sm:h-8 sm:w-8"
+                        onClick={() => void openPayment(row)}
+                      >
+                        <Wallet className="h-3 w-3 sm:h-4 sm:h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Receber</TooltipContent>
+                  </Tooltip>
+                </>
+              )}
+            </div>
+          </TooltipProvider>
+        ),
+      },
+    ];
 
   return (
     <FinancialPageShell>
@@ -379,6 +619,30 @@ export default function ContasReceber() {
           </Card>
         </div>
 
+        {dueAlertFilter && (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-primary/30 bg-primary/5 p-3 sm:p-4">
+            <p className="text-xs sm:text-sm">
+              Filtro de alertas: vencimentos em hoje, em 3 dias e em 7 dias.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto shrink-0"
+              onClick={() => {
+                setDueAlertFilter(false);
+                setSearchParams((prev) => {
+                  const n = new URLSearchParams(prev);
+                  n.delete('dueAlerts');
+                  return n;
+                });
+              }}
+            >
+              Limpar filtro
+            </Button>
+          </div>
+        )}
+
         <Card className="p-3 sm:p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             <div className="space-y-2">
@@ -399,11 +663,23 @@ export default function ContasReceber() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="ar-due-from">Vencimento de</Label>
-              <Input id="ar-due-from" type="date" value={dueFrom} onChange={(e) => setDueFrom(e.target.value)} />
+              <Input
+                id="ar-due-from"
+                type="date"
+                value={dueFrom}
+                disabled={dueAlertFilter}
+                onChange={(e) => setDueFrom(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="ar-due-to">Vencimento até</Label>
-              <Input id="ar-due-to" type="date" value={dueTo} onChange={(e) => setDueTo(e.target.value)} />
+              <Input
+                id="ar-due-to"
+                type="date"
+                value={dueTo}
+                disabled={dueAlertFilter}
+                onChange={(e) => setDueTo(e.target.value)}
+              />
             </div>
             <div className="flex items-end">
               <Button type="button" variant="outline" className="h-10 w-full" onClick={() => setPage(1)}>
@@ -462,115 +738,17 @@ export default function ContasReceber() {
           </div>
         </Card>
 
-        <Card className="hidden border p-0 overflow-hidden md:block">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Cliente</TableHead>
-                <TableHead>OS</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead>Vencimento</TableHead>
-                <TableHead>Competência</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading && rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center">
-                    <Loader2 className="mx-auto h-7 w-7 animate-spin text-muted-foreground" />
-                  </TableCell>
-                </TableRow>
-              ) : (
-                rows.map((row) => {
-                  const c = row.customers as { name?: string } | null;
-                  const o = row.orders as { order_number?: string } | null;
-                  const st = row.status as string;
-                  return (
-                    <TableRow key={row.id as string}>
-                      <TableCell>{c?.name ?? '—'}</TableCell>
-                      <TableCell>{o?.order_number ?? '—'}</TableCell>
-                      <TableCell className="text-right whitespace-nowrap">{fmt(Number(row.amount))}</TableCell>
-                      <TableCell>{formatDateBR(row.due_date as string)}</TableCell>
-                      <TableCell>{formatDateBR((row.competence_date as string) ?? null)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={cn('text-xs', statusBadgeClass(st))}>
-                          {STATUS_LABELS[st] ?? st}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <TooltipProvider delayDuration={300}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 sm:h-8 sm:w-8"
-                                onClick={() => void openHistory(row)}
-                              >
-                                <History className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Histórico</TooltipContent>
-                          </Tooltip>
-                          {row.status !== 'paid' && row.status !== 'cancelled' && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 sm:h-8 sm:w-8"
-                                  onClick={() => openPayment(row)}
-                                >
-                                  <Wallet className="h-3 w-3 sm:h-4 sm:w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Receber</TooltipContent>
-                            </Tooltip>
-                          )}
-                        </TooltipProvider>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </Card>
-
-        <div className="flex flex-col gap-3 md:hidden">
-          {rows.map((row) => {
-            const c = row.customers as { name?: string } | null;
-            return (
-              <Card key={row.id as string}>
-                <CardContent className="space-y-2 p-3 sm:p-4">
-                  <p className="font-medium text-sm sm:text-base">{c?.name ?? 'Cliente'}</p>
-                  <p className="text-sm sm:text-base">{fmt(Number(row.amount))}</p>
-                  <p className="text-muted-foreground text-xs sm:text-sm">
-                    Venc. {formatDateBR(row.due_date as string)}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant="outline" onClick={() => void openHistory(row)}>
-                      Histórico
-                    </Button>
-                    {row.status !== 'paid' && row.status !== 'cancelled' && (
-                      <Button type="button" size="sm" onClick={() => openPayment(row)}>
-                        Receber
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <AccountsReceivableListTable
+          loading={loading}
+          rows={rows}
+          columns={arColumns}
+          keyExtractor={(r) => r.id as string}
+        />
 
         <div className="flex flex-col items-center gap-2">
           <p className="text-muted-foreground text-xs sm:text-sm">
-            Mostrando página {page} — {count} registros
+            Mostrando {(page - 1) * 10 + 1} a {Math.min(page * 10, count)} de {count} itens — página {page} /{' '}
+            {totalPages || 1}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Button
@@ -699,11 +877,17 @@ export default function ContasReceber() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">—</SelectItem>
-                    {Object.entries(METHOD_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>
-                        {v}
-                      </SelectItem>
-                    ))}
+                    {pmCatalog.length > 0
+                      ? pmCatalog.map((row) => (
+                          <SelectItem key={row.id} value={row.method}>
+                            {row.name} ({paymentMethodLabel(row.method)})
+                          </SelectItem>
+                        ))
+                      : FALLBACK_PM_KEYS.map((k) => (
+                          <SelectItem key={k} value={k}>
+                            {METHOD_LABELS[k] ?? paymentMethodLabel(k)}
+                          </SelectItem>
+                        ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -866,10 +1050,26 @@ export default function ContasReceber() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={paymentOpen} onOpenChange={setPaymentOpen}>
+      <Dialog
+        open={paymentOpen}
+        onOpenChange={(o) => {
+          setPaymentOpen(o);
+          if (!o) setPaymentSnapshot(null);
+        }}
+      >
         <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-left text-xl sm:text-2xl">Registrar recebimento</DialogTitle>
+            {paymentSnapshot && (
+              <p className="text-xs sm:text-sm text-muted-foreground pt-1">
+                Saldo em aberto:{' '}
+                <span className="font-medium text-foreground whitespace-nowrap">
+                  {formatBRL(paymentSnapshot.remaining)}
+                </span>{' '}
+                (total do título + multa/juros automáticos: {formatBRL(paymentSnapshot.totalDue)}; já recebido:{' '}
+                {formatBRL(paymentSnapshot.totalReceived)})
+              </p>
+            )}
           </DialogHeader>
           <form
             className="space-y-4 pt-2"
@@ -909,11 +1109,17 @@ export default function ContasReceber() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">—</SelectItem>
-                  {Object.entries(METHOD_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>
-                      {v}
-                    </SelectItem>
-                  ))}
+                  {pmCatalog.length > 0
+                    ? pmCatalog.map((row) => (
+                        <SelectItem key={row.id} value={row.method}>
+                          {row.name} ({paymentMethodLabel(row.method)})
+                        </SelectItem>
+                      ))
+                    : FALLBACK_PM_KEYS.map((k) => (
+                        <SelectItem key={k} value={k}>
+                          {METHOD_LABELS[k] ?? paymentMethodLabel(k)}
+                        </SelectItem>
+                      ))}
                 </SelectContent>
               </Select>
             </div>
@@ -954,6 +1160,19 @@ export default function ContasReceber() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <RenegotiationDialog
+        open={renegOpen}
+        onOpenChange={setRenegOpen}
+        form={renegForm}
+        onFormChange={setRenegForm}
+        customerLabel={
+          selectedRow
+            ? (selectedRow.customers as { name?: string } | null)?.name ?? undefined
+            : undefined
+        }
+        onSubmit={submitRenegotiate}
+      />
     </FinancialPageShell>
   );
 }

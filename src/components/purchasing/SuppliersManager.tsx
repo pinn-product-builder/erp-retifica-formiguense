@@ -267,6 +267,7 @@ function BlockSupplierModal({
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function SuppliersManager() {
+  const { currentOrganization } = useOrganization();
   const {
     suppliers, count, page, totalPages, pageSize, isLoading, filters,
     actions,
@@ -473,6 +474,7 @@ export default function SuppliersManager() {
           </DialogHeader>
           <SupplierForm
             supplier={editingSupplier}
+            orgId={currentOrganization?.id}
             onSuccess={handleFormSuccess}
             onCancel={() => { setFormOpen(false); setEditing(undefined); }}
             onSubmit={editingSupplier

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { formatLocalYmd } from '@/lib/dueAlertDates';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -11,12 +12,19 @@ import {
   CustomerLookupService,
   DreService,
   ReceiptHistoryService,
+  ApprovalApService,
+  ProjectionService,
+  FinancialNotificationService,
+  type DueWindowSummary,
   type AccountsReceivableListFilters,
   type AccountsPayableListFilters,
   type ReceiptRecordInput,
   type AccountsReceivableInstallmentsInput,
+  type ReceivableSettlementSnapshot,
 } from '@/services/financial';
 import type { Database } from '@/integrations/supabase/types';
+import type { PaymentMethodContext } from '@/lib/paymentMethodApplies';
+import { paymentMethodMatchesContext } from '@/lib/paymentMethodApplies';
 
 export type AccountsReceivableInsert =
   Database['public']['Tables']['accounts_receivable']['Insert'];
@@ -186,12 +194,14 @@ export const useFinancial = () => {
           description: payable.description,
           amount: payable.amount,
           due_date: payable.due_date,
+          competence_date: (payable as { competence_date?: string | null }).competence_date ?? null,
           payment_method: payable.payment_method,
           invoice_number: payable.invoice_number,
           notes: payable.notes,
           cost_center_id: (payable as { cost_center_id?: string | null }).cost_center_id,
           purchase_order_id: (payable as { purchase_order_id?: string | null }).purchase_order_id,
           approval_status: (payable as { approval_status?: string }).approval_status,
+          invoice_file_url: (payable as { invoice_file_url?: string | null }).invoice_file_url ?? null,
         });
         if (error) throw error;
         toast.success('Conta a pagar criada com sucesso');
@@ -211,7 +221,14 @@ export const useFinancial = () => {
       if (!orgId) return null;
       try {
         setLoading(true);
-        const { data, error } = await AccountsPayableService.update(orgId, id, updates);
+        const patch = { ...updates } as Partial<AccountsPayable> & { approval_status?: string };
+        if (typeof updates.amount === 'number' && updates.status !== 'paid') {
+          patch.approval_status = await ApprovalApService.computeInitialApprovalStatus(
+            orgId,
+            updates.amount
+          );
+        }
+        const { data, error } = await AccountsPayableService.update(orgId, id, patch);
         if (error) throw error;
         toast.success('Conta a pagar atualizada com sucesso');
         return data;
@@ -274,17 +291,74 @@ export const useFinancial = () => {
     [orgId, handleError]
   );
 
-  const getPaymentMethods = useCallback(async () => {
-    try {
-      setLoading(true);
-      return await FinancialConfigService.listPaymentMethods();
-    } catch (error) {
-      handleError(error, 'Erro ao carregar formas de pagamento');
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, [handleError]);
+  const updateCashFlowEntry = useCallback(
+    async (id: string, patch: Partial<CashFlow>) => {
+      if (!orgId) return false;
+      try {
+        setLoading(true);
+        const { error } = await CashFlowService.update(orgId, id, patch);
+        if (error) throw error;
+        toast.success('Movimentação atualizada');
+        return true;
+      } catch (error) {
+        handleError(error, 'Erro ao atualizar movimentação');
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [orgId, handleError]
+  );
+
+  const deleteCashFlowEntry = useCallback(
+    async (id: string) => {
+      if (!orgId) return false;
+      try {
+        setLoading(true);
+        const { error } = await CashFlowService.remove(orgId, id);
+        if (error) throw error;
+        toast.success('Movimentação excluída');
+        return true;
+      } catch (error) {
+        handleError(error, 'Erro ao excluir movimentação');
+        return false;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [orgId, handleError]
+  );
+
+  const getCashFlowPeriodMetrics = useCallback(
+    async (startDate?: string, endDate?: string) => {
+      if (!orgId) return { income: 0, expense: 0, reconciled: 0, pending: 0 };
+      try {
+        return await CashFlowService.sumPeriodMetrics(orgId, startDate, endDate);
+      } catch (error) {
+        handleError(error, 'Erro ao calcular totais do fluxo');
+        return { income: 0, expense: 0, reconciled: 0, pending: 0 };
+      }
+    },
+    [orgId, handleError]
+  );
+
+  const getPaymentMethods = useCallback(
+    async (ctx?: PaymentMethodContext) => {
+      if (!orgId) return [];
+      try {
+        setLoading(true);
+        const rows = await FinancialConfigService.listPaymentMethods(orgId);
+        if (!ctx) return rows;
+        return rows.filter((r) => paymentMethodMatchesContext(r.applies_to, ctx));
+      } catch (error) {
+        handleError(error, 'Erro ao carregar formas de pagamento');
+        return [];
+      } finally {
+        setLoading(false);
+      }
+    },
+    [orgId, handleError]
+  );
 
   const getExpenseCategories = useCallback(async () => {
     if (!orgId) return [];
@@ -413,6 +487,68 @@ export const useFinancial = () => {
     [orgId, userId, handleError]
   );
 
+  const getReceivableSettlementSnapshot = useCallback(
+    async (receivableId: string): Promise<ReceivableSettlementSnapshot | null> => {
+      if (!orgId) return null;
+      try {
+        const { data, error } = await ReceiptHistoryService.getSettlementSnapshot(orgId, receivableId);
+        if (error) throw error;
+        return data;
+      } catch (error) {
+        handleError(error, 'Erro ao obter saldo do título');
+        return null;
+      }
+    },
+    [orgId, handleError]
+  );
+
+  const syncAndGetDueWindowSummary = useCallback(async (): Promise<DueWindowSummary | null> => {
+    if (!orgId) return null;
+    try {
+      const runDate = formatLocalYmd(new Date());
+      await FinancialNotificationService.syncDueNotifications(orgId, runDate);
+      return await FinancialNotificationService.getDueWindowSummary(orgId);
+    } catch (error) {
+      handleError(error, 'Erro ao sincronizar alertas de vencimento');
+      return null;
+    }
+  }, [orgId, handleError]);
+
+  const loadProjectionsDashboard = useCallback(async () => {
+    if (!orgId) {
+      return {
+        onDemand: {
+          days: [],
+          hasNegativeDay: false,
+          minBalance: 0,
+          openingBalance: 0,
+        },
+        persisted: [] as Awaited<ReturnType<typeof ProjectionService.listByOrg>>,
+      };
+    }
+    try {
+      setLoading(true);
+      const [onDemand, persisted] = await Promise.all([
+        ProjectionService.computeOnDemandFromArAp(orgId, 30),
+        ProjectionService.listByOrg(orgId, 90),
+      ]);
+      return { onDemand, persisted };
+    } catch (error) {
+      handleError(error, 'Erro ao carregar projeções de caixa');
+      return {
+        onDemand: {
+          days: [],
+          hasNegativeDay: false,
+          minBalance: 0,
+          openingBalance: 0,
+        },
+        persisted: [],
+      };
+    } finally {
+      setLoading(false);
+    }
+  }, [orgId, handleError]);
+
   return {
     loading,
     getAccountsReceivable,
@@ -424,7 +560,10 @@ export const useFinancial = () => {
     createAccountsPayable,
     updateAccountsPayable,
     getCashFlow,
+    getCashFlowPeriodMetrics,
     createCashFlow,
+    updateCashFlowEntry,
+    deleteCashFlowEntry,
     getPaymentMethods,
     getExpenseCategories,
     getBankAccounts,
@@ -433,6 +572,9 @@ export const useFinancial = () => {
     getCustomers,
     listReceiptHistory,
     recordReceiptPayment,
+    getReceivableSettlementSnapshot,
     createInstallmentPlan,
+    loadProjectionsDashboard,
+    syncAndGetDueWindowSummary,
   };
 };

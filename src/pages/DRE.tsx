@@ -4,11 +4,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DreCategorizedService } from '@/services/financial/dreCategorizedService';
+import { DreExportService } from '@/services/financial/dreExportService';
 import { 
   Calculator, TrendingUp, TrendingDown, DollarSign, 
   BarChart3, Calendar, FileText, Download
 } from 'lucide-react';
 import { useOrganization } from '@/hooks/useOrganization';
+import { CostCenterSelect } from '@/components/financial/CostCenterSelect';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
+import type { DreCategorizedMonth } from '@/services/financial/dreCategorizedService';
 
 export default function DRE() {
   const { currentOrganization } = useOrganization();
@@ -19,22 +29,55 @@ export default function DRE() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [monthlyData, setMonthlyData] = useState<unknown>(null);
+  const [compareTriplet, setCompareTriplet] = useState<{
+    current: DreCategorizedMonth;
+    prevMonth: DreCategorizedMonth;
+    prevYearSame: DreCategorizedMonth;
+  } | null>(null);
+  const [savingSnapshot, setSavingSnapshot] = useState(false);
+  const [dreCostCenterFilter, setDreCostCenterFilter] = useState('');
 
   useEffect(() => {
     if (!orgId) return;
     void loadDREData();
-  }, [selectedYear, orgId]);
+  }, [selectedYear, orgId, dreCostCenterFilter]);
 
   useEffect(() => {
     if (!orgId) return;
     void loadMonthlyData();
-  }, [selectedMonth, selectedYear, orgId]);
+  }, [selectedMonth, selectedYear, orgId, dreCostCenterFilter]);
+
+  useEffect(() => {
+    if (!orgId) return;
+    void DreCategorizedService.compareThreeMonths(
+      orgId,
+      selectedYear,
+      selectedMonth,
+      dreCostCenterFilter || null
+    ).then(setCompareTriplet);
+  }, [orgId, selectedYear, selectedMonth, dreCostCenterFilter]);
+
+  const persistMonthlySnapshot = async () => {
+    if (!orgId || dreCostCenterFilter) return;
+    setSavingSnapshot(true);
+    try {
+      const { error } = await DreCategorizedService.persistMonthSnapshot(
+        orgId,
+        selectedYear,
+        selectedMonth
+      );
+      if (error) toast.error(error.message);
+      else toast.success('Valores do mês gravados em monthly_dre');
+    } finally {
+      setSavingSnapshot(false);
+    }
+  };
 
   const loadDREData = async () => {
     if (!orgId) return;
     setLoading(true);
     try {
-      const rows = await DreCategorizedService.computeYear(orgId, selectedYear);
+      const rows = await DreCategorizedService.computeYear(orgId, selectedYear, dreCostCenterFilter || null);
       setDreData(rows as unknown as Record<string, unknown>[]);
     } finally {
       setLoading(false);
@@ -45,7 +88,12 @@ export default function DRE() {
     if (!orgId) return;
     setLoading(true);
     try {
-      const m = await DreCategorizedService.computeMonth(orgId, selectedYear, selectedMonth);
+      const m = await DreCategorizedService.computeMonth(
+        orgId,
+        selectedYear,
+        selectedMonth,
+        dreCostCenterFilter || null
+      );
       setMonthlyData(m);
     } finally {
       setLoading(false);
@@ -84,6 +132,81 @@ export default function DRE() {
 
   const yearlyProfitMargin = yearlyTotals.revenue as number > 0 ? ((yearlyTotals.netProfit as number / (yearlyTotals.revenue as number)) * 100) : 0;
 
+  const exportMonthlyCsv = () => {
+    if (!monthlyData) return;
+    const m = monthlyData as Record<string, unknown>;
+    const rows: (string | number)[][] = [
+      ['Receita bruta', Number(m.total_revenue ?? 0)],
+      ['(-) Custos dos serviços', Number(m.direct_costs ?? 0)],
+      ['(-) Obrigações fiscais', Number(m.tax_expenses ?? 0)],
+      ['= Lucro bruto', Number(m.gross_profit ?? 0)],
+      ['(-) Despesas operacionais', Number(m.operational_expenses ?? 0)],
+      ['(-) Retiradas de sócios', Number(m.partner_withdrawals ?? 0)],
+      ['= Lucro líquido', Number(m.net_profit ?? 0)],
+      ['Margem líquida %', Number(m.profit_margin ?? 0)],
+    ];
+    DreExportService.downloadCsv(
+      `DRE_${selectedYear}_${String(selectedMonth).padStart(2, '0')}.csv`,
+      ['Descrição', 'Valor'],
+      rows
+    );
+  };
+
+  const exportYearlyCsv = () => {
+    const headers = ['Mês', 'Receita', 'Custos diretos', 'Desp. operacionais', 'Lucro bruto', 'Lucro líquido', 'Margem %'];
+    const rows = dreData.map((month) => {
+      const mo = month as Record<string, unknown>;
+      return [
+        getMonthName(Number(mo.month)),
+        Number(mo.total_revenue ?? 0),
+        Number(mo.direct_costs ?? 0),
+        Number(mo.operational_expenses ?? 0),
+        Number(mo.gross_profit ?? 0),
+        Number(mo.net_profit ?? 0),
+        Number(mo.profit_margin ?? 0),
+      ];
+    });
+    DreExportService.downloadCsv(`DRE_anual_${selectedYear}.csv`, headers, rows);
+  };
+
+  const exportMonthlyPdf = () => {
+    if (!monthlyData) return;
+    const m = monthlyData as Record<string, unknown>;
+    const fmt = (n: number) =>
+      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
+    const html = `<h1>DRE — ${getMonthName(selectedMonth)} / ${selectedYear}</h1>
+      <table><thead><tr><th>Descrição</th><th class="num">Valor</th></tr></thead><tbody>
+      <tr><td>Receita bruta</td><td class="num">${fmt(Number(m.total_revenue ?? 0))}</td></tr>
+      <tr><td>(-) Custos dos serviços</td><td class="num">${fmt(Number(m.direct_costs ?? 0))}</td></tr>
+      <tr><td>(-) Obrigações fiscais</td><td class="num">${fmt(Number(m.tax_expenses ?? 0))}</td></tr>
+      <tr><td>= Lucro bruto</td><td class="num">${fmt(Number(m.gross_profit ?? 0))}</td></tr>
+      <tr><td>(-) Despesas operacionais</td><td class="num">${fmt(Number(m.operational_expenses ?? 0))}</td></tr>
+      <tr><td>(-) Retiradas de sócios</td><td class="num">${fmt(Number(m.partner_withdrawals ?? 0))}</td></tr>
+      <tr><td>= Lucro líquido</td><td class="num">${fmt(Number(m.net_profit ?? 0))}</td></tr>
+      <tr><td>Margem líquida</td><td class="num">${formatPercentage(Number(m.profit_margin ?? 0))}</td></tr>
+      </tbody></table>`;
+    DreExportService.openPrintableHtml(`DRE ${selectedMonth}/${selectedYear}`, html);
+  };
+
+  const exportYearlyPdf = () => {
+    const fmt = (n: number) =>
+      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
+    const body = dreData
+      .map((month) => {
+        const mo = month as Record<string, unknown>;
+        return `<tr>
+          <td>${getMonthName(Number(mo.month))}</td>
+          <td class="num">${fmt(Number(mo.total_revenue ?? 0))}</td>
+          <td class="num">${fmt(Number(mo.net_profit ?? 0))}</td>
+          <td class="num">${formatPercentage(Number(mo.profit_margin ?? 0))}</td>
+        </tr>`;
+      })
+      .join('');
+    const html = `<h1>DRE anual ${selectedYear}</h1>
+      <table><thead><tr><th>Mês</th><th class="num">Receita</th><th class="num">Lucro líq.</th><th class="num">Margem</th></tr></thead><tbody>${body}</tbody></table>`;
+    DreExportService.openPrintableHtml(`DRE anual ${selectedYear}`, html);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -92,16 +215,24 @@ export default function DRE() {
           <p className="text-muted-foreground">Análise de receitas, custos e rentabilidade</p>
         </div>
         
-        <div className="flex items-center gap-2">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar DRE
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="w-full sm:w-auto" disabled={loading}>
+              <Download className="mr-2 h-4 w-4" />
+              Exportar
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={exportMonthlyCsv}>Excel (CSV) — mês atual</DropdownMenuItem>
+            <DropdownMenuItem onClick={exportYearlyCsv}>Excel (CSV) — evolução anual</DropdownMenuItem>
+            <DropdownMenuItem onClick={exportMonthlyPdf}>PDF (imprimir) — mês atual</DropdownMenuItem>
+            <DropdownMenuItem onClick={exportYearlyPdf}>PDF (imprimir) — anual</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Seletores de Período */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-end gap-4">
         <div>
           <label className="text-sm font-medium">Ano:</label>
           <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(Number(value))}>
@@ -133,7 +264,82 @@ export default function DRE() {
             </SelectContent>
           </Select>
         </div>
+        {orgId && (
+          <div className="w-full sm:w-auto sm:min-w-[220px]">
+            <CostCenterSelect
+              orgId={orgId}
+              value={dreCostCenterFilter}
+              onValueChange={setDreCostCenterFilter}
+              label="Centro de custo (DRE)"
+              id="dre-cc-filter"
+            />
+          </div>
+        )}
       </div>
+      {dreCostCenterFilter ? (
+        <p className="text-xs sm:text-sm text-muted-foreground">
+          Visão filtrada por centro de custo: retiradas de sócios não são alocadas e aparecem como zero neste filtro.
+        </p>
+      ) : null}
+
+      {compareTriplet && (
+        <div className="space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
+              Comparativo de três períodos (lucro líquido)
+            </h2>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={savingSnapshot || !orgId || !!dreCostCenterFilter}
+              onClick={() => void persistMonthlySnapshot()}
+            >
+              {savingSnapshot ? 'Gravando…' : 'Gravar snapshot no banco'}
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Mês atual ({getMonthName(selectedMonth)} {selectedYear})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xl font-bold">{formatCurrency(compareTriplet.current.net_profit)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Margem {formatPercentage(compareTriplet.current.profit_margin)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Mês anterior</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xl font-bold">{formatCurrency(compareTriplet.prevMonth.net_profit)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Margem {formatPercentage(compareTriplet.prevMonth.profit_margin)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Mesmo mês ({getMonthName(selectedMonth)} {selectedYear - 1})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xl font-bold">{formatCurrency(compareTriplet.prevYearSame.net_profit)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Margem {formatPercentage(compareTriplet.prevYearSame.profit_margin)}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
 
       {/* KPIs Anuais */}
       <div className="grid gap-4 md:grid-cols-4">

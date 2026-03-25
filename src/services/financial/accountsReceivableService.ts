@@ -7,6 +7,7 @@ import {
   type AccountsReceivableInstallmentsInput,
 } from '@/services/financial/schemas';
 import type { AccountsReceivableListFilters, PaginatedResult } from '@/services/financial/types';
+import { CostCenterService } from '@/services/financial/costCenterService';
 
 type ArRow = Database['public']['Tables']['accounts_receivable']['Row'];
 
@@ -43,8 +44,12 @@ export class AccountsReceivableService {
     if (filters.paymentMethod) q = q.eq('payment_method', filters.paymentMethod);
     if (filters.orderId) q = q.eq('order_id', filters.orderId);
     if (filters.budgetId) q = q.eq('budget_id', filters.budgetId);
-    if (filters.dueFrom) q = q.gte('due_date', filters.dueFrom);
-    if (filters.dueTo) q = q.lte('due_date', filters.dueTo);
+    if (filters.costCenterId) q = q.eq('cost_center_id', filters.costCenterId);
+    if (filters.dueOnDates?.length) q = q.in('due_date', filters.dueOnDates);
+    else {
+      if (filters.dueFrom) q = q.gte('due_date', filters.dueFrom);
+      if (filters.dueTo) q = q.lte('due_date', filters.dueTo);
+    }
 
     q = q.order('due_date', { ascending: true }).range(from, to);
 
@@ -81,8 +86,12 @@ export class AccountsReceivableService {
     if (filters.paymentMethod) q = q.eq('payment_method', filters.paymentMethod);
     if (filters.orderId) q = q.eq('order_id', filters.orderId);
     if (filters.budgetId) q = q.eq('budget_id', filters.budgetId);
-    if (filters.dueFrom) q = q.gte('due_date', filters.dueFrom);
-    if (filters.dueTo) q = q.lte('due_date', filters.dueTo);
+    if (filters.costCenterId) q = q.eq('cost_center_id', filters.costCenterId);
+    if (filters.dueOnDates?.length) q = q.in('due_date', filters.dueOnDates);
+    else {
+      if (filters.dueFrom) q = q.gte('due_date', filters.dueFrom);
+      if (filters.dueTo) q = q.lte('due_date', filters.dueTo);
+    }
 
     const { data, error } = await q;
     if (error) throw new Error(error.message);
@@ -97,6 +106,9 @@ export class AccountsReceivableService {
       const amt = Number(r.amount);
       if (r.status === 'paid' || r.status === 'cancelled') {
         if (r.status === 'paid') received += amt;
+        continue;
+      }
+      if (r.status === 'renegotiated') {
         continue;
       }
       if (r.status === 'overdue' || (r.status === 'pending' && new Date(r.due_date as string) < today)) {
@@ -118,6 +130,13 @@ export class AccountsReceivableService {
       return { data: null, error: new Error(parsed.error.errors.map((e) => e.message).join('; ')) };
     }
     const v = parsed.data;
+    const needCc = await CostCenterService.hasAnyActive(orgId);
+    if (needCc && !v.cost_center_id) {
+      return {
+        data: null,
+        error: new Error('Centro de custo obrigatório para esta organização.'),
+      };
+    }
     const row: Database['public']['Tables']['accounts_receivable']['Insert'] = {
       org_id: orgId,
       customer_id: v.customer_id,
@@ -169,6 +188,13 @@ export class AccountsReceivableService {
       return { data: null, error: new Error(parsed.error.errors.map((e) => e.message).join('; ')) };
     }
     const v = parsed.data;
+    const needCc = await CostCenterService.hasAnyActive(orgId);
+    if (needCc && !v.cost_center_id) {
+      return {
+        data: null,
+        error: new Error('Centro de custo obrigatório para esta organização.'),
+      };
+    }
     const base = new Date(v.first_due_date);
     const per = Math.round((v.total_amount / v.installments) * 100) / 100;
     let remainder = v.total_amount - per * (v.installments - 1);

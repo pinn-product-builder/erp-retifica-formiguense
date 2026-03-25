@@ -24,11 +24,20 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { FinancialConfigService } from '@/services/financial/financialConfigService';
 import { CostCenterService } from '@/services/financial/costCenterService';
 import { ApprovalApService } from '@/services/financial/approvalApService';
+import { ArLateFeeService } from '@/services/financial/arLateFeeService';
 import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { expenseCategoryLabel, paymentMethodLabel } from '@/lib/financialFormat';
 import { Settings } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 type BankAccountRow = Database['public']['Tables']['bank_accounts']['Row'];
 type TierRow = Database['public']['Tables']['approval_tiers_ap']['Row'];
@@ -45,6 +54,25 @@ const PAYMENT_METHOD_OPTIONS: PaymentMethodEnum[] = [
   'boleto',
 ];
 
+function appliesToLabel(applies: unknown): string {
+  const a = applies as string[] | undefined;
+  if (!a?.length) return 'Ambos';
+  if (a.includes('both')) return 'Ambos';
+  if (a.includes('receivable') && a.includes('payable')) return 'Receber e pagar';
+  if (a.includes('receivable')) return 'Receber';
+  if (a.includes('payable')) return 'Pagar';
+  return a.join(', ');
+}
+
+function scopeFromApplies(applies: unknown): 'both' | 'receivable' | 'payable' {
+  const a = applies as string[] | undefined;
+  if (!a?.length) return 'both';
+  if (a.includes('both')) return 'both';
+  if (a.includes('payable') && !a.includes('receivable')) return 'payable';
+  if (a.includes('receivable') && !a.includes('payable')) return 'receivable';
+  return 'both';
+}
+
 export default function ConfigFinanceiro() {
   const { currentOrganization } = useOrganization();
   const orgId = currentOrganization?.id ?? '';
@@ -55,10 +83,12 @@ export default function ConfigFinanceiro() {
   const [catType, setCatType] = useState<Database['public']['Enums']['expense_category']>('variable');
   const [ccCode, setCcCode] = useState('');
   const [ccName, setCcName] = useState('');
+  const [ccParentId, setCcParentId] = useState('');
   const [pmName, setPmName] = useState('');
   const [pmMethod, setPmMethod] = useState<PaymentMethodEnum>('pix');
   const [pmFeePct, setPmFeePct] = useState('0');
   const [pmFeeFixed, setPmFeeFixed] = useState('');
+  const [pmAppliesScope, setPmAppliesScope] = useState<'both' | 'receivable' | 'payable'>('both');
   const [savingCategory, setSavingCategory] = useState(false);
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
   const [savingCenter, setSavingCenter] = useState(false);
@@ -77,13 +107,24 @@ export default function ConfigFinanceiro() {
   const [tierSeq, setTierSeq] = useState('0');
   const [tierRole, setTierRole] = useState<string>('');
   const [savingTier, setSavingTier] = useState(false);
+  const [editCatId, setEditCatId] = useState<string | null>(null);
+  const [editCatName, setEditCatName] = useState('');
+  const [editCatDesc, setEditCatDesc] = useState('');
+  const [savingCatEdit, setSavingCatEdit] = useState(false);
+  const [lfPenalty, setLfPenalty] = useState('2');
+  const [lfDaily, setLfDaily] = useState('0.033');
+  const [lfGrace, setLfGrace] = useState('0');
+  const [lfActive, setLfActive] = useState(true);
+  const [lfSaving, setLfSaving] = useState(false);
+  const [lfApplying, setLfApplying] = useState(false);
 
   const load = async () => {
     if (!orgId) return;
     try {
+      await FinancialConfigService.ensureDefaultExpenseCategories(orgId);
       const [c, m, cc, ba, tr] = await Promise.all([
         FinancialConfigService.listExpenseCategories(orgId),
-        FinancialConfigService.listPaymentMethods(),
+        FinancialConfigService.listPaymentMethods(orgId),
         CostCenterService.list(orgId),
         FinancialConfigService.listBankAccounts(orgId, false),
         ApprovalApService.listTiers(orgId),
@@ -93,6 +134,13 @@ export default function ConfigFinanceiro() {
       setCenters(cc as unknown as Record<string, unknown>[]);
       setBankAccounts(ba);
       setTiers(tr);
+      const rule = await ArLateFeeService.getActiveRule(orgId);
+      if (rule) {
+        setLfPenalty(String(rule.penalty_percent));
+        setLfDaily(String(rule.daily_interest_percent));
+        setLfGrace(String(rule.grace_days ?? 0));
+        setLfActive(rule.is_active ?? true);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erro ao carregar configurações');
     }
@@ -131,6 +179,42 @@ export default function ConfigFinanceiro() {
     }
   };
 
+  const startEditCategory = (c: Record<string, unknown>) => {
+    setEditCatId(c.id as string);
+    setEditCatName((c.name as string) ?? '');
+    setEditCatDesc((c.description as string) ?? '');
+  };
+
+  const cancelEditCategory = () => {
+    setEditCatId(null);
+    setEditCatName('');
+    setEditCatDesc('');
+  };
+
+  const saveCategoryEdit = async () => {
+    if (!orgId || !editCatId) return;
+    if (!editCatName.trim()) {
+      toast.error('Informe o nome.');
+      return;
+    }
+    setSavingCatEdit(true);
+    try {
+      const { error } = await FinancialConfigService.updateExpenseCategory(editCatId, orgId, {
+        name: editCatName.trim(),
+        description: editCatDesc.trim() || null,
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success('Categoria atualizada');
+      cancelEditCategory();
+      void load();
+    } finally {
+      setSavingCatEdit(false);
+    }
+  };
+
   const addPaymentMethod = async () => {
     if (!pmName.trim()) {
       toast.error('Informe o nome (ex.: máquina ou conta).');
@@ -150,14 +234,22 @@ export default function ConfigFinanceiro() {
       }
       feeFixed = f;
     }
+    if (!orgId) {
+      toast.error('Selecione uma organização.');
+      return;
+    }
     setSavingPaymentMethod(true);
     try {
+      const applies_to: string[] =
+        pmAppliesScope === 'both' ? ['both'] : [pmAppliesScope];
       const { error } = await FinancialConfigService.createPaymentMethod({
+        org_id: orgId,
         name: pmName.trim(),
         method: pmMethod,
         fee_percentage: feePct,
         fee_fixed: feeFixed,
         is_active: true,
+        applies_to,
       });
       if (error) {
         toast.error(error.message);
@@ -184,7 +276,12 @@ export default function ConfigFinanceiro() {
     }
     setSavingCenter(true);
     try {
-      const { error } = await CostCenterService.create(orgId, ccCode.trim(), ccName.trim());
+      const { error } = await CostCenterService.create(
+        orgId,
+        ccCode.trim(),
+        ccName.trim(),
+        ccParentId || null
+      );
       if (error) {
         toast.error(error.message);
         return;
@@ -192,6 +289,7 @@ export default function ConfigFinanceiro() {
       toast.success('Centro de custo criado');
       setCcCode('');
       setCcName('');
+      setCcParentId('');
       void load();
     } finally {
       setSavingCenter(false);
@@ -295,6 +393,53 @@ export default function ConfigFinanceiro() {
     }
   };
 
+  const saveLateFeeRule = async () => {
+    if (!orgId) return;
+    setLfSaving(true);
+    try {
+      await ArLateFeeService.upsertRule(orgId, {
+        penalty_percent: Number(String(lfPenalty).replace(',', '.')),
+        daily_interest_percent: Number(String(lfDaily).replace(',', '.')),
+        grace_days: Number(String(lfGrace).replace(',', '.')) || 0,
+        is_active: lfActive,
+      });
+      toast.success('Regra de multa/juros salva');
+      void load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao salvar');
+    } finally {
+      setLfSaving(false);
+    }
+  };
+
+  const runLateFeeApply = async () => {
+    if (!orgId) return;
+    setLfApplying(true);
+    try {
+      const ref = new Date().toISOString().slice(0, 10);
+      const { updated } = await ArLateFeeService.applyForOrg(orgId, ref);
+      toast.success(`${updated} título(s) atualizado(s)`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao aplicar');
+    } finally {
+      setLfApplying(false);
+    }
+  };
+
+  const updatePaymentMethodScope = async (
+    id: string,
+    scope: 'both' | 'receivable' | 'payable'
+  ) => {
+    if (!orgId) return;
+    const applies_to: string[] = scope === 'both' ? ['both'] : [scope];
+    const { error } = await FinancialConfigService.updatePaymentMethod(id, orgId, { applies_to });
+    if (error) toast.error(error.message);
+    else {
+      toast.success('Forma de pagamento atualizada');
+      void load();
+    }
+  };
+
   const toggleBankActive = async (row: BankAccountRow) => {
     if (!orgId) return;
     const { error } = await FinancialConfigService.updateBankAccount(row.id, orgId, {
@@ -305,6 +450,12 @@ export default function ConfigFinanceiro() {
       toast.success(row.is_active ? 'Conta inativada' : 'Conta ativada');
       void load();
     }
+  };
+
+  const parentCenterLabel = (pid: string | null | undefined) => {
+    if (!pid) return '—';
+    const x = centers.find((c) => c.id === pid);
+    return x ? `${String(x.code)} ${String(x.name)}` : '—';
   };
 
   return (
@@ -323,7 +474,7 @@ export default function ConfigFinanceiro() {
         </div>
 
         <Tabs defaultValue="categories" className="w-full">
-          <TabsList className="flex w-full overflow-x-auto justify-start lg:grid lg:grid-cols-5 h-auto p-1 gap-1">
+          <TabsList className="flex w-full overflow-x-auto justify-start lg:grid lg:grid-cols-6 h-auto p-1 gap-1">
             <TabsTrigger value="categories" className="text-xs sm:text-sm flex-shrink-0">
               Categorias
             </TabsTrigger>
@@ -336,6 +487,9 @@ export default function ConfigFinanceiro() {
             <TabsTrigger value="centers" className="text-xs sm:text-sm flex-shrink-0">
               Centros de custo
             </TabsTrigger>
+            <TabsTrigger value="late-fees" className="text-xs sm:text-sm flex-shrink-0">
+              Juros/multa AR
+            </TabsTrigger>
             <TabsTrigger value="tiers" className="text-xs sm:text-sm flex-shrink-0">
               Alçadas AP
             </TabsTrigger>
@@ -347,7 +501,7 @@ export default function ConfigFinanceiro() {
                 <CardTitle className="text-base sm:text-lg">Categorias de despesa</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="cat-name">Nome</Label>
                     <Input
@@ -396,26 +550,88 @@ export default function ConfigFinanceiro() {
                       <TableRow>
                         <TableHead>Nome</TableHead>
                         <TableHead>Tipo</TableHead>
+                        <TableHead className="hidden sm:table-cell">Origem</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {categories.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={2} className="text-muted-foreground text-sm">
+                          <TableCell colSpan={4} className="text-muted-foreground text-sm">
                             Nenhuma categoria listada
                           </TableCell>
                         </TableRow>
                       ) : (
-                        categories.map((c) => (
-                          <TableRow key={c.id as string}>
-                            <TableCell>{c.name as string}</TableCell>
-                            <TableCell>{expenseCategoryLabel(c.category as string)}</TableCell>
-                          </TableRow>
-                        ))
+                        categories.map((c) => {
+                          const isOwn = (c.org_id as string | null) === orgId;
+                          return (
+                            <TableRow key={c.id as string}>
+                              <TableCell className="max-w-[200px] truncate">{c.name as string}</TableCell>
+                              <TableCell>{expenseCategoryLabel(c.category as string)}</TableCell>
+                              <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
+                                {isOwn ? 'Organização' : 'Global'}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {isOwn ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs"
+                                    onClick={() => startEditCategory(c)}
+                                  >
+                                    Editar
+                                  </Button>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">—</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>
                 </div>
+                <Dialog open={editCatId !== null} onOpenChange={(o) => !o && cancelEditCategory()}>
+                  <DialogContent className="max-w-[95vw] sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="text-lg sm:text-xl">Editar categoria</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3 sm:space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="ec-name">Nome</Label>
+                        <Input
+                          id="ec-name"
+                          value={editCatName}
+                          onChange={(e) => setEditCatName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ec-desc">Descrição</Label>
+                        <Textarea
+                          id="ec-desc"
+                          value={editCatDesc}
+                          onChange={(e) => setEditCatDesc(e.target.value)}
+                          rows={3}
+                          className="resize-none"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter className="flex-col gap-2 sm:flex-row">
+                      <Button type="button" variant="outline" onClick={cancelEditCategory}>
+                        Cancelar
+                      </Button>
+                      <Button
+                        type="button"
+                        disabled={savingCatEdit}
+                        onClick={() => void saveCategoryEdit()}
+                      >
+                        {savingCatEdit ? 'Salvando…' : 'Salvar'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </CardContent>
             </Card>
           </TabsContent>
@@ -426,7 +642,7 @@ export default function ConfigFinanceiro() {
                 <CardTitle className="text-base sm:text-lg">Máquinas / formas de recebimento</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-7">
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="pm-name">Nome</Label>
                     <Input
@@ -451,6 +667,24 @@ export default function ConfigFinanceiro() {
                             {paymentMethodLabel(m)}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Uso</Label>
+                    <Select
+                      value={pmAppliesScope}
+                      onValueChange={(v) =>
+                        setPmAppliesScope(v as 'both' | 'receivable' | 'payable')
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="both">Receber e pagar</SelectItem>
+                        <SelectItem value="receivable">Somente receber</SelectItem>
+                        <SelectItem value="payable">Somente pagar</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -490,6 +724,7 @@ export default function ConfigFinanceiro() {
                       <TableRow>
                         <TableHead>Nome</TableHead>
                         <TableHead>Método</TableHead>
+                        <TableHead className="min-w-[140px]">Uso</TableHead>
                         <TableHead className="text-right">Taxa %</TableHead>
                         <TableHead className="text-right">Taxa fixa</TableHead>
                       </TableRow>
@@ -497,31 +732,59 @@ export default function ConfigFinanceiro() {
                     <TableBody>
                       {methods.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-muted-foreground text-sm">
+                          <TableCell colSpan={5} className="text-muted-foreground text-sm">
                             Nenhum registro
                           </TableCell>
                         </TableRow>
                       ) : (
-                        methods.map((m) => (
-                          <TableRow key={m.id as string}>
-                            <TableCell>{m.name as string}</TableCell>
-                            <TableCell>{paymentMethodLabel(m.method as string)}</TableCell>
-                            <TableCell className="text-right whitespace-nowrap text-xs sm:text-sm">
-                              {Number(m.fee_percentage ?? 0).toLocaleString('pt-BR', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 4,
-                              })}
-                            </TableCell>
-                            <TableCell className="text-right whitespace-nowrap text-xs sm:text-sm">
-                              {m.fee_fixed != null && Number(m.fee_fixed) !== 0
-                                ? Number(m.fee_fixed).toLocaleString('pt-BR', {
-                                    style: 'currency',
-                                    currency: 'BRL',
-                                  })
-                                : '—'}
-                            </TableCell>
-                          </TableRow>
-                        ))
+                        methods.map((m) => {
+                          const canEdit = (m.org_id as string | null) === orgId;
+                          const sc = scopeFromApplies(m.applies_to);
+                          return (
+                            <TableRow key={m.id as string}>
+                              <TableCell>{m.name as string}</TableCell>
+                              <TableCell>{paymentMethodLabel(m.method as string)}</TableCell>
+                              <TableCell>
+                                {canEdit ? (
+                                  <Select
+                                    value={sc}
+                                    onValueChange={(v) =>
+                                      void updatePaymentMethodScope(
+                                        m.id as string,
+                                        v as 'both' | 'receivable' | 'payable'
+                                      )
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="both">Receber e pagar</SelectItem>
+                                      <SelectItem value="receivable">Somente receber</SelectItem>
+                                      <SelectItem value="payable">Somente pagar</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <span className="text-xs sm:text-sm">{appliesToLabel(m.applies_to)}</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right whitespace-nowrap text-xs sm:text-sm">
+                                {Number(m.fee_percentage ?? 0).toLocaleString('pt-BR', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 4,
+                                })}
+                              </TableCell>
+                              <TableCell className="text-right whitespace-nowrap text-xs sm:text-sm">
+                                {m.fee_fixed != null && Number(m.fee_fixed) !== 0
+                                  ? Number(m.fee_fixed).toLocaleString('pt-BR', {
+                                      style: 'currency',
+                                      currency: 'BRL',
+                                    })
+                                  : '—'}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>
@@ -662,6 +925,69 @@ export default function ConfigFinanceiro() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="late-fees" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base sm:text-lg">Multa e juros em contas a receber vencidas</CardTitle>
+                <p className="text-xs sm:text-sm text-muted-foreground font-normal">
+                  Multa sobre o principal e juros diários após carência. Evita recálculo no mesmo dia.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="lf-pen">Multa (% sobre principal)</Label>
+                    <Input
+                      id="lf-pen"
+                      value={lfPenalty}
+                      onChange={(e) => setLfPenalty(e.target.value)}
+                      inputMode="decimal"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lf-day">Juros diários (% ao dia)</Label>
+                    <Input
+                      id="lf-day"
+                      value={lfDaily}
+                      onChange={(e) => setLfDaily(e.target.value)}
+                      inputMode="decimal"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lf-grace">Dias de carência</Label>
+                    <Input
+                      id="lf-grace"
+                      value={lfGrace}
+                      onChange={(e) => setLfGrace(e.target.value)}
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <div className="space-y-2 flex-1">
+                      <Label>Regra ativa</Label>
+                      <div className="flex items-center gap-2 pt-2">
+                        <Switch checked={lfActive} onCheckedChange={setLfActive} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button type="button" disabled={lfSaving || !orgId} onClick={() => void saveLateFeeRule()}>
+                    {lfSaving ? 'Salvando…' : 'Salvar regra'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={lfApplying || !orgId}
+                    onClick={() => void runLateFeeApply()}
+                  >
+                    {lfApplying ? 'Aplicando…' : 'Aplicar hoje'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="tiers" className="mt-4">
             <Card>
               <CardHeader>
@@ -793,7 +1119,7 @@ export default function ConfigFinanceiro() {
                 <CardTitle className="text-base sm:text-lg">Centros de custo</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
                   <div className="space-y-2">
                     <Label htmlFor="cc-code">Código</Label>
                     <Input id="cc-code" value={ccCode} onChange={(e) => setCcCode(e.target.value)} />
@@ -801,6 +1127,25 @@ export default function ConfigFinanceiro() {
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="cc-name">Nome</Label>
                     <Input id="cc-name" value={ccName} onChange={(e) => setCcName(e.target.value)} />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Centro pai (opcional)</Label>
+                    <Select
+                      value={ccParentId || '__none__'}
+                      onValueChange={(v) => setCcParentId(v === '__none__' ? '' : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Nenhum" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Nenhum</SelectItem>
+                        {centers.map((c) => (
+                          <SelectItem key={c.id as string} value={c.id as string}>
+                            {c.code as string} — {c.name as string}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex items-end">
                     <Button
@@ -819,6 +1164,7 @@ export default function ConfigFinanceiro() {
                       <TableRow>
                         <TableHead>Código</TableHead>
                         <TableHead>Nome</TableHead>
+                        <TableHead className="hidden md:table-cell">Pai</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -826,6 +1172,9 @@ export default function ConfigFinanceiro() {
                         <TableRow key={c.id as string}>
                           <TableCell>{c.code as string}</TableCell>
                           <TableCell>{c.name as string}</TableCell>
+                          <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                            {parentCenterLabel(c.parent_id as string | null | undefined)}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

@@ -30,7 +30,9 @@ export interface AccountsReceivableListFilters {
   budgetId?: string;
   dueFrom?: string;
   dueTo?: string;
+  dueOnDates?: string[];
   search?: string;
+  costCenterId?: string;
 }
 
 export interface FinancialKpis {

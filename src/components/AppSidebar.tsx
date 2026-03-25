@@ -37,6 +37,8 @@ import {
   LineChart,
   SlidersHorizontal,
   ClipboardCheck,
+  Repeat,
+  AlertTriangle,
 } from "lucide-react";
 
 import {
@@ -223,6 +225,16 @@ const financialItems = [
     title: "Contas a Pagar",
     url: "/contas-pagar",
     icon: CreditCard,
+  },
+  {
+    title: "AP recorrentes",
+    url: "/ap-recorrentes",
+    icon: Repeat,
+  },
+  {
+    title: "Aging a receber",
+    url: "/inadimplencia-aging",
+    icon: AlertTriangle,
   },
   {
     title: "Fluxo de Caixa",

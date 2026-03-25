@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import type { PaginatedResult } from '@/services/financial/types';
 
 type TierRow = Database['public']['Tables']['approval_tiers_ap']['Row'];
 type ApRow = Database['public']['Tables']['accounts_payable']['Row'];
@@ -67,6 +68,31 @@ export class ApprovalApService {
       .order('due_date', { ascending: true });
     if (error) throw new Error(error.message);
     return (data as ApRow[]) ?? [];
+  }
+
+  static async listPendingApprovalPaginated(
+    orgId: string,
+    page: number,
+    pageSize: number
+  ): Promise<PaginatedResult<ApRow>> {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    const { data, error, count } = await supabase
+      .from('accounts_payable')
+      .select('*', { count: 'exact' })
+      .eq('org_id', orgId)
+      .in('approval_status', [...PENDING_STATUSES])
+      .order('due_date', { ascending: true })
+      .range(from, to);
+    if (error) throw new Error(error.message);
+    const total = count ?? 0;
+    return {
+      data: (data as ApRow[]) ?? [],
+      count: total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    };
   }
 
   static async listEvents(orgId: string, payableId: string): Promise<EventRow[]> {

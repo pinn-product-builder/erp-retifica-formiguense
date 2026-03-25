@@ -26,10 +26,15 @@ import { FinancialConfigService } from '@/services/financial/financialConfigServ
 import { StatementImportService } from '@/services/financial/statementImportService';
 import { ReconciliationMatchingService } from '@/services/financial/reconciliationMatchingService';
 import { CashFlowService } from '@/services/financial/cashFlowService';
+import {
+  ReconciliationHintsService,
+  type SupplierClassificationHint,
+} from '@/services/financial/reconciliationHintsService';
+import { ReconciliationReportService } from '@/services/financial/reconciliationReportService';
 import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { formatBRL, formatDateBR } from '@/lib/financialFormat';
-import { Building2, Landmark, Upload } from 'lucide-react';
+import { Building2, FileText, Landmark, Upload } from 'lucide-react';
 
 type BankAccountRow = Database['public']['Tables']['bank_accounts']['Row'];
 type BslRow = Database['public']['Tables']['bank_statement_lines']['Row'];
@@ -65,6 +70,7 @@ export default function ConciliacaoBancaria() {
   const [autoMatching, setAutoMatching] = useState(false);
   const [cfByLine, setCfByLine] = useState<Record<string, string>>({});
   const [cashFlows, setCashFlows] = useState<(CfRow & Record<string, unknown>)[]>([]);
+  const [lineHints, setLineHints] = useState<Record<string, SupplierClassificationHint | null>>({});
 
   const loadReconciliations = useCallback(async () => {
     if (!orgId) return;
@@ -122,6 +128,30 @@ export default function ConciliacaoBancaria() {
   useEffect(() => {
     void loadCashFlowsForBank();
   }, [loadCashFlowsForBank]);
+
+  useEffect(() => {
+    if (!orgId || lines.length === 0) {
+      setLineHints({});
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const pending = lines.filter((l) => !l.matched_cash_flow_id);
+      const results = await Promise.all(
+        pending.map(async (ln) => {
+          const desc = (ln.description as string) ?? '';
+          const hint = await ReconciliationHintsService.matchSupplierByDescription(orgId, desc);
+          return [ln.id, hint] as const;
+        })
+      );
+      const next: Record<string, SupplierClassificationHint | null> = {};
+      for (const [id, hint] of results) next[id] = hint;
+      if (!cancelled) setLineHints(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, lines]);
 
   const create = async () => {
     if (!orgId || !bankId) {
@@ -189,6 +219,32 @@ export default function ConciliacaoBancaria() {
       void loadCashFlowsForBank();
     } finally {
       setAutoMatching(false);
+    }
+  };
+
+  const [reportingId, setReportingId] = useState<string | null>(null);
+
+  const generateFormalReport = async (reconciliationId: string) => {
+    if (!orgId) return;
+    setReportingId(reconciliationId);
+    try {
+      const snapshot = await ReconciliationReportService.buildFormalSnapshot({
+        orgId,
+        reconciliationId,
+        importId: selectedImportId || null,
+      });
+      await ReconciliationReportService.createSnapshot(
+        orgId,
+        reconciliationId,
+        user?.id ?? null,
+        snapshot
+      );
+      ReconciliationReportService.openPrintableReport(snapshot);
+      toast.success('Relatório aberto; use Imprimir para salvar em PDF');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Falha ao gerar relatório');
+    } finally {
+      setReportingId(null);
     }
   };
 
@@ -320,8 +376,15 @@ export default function ConciliacaoBancaria() {
                         <TableCell className="text-right whitespace-nowrap text-xs sm:text-sm font-medium">
                           {formatBRL(Number(ln.amount))}
                         </TableCell>
-                        <TableCell className="hidden md:table-cell max-w-[200px] truncate text-sm">
-                          {ln.description ?? '—'}
+                        <TableCell className="hidden md:table-cell max-w-[220px] text-sm align-top">
+                          <div className="truncate" title={ln.description ?? ''}>
+                            {ln.description ?? '—'}
+                          </div>
+                          {lineHints[ln.id] && (
+                            <p className="text-xs text-primary mt-1 line-clamp-2">
+                              {lineHints[ln.id]?.label}: categoria/CC padrão do fornecedor disponíveis no cadastro.
+                            </p>
+                          )}
                         </TableCell>
                         <TableCell className="text-xs sm:text-sm">
                           {ln.matched_cash_flow_id ? (
@@ -436,6 +499,7 @@ export default function ConciliacaoBancaria() {
                     <TableHead>Data extrato</TableHead>
                     <TableHead className="text-right whitespace-nowrap">Saldo</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right w-[120px]">Relatório</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -448,11 +512,24 @@ export default function ConciliacaoBancaria() {
                         {formatBRL(Number(r.statement_balance))}
                       </TableCell>
                       <TableCell>{STATUS_PT[(r.status as string) ?? ''] ?? (r.status as string)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="text-xs gap-1"
+                          disabled={!orgId || reportingId === (r.id as string)}
+                          onClick={() => void generateFormalReport(r.id as string)}
+                        >
+                          <FileText className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+                          <span className="hidden sm:inline">PDF</span>
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {rows.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                         Nenhuma conciliação registrada
                       </TableCell>
                     </TableRow>
