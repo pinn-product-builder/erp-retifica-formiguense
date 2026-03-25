@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,7 @@ import {
   type SupplierClassificationHint,
 } from '@/services/financial/reconciliationHintsService';
 import { ReconciliationReportService } from '@/services/financial/reconciliationReportService';
+import { CardMachineService } from '@/services/financial/cardMachineService';
 import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { formatBRL, formatDateBR } from '@/lib/financialFormat';
@@ -40,12 +41,26 @@ type BankAccountRow = Database['public']['Tables']['bank_accounts']['Row'];
 type BslRow = Database['public']['Tables']['bank_statement_lines']['Row'];
 type ImportRow = Database['public']['Tables']['bank_statement_imports']['Row'];
 type CfRow = Database['public']['Tables']['cash_flow']['Row'];
+type BrRow = Database['public']['Tables']['bank_reconciliations']['Row'];
+type CardMachineRow = Database['public']['Tables']['card_machine_configs']['Row'];
 
 const STATUS_PT: Record<string, string> = {
   open: 'Aberta',
   closed: 'Fechada',
   reconciled: 'Conciliada',
 };
+
+function expectedNetFromMachine(
+  gross: number,
+  cfg: CardMachineRow | null
+): { net: number; fee: number } | null {
+  if (!cfg) return null;
+  const pct = Number(cfg.fee_percentage ?? 0) / 100;
+  const fixed = Number(cfg.fee_fixed ?? 0);
+  const fee = Math.max(0, gross * pct + fixed);
+  const net = gross - fee;
+  return { net, fee };
+}
 
 function accountLabel(a: BankAccountRow): string {
   const n = a.name ?? '';
@@ -71,6 +86,9 @@ export default function ConciliacaoBancaria() {
   const [cfByLine, setCfByLine] = useState<Record<string, string>>({});
   const [cashFlows, setCashFlows] = useState<(CfRow & Record<string, unknown>)[]>([]);
   const [lineHints, setLineHints] = useState<Record<string, SupplierClassificationHint | null>>({});
+  const [activeReconciliationId, setActiveReconciliationId] = useState<string>('');
+  const [closingId, setClosingId] = useState<string | null>(null);
+  const [machineConfigs, setMachineConfigs] = useState<CardMachineRow[]>([]);
 
   const loadReconciliations = useCallback(async () => {
     if (!orgId) return;
@@ -78,11 +96,27 @@ export default function ConciliacaoBancaria() {
     setRows(r as unknown as Record<string, unknown>[]);
   }, [orgId]);
 
+  const reconciliations = useMemo(
+    () => (rows as unknown as BrRow[]).filter((r) => String(r.org_id) === orgId),
+    [rows, orgId]
+  );
+
+  const activeReconciliation = useMemo(
+    () => reconciliations.find((r) => r.id === activeReconciliationId) ?? null,
+    [reconciliations, activeReconciliationId]
+  );
+
   const loadAccounts = useCallback(async () => {
     if (!orgId) return;
     const ba = await FinancialConfigService.listBankAccounts(orgId, true);
     setAccounts(ba);
     setBankId((prev) => prev || ba[0]?.id || '');
+  }, [orgId]);
+
+  const loadMachines = useCallback(async () => {
+    if (!orgId) return;
+    const list = await CardMachineService.list(orgId);
+    setMachineConfigs(list.filter((c) => c.is_active));
   }, [orgId]);
 
   const loadImports = useCallback(async () => {
@@ -119,7 +153,8 @@ export default function ConciliacaoBancaria() {
     void loadReconciliations();
     void loadAccounts();
     void loadImports();
-  }, [orgId, loadReconciliations, loadAccounts, loadImports]);
+    void loadMachines();
+  }, [orgId, loadReconciliations, loadAccounts, loadImports, loadMachines]);
 
   useEffect(() => {
     void loadLines(selectedImportId);
@@ -208,7 +243,10 @@ export default function ConciliacaoBancaria() {
       const { matched, error } = await ReconciliationMatchingService.autoMatchImport(
         orgId,
         selectedImportId,
-        bankId
+        bankId,
+        4,
+        activeReconciliationId || undefined,
+        user?.id ?? null
       );
       if (error) {
         toast.error(error.message);
@@ -254,10 +292,28 @@ export default function ConciliacaoBancaria() {
       toast.error('Selecione um lançamento de caixa');
       return;
     }
-    const { error } = await BankReconciliationService.matchLineToCashFlow(lineId, cfId);
+
+    if (!activeReconciliationId) {
+      toast.error('Selecione uma conciliação (sessão) no histórico para registrar auditoria');
+      return;
+    }
+
+    const ln = lines.find((l) => l.id === lineId);
+    if (!ln) {
+      toast.error('Linha não encontrada');
+      return;
+    }
+
+    const { error } = await BankReconciliationService.confirmMatch({
+      reconciliationId: activeReconciliationId,
+      statementLineId: lineId,
+      cashFlowId: cfId,
+      matchedAmount: Number(ln.amount),
+      userId: user?.id ?? null,
+    });
     if (error) toast.error(error.message);
     else {
-      toast.success('Vinculado');
+      toast.success('Vinculado e confirmado');
       void loadLines(selectedImportId);
       void loadCashFlowsForBank();
       setCfByLine((prev) => {
@@ -267,6 +323,66 @@ export default function ConciliacaoBancaria() {
       });
     }
   };
+
+  const unmatch = async (lineId: string) => {
+    const ln = lines.find((l) => l.id === lineId);
+    if (!ln?.matched_cash_flow_id) return;
+    const cfId = ln.matched_cash_flow_id;
+    const { error } = await BankReconciliationService.unmatchLine(lineId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    await CashFlowService.update(orgId, cfId, { reconciled: false });
+    toast.success('Vínculo removido');
+    void loadLines(selectedImportId);
+    void loadCashFlowsForBank();
+  };
+
+  const adjustLine = async (lineId: string) => {
+    if (!activeReconciliationId) {
+      toast.error('Selecione uma conciliação (sessão) no histórico');
+      return;
+    }
+    const reason = window.prompt('Motivo do ajuste (ex: taxa maquininha, estorno, tarifa):')?.trim();
+    if (!reason) return;
+    const ln = lines.find((l) => l.id === lineId);
+    if (!ln) return;
+    const { error } = await BankReconciliationService.markAdjusted({
+      reconciliationId: activeReconciliationId,
+      statementLineId: lineId,
+      matchedAmount: Number(ln.amount),
+      reason,
+      userId: user?.id ?? null,
+    });
+    if (error) toast.error(error.message);
+    else toast.success('Ajuste registrado');
+  };
+
+  const closeSession = async (reconciliationId: string) => {
+    if (!orgId) return;
+    setClosingId(reconciliationId);
+    try {
+      const { error } = await BankReconciliationService.updateStatus(orgId, reconciliationId, 'reconciled');
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success('Sessão conciliada');
+      if (activeReconciliationId === reconciliationId) setActiveReconciliationId('');
+      await loadReconciliations();
+    } finally {
+      setClosingId(null);
+    }
+  };
+
+  const machineCfgByMethod = useMemo(() => {
+    const m = new Map<string, CardMachineRow>();
+    for (const c of machineConfigs) {
+      if (c.payment_method) m.set(String(c.payment_method), c);
+    }
+    return m;
+  }, [machineConfigs]);
 
   return (
     <FinancialPageShell>
@@ -278,6 +394,14 @@ export default function ConciliacaoBancaria() {
           <p className="text-sm sm:text-base text-muted-foreground">
             Extrato, importação e vínculo com fluxo de caixa
           </p>
+          <div className="mt-2 text-xs sm:text-sm text-muted-foreground">
+            Sessão ativa:{' '}
+            <span className="font-medium text-foreground">
+              {activeReconciliation
+                ? `${formatDateBR(activeReconciliation.statement_end_date)} — ${STATUS_PT[activeReconciliation.status] ?? activeReconciliation.status}`
+                : 'nenhuma'}
+            </span>
+          </div>
         </div>
 
         <Card>
@@ -369,6 +493,23 @@ export default function ConciliacaoBancaria() {
                   </TableHeader>
                   <TableBody>
                     {lines.map((ln) => (
+                      (() => {
+                        const cf = ln.matched_cash_flow_id
+                          ? cashFlows.find((c) => c.id === ln.matched_cash_flow_id) ?? null
+                          : null;
+                        const cfg =
+                          cf?.payment_method != null
+                            ? machineCfgByMethod.get(String(cf.payment_method)) ?? null
+                            : null;
+                        const maybe = cf ? expectedNetFromMachine(Number(cf.amount), cfg) : null;
+                        const feeHint =
+                          cf && maybe
+                            ? Math.abs(Number(ln.amount) - maybe.net) <= 0.5
+                              ? `Possível taxa: ${formatBRL(maybe.fee)} (líquido estimado ${formatBRL(maybe.net)})`
+                              : null
+                            : null;
+
+                        return (
                       <TableRow key={ln.id}>
                         <TableCell className="whitespace-nowrap text-xs sm:text-sm">
                           {formatDateBR(ln.transaction_date)}
@@ -385,10 +526,28 @@ export default function ConciliacaoBancaria() {
                               {lineHints[ln.id]?.label}: categoria/CC padrão do fornecedor disponíveis no cadastro.
                             </p>
                           )}
+                          {feeHint && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{feeHint}</p>
+                          )}
                         </TableCell>
                         <TableCell className="text-xs sm:text-sm">
                           {ln.matched_cash_flow_id ? (
-                            <span className="text-muted-foreground">Caixa {ln.matched_cash_flow_id.slice(0, 8)}…</span>
+                            <div className="space-y-1">
+                              <span className="text-muted-foreground">
+                                Caixa {ln.matched_cash_flow_id.slice(0, 8)}…
+                              </span>
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => void unmatch(ln.id)}
+                                >
+                                  Desvincular
+                                </Button>
+                              </div>
+                            </div>
                           ) : (
                             <Select
                               value={cfByLine[ln.id] ?? ''}
@@ -414,18 +573,31 @@ export default function ConciliacaoBancaria() {
                         </TableCell>
                         <TableCell className="text-right">
                           {!ln.matched_cash_flow_id && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="text-xs"
-                              onClick={() => void manualMatch(ln.id)}
-                            >
-                              Vincular
-                            </Button>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="text-xs"
+                                onClick={() => void manualMatch(ln.id)}
+                              >
+                                Vincular
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="text-xs"
+                                onClick={() => void adjustLine(ln.id)}
+                              >
+                                Ajustar
+                              </Button>
+                            </div>
                           )}
                         </TableCell>
                       </TableRow>
+                        );
+                      })()
                     ))}
                   </TableBody>
                 </Table>
@@ -499,7 +671,7 @@ export default function ConciliacaoBancaria() {
                     <TableHead>Data extrato</TableHead>
                     <TableHead className="text-right whitespace-nowrap">Saldo</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right w-[120px]">Relatório</TableHead>
+                    <TableHead className="text-right w-[260px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -513,17 +685,42 @@ export default function ConciliacaoBancaria() {
                       </TableCell>
                       <TableCell>{STATUS_PT[(r.status as string) ?? ''] ?? (r.status as string)}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="text-xs gap-1"
-                          disabled={!orgId || reportingId === (r.id as string)}
-                          onClick={() => void generateFormalReport(r.id as string)}
-                        >
-                          <FileText className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
-                          <span className="hidden sm:inline">PDF</span>
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant={activeReconciliationId === (r.id as string) ? 'default' : 'outline'}
+                            size="sm"
+                            className="text-xs"
+                            onClick={() => setActiveReconciliationId(r.id as string)}
+                          >
+                            {activeReconciliationId === (r.id as string) ? 'Sessão ativa' : 'Selecionar'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-xs gap-1"
+                            disabled={!orgId || reportingId === (r.id as string)}
+                            onClick={() => void generateFormalReport(r.id as string)}
+                          >
+                            <FileText className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+                            <span className="hidden sm:inline">PDF</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="text-xs"
+                            disabled={
+                              !orgId ||
+                              (r.status as string) !== 'open' ||
+                              closingId === (r.id as string)
+                            }
+                            onClick={() => void closeSession(r.id as string)}
+                          >
+                            {closingId === (r.id as string) ? '…' : 'Fechar'}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

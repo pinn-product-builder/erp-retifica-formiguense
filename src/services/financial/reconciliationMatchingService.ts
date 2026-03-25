@@ -16,7 +16,9 @@ export class ReconciliationMatchingService {
     orgId: string,
     importId: string,
     bankAccountId: string,
-    toleranceDays = 4
+    toleranceDays = 4,
+    reconciliationId?: string,
+    userId?: string | null
   ): Promise<{ matched: number; error: Error | null }> {
     const lines = await BankReconciliationService.listLines(importId);
     const pending = lines.filter((l) => !l.matched_cash_flow_id);
@@ -47,8 +49,25 @@ export class ReconciliationMatchingService {
       if (idx === -1) continue;
       const cf = pool[idx];
       pool.splice(idx, 1);
-      const { error } = await BankReconciliationService.matchLineToCashFlow(line.id, cf.id as string);
-      if (!error) matched += 1;
+      const cfId = cf.id as string;
+
+      if (reconciliationId) {
+        const { error } = await BankReconciliationService.confirmMatch({
+          reconciliationId,
+          statementLineId: line.id,
+          cashFlowId: cfId,
+          matchedAmount: Number(line.amount),
+          userId: userId ?? null,
+        });
+        if (!error) matched += 1;
+        continue;
+      }
+
+      const { error } = await BankReconciliationService.matchLineToCashFlow(line.id, cfId);
+      if (!error) {
+        await supabase.from('cash_flow').update({ reconciled: true }).eq('id', cfId);
+        matched += 1;
+      }
     }
 
     return { matched, error: null };

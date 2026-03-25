@@ -82,13 +82,13 @@ todos:
     status: completed
   - id: fase-3-us014
     content: "US-FIN-014: Conciliacao aprimorada - taxas maquininha, painel lado a lado, status itens, auditoria, fechar sessao"
-    status: pending
+    status: completed
   - id: fase-3-us016
     content: "US-FIN-016: Projecao 90d - cenarios otimista/realista/pessimista, resumo mensal, grafico, alerta minimo"
-    status: pending
+    status: completed
   - id: fase-3-us017
     content: "US-FIN-017: Relatorio mensal - MonthlyReportService, PDF com DRE+indicadores+top10+recomendacoes"
-    status: pending
+    status: completed
   - id: fase-3-us026
     content: "US-FIN-026: Import extrato aprimorado - suporte CNAB, idempotencia bank_transaction_id, resumo auditavel"
     status: completed
@@ -100,16 +100,16 @@ todos:
     status: completed
   - id: fase-3-us031
     content: "US-FIN-031: Relatorios filtraveis AP/AR - filtros ricos, totais, export PDF/Excel, persistencia layout"
-    status: pending
+    status: completed
   - id: fase-4-us032
     content: "US-FIN-032: Workflow aprovacao - awaiting_approval default, recalcular alcanar ao editar, bloqueio pagamento, paginacao"
-    status: pending
+    status: completed
   - id: fase-5-us033
     content: "US-FIN-033: Integracao contabil/fiscal - FinAccountingIntegrationService, fin_accounting_entries, idempotency, mapeamento, fila"
-    status: pending
+    status: completed
   - id: fase-5-us034
     content: "US-FIN-034: Integracao bancaria - BankTransmissionService, remessa/retorno, idempotencia, fila rejeicoes"
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -167,9 +167,9 @@ Antes de qualquer codigo frontend, ajustar o schema do Supabase via `apply_migra
 - `**ar_late_fee_rules`** (US-FIN-025): `id, org_id, penalty_percent, daily_interest_percent, grace_days, is_active, created_at`
 - `**ar_late_fee_history`** (US-FIN-025): `id, receivable_account_id, calculated_date, penalty_amount, interest_amount, total_fee, days_overdue`
 - `**financial_notifications`** (US-FIN-009): `id, org_id, type, title, message, reference_id, reference_type, is_read, created_at`
-- `**ap_payment_history**` (analoga a `receipt_history` para AP): `id, org_id, payable_id, amount_paid, paid_at, payment_method, notes, registered_by, created_at`
-- `**monthly_financial_reports**` (US-FIN-017): `id, org_id, month, year, pdf_url, generated_by, generated_at, created_at`
-- `**fin_accounting_entries**` (US-FIN-033): `id, org_id, source_type, source_id, event_type, idempotency_key UNIQUE, account_code, debit, credit, competence_date, status, created_at`
+- `**ap_payment_history`** (analoga a `receipt_history` para AP): `id, org_id, payable_id, amount_paid, paid_at, payment_method, notes, registered_by, created_at`
+- `**monthly_financial_reports`** (US-FIN-017): `id, org_id, month, year, pdf_url, generated_by, generated_at, created_at`
+- `**fin_accounting_entries`** (US-FIN-033): `id, org_id, source_type, source_id, event_type, idempotency_key UNIQUE, account_code, debit, credit, competence_date, status, created_at`
 - `**bank_transmission_batches**` (US-FIN-034): `id, org_id, bank_account_id, direction, file_hash, status, total_items, processed_items, created_at`
 
 ### Indices e constraints

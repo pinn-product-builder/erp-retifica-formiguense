@@ -1,6 +1,7 @@
 import { AdvancedIndicatorsService } from '@/services/financial/advancedIndicatorsService';
 import { DreCategorizedService } from '@/services/financial/dreCategorizedService';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
 export interface MonthlyReportPayload {
   month: number;
@@ -11,6 +12,8 @@ export interface MonthlyReportPayload {
   topExpenses: string;
   recommendations: string;
 }
+
+type ReportRow = Database['public']['Tables']['monthly_financial_reports']['Row'];
 
 export class MonthlyReportService {
   static async buildPayload(orgId: string, month: number, year: number): Promise<MonthlyReportPayload> {
@@ -99,5 +102,41 @@ export class MonthlyReportService {
     a.download = `relatorio-financeiro-${payload.year}-${payload.month}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  static async createRecord(params: {
+    orgId: string;
+    month: number;
+    year: number;
+    generatedBy: string | null;
+    pdfUrl?: string | null;
+    excelUrl?: string | null;
+  }): Promise<{ data: ReportRow | null; error: Error | null }> {
+    const { orgId, month, year, generatedBy, pdfUrl, excelUrl } = params;
+    const { data, error } = await supabase
+      .from('monthly_financial_reports')
+      .insert({
+        org_id: orgId,
+        month,
+        year,
+        generated_by: generatedBy,
+        generated_at: new Date().toISOString(),
+        pdf_url: pdfUrl ?? null,
+        excel_url: excelUrl ?? null,
+      })
+      .select('*')
+      .single();
+    return { data: (data as ReportRow) ?? null, error: error ? new Error(error.message) : null };
+  }
+
+  static async listByOrg(orgId: string, limit = 24): Promise<ReportRow[]> {
+    const { data, error } = await supabase
+      .from('monthly_financial_reports')
+      .select('*')
+      .eq('org_id', orgId)
+      .order('generated_at', { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return (data as ReportRow[]) ?? [];
   }
 }

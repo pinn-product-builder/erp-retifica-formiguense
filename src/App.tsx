@@ -49,6 +49,8 @@ const ConfigFinanceiro = lazy(() => import('@/pages/ConfigFinanceiro'));
 const RelatoriosFinanceiros = lazy(() => import('@/pages/RelatoriosFinanceiros'));
 const AprovacaoContasPagar = lazy(() => import('@/pages/AprovacaoContasPagar'));
 const RetiradasSocios = lazy(() => import('@/pages/RetiradasSocios'));
+const IntegracaoContabil = lazy(() => import('@/pages/IntegracaoContabil'));
+const IntegracaoBancaria = lazy(() => import('@/pages/IntegracaoBancaria'));
 const ModuloFiscal = lazy(() => import('@/pages/ModuloFiscal'));
 const PCP = lazy(() => import('@/pages/PCP'));
 const Compras = lazy(() => import('@/pages/Compras'));
@@ -130,6 +132,8 @@ function AppContent() {
             <Route path="/relatorios-financeiros" element={<ProfileProtectedRoute><Layout><RelatoriosFinanceiros /></Layout></ProfileProtectedRoute>} />
             <Route path="/aprovacao-contas-pagar" element={<ProfileProtectedRoute><Layout><AprovacaoContasPagar /></Layout></ProfileProtectedRoute>} />
             <Route path="/retiradas-socios" element={<ProfileProtectedRoute><Layout><RetiradasSocios /></Layout></ProfileProtectedRoute>} />
+            <Route path="/integracao-contabil" element={<ProfileProtectedRoute><Layout><IntegracaoContabil /></Layout></ProfileProtectedRoute>} />
+            <Route path="/integracao-bancaria" element={<ProfileProtectedRoute><Layout><IntegracaoBancaria /></Layout></ProfileProtectedRoute>} />
             <Route path="/modulo-fiscal" element={<ProfileProtectedRoute><Layout><ModuloFiscal /></Layout></ProfileProtectedRoute>} />
             <Route path="*" element={<ProtectedRoute><Layout><NotFound /></Layout></ProtectedRoute>} />
           </Routes>

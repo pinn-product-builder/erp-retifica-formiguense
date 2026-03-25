@@ -25,6 +25,14 @@ import { ApprovalApService } from '@/services/financial/approvalApService';
 import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { formatBRL, formatDateBR } from '@/lib/financialFormat';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 type TierRow = Database['public']['Tables']['approval_tiers_ap']['Row'];
 
@@ -35,6 +43,8 @@ export default function AprovacaoContasPagar() {
   const userId = user?.id ?? null;
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [tiers, setTiers] = useState<TierRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -42,16 +52,17 @@ export default function AprovacaoContasPagar() {
   const load = async () => {
     if (!orgId) return;
     const [data, t] = await Promise.all([
-      ApprovalApService.listPendingApproval(orgId),
+      ApprovalApService.listPendingApprovalPaginated(orgId, page, 10),
       ApprovalApService.listTiers(orgId),
     ]);
-    setRows(data as unknown as Record<string, unknown>[]);
+    setRows(data.data as unknown as Record<string, unknown>[]);
+    setTotalPages(data.totalPages);
     setTiers(t);
   };
 
   useEffect(() => {
     void load();
-  }, [orgId]);
+  }, [orgId, page]);
 
   const tierLabel = (amount: number) => {
     const t = ApprovalApService.resolveTierForAmount(tiers, amount);
@@ -157,6 +168,36 @@ export default function AprovacaoContasPagar() {
             </Table>
           </div>
         </Card>
+
+        {totalPages > 1 && (
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPage((p) => Math.max(1, p - 1));
+                  }}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationLink href="#" isActive>
+                  {page}/{totalPages}
+                </PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPage((p) => Math.min(totalPages, p + 1));
+                  }}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        )}
       </div>
 
       <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>

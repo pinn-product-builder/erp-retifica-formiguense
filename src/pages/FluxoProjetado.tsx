@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
@@ -14,10 +14,20 @@ import { FinancialPageShell } from '@/components/financial/FinancialPageShell';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useFinancial } from '@/hooks/useFinancial';
 import { formatBRL, formatDateBR } from '@/lib/financialFormat';
-import type { OnDemandProjectionDay } from '@/services/financial/projectionService';
+import type { OnDemandProjectionDay, ProjectionScenarioKey, ScenarioProjectionResult } from '@/services/financial/projectionService';
 import type { Database } from '@/integrations/supabase/types';
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ProjectionService } from '@/services/financial/projectionService';
 
 type PersistedProjectionRow = Database['public']['Tables']['cash_flow_projection']['Row'];
 
@@ -78,18 +88,40 @@ export default function FluxoProjetado() {
     minBalance: number;
     openingBalance: number;
   } | null>(null);
+  const [scenarioKey, setScenarioKey] = useState<ProjectionScenarioKey>('realistic');
+  const [recommendedMin, setRecommendedMin] = useState('10000');
+  const [scenario90d, setScenario90d] = useState<ScenarioProjectionResult | null>(null);
+  const recMinNumber = useMemo(() => Math.max(0, Number(recommendedMin.replace(',', '.')) || 0), [recommendedMin]);
   const [persisted, setPersisted] = useState<PersistedProjectionRow[]>([]);
 
   const refresh = useCallback(async () => {
     const bundle = await loadProjectionsDashboard();
     setOnDemand(bundle.onDemand);
     setPersisted(bundle.persisted);
+    setScenario90d(bundle.scenarios90d);
   }, [loadProjectionsDashboard]);
+
+  const refreshScenario = useCallback(async () => {
+    if (!orgId) return;
+    const res = await ProjectionService.computeScenario90dFromArAp(orgId, scenarioKey, recMinNumber || 10000);
+    setScenario90d(res);
+  }, [orgId, scenarioKey, recMinNumber]);
 
   useEffect(() => {
     if (!orgId) return;
     void refresh();
   }, [orgId, refresh]);
+
+  useEffect(() => {
+    if (!orgId) return;
+    void refreshScenario();
+  }, [orgId, refreshScenario]);
+
+  const scenarioLabel = (k: ProjectionScenarioKey) => {
+    if (k === 'optimistic') return 'Otimista';
+    if (k === 'pessimistic') return 'Pessimista';
+    return 'Realista';
+  };
 
   return (
     <FinancialPageShell>
@@ -98,7 +130,7 @@ export default function FluxoProjetado() {
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Fluxo de caixa projetado</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Projeção de 30 dias por vencimentos de contas a receber e a pagar; série persistida de 90 dias.
+              Projeção de 30 dias por vencimentos de contas a receber e a pagar; simulação 90 dias com cenários; série persistida (quando houver rotina gravando).
             </p>
           </div>
           <Button
@@ -144,7 +176,7 @@ export default function FluxoProjetado() {
               </p>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0 min-w-0">
-              <ResponsiveTable<OnDemandProjectionDay>
+              <ResponsiveTable
                 data={onDemand.days}
                 columns={onDemandColumns}
                 keyExtractor={(r) => r.projection_date}
@@ -153,6 +185,120 @@ export default function FluxoProjetado() {
             </CardContent>
           </Card>
         )}
+
+        <Card>
+          <CardHeader className="p-4 sm:p-6 pb-2">
+            <CardTitle className="text-base sm:text-lg">Projeção 90 dias (cenários)</CardTitle>
+            <p className="text-xs sm:text-sm text-muted-foreground font-normal">
+              Ajuste de cenário aplica fatores nas entradas/saídas previstas por vencimento (AR/AP). Use como simulação.
+            </p>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="space-y-2">
+                <Label>Cenário</Label>
+                <Select value={scenarioKey} onValueChange={(v) => setScenarioKey(v as ProjectionScenarioKey)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[2000]">
+                    <SelectItem value="optimistic">{scenarioLabel('optimistic')}</SelectItem>
+                    <SelectItem value="realistic">{scenarioLabel('realistic')}</SelectItem>
+                    <SelectItem value="pessimistic">{scenarioLabel('pessimistic')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="min-alert">Alerta saldo mínimo (R$)</Label>
+                <Input
+                  id="min-alert"
+                  inputMode="decimal"
+                  value={recommendedMin}
+                  onChange={(e) => setRecommendedMin(e.target.value)}
+                  className="h-9 sm:h-10"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  disabled={!orgId}
+                  onClick={() => void refreshScenario()}
+                >
+                  Recalcular cenário
+                </Button>
+              </div>
+            </div>
+
+            {scenario90d && scenario90d.belowRecommended && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5" />
+                <div>
+                  <AlertTitle className="text-sm sm:text-base">Abaixo do mínimo recomendado</AlertTitle>
+                  <AlertDescription className="text-xs sm:text-sm">
+                    No cenário <span className="font-medium">{scenarioLabel(scenario90d.scenario)}</span> o menor saldo
+                    em 90 dias fica em{' '}
+                    <span className="font-semibold whitespace-nowrap">{formatBRL(scenario90d.minBalance)}</span>, abaixo
+                    de <span className="font-semibold whitespace-nowrap">{formatBRL(scenario90d.recommendedMinimum)}</span>.
+                  </AlertDescription>
+                </div>
+              </Alert>
+            )}
+
+            {scenario90d && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card className="border">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-sm sm:text-base">Resumo mensal</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0 sm:p-4 pt-0 overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Mês</TableHead>
+                          <TableHead className="text-right whitespace-nowrap">Entradas</TableHead>
+                          <TableHead className="text-right whitespace-nowrap">Saídas</TableHead>
+                          <TableHead className="text-right whitespace-nowrap">Saldo fim</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {scenario90d.monthly.map((m) => (
+                          <TableRow key={m.month}>
+                            <TableCell className="text-xs sm:text-sm">{m.month}</TableCell>
+                            <TableCell className="text-right whitespace-nowrap text-xs sm:text-sm text-success">
+                              {formatBRL(m.income)}
+                            </TableCell>
+                            <TableCell className="text-right whitespace-nowrap text-xs sm:text-sm text-destructive">
+                              {formatBRL(m.expense)}
+                            </TableCell>
+                            <TableCell className="text-right whitespace-nowrap text-xs sm:text-sm font-medium">
+                              {formatBRL(m.endBalance)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                <Card className="border">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-sm sm:text-base">Dias (primeiros 20)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0 sm:p-4 pt-0">
+                    <ResponsiveTable
+                      data={scenario90d.days.slice(0, 20)}
+                      columns={onDemandColumns}
+                      keyExtractor={(r) => r.projection_date}
+                      emptyMessage="Sem títulos no horizonte."
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="p-4 sm:p-6 pb-2">

@@ -1,8 +1,20 @@
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
 export type BankBatchDirection = 'outbound' | 'inbound';
 
 export class BankTransmissionService {
+  static async listBatches(orgId: string, limit = 50): Promise<Database['public']['Tables']['bank_transmission_batches']['Row'][]> {
+    const { data, error } = await supabase
+      .from('bank_transmission_batches')
+      .select('*')
+      .eq('org_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return (data as Database['public']['Tables']['bank_transmission_batches']['Row'][]) ?? [];
+  }
+
   static async createBatch(
     orgId: string,
     bankAccountId: string,

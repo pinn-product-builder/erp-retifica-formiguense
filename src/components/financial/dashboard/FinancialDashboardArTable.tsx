@@ -68,7 +68,7 @@ export function FinancialDashboardArTable({
         {loading ? (
           <p className="text-sm text-muted-foreground py-6 text-center">Carregando…</p>
         ) : (
-          <ResponsiveTable<FinancialDashboardArRow>
+          <ResponsiveTable
             data={rows}
             columns={columns}
             keyExtractor={(r) => r.id}

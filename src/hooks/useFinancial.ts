@@ -523,6 +523,7 @@ export const useFinancial = () => {
           minBalance: 0,
           openingBalance: 0,
         },
+        scenarios90d: null as Awaited<ReturnType<typeof ProjectionService.computeScenario90dFromArAp>> | null,
         persisted: [] as Awaited<ReturnType<typeof ProjectionService.listByOrg>>,
       };
     }
@@ -532,7 +533,8 @@ export const useFinancial = () => {
         ProjectionService.computeOnDemandFromArAp(orgId, 30),
         ProjectionService.listByOrg(orgId, 90),
       ]);
-      return { onDemand, persisted };
+      const scenarios90d = await ProjectionService.computeScenario90dFromArAp(orgId, 'realistic', 10000);
+      return { onDemand, scenarios90d, persisted };
     } catch (error) {
       handleError(error, 'Erro ao carregar projeções de caixa');
       return {
@@ -542,6 +544,7 @@ export const useFinancial = () => {
           minBalance: 0,
           openingBalance: 0,
         },
+        scenarios90d: null,
         persisted: [],
       };
     } finally {

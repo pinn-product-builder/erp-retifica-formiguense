@@ -5,6 +5,7 @@ import type { PaginatedResult } from '@/services/financial/types';
 import { ApprovalApService } from '@/services/financial/approvalApService';
 import { CashFlowService } from '@/services/financial/cashFlowService';
 import { CostCenterService } from '@/services/financial/costCenterService';
+import { isAccountsPayableApprovedForPayment } from '@/services/financial/approvalApService';
 
 type ApRow = Database['public']['Tables']['accounts_payable']['Row'];
 
@@ -163,6 +164,23 @@ export class AccountsPayableService {
     id: string,
     patch: Partial<Database['public']['Tables']['accounts_payable']['Update']>
   ): Promise<{ data: ApRow | null; error: Error | null }> {
+    if (patch.status === 'paid') {
+      const { data: cur, error: cErr } = await supabase
+        .from('accounts_payable')
+        .select('approval_status')
+        .eq('org_id', orgId)
+        .eq('id', id)
+        .maybeSingle();
+      if (cErr) return { data: null, error: new Error(cErr.message) };
+      const curStatus = (cur as { approval_status?: string | null } | null)?.approval_status ?? null;
+      if (!isAccountsPayableApprovedForPayment(curStatus)) {
+        return {
+          data: null,
+          error: new Error('Pagamento bloqueado: título ainda não aprovado.'),
+        };
+      }
+    }
+
     const { data, error } = await supabase
       .from('accounts_payable')
       .update(patch)
