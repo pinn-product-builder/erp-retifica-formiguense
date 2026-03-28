@@ -105,8 +105,8 @@ export function FinancialAsyncCombobox<T extends { id: string }>({
                   className="flex w-full items-start px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
-                    onChange(opt);
                     onInputChange(getOptionLabel(opt));
+                    onChange(opt);
                     close();
                   }}
                 >
