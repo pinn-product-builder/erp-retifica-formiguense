@@ -11,6 +11,42 @@ import { CostCenterService } from '@/services/financial/costCenterService';
 
 type ArRow = Database['public']['Tables']['accounts_receivable']['Row'];
 
+async function attachAuditUserNames(
+  rows: (ArRow & Record<string, unknown>)[]
+): Promise<(ArRow & Record<string, unknown>)[]> {
+  const ids = new Set<string>();
+  for (const r of rows) {
+    if (r.created_by) ids.add(r.created_by as string);
+    if (r.updated_by) ids.add(r.updated_by as string);
+  }
+  const emptyAudit = () =>
+    rows.map((r) => ({
+      ...r,
+      audit_created_by_name: null as string | null,
+      audit_updated_by_name: null as string | null,
+    }));
+  if (ids.size === 0) {
+    return emptyAudit();
+  }
+  const { data: basicRows, error } = await supabase
+    .from('user_basic_info')
+    .select('user_id, name')
+    .in('user_id', [...ids]);
+  if (error || !basicRows?.length) {
+    return emptyAudit();
+  }
+  const map = new Map(
+    basicRows
+      .filter((p): p is { user_id: string; name: string | null } => p.user_id != null)
+      .map((p) => [p.user_id, p.name?.trim() || null])
+  );
+  return rows.map((r) => {
+    const createdName = r.created_by ? (map.get(r.created_by as string) ?? null) : null;
+    const updatedName = r.updated_by ? (map.get(r.updated_by as string) ?? null) : null;
+    return { ...r, audit_created_by_name: createdName, audit_updated_by_name: updatedName };
+  });
+}
+
 export class AccountsReceivableService {
   static async refreshOverdue(orgId: string): Promise<{ error: Error | null }> {
     const { error } = await supabase.rpc('refresh_accounts_receivable_overdue', {
@@ -51,7 +87,10 @@ export class AccountsReceivableService {
       if (filters.dueTo) q = q.lte('due_date', filters.dueTo);
     }
 
-    q = q.order('due_date', { ascending: true }).range(from, to);
+    q = q
+      .order('created_at', { ascending: false, nullsFirst: false })
+      .order('id', { ascending: false })
+      .range(from, to);
 
     const { data, error, count } = await q;
     if (error) throw new Error(error.message);
@@ -65,6 +104,8 @@ export class AccountsReceivableService {
         return (c?.name?.toLowerCase().includes(t) ?? false) || inv.toLowerCase().includes(t);
       });
     }
+
+    rows = await attachAuditUserNames(rows);
 
     const total = count ?? 0;
     return {

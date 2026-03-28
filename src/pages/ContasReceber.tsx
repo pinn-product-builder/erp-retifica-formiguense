@@ -494,14 +494,39 @@ export default function ContasReceber() {
       {
         key: 'audit',
         header: 'Auditoria',
-        hideInMobile: true,
+        mobileLabel: 'Auditoria',
         priority: 8,
-        render: (row) => (
-          <span className="text-muted-foreground text-xs">
-            {(row.created_by as string)?.slice(0, 8) ?? '—'} /{' '}
-            {(row.updated_by as string)?.slice(0, 8) ?? '—'}
-          </span>
-        ),
+        minWidth: 200,
+        render: (row) => {
+          const ext = row as ArRow & {
+            audit_created_by_name?: string | null;
+            audit_updated_by_name?: string | null;
+          };
+          const created = ext.audit_created_by_name?.trim() || null;
+          const updated = ext.audit_updated_by_name?.trim() || null;
+          const title = [created && `Criado: ${created}`, updated && `Editado: ${updated}`]
+            .filter(Boolean)
+            .join(' · ');
+          return (
+            <div
+              className="flex min-w-0 max-w-[11rem] flex-col gap-0.5 text-xs sm:max-w-[15rem]"
+              title={title || undefined}
+            >
+              <div className="flex min-w-0 items-baseline gap-1.5">
+                <span className="shrink-0 text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
+                  Criado
+                </span>
+                <span className="min-w-0 truncate font-medium text-foreground">{created ?? '—'}</span>
+              </div>
+              <div className="flex min-w-0 items-baseline gap-1.5">
+                <span className="shrink-0 text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
+                  Editado
+                </span>
+                <span className="min-w-0 truncate font-medium text-foreground">{updated ?? '—'}</span>
+              </div>
+            </div>
+          );
+        },
       },
       {
         key: 'actions',
