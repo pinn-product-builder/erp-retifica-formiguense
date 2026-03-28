@@ -104,6 +104,7 @@ export default function ContasReceber() {
   } = useFinancial();
 
   const [page, setPage] = useState(1);
+  const [listVersion, setListVersion] = useState(0);
   const [rows, setRows] = useState<(ArRow & Record<string, unknown>)[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [count, setCount] = useState(0);
@@ -122,19 +123,22 @@ export default function ContasReceber() {
   const [selectedRow, setSelectedRow] = useState<(ArRow & Record<string, unknown>) | null>(null);
   const [historyRows, setHistoryRows] = useState<Record<string, unknown>[]>([]);
 
-  const [customerOpt, setCustomerOpt] = useState<CustomerRow | null>(null);
+  const [customerFilterOpt, setCustomerFilterOpt] = useState<CustomerRow | null>(null);
+  const [dialogCustomerOpt, setDialogCustomerOpt] = useState<CustomerRow | null>(null);
   const [customerFilterInput, setCustomerFilterInput] = useState('');
   const [customerDialogInput, setCustomerDialogInput] = useState('');
   const [customerOptions, setCustomerOptions] = useState<CustomerRow[]>([]);
   const [customerLoading, setCustomerLoading] = useState(false);
 
-  const [orderOpt, setOrderOpt] = useState<OrderWithDetails | null>(null);
+  const [orderFilterOpt, setOrderFilterOpt] = useState<OrderWithDetails | null>(null);
+  const [dialogOrderOpt, setDialogOrderOpt] = useState<OrderWithDetails | null>(null);
   const [orderFilterInput, setOrderFilterInput] = useState('');
   const [orderDialogInput, setOrderDialogInput] = useState('');
   const [orderOptions, setOrderOptions] = useState<OrderWithDetails[]>([]);
   const [orderLoading, setOrderLoading] = useState(false);
 
-  const [budgetOpt, setBudgetOpt] = useState<BudgetListItem | null>(null);
+  const [budgetFilterOpt, setBudgetFilterOpt] = useState<BudgetListItem | null>(null);
+  const [dialogBudgetOpt, setDialogBudgetOpt] = useState<BudgetListItem | null>(null);
   const [budgetFilterInput, setBudgetFilterInput] = useState('');
   const [budgetDialogInput, setBudgetDialogInput] = useState('');
   const [budgetOptions, setBudgetOptions] = useState<BudgetListItem[]>([]);
@@ -182,11 +186,11 @@ export default function ContasReceber() {
       if (dueFrom) f.dueFrom = dueFrom;
       if (dueTo) f.dueTo = dueTo;
     }
-    if (customerOpt) f.customerId = customerOpt.id;
-    if (orderOpt) f.orderId = orderOpt.id;
-    if (budgetOpt) f.budgetId = budgetOpt.id;
+    if (customerFilterOpt) f.customerId = customerFilterOpt.id;
+    if (orderFilterOpt) f.orderId = orderFilterOpt.id;
+    if (budgetFilterOpt) f.budgetId = budgetFilterOpt.id;
     return f;
-  }, [statusFilter, dueFrom, dueTo, dueAlertFilter, customerOpt, orderOpt, budgetOpt]);
+  }, [statusFilter, dueFrom, dueTo, dueAlertFilter, customerFilterOpt, orderFilterOpt, budgetFilterOpt]);
 
   useEffect(() => {
     if (searchParams.get('dueAlerts') === '1') setDueAlertFilter(true);
@@ -197,22 +201,29 @@ export default function ContasReceber() {
     void FinancialConfigService.listPaymentMethodsForContext(orgId, 'receivable').then(setPmCatalog);
   }, [orgId]);
 
-  const load = useCallback(async () => {
-    if (!orgId) return;
-    const filters = buildFilters();
-    const [listRes, t] = await Promise.all([
-      getAccountsReceivable(page, 10, filters),
-      getReceivableTotals(filters),
-    ]);
-    setRows(listRes.data as (ArRow & Record<string, unknown>)[]);
-    setTotalPages(listRes.totalPages);
-    setCount(listRes.count);
-    setTotals(t);
-  }, [orgId, page, buildFilters, getAccountsReceivable, getReceivableTotals]);
-
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!orgId) return;
+    let cancelled = false;
+    (async () => {
+      const filters = buildFilters();
+      const [listRes, t] = await Promise.all([
+        getAccountsReceivable(page, 10, filters),
+        getReceivableTotals(filters),
+      ]);
+      if (cancelled) return;
+      if (listRes.totalPages >= 1 && page > listRes.totalPages) {
+        setPage(1);
+        return;
+      }
+      setRows(listRes.data as (ArRow & Record<string, unknown>)[]);
+      setTotalPages(listRes.totalPages);
+      setCount(listRes.count);
+      setTotals(t);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, page, buildFilters, listVersion, getAccountsReceivable, getReceivableTotals]);
 
   useEffect(() => {
     const q = dialogOpen || installDialogOpen ? customerDialogInput : customerFilterInput;
@@ -231,7 +242,7 @@ export default function ContasReceber() {
   }, [customerFilterInput, customerDialogInput, dialogOpen, installDialogOpen, orgId]);
 
   useEffect(() => {
-    const q = dialogOpen ? orderDialogInput : orderFilterInput;
+    const q = dialogOpen || installDialogOpen ? orderDialogInput : orderFilterInput;
     if (!orgId || !q.trim()) {
       setOrderOptions([]);
       return;
@@ -249,10 +260,10 @@ export default function ContasReceber() {
       });
     }, 300);
     return () => clearTimeout(t);
-  }, [orderFilterInput, orderDialogInput, dialogOpen, orgId]);
+  }, [orderFilterInput, orderDialogInput, dialogOpen, installDialogOpen, orgId]);
 
   useEffect(() => {
-    const q = dialogOpen ? budgetDialogInput : budgetFilterInput;
+    const q = dialogOpen || installDialogOpen ? budgetDialogInput : budgetFilterInput;
     if (!orgId || !q.trim()) {
       setBudgetOptions([]);
       return;
@@ -265,7 +276,7 @@ export default function ContasReceber() {
       });
     }, 300);
     return () => clearTimeout(t);
-  }, [budgetFilterInput, budgetDialogInput, dialogOpen, orgId]);
+  }, [budgetFilterInput, budgetDialogInput, dialogOpen, installDialogOpen, orgId]);
 
   const openEdit = async (row: ArRow & Record<string, unknown>) => {
     if (row.status === 'paid' || row.status === 'cancelled') {
@@ -275,10 +286,10 @@ export default function ContasReceber() {
     if (!orgId) return;
     setSelectedRow(row);
     const cust = await CustomerLookupService.getById(orgId, row.customer_id as string);
-    setCustomerOpt(cust);
+    setDialogCustomerOpt(cust);
     setCustomerDialogInput(cust?.name ?? '');
-    setOrderOpt(null);
-    setBudgetOpt(null);
+    setDialogOrderOpt(null);
+    setDialogBudgetOpt(null);
     setOrderDialogInput('');
     setBudgetDialogInput('');
     setForm({
@@ -325,14 +336,14 @@ export default function ContasReceber() {
     }
     toast.success('Renegociação registrada');
     setRenegOpen(false);
-    void load();
+    setListVersion((v) => v + 1);
   };
 
   const openNew = () => {
     setSelectedRow(null);
-    setCustomerOpt(null);
-    setOrderOpt(null);
-    setBudgetOpt(null);
+    setDialogCustomerOpt(null);
+    setDialogOrderOpt(null);
+    setDialogBudgetOpt(null);
     setCustomerDialogInput('');
     setOrderDialogInput('');
     setBudgetDialogInput('');
@@ -349,11 +360,11 @@ export default function ContasReceber() {
   };
 
   const submitForm = async () => {
-    if (!customerOpt) return;
+    if (!dialogCustomerOpt) return;
     const payload = {
-      customer_id: customerOpt.id,
-      order_id: orderOpt?.id ?? null,
-      budget_id: budgetOpt?.id ?? null,
+      customer_id: dialogCustomerOpt.id,
+      order_id: dialogOrderOpt?.id ?? null,
+      budget_id: dialogBudgetOpt?.id ?? null,
       amount: Number(form.amount.replace(',', '.')),
       due_date: form.due_date,
       competence_date: form.competence_date || form.due_date,
@@ -374,15 +385,18 @@ export default function ContasReceber() {
       await createAccountsReceivable(payload);
     }
     setDialogOpen(false);
-    void load();
+    if (!selectedRow) {
+      setPage(1);
+    }
+    setListVersion((v) => v + 1);
   };
 
   const submitInstall = async () => {
-    if (!customerOpt) return;
+    if (!dialogCustomerOpt) return;
     const ok = await createInstallmentPlan({
-      customer_id: customerOpt.id,
-      order_id: orderOpt?.id ?? null,
-      budget_id: budgetOpt?.id ?? null,
+      customer_id: dialogCustomerOpt.id,
+      order_id: dialogOrderOpt?.id ?? null,
+      budget_id: dialogBudgetOpt?.id ?? null,
       total_amount: Number(installForm.total_amount.replace(',', '.')),
       first_due_date: installForm.first_due_date,
       competence_date: installForm.competence_date || installForm.first_due_date,
@@ -393,7 +407,8 @@ export default function ContasReceber() {
     });
     if (ok) {
       setInstallDialogOpen(false);
-      void load();
+      setPage(1);
+      setListVersion((v) => v + 1);
     }
   };
 
@@ -434,7 +449,7 @@ export default function ContasReceber() {
     });
     if (ok) {
       setPaymentOpen(false);
-      void load();
+      setListVersion((v) => v + 1);
     }
   };
 
@@ -715,12 +730,12 @@ export default function ContasReceber() {
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
             <CustomerArCombobox
               label="Cliente"
-              value={customerOpt}
-              onChange={setCustomerOpt}
+              value={customerFilterOpt}
+              onChange={setCustomerFilterOpt}
               inputValue={customerFilterInput}
               onInputChange={(v) => {
                 setCustomerFilterInput(v);
-                setCustomerOpt(null);
+                setCustomerFilterOpt(null);
               }}
               options={customerOptions}
               loading={customerLoading}
@@ -730,12 +745,12 @@ export default function ContasReceber() {
             />
             <OrderArCombobox
               label="OS"
-              value={orderOpt}
-              onChange={setOrderOpt}
+              value={orderFilterOpt}
+              onChange={setOrderFilterOpt}
               inputValue={orderFilterInput}
               onInputChange={(v) => {
                 setOrderFilterInput(v);
-                setOrderOpt(null);
+                setOrderFilterOpt(null);
               }}
               options={orderOptions}
               loading={orderLoading}
@@ -745,12 +760,12 @@ export default function ContasReceber() {
             />
             <BudgetArCombobox
               label="Orçamento"
-              value={budgetOpt}
-              onChange={setBudgetOpt}
+              value={budgetFilterOpt}
+              onChange={setBudgetFilterOpt}
               inputValue={budgetFilterInput}
               onInputChange={(v) => {
                 setBudgetFilterInput(v);
-                setBudgetOpt(null);
+                setBudgetFilterOpt(null);
               }}
               options={budgetOptions}
               loading={budgetLoading}
@@ -818,12 +833,12 @@ export default function ContasReceber() {
             <CustomerArCombobox
               label="Cliente"
               required
-              value={customerOpt}
-              onChange={setCustomerOpt}
+              value={dialogCustomerOpt}
+              onChange={setDialogCustomerOpt}
               inputValue={customerDialogInput}
               onInputChange={(v) => {
                 setCustomerDialogInput(v);
-                setCustomerOpt(null);
+                setDialogCustomerOpt(null);
               }}
               options={customerOptions}
               loading={customerLoading}
@@ -832,12 +847,12 @@ export default function ContasReceber() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <OrderArCombobox
                 label="OS (opcional)"
-                value={orderOpt}
-                onChange={setOrderOpt}
+                value={dialogOrderOpt}
+                onChange={setDialogOrderOpt}
                 inputValue={orderDialogInput}
                 onInputChange={(v) => {
                   setOrderDialogInput(v);
-                  setOrderOpt(null);
+                  setDialogOrderOpt(null);
                 }}
                 options={orderOptions}
                 loading={orderLoading}
@@ -845,12 +860,12 @@ export default function ContasReceber() {
               />
               <BudgetArCombobox
                 label="Orçamento (opcional)"
-                value={budgetOpt}
-                onChange={setBudgetOpt}
+                value={dialogBudgetOpt}
+                onChange={setDialogBudgetOpt}
                 inputValue={budgetDialogInput}
                 onInputChange={(v) => {
                   setBudgetDialogInput(v);
-                  setBudgetOpt(null);
+                  setDialogBudgetOpt(null);
                 }}
                 options={budgetOptions}
                 loading={budgetLoading}
@@ -945,7 +960,7 @@ export default function ContasReceber() {
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={!customerOpt || !form.amount || !form.due_date}>
+              <Button type="submit" disabled={!dialogCustomerOpt || !form.amount || !form.due_date}>
                 Salvar
               </Button>
             </DialogFooter>
@@ -968,12 +983,12 @@ export default function ContasReceber() {
             <CustomerArCombobox
               label="Cliente"
               required
-              value={customerOpt}
-              onChange={setCustomerOpt}
+              value={dialogCustomerOpt}
+              onChange={setDialogCustomerOpt}
               inputValue={customerDialogInput}
               onInputChange={(v) => {
                 setCustomerDialogInput(v);
-                setCustomerOpt(null);
+                setDialogCustomerOpt(null);
               }}
               options={customerOptions}
               loading={customerLoading}
