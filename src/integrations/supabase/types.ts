@@ -877,7 +877,6 @@ export type Database = {
           org_id: string
           receivable_account_id: string
           reference_date: string
-          status: string
         }
         Insert: {
           alert_type: string
@@ -887,7 +886,6 @@ export type Database = {
           org_id: string
           receivable_account_id: string
           reference_date: string
-          status?: string
         }
         Update: {
           alert_type?: string
@@ -897,7 +895,6 @@ export type Database = {
           org_id?: string
           receivable_account_id?: string
           reference_date?: string
-          status?: string
         }
         Relationships: [
           {
