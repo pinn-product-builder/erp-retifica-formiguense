@@ -195,9 +195,7 @@ export function PurchaseOrdersList({
                 <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
                   <Package className="h-10 w-10 opacity-30" />
                   <p className="text-sm font-medium">Nenhum pedido encontrado</p>
-                  <Button variant="link" size="sm" onClick={onNew}>
-                    Criar primeiro pedido
-                  </Button>
+                  <p className="text-xs">Crie um novo pedido de compra para começar</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
