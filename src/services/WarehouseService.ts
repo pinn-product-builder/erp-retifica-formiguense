@@ -118,6 +118,17 @@ class WarehouseService {
     return (data ?? []) as WarehouseLocation[];
   }
 
+  async getLocationById(id: string): Promise<WarehouseLocation | null> {
+    const { data, error } = await supabase
+      .from('warehouse_locations' as never)
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) throw error;
+    return (data ?? null) as WarehouseLocation | null;
+  }
+
   async listAllLocations(orgId: string): Promise<(WarehouseLocation & { warehouse_name: string })[]> {
     const { data, error } = await supabase
       .from('warehouse_locations' as never)

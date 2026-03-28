@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,9 @@ import { Loader2, Copy, Tag } from 'lucide-react';
 import { usePartsInventory, type PartInventory, type ComponentType, type PartStatus } from '@/hooks/usePartsInventory';
 import { useEngineComponents } from '@/hooks/useEngineComponents';
 import { useMacroComponents, type MacroComponent } from '@/hooks/useMacroComponents';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { warehouseService, type Warehouse, type WarehouseLocation } from '@/services/WarehouseService';
+import { partFormNcmSchema } from '@/services/inventory/partFormSchema';
 
 const formatCurrency = (value: number): string =>
   new Intl.NumberFormat('pt-BR', {
@@ -30,22 +33,57 @@ interface PartFormProps {
   onClone?: (partId: string) => void;
 }
 
+const ENTRY_PACKAGING_OPTIONS = [
+  { value: 'unidade', label: 'Unidade' },
+  { value: 'jogo', label: 'Jogo' },
+  { value: 'kit', label: 'Kit' },
+] as const;
+
 const SECTION_OPTIONS = [
   { value: 'diesel', label: 'Diesel' },
   { value: 'otto', label: 'Otto' },
   { value: 'bosch', label: 'Bosch' },
-];
+] as const;
+
+const MERCHANDISE_ORIGIN_OPTIONS = [
+  { value: '0', label: '0 — Nacional' },
+  { value: '1', label: '1 — Estrangeira, importação direta' },
+  { value: '2', label: '2 — Estrangeira, mercado interno' },
+  { value: '3', label: '3 — Nacional, conteúdo import. > 40%' },
+  { value: '4', label: '4 — Nacional, processos produtivos' },
+  { value: '5', label: '5 — Nacional, conteúdo import. ≤ 40%' },
+  { value: '6', label: '6 — Estrangeira, sem similar nacional' },
+  { value: '7', label: '7 — Estrangeira, sem similar (imp.)' },
+  { value: '8', label: '8 — Nacional, conteúdo import. > 70%' },
+] as const;
+
+function locationLabel(loc: WarehouseLocation): string {
+  const bits = [loc.code];
+  if (loc.aisle) bits.push(`Corredor ${loc.aisle}`);
+  if (loc.rack) bits.push(`Prat. ${loc.rack}`);
+  if (loc.bin) bits.push(`Bin ${loc.bin}`);
+  return bits.join(' · ');
+}
+
+type EntryPackaging = (typeof ENTRY_PACKAGING_OPTIONS)[number]['value'];
+type InventorySection = (typeof SECTION_OPTIONS)[number]['value'];
 
 export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess, onClone }) => {
+  const { currentOrganization } = useOrganization();
   const { createPart, updatePart, clonePart, loading } = usePartsInventory();
   const { components: engineComponents, loading: componentsLoading } = useEngineComponents();
   const { macroComponents, loading: macroComponentsLoading } = useMacroComponents();
+
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [locations, setLocations] = useState<WarehouseLocation[]>([]);
+  const [warehousesLoading, setWarehousesLoading] = useState(false);
 
   const isEditing = !!part;
 
   const [formData, setFormData] = useState({
     part_name: '',
     part_code: '',
+    barcode: '',
     quantity: isEditing ? 1 : 0,
     unit_cost: 0,
     supplier: '',
@@ -53,25 +91,76 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess, onClone }) 
     macro_component_id: '',
     status: 'disponivel' as PartStatus,
     notes: '',
+    entry_packaging: '' as '' | EntryPackaging,
+    inventory_section: '' as '' | InventorySection,
+    warehouse_id: '',
+    location_id: '',
+    merchandise_origin: '',
+    ncm: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    if (part) {
-      setFormData({
-        part_name: part.part_name,
-        part_code: part.part_code ?? '',
-        quantity: part.quantity,
-        unit_cost: part.unit_cost ?? 0,
-        supplier: part.supplier ?? '',
-        component: part.component ?? undefined,
-        macro_component_id: (part as { macro_component_id?: string }).macro_component_id ?? '',
-        status: (part.status as PartStatus) ?? 'disponivel',
-        notes: part.notes ?? '',
-      });
+  const loadWarehouses = useCallback(async () => {
+    if (!currentOrganization?.id) return;
+    setWarehousesLoading(true);
+    try {
+      const list = await warehouseService.listWarehouses(currentOrganization.id);
+      setWarehouses(list.filter((w) => w.is_active));
+    } finally {
+      setWarehousesLoading(false);
     }
+  }, [currentOrganization?.id]);
+
+  useEffect(() => {
+    void loadWarehouses();
+  }, [loadWarehouses]);
+
+  useEffect(() => {
+    if (!formData.warehouse_id) {
+      setLocations([]);
+      return;
+    }
+    void warehouseService.listLocations(formData.warehouse_id).then((loc) => {
+      setLocations(loc.filter((l) => l.is_active));
+    });
+  }, [formData.warehouse_id]);
+
+  useEffect(() => {
+    if (!part) return;
+    setFormData({
+      part_name: part.part_name,
+      part_code: part.part_code ?? '',
+      barcode: part.barcode ?? '',
+      quantity: part.quantity,
+      unit_cost: part.unit_cost ?? 0,
+      supplier: part.supplier ?? '',
+      component: part.component ?? undefined,
+      macro_component_id: part.macro_component_id ?? '',
+      status: (part.status as PartStatus) ?? 'disponivel',
+      notes: part.notes ?? '',
+      entry_packaging: (part.entry_packaging as EntryPackaging | null) ?? '',
+      inventory_section: (part.inventory_section as InventorySection | null) ?? '',
+      warehouse_id: part.warehouse_id ?? '',
+      location_id: part.location_id ?? '',
+      merchandise_origin: part.merchandise_origin ?? '',
+      ncm: part.ncm ?? '',
+    });
   }, [part]);
+
+  useEffect(() => {
+    if (!part?.location_id || part.warehouse_id) return;
+    void (async () => {
+      const loc = await warehouseService.getLocationById(part.location_id!);
+      if (loc) {
+        setFormData((prev) => ({
+          ...prev,
+          warehouse_id: loc.warehouse_id,
+          location_id: part.location_id ?? '',
+        }));
+      }
+    })();
+  }, [part?.id, part?.location_id, part?.warehouse_id]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -88,6 +177,11 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess, onClone }) 
       newErrors.quantity = 'Quantidade não pode ser negativa';
     }
 
+    const ncmParsed = partFormNcmSchema.safeParse(formData.ncm);
+    if (!ncmParsed.success) {
+      newErrors.ncm = ncmParsed.error.issues[0]?.message ?? 'NCM inválido';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -96,9 +190,12 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess, onClone }) 
     e.preventDefault();
     if (!validateForm()) return;
 
+    const ncmDigits = formData.ncm.replace(/\D/g, '').slice(0, 8);
+
     const dataToSend = {
       part_name: formData.part_name,
       part_code: formData.part_code || undefined,
+      barcode: formData.barcode.trim() || undefined,
       quantity: isEditing ? formData.quantity : 0,
       unit_cost: formData.unit_cost,
       supplier: formData.supplier || undefined,
@@ -106,6 +203,12 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess, onClone }) 
       macro_component_id: formData.macro_component_id || undefined,
       status: formData.status,
       notes: formData.notes || undefined,
+      entry_packaging: formData.entry_packaging || undefined,
+      inventory_section: formData.inventory_section || undefined,
+      warehouse_id: formData.warehouse_id || undefined,
+      location_id: formData.location_id || undefined,
+      merchandise_origin: formData.merchandise_origin || undefined,
+      ncm: ncmDigits || undefined,
     };
 
     const success = part
@@ -132,6 +235,8 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess, onClone }) 
       <html><body style="font-family:monospace;padding:16px;">
         <h3 style="margin:0">${formData.part_name}</h3>
         <p style="margin:4px 0">Código: <strong>${formData.part_code || 'N/A'}</strong></p>
+        <p style="margin:4px 0">Código de barras: <strong>${formData.barcode || 'N/A'}</strong></p>
+        <p style="margin:4px 0">NCM: <strong>${formData.ncm.replace(/\D/g, '').slice(0, 8) || 'N/A'}</strong></p>
         <p style="margin:4px 0">Custo: <strong>${formatCurrency(formData.unit_cost)}</strong></p>
         <p style="margin:4px 0">Status: <strong>${formData.status}</strong></p>
       </body></html>
@@ -187,6 +292,103 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess, onClone }) 
         </div>
 
         <div>
+          <Label htmlFor="barcode">Código de barras</Label>
+          <Input
+            id="barcode"
+            value={formData.barcode}
+            onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+            placeholder="EAN / código interno"
+            inputMode="numeric"
+            autoComplete="off"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="ncm">NCM do produto</Label>
+          <Input
+            id="ncm"
+            value={formData.ncm}
+            onChange={(e) => setFormData({ ...formData, ncm: e.target.value })}
+            placeholder="8 dígitos"
+            inputMode="numeric"
+            maxLength={14}
+          />
+          {errors.ncm && <p className="text-xs text-red-500 mt-1">{errors.ncm}</p>}
+        </div>
+
+        <div>
+          <Label htmlFor="entry_packaging">Embalagem de entrada</Label>
+          <Select
+            value={formData.entry_packaging || 'none'}
+            onValueChange={(value) =>
+              setFormData({
+                ...formData,
+                entry_packaging: value === 'none' ? '' : (value as EntryPackaging),
+              })
+            }
+          >
+            <SelectTrigger id="entry_packaging">
+              <SelectValue placeholder="Selecione..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Não informado</SelectItem>
+              {ENTRY_PACKAGING_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="inventory_section">Seção</Label>
+          <Select
+            value={formData.inventory_section || 'none'}
+            onValueChange={(value) =>
+              setFormData({
+                ...formData,
+                inventory_section: value === 'none' ? '' : (value as InventorySection),
+              })
+            }
+          >
+            <SelectTrigger id="inventory_section">
+              <SelectValue placeholder="Selecione..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Não informado</SelectItem>
+              {SECTION_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="merchandise_origin">Origem da mercadoria</Label>
+          <Select
+            value={formData.merchandise_origin || 'none'}
+            onValueChange={(value) =>
+              setFormData({ ...formData, merchandise_origin: value === 'none' ? '' : value })
+            }
+          >
+            <SelectTrigger id="merchandise_origin" className="text-left">
+              <SelectValue placeholder="Selecione..." />
+            </SelectTrigger>
+            <SelectContent className="max-h-[min(60vh,320px)]">
+              <SelectItem value="none">Não informado</SelectItem>
+              {MERCHANDISE_ORIGIN_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value} className="text-xs sm:text-sm">
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
           <Label htmlFor="status">Status</Label>
           <Select
             value={formData.status}
@@ -200,6 +402,61 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess, onClone }) 
               <SelectItem value="reservado">Reservado</SelectItem>
               <SelectItem value="usado">Usado</SelectItem>
               <SelectItem value="pendente">Pendente</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="sm:col-span-2">
+          <Label htmlFor="warehouse_id">Depósito</Label>
+          <Select
+            value={formData.warehouse_id || 'none'}
+            onValueChange={(value) =>
+              setFormData({
+                ...formData,
+                warehouse_id: value === 'none' ? '' : value,
+                location_id: '',
+              })
+            }
+          >
+            <SelectTrigger id="warehouse_id">
+              <SelectValue placeholder={warehousesLoading ? 'Carregando...' : 'Selecione o depósito'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Não informado</SelectItem>
+              {warehouses.map((w) => (
+                <SelectItem key={w.id} value={w.id}>
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="sm:col-span-2">
+          <Label htmlFor="location_id">Localização</Label>
+          <Select
+            value={formData.location_id || 'none'}
+            disabled={!formData.warehouse_id}
+            onValueChange={(value) =>
+              setFormData({ ...formData, location_id: value === 'none' ? '' : value })
+            }
+          >
+            <SelectTrigger id="location_id">
+              <SelectValue
+                placeholder={
+                  !formData.warehouse_id
+                    ? 'Selecione um depósito primeiro'
+                    : 'Selecione a localização'
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Não informado</SelectItem>
+              {locations.map((loc) => (
+                <SelectItem key={loc.id} value={loc.id}>
+                  {locationLabel(loc)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -221,10 +478,14 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess, onClone }) 
             <SelectContent>
               <SelectItem value="none">Nenhum</SelectItem>
               {componentsLoading ? (
-                <SelectItem value="loading" disabled>Carregando...</SelectItem>
+                <SelectItem value="loading" disabled>
+                  Carregando...
+                </SelectItem>
               ) : (
                 engineComponents.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
                 ))
               )}
             </SelectContent>
@@ -245,12 +506,16 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess, onClone }) 
             <SelectContent>
               <SelectItem value="none">Nenhum</SelectItem>
               {macroComponentsLoading ? (
-                <SelectItem value="loading" disabled>Carregando...</SelectItem>
+                <SelectItem value="loading" disabled>
+                  Carregando...
+                </SelectItem>
               ) : (
                 (macroComponents as MacroComponent[])
                   .filter((mc) => mc.is_active)
                   .map((mc) => (
-                    <SelectItem key={mc.id} value={mc.id}>{mc.name}</SelectItem>
+                    <SelectItem key={mc.id} value={mc.id}>
+                      {mc.name}
+                    </SelectItem>
                   ))
               )}
             </SelectContent>
@@ -310,7 +575,7 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess, onClone }) 
             id="notes"
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            placeholder="Seção (Diesel/Otto/Bosch), NCM, código de barras ou outras observações..."
+            placeholder="Notas adicionais sobre a peça"
             rows={3}
           />
         </div>

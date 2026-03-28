@@ -50,8 +50,9 @@ class InventoryService {
     }
 
     if (filters?.search) {
+      const q = filters.search.trim();
       query = query.or(
-        `part_name.ilike.%${filters.search}%,part_code.ilike.%${filters.search}%`
+        `part_name.ilike.%${q}%,part_code.ilike.%${q}%,barcode.ilike.%${q}%`
       );
     }
 
@@ -84,8 +85,9 @@ class InventoryService {
     }
 
     if (filters?.search) {
+      const q = filters.search.trim();
       query = query.or(
-        `part_name.ilike.%${filters.search}%,part_code.ilike.%${filters.search}%`
+        `part_name.ilike.%${q}%,part_code.ilike.%${q}%,barcode.ilike.%${q}%`
       );
     }
 

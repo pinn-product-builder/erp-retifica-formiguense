@@ -5665,16 +5665,21 @@ export type Database = {
       parts_inventory: {
         Row: {
           applied_at: string | null
+          barcode: string | null
           component: Database["public"]["Enums"]["engine_component"] | null
           cost_method: string
           cost_method_changed_at: string | null
           cost_method_changed_by: string | null
           cost_method_locked: boolean
           created_at: string
+          entry_packaging: string | null
           expiry_alert_days: number
           id: string
+          inventory_section: string | null
           location_id: string | null
           macro_component_id: string | null
+          merchandise_origin: string | null
+          ncm: string | null
           notes: string | null
           order_id: string | null
           org_id: string | null
@@ -5692,16 +5697,21 @@ export type Database = {
         }
         Insert: {
           applied_at?: string | null
+          barcode?: string | null
           component?: Database["public"]["Enums"]["engine_component"] | null
           cost_method?: string
           cost_method_changed_at?: string | null
           cost_method_changed_by?: string | null
           cost_method_locked?: boolean
           created_at?: string
+          entry_packaging?: string | null
           expiry_alert_days?: number
           id?: string
+          inventory_section?: string | null
           location_id?: string | null
           macro_component_id?: string | null
+          merchandise_origin?: string | null
+          ncm?: string | null
           notes?: string | null
           order_id?: string | null
           org_id?: string | null
@@ -5719,16 +5729,21 @@ export type Database = {
         }
         Update: {
           applied_at?: string | null
+          barcode?: string | null
           component?: Database["public"]["Enums"]["engine_component"] | null
           cost_method?: string
           cost_method_changed_at?: string | null
           cost_method_changed_by?: string | null
           cost_method_locked?: boolean
           created_at?: string
+          entry_packaging?: string | null
           expiry_alert_days?: number
           id?: string
+          inventory_section?: string | null
           location_id?: string | null
           macro_component_id?: string | null
+          merchandise_origin?: string | null
+          ncm?: string | null
           notes?: string | null
           order_id?: string | null
           org_id?: string | null

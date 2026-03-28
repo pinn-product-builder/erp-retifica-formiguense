@@ -35,7 +35,7 @@ export function OrderMaterialsTab({ orderId }: OrderMaterialsTabProps) {
   const [processingId, setProcessingId] = React.useState<string | null>(null);
 
   // Estorno de consumo (US-036 AC05)
-  const [reversalTarget, setReversalTarget] = useState<{ id: string; name: string } | null>(null);
+  const [reversalTarget, setReversalTarget] = useState<{ id: string; name: string; quantity: number } | null>(null);
   const [reversalReason,  setReversalReason]  = useState('');
   const [reversing, setReversing] = useState(false);
 
@@ -52,7 +52,7 @@ export function OrderMaterialsTab({ orderId }: OrderMaterialsTabProps) {
       await ConsumptionService.reverseConsumption({
         orgId:      currentOrganization.id,
         movementId: reversalTarget.id,
-        quantity:   1,
+        quantity:   reversalTarget.quantity,
         reversedBy: user?.id ?? '',
         reason:     reversalReason,
       });
@@ -266,7 +266,13 @@ export function OrderMaterialsTab({ orderId }: OrderMaterialsTabProps) {
                         )}
                         {(material.status === 'applied' || material.status === 'used') && (
                           <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground gap-1"
-                            onClick={() => setReversalTarget({ id: material.id, name: material.part_name })}
+                            onClick={() =>
+                              setReversalTarget({
+                                id: material.id,
+                                name: material.part_name,
+                                quantity: material.quantity,
+                              })
+                            }
                           >
                             <RotateCcw className="h-3 w-3" />
                             Estornar

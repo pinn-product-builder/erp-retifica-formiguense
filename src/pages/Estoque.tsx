@@ -222,10 +222,10 @@ const Estoque = () => {
           variant="warning"
         />
         <StatCard
-          title="SKUs"
+          title="Códigos Universais"
           value={stats.tipos}
           icon={Package}
-          subtitle="Códigos diferentes"
+          subtitle="Códigos universais"
         />
         <StatCard
           title="Valor Total"

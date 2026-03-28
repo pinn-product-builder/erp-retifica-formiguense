@@ -72,8 +72,7 @@ export function usePartsInventory() {
       if (!currentOrganization?.id) return false;
       try {
         setLoading(true);
-        const { macro_component_id: _ignored, ...rest } = partData;
-        await inventoryService.createPart(currentOrganization.id, rest as CreatePartInput);
+        await inventoryService.createPart(currentOrganization.id, partData as CreatePartInput);
         toast({ title: 'Peça adicionada', description: `${partData.part_name} foi adicionada ao estoque` });
         await fetchParts();
         return true;
@@ -92,8 +91,7 @@ export function usePartsInventory() {
       if (!currentOrganization?.id) return false;
       try {
         setLoading(true);
-        const { macro_component_id: _ignored, ...rest } = partData;
-        await inventoryService.updatePart(partId, currentOrganization.id, rest as UpdatePartInput);
+        await inventoryService.updatePart(partId, currentOrganization.id, partData as UpdatePartInput);
         toast({ title: 'Peça atualizada', description: 'As informações da peça foram atualizadas' });
         await fetchParts();
         return true;
