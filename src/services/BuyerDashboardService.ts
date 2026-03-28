@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Quotation } from './QuotationService';
+import { QuotationService, type Quotation } from './QuotationService';
 import type { PurchaseOrderRow } from './PurchaseOrderService';
 import type { ConditionalOrder } from './ConditionalOrderService';
 import type { PurchaseNeed } from '@/hooks/usePurchaseNeeds';
@@ -206,7 +206,7 @@ export const BuyerDashboardService = {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-    const [{ data: monthOrders }, { data: deliveredOrders }] = await Promise.all([
+    const [{ data: monthOrders }, avgLeadFromQuotations] = await Promise.all([
       supabase
         .from('purchase_orders')
         .select('total_value')
@@ -214,13 +214,7 @@ export const BuyerDashboardService = {
         .not('status', 'in', '("cancelled","rejected","draft")')
         .gte('order_date', monthStart),
 
-      supabase
-        .from('purchase_orders')
-        .select('order_date, actual_delivery')
-        .eq('org_id', orgId)
-        .eq('status', 'delivered')
-        .not('actual_delivery', 'is', null)
-        .gte('order_date', new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString()),
+      QuotationService.fetchAvgLeadTimeDays(orgId),
     ]);
 
     const month_purchases = (monthOrders ?? []).reduce(
@@ -228,21 +222,8 @@ export const BuyerDashboardService = {
       0,
     );
 
-    const leadTimes = (deliveredOrders ?? [])
-      .filter(o => o.actual_delivery)
-      .map(o => {
-        const days = Math.ceil(
-          (new Date(o.actual_delivery!).getTime() - new Date(o.order_date).getTime()) /
-            (1000 * 60 * 60 * 24),
-        );
-        return days;
-      })
-      .filter(d => d > 0);
-
     const avg_lead_time =
-      leadTimes.length > 0
-        ? Math.round(leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length)
-        : 0;
+      avgLeadFromQuotations != null ? Math.round(avgLeadFromQuotations * 10) / 10 : 0;
 
     return { month_purchases, avg_lead_time, savings_percentage: 0 };
   },

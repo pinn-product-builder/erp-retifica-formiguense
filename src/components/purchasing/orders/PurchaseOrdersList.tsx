@@ -16,7 +16,7 @@ import {
   PaginationNext, PaginationPrevious,
 } from '@/components/ui/pagination';
 import {
-  Plus, Search, Filter, MoreHorizontal, Eye, Pencil, Send,
+  Search, Filter, MoreHorizontal, Eye, Pencil, Send,
   CheckCircle, XCircle, Loader2, ShoppingCart, Clock, Truck, Package,
   ThumbsUp,
 } from 'lucide-react';
@@ -39,7 +39,6 @@ interface PurchaseOrdersListProps {
   stats:       POStats | null;
   onFilters:   (f: POFilters) => void;
   onPage:      (p: number) => void;
-  onNew:       () => void;
   onView:      (order: PurchaseOrderRow) => void;
   onEdit:      (order: PurchaseOrderRow) => void;
   onApprove:   (id: string) => Promise<boolean>;
@@ -51,7 +50,7 @@ interface PurchaseOrdersListProps {
 
 export function PurchaseOrdersList({
   orders, count, totalPages, page, pageSize, isLoading,
-  filters, stats, onFilters, onPage, onNew,
+  filters, stats, onFilters, onPage,
   onView, onEdit, onApprove, onSendForApproval, onSend, onConfirm, onCancel,
 }: PurchaseOrdersListProps) {
   const [search,    setSearch]    = useState(filters.search ?? '');
@@ -97,10 +96,6 @@ export function PurchaseOrdersList({
           </h1>
           <p className="text-muted-foreground text-sm">Gerencie seus pedidos de compra</p>
         </div>
-        <Button onClick={onNew}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Pedido
-        </Button>
       </div>
 
       {/* Stats Cards */}

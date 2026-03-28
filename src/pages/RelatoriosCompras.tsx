@@ -271,47 +271,105 @@ export default function RelatoriosCompras() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="p-4 sm:p-6 pb-2">
-                <CardTitle className="text-sm sm:text-base">Top Fornecedores</CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-6 pt-0">
-                {isLoading ? (
-                  <Skeleton className="h-72" />
-                ) : (data?.topSuppliers ?? []).length === 0 ? (
-                  <div className="flex items-center justify-center h-72 text-sm text-muted-foreground">Sem dados</div>
-                ) : (
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={data!.topSuppliers}
-                          dataKey="total_value"
-                          nameKey="supplier_name"
-                          cx="50%"
-                          cy="45%"
-                          innerRadius={50}
-                          outerRadius={80}
-                          label={false}
-                        >
-                          {data!.topSuppliers.map((_, i) => (
-                            <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(v: number) => formatCurrency(v)}
-                          contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 12 }}
-                        />
-                        <Legend
-                          formatter={(value) => <span className="text-xs">{value}</span>}
-                          iconSize={10}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <div className="flex flex-col gap-4 min-w-0">
+              <Card>
+                <CardHeader className="p-4 sm:p-6 pb-2">
+                  <CardTitle className="text-sm sm:text-base">Top Fornecedores</CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 sm:p-6 pt-0">
+                  {isLoading ? (
+                    <Skeleton className="h-72" />
+                  ) : (data?.topSuppliers ?? []).length === 0 ? (
+                    <div className="flex items-center justify-center h-72 text-sm text-muted-foreground">Sem dados</div>
+                  ) : (
+                    <div className="h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={data!.topSuppliers}
+                            dataKey="total_value"
+                            nameKey="supplier_name"
+                            cx="50%"
+                            cy="45%"
+                            innerRadius={50}
+                            outerRadius={80}
+                            label={false}
+                          >
+                            {data!.topSuppliers.map((_, i) => (
+                              <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(v: number) => formatCurrency(v)}
+                            contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 12 }}
+                          />
+                          <Legend
+                            formatter={(value) => <span className="text-xs">{value}</span>}
+                            iconSize={10}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="p-4 sm:p-6 pb-2">
+                  <CardTitle className="text-sm sm:text-base">Gastos por Ciclo (Diesel / Otto)</CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 sm:p-6 pt-0">
+                  {isLoading ? (
+                    <Skeleton className="h-72" />
+                  ) : (() => {
+                    const cycleRows = (data?.cycleSpending ?? [])
+                      .map((c) => ({
+                        name: CYCLE_LABELS[c.cycle_type] ?? c.cycle_type,
+                        total_value: c.total_value,
+                      }))
+                      .filter((c) => c.total_value > 0);
+                    const cycleSum = cycleRows.reduce((s, c) => s + c.total_value, 0);
+                    if (cycleSum === 0) {
+                      return (
+                        <div className="flex items-center justify-center h-72 text-sm text-muted-foreground text-center px-2">
+                          Sem pedidos classificados por ciclo no período
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={cycleRows}
+                              dataKey="total_value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="45%"
+                              innerRadius={50}
+                              outerRadius={80}
+                              label={false}
+                            >
+                              {cycleRows.map((_, i) => (
+                                <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              formatter={(v: number) => formatCurrency(v)}
+                              contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 12 }}
+                            />
+                            <Legend
+                              formatter={(value) => <span className="text-xs">{value}</span>}
+                              iconSize={10}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </TabsContent>
 
@@ -791,3 +849,9 @@ export default function RelatoriosCompras() {
 }
 
 const PIE_COLORS = ['hsl(var(--primary))', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280'];
+
+const CYCLE_LABELS: Record<string, string> = {
+  diesel: 'Diesel',
+  otto: 'Otto (Gasolina/Álcool)',
+  outros: 'Outros',
+};

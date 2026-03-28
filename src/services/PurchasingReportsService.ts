@@ -33,10 +33,16 @@ export interface SupplierVolume {
   avg_lead_time_days: number | null;
 }
 
+export interface CycleSpending {
+  cycle_type: string;
+  total_value: number;
+}
+
 export interface PurchasingReportData {
   kpis: PurchasingKPIs;
   volumeByMonth: VolumeByMonth[];
   topSuppliers: SupplierVolume[];
+  cycleSpending: CycleSpending[];
 }
 
 export interface SupplierPerformance {
@@ -131,11 +137,31 @@ function getDateRange(filters: FiltrosRelatorio): { start: string; end: string }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabase as any;
 
+async function fetchCycleSpendingInternal(orgId: string, filters: FiltrosRelatorio): Promise<CycleSpending[]> {
+  const { start, end } = getDateRange(filters);
+  const { data } = await db
+    .from('purchase_orders')
+    .select('cycle_type, total_value')
+    .eq('org_id', orgId)
+    .gte('order_date', start)
+    .lte('order_date', end)
+    .not('status', 'in', '("cancelled","draft")');
+
+  const grouped = new Map<string, number>();
+  for (const row of (data ?? []) as Array<{ cycle_type: string | null; total_value: number | null }>) {
+    const key = row.cycle_type ?? 'outros';
+    grouped.set(key, (grouped.get(key) ?? 0) + (Number(row.total_value) || 0));
+  }
+  return Array.from(grouped.entries()).map(([cycle_type, total_value]) => ({ cycle_type, total_value }));
+}
+
 export const PurchasingReportsService = {
+  fetchCycleSpending: fetchCycleSpendingInternal,
+
   async fetchDashboardData(orgId: string, filters: FiltrosRelatorio): Promise<PurchasingReportData> {
     const { start, end } = getDateRange(filters);
 
-    const [ordersRes, volumeRes, suppliersRes, quotSavingsRes, returnsRes, receiptsRes] =
+    const [ordersRes, volumeRes, suppliersRes, quotSavingsRes, returnsRes, receiptsRes, cycleSpending] =
       await Promise.all([
         db
           .from('purchase_orders')
@@ -178,6 +204,8 @@ export const PurchasingReportsService = {
           .eq('org_id', orgId)
           .gte('receipt_date', start)
           .lte('receipt_date', end),
+
+        fetchCycleSpendingInternal(orgId, filters),
       ]);
 
     const orders: Array<{
@@ -245,6 +273,7 @@ export const PurchasingReportsService = {
       },
       volumeByMonth,
       topSuppliers,
+      cycleSpending,
     };
   },
 

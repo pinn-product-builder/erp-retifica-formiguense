@@ -6737,6 +6737,7 @@ export type Database = {
           confirmed_at: string | null
           created_at: string
           created_by: string | null
+          cycle_type: string | null
           delivery_address: string | null
           discount: number | null
           expected_delivery: string | null
@@ -6766,6 +6767,7 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
+          cycle_type?: string | null
           delivery_address?: string | null
           discount?: number | null
           expected_delivery?: string | null
@@ -6795,6 +6797,7 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
+          cycle_type?: string | null
           delivery_address?: string | null
           discount?: number | null
           expected_delivery?: string | null
@@ -7117,6 +7120,7 @@ export type Database = {
           quotation_number: string
           requested_by: string
           requested_date: string
+          sent_at: string | null
           status: string
           title: string | null
           updated_at: string
@@ -7135,6 +7139,7 @@ export type Database = {
           quotation_number: string
           requested_by: string
           requested_date?: string
+          sent_at?: string | null
           status?: string
           title?: string | null
           updated_at?: string
@@ -7153,6 +7158,7 @@ export type Database = {
           quotation_number?: string
           requested_by?: string
           requested_date?: string
+          sent_at?: string | null
           status?: string
           title?: string | null
           updated_at?: string

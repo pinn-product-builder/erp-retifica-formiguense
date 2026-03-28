@@ -1,24 +1,39 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuotations, useQuotationDetails } from '@/hooks/useQuotations';
 import { useQuotationComparison } from '@/hooks/useQuotationComparison';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { QuotationsList }          from './QuotationsList';
 import { QuotationForm }           from './QuotationForm';
 import { QuotationDetails }        from './QuotationDetails';
 import { ProposalComparisonView }  from './ProposalComparisonView';
 import { ReopenQuotationDialog }   from './ReopenQuotationDialog';
 import { CopyQuotationDialog }     from './CopyQuotationDialog';
-import type { Quotation } from '@/services/QuotationService';
+import { QuotationService, type Quotation } from '@/services/QuotationService';
+import PurchaseOrderForm from '@/components/purchasing/PurchaseOrderForm';
 
 export function QuotationsManager() {
   const navigate = useNavigate();
+  const { currentOrganization } = useOrganization();
+  const [avgLeadTimeDays, setAvgLeadTimeDays] = useState<number | null>(null);
   const {
     quotations, count, totalPages, currentPage, isLoading, filters,
     setFilters, handlePageChange, refresh,
     actions: { createQuotation, updateQuotation, updateStatus, deleteQuotation, reopenQuotation, copyQuotation },
   } = useQuotations();
 
-  const [formOpen,       setFormOpen]       = useState(false);
+  useEffect(() => {
+    if (!currentOrganization?.id) {
+      setAvgLeadTimeDays(null);
+      return;
+    }
+    QuotationService.fetchAvgLeadTimeDays(currentOrganization.id)
+      .then(setAvgLeadTimeDays)
+      .catch(() => setAvgLeadTimeDays(null));
+  }, [currentOrganization?.id, count]);
+
+  const [formOpen,              setFormOpen]              = useState(false);
+  const [newPurchaseOrderOpen,  setNewPurchaseOrderOpen]  = useState(false);
   const [editTarget,     setEditTarget]     = useState<Quotation | null>(null);
   const [viewTarget,     setViewTarget]     = useState<Quotation | null>(null);
   const [compareTarget,  setCompareTarget]  = useState<Quotation | null>(null);
@@ -41,7 +56,8 @@ export function QuotationsManager() {
 
   const { generatePurchaseOrders } = useQuotationComparison(viewTarget?.id ?? null);
 
-  const handleNew     = () => { setEditTarget(null); setFormOpen(true); };
+  const handleNew              = () => { setEditTarget(null); setFormOpen(true); };
+  const handleNewPurchaseOrder = () => setNewPurchaseOrderOpen(true);
   const handleEdit    = (q: Quotation) => { setEditTarget(q); setFormOpen(true); };
   const handleView    = (q: Quotation) => setViewTarget(q);
   const handleCompare = (q: Quotation) => setCompareTarget(q);
@@ -103,12 +119,14 @@ export function QuotationsManager() {
         onFilters={setFilters}
         onPageChange={handlePageChange}
         onNew={handleNew}
+        onNewPurchaseOrder={handleNewPurchaseOrder}
         onEdit={handleEdit}
         onView={handleView}
         onCompare={handleCompare}
         onDelete={deleteQuotation}
         onReopen={handleReopen}
         onCopy={handleCopy}
+        avgLeadTimeDays={avgLeadTimeDays}
       />
 
       <QuotationForm
@@ -116,6 +134,15 @@ export function QuotationsManager() {
         onOpenChange={setFormOpen}
         quotation={editTarget ?? undefined}
         onSubmit={handleFormSubmit}
+      />
+
+      <PurchaseOrderForm
+        open={newPurchaseOrderOpen}
+        onOpenChange={setNewPurchaseOrderOpen}
+        onSuccess={() => {
+          setNewPurchaseOrderOpen(false);
+          navigate('/pedidos-compra');
+        }}
       />
 
       {viewTarget && detailQuotation && (

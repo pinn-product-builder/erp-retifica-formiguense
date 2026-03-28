@@ -23,7 +23,7 @@ import {
 import {
   Plus, Search, Filter, MoreHorizontal, Eye, Pencil, Trash2,
   Loader2, FileText, Clock, CheckCircle, AlertTriangle, BarChart3,
-  Send, XCircle, RotateCcw, Copy,
+  Send, XCircle, RotateCcw, Copy, Timer, ShoppingCart,
 } from 'lucide-react';
 import {
   STATUS_LABELS, STATUS_COLORS, URGENCY_LABELS, URGENCY_COLORS,
@@ -40,20 +40,22 @@ interface QuotationsListProps {
   onFilters:    (f: QuotationFilters) => void;
   onPageChange: (p: number) => void;
   onNew:        () => void;
+  onNewPurchaseOrder: () => void;
   onEdit:       (q: Quotation) => void;
   onView:       (q: Quotation) => void;
   onCompare:    (q: Quotation) => void;
   onDelete:     (id: string) => Promise<boolean>;
   onReopen?:    (q: Quotation) => void;
   onCopy?:      (q: Quotation) => void;
+  avgLeadTimeDays?: number | null;
 }
 
 type TabValue = 'all' | 'waiting' | 'responded' | 'finished';
 
 export function QuotationsList({
   quotations, count, totalPages, currentPage, isLoading,
-  filters, onFilters, onPageChange, onNew, onEdit, onView, onCompare, onDelete,
-  onReopen, onCopy,
+  filters, onFilters, onPageChange, onNew, onNewPurchaseOrder, onEdit, onView, onCompare, onDelete,
+  onReopen, onCopy, avgLeadTimeDays,
 }: QuotationsListProps) {
   const [deleteId,  setDeleteId]  = useState<string | null>(null);
   const [search,    setSearch]    = useState(filters.search ?? '');
@@ -95,14 +97,23 @@ export function QuotationsList({
           </h1>
           <p className="text-muted-foreground text-sm">Gerencie suas cotações de compra</p>
         </div>
-        <Button onClick={onNew}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Cotação
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto min-w-0">
+          <Button variant="outline" onClick={onNewPurchaseOrder} className="w-full sm:w-auto shrink-0">
+            <ShoppingCart className="h-4 w-4 sm:mr-2 shrink-0" />
+            <span className="truncate sm:whitespace-normal">
+              <span className="sm:hidden">Novo pedido</span>
+              <span className="hidden sm:inline">Novo pedido de compra</span>
+            </span>
+          </Button>
+          <Button onClick={onNew} className="w-full sm:w-auto shrink-0">
+            <Plus className="h-4 w-4 sm:mr-2 shrink-0" />
+            Nova Cotação
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
@@ -143,6 +154,22 @@ export function QuotationsList({
               <div className="min-w-0">
                 <div className="text-2xl font-bold">{overdue}</div>
                 <p className="text-sm text-muted-foreground truncate">Vencidas</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="col-span-2 sm:col-span-1">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2">
+              <Timer className="h-5 w-5 text-amber-500 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-2xl font-bold">
+                  {avgLeadTimeDays != null ? `${avgLeadTimeDays.toFixed(1)}` : '—'}
+                </div>
+                <p className="text-sm text-muted-foreground truncate">Lead Time Médio</p>
+                {avgLeadTimeDays != null && (
+                  <p className="text-xs text-muted-foreground truncate">dias (após envio)</p>
+                )}
               </div>
             </div>
           </CardContent>

@@ -4,8 +4,6 @@ import { PurchaseOrderEditModal } from './PurchaseOrderEditModal';
 import { PurchaseOrderDetailsModal } from './PurchaseOrderDetailsModal';
 import { usePurchaseOrders, usePurchaseOrderDetails } from '@/hooks/usePurchaseOrders';
 import { PurchaseOrderRow } from '@/services/PurchaseOrderService';
-import PurchaseOrderForm from '@/components/purchasing/PurchaseOrderForm';
-
 export function PurchaseOrdersManager() {
   const {
     orders,
@@ -37,8 +35,6 @@ export function PurchaseOrdersManager() {
   const [editTarget,  setEditTarget]  = useState<PurchaseOrderRow | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [editOpen,    setEditOpen]    = useState(false);
-  const [newFormOpen, setNewFormOpen] = useState(false);
-
   const { order: detailOrder, isLoading: detailLoading, refresh: refreshDetail } = usePurchaseOrderDetails(viewId);
 
   const handleView = (order: PurchaseOrderRow) => {
@@ -81,7 +77,6 @@ export function PurchaseOrdersManager() {
         stats={stats}
         onFilters={setFilters}
         onPage={setPage}
-        onNew={() => setNewFormOpen(true)}
         onView={handleView}
         onEdit={handleEdit}
         onApprove={approve}
@@ -89,12 +84,6 @@ export function PurchaseOrdersManager() {
         onSend={send}
         onConfirm={confirm}
         onCancel={cancel}
-      />
-
-      <PurchaseOrderForm
-        open={newFormOpen}
-        onOpenChange={setNewFormOpen}
-        onSuccess={() => { setNewFormOpen(false); refresh(); }}
       />
 
       <PurchaseOrderDetailsModal

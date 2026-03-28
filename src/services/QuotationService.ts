@@ -68,6 +68,7 @@ export interface Quotation {
   delivery_address?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  sent_at?: string | null;
   // from view
   total_items?: number;
   total_proposals?: number;
@@ -691,5 +692,38 @@ export const QuotationService = {
   generateWhatsAppLink(phone: string, message: string): string {
     const clean = phone.replace(/\D/g, '');
     return `https://wa.me/${clean}?text=${encodeURIComponent(message)}`;
+  },
+
+  async fetchAvgLeadTimeDays(orgId: string): Promise<number | null> {
+    const { data, error } = await supabase
+      .from('purchase_quotations')
+      .select(`
+        sent_at,
+        purchase_quotation_items(
+          proposals:purchase_quotation_proposals(responded_at)
+        )
+      `)
+      .eq('org_id', orgId)
+      .not('status', 'eq', 'draft')
+      .not('sent_at', 'is', null);
+
+    if (error) throw error;
+
+    type ItemRow = { proposals?: Array<{ responded_at: string | null }> | null };
+    type QRow = { sent_at: string | null; purchase_quotation_items?: ItemRow[] | null };
+
+    const diffs: number[] = [];
+    for (const q of (data ?? []) as QRow[]) {
+      if (!q.sent_at) continue;
+      const sentMs = new Date(q.sent_at).getTime();
+      for (const item of q.purchase_quotation_items ?? []) {
+        for (const p of item.proposals ?? []) {
+          if (p.responded_at) {
+            diffs.push((new Date(p.responded_at).getTime() - sentMs) / 86_400_000);
+          }
+        }
+      }
+    }
+    return diffs.length > 0 ? diffs.reduce((a, b) => a + b, 0) / diffs.length : null;
   },
 };
