@@ -232,7 +232,7 @@ const financialItems = [
     icon: Repeat,
   },
   {
-    title: "Aging a receber",
+    title: "Vencimentos a receber",
     url: "/inadimplencia-aging",
     icon: AlertTriangle,
   },

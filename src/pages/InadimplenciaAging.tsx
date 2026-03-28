@@ -60,7 +60,7 @@ export default function InadimplenciaAging() {
     <FinancialPageShell>
       <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-xl font-bold sm:text-2xl md:text-3xl">Inadimplência e aging a receber</h1>
+          <h1 className="text-xl font-bold sm:text-2xl md:text-3xl">Vencimentos a receber</h1>
           <p className="text-sm sm:text-base text-muted-foreground">
             Posição em aberto por faixa de vencimento (data de referência configurável)
           </p>

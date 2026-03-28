@@ -319,7 +319,7 @@ export default function RelatoriosFinanceiros() {
         <Tabs value={tab} onValueChange={setTab} className="w-full">
           <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 overflow-x-auto p-1">
             <TabsTrigger value="aging" className="flex-shrink-0 text-xs sm:text-sm">
-              Aging AR
+              Vencimentos a receber
             </TabsTrigger>
             <TabsTrigger value="curve" className="flex-shrink-0 text-xs sm:text-sm">
               Curva vencimentos

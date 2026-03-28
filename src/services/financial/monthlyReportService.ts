@@ -61,7 +61,7 @@ export class MonthlyReportService {
       .join('\n');
 
     const rec: string[] = [];
-    if (ind.inadimplenciaPercent > 5) rec.push('Inadimplência acima de 5%: revisar cobrança e aging.');
+    if (ind.inadimplenciaPercent > 5) rec.push('Inadimplência acima de 5%: revisar cobrança e vencimentos a receber.');
     if (ind.giroCaixaDias != null && ind.giroCaixaDias < 10) rec.push('Giro de caixa baixo: revisar despesas e projeção.');
     if (!rec.length) rec.push('Indicadores dentro dos parâmetros observados.');
 
