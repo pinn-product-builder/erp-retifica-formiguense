@@ -122,7 +122,7 @@ export class AccountsReceivableService {
     filters: AccountsReceivableListFilters = {}
   ): Promise<{ open: number; overdue: number; received: number }> {
     await this.refreshOverdue(orgId);
-    let q = supabase.from('accounts_receivable').select('status, amount').eq('org_id', orgId);
+    let q = supabase.from('accounts_receivable').select('status, amount, due_date').eq('org_id', orgId);
     if (filters.customerId) q = q.eq('customer_id', filters.customerId);
     if (filters.paymentMethod) q = q.eq('payment_method', filters.paymentMethod);
     if (filters.orderId) q = q.eq('order_id', filters.orderId);
@@ -152,7 +152,10 @@ export class AccountsReceivableService {
       if (r.status === 'renegotiated') {
         continue;
       }
-      if (r.status === 'overdue' || (r.status === 'pending' && new Date(r.due_date as string) < today)) {
+      if (
+        r.status === 'overdue' ||
+        (r.status === 'pending' && new Date(r.due_date) < today)
+      ) {
         overdue += amt;
       } else if (r.status === 'pending' || r.status === 'renegotiated') {
         open += amt;
@@ -238,7 +241,7 @@ export class AccountsReceivableService {
     }
     const base = new Date(v.first_due_date);
     const per = Math.round((v.total_amount / v.installments) * 100) / 100;
-    let remainder = v.total_amount - per * (v.installments - 1);
+    const remainder = v.total_amount - per * (v.installments - 1);
     const src = v.source ?? null;
     const srcId = v.source_id ?? null;
     const rows: Database['public']['Tables']['accounts_receivable']['Insert'][] = [];
