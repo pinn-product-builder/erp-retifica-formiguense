@@ -694,13 +694,21 @@ export const QuotationService = {
     return `https://wa.me/${clean}?text=${encodeURIComponent(message)}`;
   },
 
+  /**
+   * Lead time médio (dias corridos, base 24h) = tempo entre o envio da cotação completa (`sent_at`)
+   * e a resposta registrada do fornecedor (`responded_at` na proposta).
+   * Só entram cotações com `sent_at` preenchido; propostas sem data de resposta ou sem preço
+   * unitário válido não entram no cálculo.
+   */
   async fetchAvgLeadTimeDays(orgId: string): Promise<number | null> {
+    const MS_PER_DAY = 86_400_000; // 24h
+
     const { data, error } = await supabase
       .from('purchase_quotations')
       .select(`
         sent_at,
         purchase_quotation_items(
-          proposals:purchase_quotation_proposals(responded_at)
+          proposals:purchase_quotation_proposals(responded_at, unit_price)
         )
       `)
       .eq('org_id', orgId)
@@ -709,7 +717,8 @@ export const QuotationService = {
 
     if (error) throw error;
 
-    type ItemRow = { proposals?: Array<{ responded_at: string | null }> | null };
+    type ProposalRow = { responded_at: string | null; unit_price: number | null };
+    type ItemRow = { proposals?: ProposalRow[] | null };
     type QRow = { sent_at: string | null; purchase_quotation_items?: ItemRow[] | null };
 
     const diffs: number[] = [];
@@ -718,9 +727,11 @@ export const QuotationService = {
       const sentMs = new Date(q.sent_at).getTime();
       for (const item of q.purchase_quotation_items ?? []) {
         for (const p of item.proposals ?? []) {
-          if (p.responded_at) {
-            diffs.push((new Date(p.responded_at).getTime() - sentMs) / 86_400_000);
-          }
+          if (!p.responded_at) continue;
+          if (p.unit_price == null || p.unit_price <= 0) continue;
+          const deltaMs = new Date(p.responded_at).getTime() - sentMs;
+          if (deltaMs < 0) continue;
+          diffs.push(deltaMs / MS_PER_DAY);
         }
       }
     }

@@ -3,8 +3,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Users, FileText, Package, Plus, Check, X, CalendarDays } from 'lucide-react';
+import {
+  ShoppingCart, Users, FileText, Package, Plus, Check, X, CalendarDays, Clock,
+} from 'lucide-react';
 import { usePurchasing } from '@/hooks/usePurchasing';
+import { useOrganization } from '@/hooks/useOrganization';
+import { QuotationService } from '@/services/QuotationService';
 import { usePurchaseNeeds } from '@/hooks/usePurchaseNeeds';
 import { usePurchaseReceipts } from '@/hooks/usePurchaseReceipts';
 import { useToast } from '@/hooks/use-toast';
@@ -66,14 +70,41 @@ export default function Compras() {
   const { toast } = useToast();
   const { fetchNeeds } = usePurchaseNeeds();
   const { fetchReceipts } = usePurchaseReceipts();
+  const { currentOrganization } = useOrganization();
 
   const [showRequisitionDialog, setShowRequisitionDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('requisitions');
+  const [avgLeadTimeDays, setAvgLeadTimeDays] = useState<number | null>(null);
+  const [leadTimeLoading, setLeadTimeLoading] = useState(true);
 
   // Carregar fornecedores ao montar o componente
   useEffect(() => {
     fetchSuppliers();
   }, [fetchSuppliers]);
+
+  useEffect(() => {
+    const orgId = currentOrganization?.id;
+    if (!orgId) {
+      setAvgLeadTimeDays(null);
+      setLeadTimeLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLeadTimeLoading(true);
+    void QuotationService.fetchAvgLeadTimeDays(orgId)
+      .then((v) => {
+        if (!cancelled) setAvgLeadTimeDays(v);
+      })
+      .catch(() => {
+        if (!cancelled) setAvgLeadTimeDays(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLeadTimeLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentOrganization?.id]);
 
   const getActiveSuppliersCount = () => {
     return suppliers.filter(supplier => supplier.is_active).length;
@@ -102,7 +133,7 @@ export default function Compras() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card>
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center space-x-2">
@@ -146,6 +177,23 @@ export default function Compras() {
               <div className="min-w-0 flex-1">
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">Valor em Pedidos</p>
                 <p className="text-xs sm:text-sm md:text-base font-bold truncate">{formatCurrency(getActiveOrdersValue())}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-start gap-2">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-500 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <p className="text-xs sm:text-sm text-muted-foreground leading-tight">Lead time médio (cotação)</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold tabular-nums">
+                  {leadTimeLoading ? '…' : avgLeadTimeDays != null ? `${avgLeadTimeDays.toFixed(1)} d` : '—'}
+                </p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-snug">
+                  A partir do envio completo (24h = 1 dia). Sem resposta ou preço, ignora.
+                </p>
               </div>
             </div>
           </CardContent>
