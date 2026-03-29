@@ -41,6 +41,11 @@ import { ArRenegotiationService } from '@/services/financial/arRenegotiationServ
 import type { ReceivableSettlementSnapshot } from '@/services/financial/receiptHistoryService';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  isISODateAfterOther,
+  isISODateBeforeToday,
+  todayISODateLocal,
+} from '@/lib/calendarDate';
 
 type ArRow = Database['public']['Tables']['accounts_receivable']['Row'];
 type CustomerRow = Database['public']['Tables']['customers']['Row'];
@@ -618,6 +623,21 @@ export default function ContasReceber() {
       },
     ];
 
+  const todayMin = todayISODateLocal();
+  const isCreatingAr = !selectedRow;
+  const arCreateDatesInvalid =
+    isCreatingAr &&
+    (isISODateBeforeToday(form.due_date) ||
+      (form.competence_date.trim() !== '' &&
+        (isISODateBeforeToday(form.competence_date) ||
+          isISODateAfterOther(form.competence_date, form.due_date))));
+  const installDatesInvalid =
+    !installForm.first_due_date.trim() ||
+    isISODateBeforeToday(installForm.first_due_date) ||
+    (installForm.competence_date.trim() !== '' &&
+      (isISODateBeforeToday(installForm.competence_date) ||
+        isISODateAfterOther(installForm.competence_date, installForm.first_due_date)));
+
   return (
     <FinancialPageShell>
       <div className="flex flex-col gap-4 sm:gap-6">
@@ -888,6 +908,7 @@ export default function ContasReceber() {
                 <Input
                   id="ar-due"
                   type="date"
+                  min={isCreatingAr ? todayMin : undefined}
                   value={form.due_date}
                   onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))}
                   required
@@ -898,6 +919,7 @@ export default function ContasReceber() {
                 <Input
                   id="ar-competence"
                   type="date"
+                  min={isCreatingAr ? todayMin : undefined}
                   value={form.competence_date}
                   onChange={(e) => setForm((f) => ({ ...f, competence_date: e.target.value }))}
                 />
@@ -960,7 +982,12 @@ export default function ContasReceber() {
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={!dialogCustomerOpt || !form.amount || !form.due_date}>
+              <Button
+                type="submit"
+                disabled={
+                  !dialogCustomerOpt || !form.amount || !form.due_date || arCreateDatesInvalid
+                }
+              >
                 Salvar
               </Button>
             </DialogFooter>
@@ -1023,6 +1050,7 @@ export default function ContasReceber() {
                 <Input
                   id="inst-first"
                   type="date"
+                  min={todayMin}
                   value={installForm.first_due_date}
                   onChange={(e) => setInstallForm((f) => ({ ...f, first_due_date: e.target.value }))}
                   required
@@ -1033,6 +1061,7 @@ export default function ContasReceber() {
                 <Input
                   id="inst-comp"
                   type="date"
+                  min={todayMin}
                   value={installForm.competence_date}
                   onChange={(e) => setInstallForm((f) => ({ ...f, competence_date: e.target.value }))}
                 />
@@ -1042,7 +1071,9 @@ export default function ContasReceber() {
               <Button type="button" variant="outline" onClick={() => setInstallDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit">Gerar parcelas</Button>
+              <Button type="submit" disabled={installDatesInvalid}>
+                Gerar parcelas
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

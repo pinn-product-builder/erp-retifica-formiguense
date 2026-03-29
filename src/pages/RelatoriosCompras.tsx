@@ -261,7 +261,7 @@ export default function RelatoriosCompras() {
                         <YAxis className="text-xs" tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} width={52} />
                         <Tooltip
                           formatter={(v: number) => [formatCurrency(v), 'Valor']}
-                          contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 12 }}
+                          {...PURCHASES_CHART_TOOLTIP}
                         />
                         <Bar dataKey="total_value" name="Valor Total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                       </BarChart>
@@ -299,13 +299,13 @@ export default function RelatoriosCompras() {
                               <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip
-                            formatter={(v: number) => formatCurrency(v)}
-                            contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 12 }}
-                          />
+                          <Tooltip formatter={(v: number) => formatCurrency(v)} {...PURCHASES_CHART_TOOLTIP} />
                           <Legend
-                            formatter={(value) => <span className="text-xs">{value}</span>}
+                            formatter={(value) => (
+                              <span className="text-xs text-foreground">{value}</span>
+                            )}
                             iconSize={10}
+                            wrapperStyle={PURCHASES_PIE_LEGEND_STYLE}
                           />
                         </PieChart>
                       </ResponsiveContainer>
@@ -354,13 +354,13 @@ export default function RelatoriosCompras() {
                                 <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                               ))}
                             </Pie>
-                            <Tooltip
-                              formatter={(v: number) => formatCurrency(v)}
-                              contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 12 }}
-                            />
+                            <Tooltip formatter={(v: number) => formatCurrency(v)} {...PURCHASES_CHART_TOOLTIP} />
                             <Legend
-                              formatter={(value) => <span className="text-xs">{value}</span>}
+                              formatter={(value) => (
+                                <span className="text-xs text-foreground">{value}</span>
+                              )}
                               iconSize={10}
+                              wrapperStyle={PURCHASES_PIE_LEGEND_STYLE}
                             />
                           </PieChart>
                         </ResponsiveContainer>
@@ -849,6 +849,21 @@ export default function RelatoriosCompras() {
 }
 
 const PIE_COLORS = ['hsl(var(--primary))', '#10b981', '#f59e0b', '#8b5cf6', '#6b7280'];
+
+/** Recharts Tooltip não herda cor do tema; sem isso o texto fica ilegível no dark mode. */
+const PURCHASES_CHART_TOOLTIP = {
+  contentStyle: {
+    background: 'hsl(var(--card))',
+    border: '1px solid hsl(var(--border))',
+    fontSize: 12,
+    color: 'hsl(var(--foreground))',
+    borderRadius: 8,
+  },
+  labelStyle: { color: 'hsl(var(--foreground))' },
+  itemStyle: { color: 'hsl(var(--foreground))' },
+} as const;
+
+const PURCHASES_PIE_LEGEND_STYLE = { color: 'hsl(var(--foreground))' } as const;
 
 const CYCLE_LABELS: Record<string, string> = {
   diesel: 'Diesel',

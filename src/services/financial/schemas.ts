@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parseISODateLocal } from '@/lib/calendarDate';
 
 const paymentMethodSchema = z.enum([
   'cash',
@@ -36,15 +37,24 @@ export const accountsReceivableCreateSchema = z
     source_id: z.string().uuid().optional().nullable(),
   })
   .superRefine((data, ctx) => {
-    const due = new Date(data.due_date);
-    const comp = new Date(data.competence_date);
+    const due = parseISODateLocal(data.due_date);
+    const comp = parseISODateLocal(data.competence_date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    due.setHours(0, 0, 0, 0);
+    comp.setHours(0, 0, 0, 0);
     if (due < today) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Vencimento não pode ser anterior à data atual',
         path: ['due_date'],
+      });
+    }
+    if (comp < today) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Competência não pode ser anterior à data atual',
+        path: ['competence_date'],
       });
     }
     if (comp > due) {
@@ -72,15 +82,24 @@ export const accountsReceivableInstallmentsSchema = z
     cost_center_id: z.string().uuid().optional().nullable(),
   })
   .superRefine((data, ctx) => {
-    const due = new Date(data.first_due_date);
-    const comp = new Date(data.competence_date);
+    const due = parseISODateLocal(data.first_due_date);
+    const comp = parseISODateLocal(data.competence_date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    due.setHours(0, 0, 0, 0);
+    comp.setHours(0, 0, 0, 0);
     if (due < today) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: '1º vencimento não pode ser anterior à data atual',
         path: ['first_due_date'],
+      });
+    }
+    if (comp < today) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Competência não pode ser anterior à data atual',
+        path: ['competence_date'],
       });
     }
     if (comp > due) {
@@ -121,14 +140,35 @@ export const accountsPayableCreateSchema = z
     invoice_file_url: z.string().optional().nullable(),
   })
   .superRefine((data, ctx) => {
-    const comp = data.competence_date ? new Date(data.competence_date) : null;
-    const due = new Date(data.due_date);
-    if (comp && comp > due) {
+    const due = parseISODateLocal(data.due_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    due.setHours(0, 0, 0, 0);
+    if (due < today) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Competência não pode ser posterior ao vencimento',
-        path: ['competence_date'],
+        message: 'Vencimento não pode ser anterior à data atual',
+        path: ['due_date'],
       });
+    }
+    const compStr = data.competence_date?.trim();
+    if (compStr) {
+      const comp = parseISODateLocal(compStr);
+      comp.setHours(0, 0, 0, 0);
+      if (comp < today) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Competência não pode ser anterior à data atual',
+          path: ['competence_date'],
+        });
+      }
+      if (comp > due) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Competência não pode ser posterior ao vencimento',
+          path: ['competence_date'],
+        });
+      }
     }
   });
 

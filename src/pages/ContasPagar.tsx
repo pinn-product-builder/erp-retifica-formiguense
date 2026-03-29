@@ -28,6 +28,11 @@ import { formatBRL, formatDateBR, paymentMethodLabel } from '@/lib/financialForm
 import { FinancialConfigService } from '@/services/financial/financialConfigService';
 import { cn } from '@/lib/utils';
 import { getDueAlertCalendarDates } from '@/lib/dueAlertDates';
+import {
+  isISODateAfterOther,
+  isISODateBeforeToday,
+  todayISODateLocal,
+} from '@/lib/calendarDate';
 import type { ResponsiveTableColumn } from '@/components/ui/responsive-table';
 
 const ITEMS_PER_PAGE = 10;
@@ -481,6 +486,15 @@ export default function ContasPagar() {
     },
   ];
 
+  const todayMin = todayISODateLocal();
+  const apCreateDatesInvalid =
+    !editingPayable &&
+    (!formData.due_date ||
+      isISODateBeforeToday(String(formData.due_date)) ||
+      (String(formData.competence_date ?? '').trim() !== '' &&
+        (isISODateBeforeToday(String(formData.competence_date)) ||
+          isISODateAfterOther(String(formData.competence_date), String(formData.due_date)))));
+
   return (
     <div className="space-y-4 p-3 sm:space-y-6 sm:p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -564,6 +578,7 @@ export default function ContasPagar() {
                   <Input
                     id="ap-due"
                     type="date"
+                    min={!editingPayable ? todayMin : undefined}
                     value={formData.due_date}
                     onChange={(e) => setFormData((prev) => ({ ...prev, due_date: e.target.value }))}
                     required
@@ -574,6 +589,7 @@ export default function ContasPagar() {
                   <Input
                     id="ap-comp"
                     type="date"
+                    min={!editingPayable ? todayMin : undefined}
                     value={(formData.competence_date as string) || ''}
                     onChange={(e) => setFormData((prev) => ({ ...prev, competence_date: e.target.value }))}
                   />
@@ -687,7 +703,7 @@ export default function ContasPagar() {
                 <Button type="button" variant="outline" onClick={() => handleModalChange(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={loading || apCreateDatesInvalid}>
                   {loading ? 'Salvando...' : 'Salvar'}
                 </Button>
               </div>
