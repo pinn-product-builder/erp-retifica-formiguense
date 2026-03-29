@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  ShoppingCart, Users, FileText, Package, Plus, Check, X, CalendarDays, Clock,
+  ShoppingCart, Users, FileText, Package, Plus, Check, X, CalendarDays, Clock, Info,
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePurchasing } from '@/hooks/usePurchasing';
 import { useOrganization } from '@/hooks/useOrganization';
 import { QuotationService } from '@/services/QuotationService';
@@ -187,12 +188,37 @@ export default function Compras() {
             <div className="flex items-start gap-2">
               <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-500 flex-shrink-0 mt-0.5" />
               <div className="min-w-0 flex-1 space-y-0.5">
-                <p className="text-xs sm:text-sm text-muted-foreground leading-tight">Lead time médio (cotação)</p>
+                <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground leading-tight">
+                  <span className="truncate">Lead time médio (cotação)</span>
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex rounded-sm text-muted-foreground/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          aria-label="Como este indicador é calculado"
+                        >
+                          <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        sideOffset={6}
+                        className="max-w-[min(20rem,calc(100vw-2rem))] p-3 text-xs leading-relaxed text-popover-foreground"
+                      >
+                        <p className="font-medium text-foreground mb-1.5">Lead time médio (cotação)</p>
+                        <p className="text-muted-foreground">
+                          Considera apenas o período após o <strong className="text-foreground">envio completo</strong> da
+                          cotação (data registrada ao enviar). A unidade é <strong className="text-foreground">dias</strong>{' '}
+                          (base 24h). Entram só propostas com resposta datada e preço unitário válido; demais são ignoradas
+                          no cálculo da média.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <p className="text-lg sm:text-xl md:text-2xl font-bold tabular-nums">
                   {leadTimeLoading ? '…' : avgLeadTimeDays != null ? `${avgLeadTimeDays.toFixed(1)} d` : '—'}
-                </p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground leading-snug">
-                  A partir do envio completo (24h = 1 dia). Sem resposta ou preço, ignora.
                 </p>
               </div>
             </div>
