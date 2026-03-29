@@ -205,6 +205,18 @@ class StockAccountingService {
     if (error) throw error;
   }
 
+  /** Lançamentos contábeis vinculados à movimentação de estoque (ex.: saída por aplicação na OS). */
+  async listEntriesByMovementId(orgId: string, movementId: string): Promise<AccountingEntry[]> {
+    const { data, error } = await supabase
+      .from('stock_accounting_entries' as never)
+      .select('*')
+      .eq('org_id', orgId)
+      .eq('movement_id', movementId);
+
+    if (error) throw error;
+    return (data ?? []) as AccountingEntry[];
+  }
+
   async listProvisions(
     orgId: string,
     page = 1,

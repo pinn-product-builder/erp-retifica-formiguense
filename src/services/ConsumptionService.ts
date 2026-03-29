@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { stockAccountingService } from '@/services/StockAccountingService';
 
 export interface DirectConsumptionInput {
   orgId:        string;
@@ -176,6 +177,23 @@ export const ConsumptionService = {
       throw new Error('Quantidade de estorno inválida');
     }
 
+    let reversalQuery = db()
+      .from('inventory_movements')
+      .select('id, metadata')
+      .eq('org_id', input.orgId)
+      .eq('movement_type', 'entrada');
+    if (mv.order_id) {
+      reversalQuery = reversalQuery.eq('order_id', mv.order_id);
+    }
+    const { data: existingReversal } = await reversalQuery;
+    const alreadyReversed = (existingReversal ?? []).some((row: { metadata?: { action_type?: string; original_movement_id?: string } | null }) =>
+      row.metadata?.action_type === 'consumption_reversal' &&
+      row.metadata?.original_movement_id === mv.id
+    );
+    if (alreadyReversed) {
+      throw new Error('Estorno já realizado para esta peça');
+    }
+
     const { data: stock, error: stockErr } = await db()
       .from('parts_inventory')
       .select('quantity')
@@ -208,5 +226,52 @@ export const ConsumptionService = {
         },
       });
     if (mvErr) throw mvErr;
+
+    const accountingEntries = await stockAccountingService.listEntriesByMovementId(input.orgId, mv.id);
+    for (const entry of accountingEntries) {
+      if (entry.status === 'posted' || entry.status === 'draft') {
+        await stockAccountingService.reverseEntry(entry.id, input.reversedBy);
+      }
+    }
+
+    const isFullReversal = qtyToReverse >= qtyOriginal;
+
+    const { data: reservationRow } = await db()
+      .from('parts_reservations')
+      .select('id')
+      .eq('id', input.movementId)
+      .eq('org_id', input.orgId)
+      .maybeSingle();
+
+    if (reservationRow && isFullReversal) {
+      const { error: resErr } = await db()
+        .from('parts_reservations')
+        .update({
+          reservation_status: 'reserved',
+          quantity_separated: null,
+          quantity_applied: 0,
+          separated_at: null,
+          separated_by: null,
+          applied_at: null,
+          applied_by: null,
+        })
+        .eq('id', input.movementId);
+      if (resErr) throw resErr;
+    } else if (!reservationRow) {
+      const { data: materialRow } = await db()
+        .from('order_materials')
+        .select('id')
+        .eq('id', input.movementId)
+        .eq('org_id', input.orgId)
+        .maybeSingle();
+
+      if (materialRow && isFullReversal) {
+        const { error: delErr } = await db()
+          .from('order_materials')
+          .delete()
+          .eq('id', input.movementId);
+        if (delErr) throw delErr;
+      }
+    }
   },
 };

@@ -8,13 +8,13 @@ import { translateStatus, ORDER_STATUS, WORKFLOW_STATUS, DIAGNOSTIC_STATUS, BUDG
 export interface TimelineEvent {
   id: string;
   timestamp: string;
-  event_type: 'order_status' | 'workflow_status' | 'diagnostic' | 'budget' | 'reservation' | 'material' | 'report' | 'warranty';
+  event_type: 'order_status' | 'workflow_status' | 'diagnostic' | 'budget' | 'reservation' | 'material' | 'report' | 'warranty' | 'consumption_reversal';
   title: string;
   description?: string;
   details?: Record<string, unknown>;
   user_id?: string;
   user_name?: string;
-  icon_type: 'status' | 'workflow' | 'diagnostic' | 'budget' | 'package' | 'file' | 'shield';
+  icon_type: 'status' | 'workflow' | 'diagnostic' | 'budget' | 'package' | 'file' | 'shield' | 'reversal';
   color: string;
 }
 
@@ -455,7 +455,81 @@ export function useOrderTimeline(orderId: string, enabled: boolean = true) {
         }
       }
 
-      // 7. Garantias
+      // 7. Estornos de consumo de peças (movimentação de entrada + estorno contábil na OS)
+      const { data: reversalMovements } = await supabase
+        .from('inventory_movements')
+        .select(`
+          id,
+          created_at,
+          created_by,
+          reason,
+          quantity,
+          metadata,
+          parts_inventory ( part_code, part_name )
+        `)
+        .eq('order_id', targetOrderId)
+        .eq('movement_type', 'entrada')
+        .order('created_at', { ascending: false });
+
+      // original_movement_id no metadata = id da saída em inventory_movements; o texto legível é o campo `reason` dessa linha.
+      type ReversalRow = {
+        id: string;
+        created_at: string;
+        created_by: string | null;
+        reason: string;
+        quantity: number;
+        metadata: { action_type?: string; original_movement_id?: string } | null;
+        parts_inventory: { part_code: string | null; part_name: string } | null;
+      };
+      const reversalRows = (reversalMovements ?? []).filter((row: ReversalRow) => {
+        return row.metadata?.action_type === 'consumption_reversal';
+      }) as ReversalRow[];
+
+      const origIds = [
+        ...new Set(
+          reversalRows
+            .map((r) => r.metadata?.original_movement_id)
+            .filter((id): id is string => Boolean(id))
+        ),
+      ];
+
+      let origReasonById: Record<string, string> = {};
+      if (origIds.length > 0) {
+        const { data: origMovements } = await supabase
+          .from('inventory_movements')
+          .select('id, reason')
+          .in('id', origIds);
+        origReasonById = (origMovements ?? []).reduce<Record<string, string>>((acc, m) => {
+          acc[m.id] = m.reason ?? '';
+          return acc;
+        }, {});
+      }
+
+      reversalRows.forEach((row) => {
+        const meta = row.metadata;
+        if (!meta?.original_movement_id) return;
+        const partName = row.parts_inventory?.part_name ?? 'Peça';
+        const partCode = row.parts_inventory?.part_code ?? '';
+        const saidaOriginalText =
+          origReasonById[meta.original_movement_id] ||
+          '(Descrição da saída original indisponível)';
+        allEvents.push({
+          id: `consumption-reversal-${row.id}`,
+          timestamp: row.created_at,
+          event_type: 'consumption_reversal',
+          title: `Estorno de consumo: ${partName}`,
+          description: `${row.reason}${partCode ? ` — Código: ${partCode}` : ''}`,
+          details: {
+            quantidade_estornada: row.quantity,
+            saida_original: saidaOriginalText,
+          },
+          user_id: row.created_by || undefined,
+          icon_type: 'reversal',
+          color: 'bg-rose-600',
+        });
+      });
+
+      // 8. Garantias
       const { data: warranties } = await supabase
         .from('order_warranties')
         .select('*')

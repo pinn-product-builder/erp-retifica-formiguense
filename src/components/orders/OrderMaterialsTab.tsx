@@ -56,7 +56,7 @@ export function OrderMaterialsTab({ orderId }: OrderMaterialsTabProps) {
         reversedBy: user?.id ?? '',
         reason:     reversalReason,
       });
-      toast.success('Estorno registrado com sucesso');
+      toast.success('Estorno concluído: estoque e contabilidade ajustados; a peça voltou ao status inicial na OS.');
       setReversalTarget(null);
       setReversalReason('');
       fetchMaterials();
@@ -312,7 +312,7 @@ export function OrderMaterialsTab({ orderId }: OrderMaterialsTabProps) {
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Ao confirmar, a peça retornará ao estoque e o custo da OS será ajustado.
+              Ao confirmar, o estoque é devolvido, os lançamentos contábeis vinculados à saída são estornados (se existirem), o registro na OS volta ao status inicial (reservado ou removido no consumo direto) e o evento aparece na Linha do Tempo. Não é possível estornar de novo o mesmo consumo.
             </p>
             <div className="space-y-1.5">
               <Label className="text-sm">Justificativa <span className="text-destructive">*</span></Label>

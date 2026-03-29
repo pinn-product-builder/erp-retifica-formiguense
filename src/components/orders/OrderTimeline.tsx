@@ -1,7 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Clock, User, FileText, Package, Shield, FileCheck, GitBranch, Activity, CheckCircle } from 'lucide-react';
+import { Clock, User, FileText, Package, Shield, FileCheck, GitBranch, Activity, CheckCircle, RotateCcw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,6 +20,7 @@ const ICON_MAP = {
   package: Package,
   file: FileText,
   shield: Shield,
+  reversal: RotateCcw,
 };
 
 const STATUS_COLORS = {
@@ -50,7 +51,8 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   'reservation': 'Reserva de Peça',
   'material': 'Material',
   'report': 'Relatório Técnico',
-  'warranty': 'Garantia'
+  'warranty': 'Garantia',
+  'consumption_reversal': 'Estorno de consumo',
 };
 
 export function OrderTimeline({ orderId, enabled = true }: OrderTimelineProps) {
@@ -91,7 +93,7 @@ export function OrderTimeline({ orderId, enabled = true }: OrderTimelineProps) {
         <div className="space-y-6">
           {events.map((event, index) => {
             const isFirst = index === 0;
-            const EventIcon = ICON_MAP[event.icon_type] || Activity;
+            const EventIcon = ICON_MAP[event.icon_type as keyof typeof ICON_MAP] || Activity;
             
             return (
               <div key={event.id} className="flex items-start gap-4">
@@ -143,6 +145,8 @@ export function OrderTimeline({ orderId, enabled = true }: OrderTimelineProps) {
                             'approved_amount': 'Valor Aprovado',
                             'part_code': 'Código da Peça',
                             'quantity': 'Quantidade',
+                            'quantidade_estornada': 'Quantidade devolvida ao estoque',
+                            'saida_original': 'Saída que foi estornada',
                             'report_type': 'Tipo de Relatório',
                             'conformity_status': 'Status de Conformidade',
                             'warranty_type': 'Tipo de Garantia',
