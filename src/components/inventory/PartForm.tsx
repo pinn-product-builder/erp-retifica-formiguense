@@ -308,10 +308,16 @@ export const PartForm: React.FC<PartFormProps> = ({ part, onSuccess, onClone }) 
           <Input
             id="ncm"
             value={formData.ncm}
-            onChange={(e) => setFormData({ ...formData, ncm: e.target.value })}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                ncm: e.target.value.replace(/\D/g, '').slice(0, 8),
+              })
+            }
             placeholder="8 dígitos"
             inputMode="numeric"
-            maxLength={14}
+            maxLength={8}
+            autoComplete="off"
           />
           {errors.ncm && <p className="text-xs text-red-500 mt-1">{errors.ncm}</p>}
         </div>
