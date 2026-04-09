@@ -55,15 +55,23 @@ export function useAlertsDashboard() {
 
       if (stockError) throw stockError;
 
-      // 2. Alertas de Orçamento
-      const { data: budgetAlerts, error: budgetError } = await supabase
+      // 2. Alertas de Orçamento (escopo da org via orçamento — alinhado ao RLS)
+      const { data: budgetRows, error: budgetError } = await supabase
         .from('budget_alerts')
-        .select('*')
+        .select('*, detailed_budgets!inner(org_id)')
+        .eq('detailed_budgets.org_id', currentOrganization.id)
         .eq('is_active', true)
         .is('dismissed_at', null)
         .order('created_at', { ascending: false });
 
       if (budgetError) throw budgetError;
+
+      const budgetAlerts: BudgetAlert[] = (budgetRows ?? []).map((row) => {
+        const { detailed_budgets: _o, ...rest } = row as BudgetAlert & {
+          detailed_budgets: { org_id: string };
+        };
+        return rest;
+      });
 
       // 3. Necessidades de Compra
       const { data: purchaseNeeds, error: purchaseError } = await supabase
