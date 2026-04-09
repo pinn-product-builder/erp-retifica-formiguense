@@ -13,7 +13,7 @@ export type ArDueAlertWithDetails = AlertRow & {
     amount: number;
     due_date: string;
     status: string | null;
-    customers: { name: string; trade_name: string | null } | null;
+    customers: { name: string; workshop_name: string | null } | null;
   } | null;
 };
 
@@ -76,7 +76,7 @@ export class ArDueAlertService {
           amount,
           due_date,
           status,
-          customers ( name, trade_name )
+          customers ( name, workshop_name )
         )
       `
       )

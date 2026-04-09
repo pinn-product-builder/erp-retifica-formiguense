@@ -20,7 +20,7 @@ type ArDueAlertsCardProps = {
 function customerLabel(row: ArDueAlertWithDetails): string {
   const c = row.accounts_receivable?.customers;
   if (!c) return '—';
-  return c.trade_name?.trim() || c.name || '—';
+  return c.workshop_name?.trim() || c.name || '—';
 }
 
 export function ArDueAlertsCard({ items, loading, onMarkRead, onNegotiate }: ArDueAlertsCardProps) {

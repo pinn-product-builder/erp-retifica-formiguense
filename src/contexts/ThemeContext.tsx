@@ -46,7 +46,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           .select('*')
           .eq('org_id', currentOrganization.id)
           .eq('is_active', true)
-          .single();
+          .order('updated_at', { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
 
         if (themeError) throw themeError;
 

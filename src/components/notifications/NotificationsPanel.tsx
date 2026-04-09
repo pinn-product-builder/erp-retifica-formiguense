@@ -87,7 +87,7 @@ export function NotificationsPanel() {
   const arDueCustomerLabel = (row: (typeof arDueItems)[0]) => {
     const c = row.accounts_receivable?.customers;
     if (!c) return '—';
-    return c.trade_name?.trim() || c.name || '—';
+    return c.workshop_name?.trim() || c.name || '—';
   };
 
   const handleArDueNegotiate = async (alertId: string) => {

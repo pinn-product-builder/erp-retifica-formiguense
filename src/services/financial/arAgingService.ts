@@ -34,7 +34,7 @@ export class ArAgingService {
         amount,
         due_date,
         customer_id,
-        customers ( name, trade_name )
+        customers ( name, workshop_name )
       `
       )
       .eq('org_id', orgId)
@@ -48,10 +48,10 @@ export class ArAgingService {
         amount: number;
         due_date: string;
         customer_id: string;
-        customers: { name?: string; trade_name?: string } | null;
+        customers: { name?: string; workshop_name?: string | null } | null;
       };
       const cust = r.customers;
-      const customerName = (cust?.trade_name || cust?.name || 'Cliente').trim();
+      const customerName = (cust?.workshop_name || cust?.name || 'Cliente').trim();
       out.push({
         receivable_id: r.id,
         customer_id: r.customer_id,
