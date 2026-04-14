@@ -1,8 +1,10 @@
--- =============================================================================
--- 2) Função auxiliar inline: escopo por org_id obrigatório
--- =============================================================================
+-- RLS apenas (parte 2/2): CREATE das políticas que substituem os WARN do advisor
+-- (rls_policy_always_true), com escopo is_super_admin() / is_org_member(org_id) ou EXISTS
+-- (orders, bank_reconciliations, bank_statement_imports) onde não há org_id na linha.
+-- Doc: https://supabase.com/docs/guides/database/database-linter?lint=0024_permissive_rls_policy
+-- Depende de: 20260409120000_rls_drop_legacy_permissive_policies.sql
 
--- Tabelas com org_id NOT NULL (padrão ERP)
+-- org_id direto na tabela
 CREATE POLICY "org_member_all_accounts_payable_approval_events"
   ON public.accounts_payable_approval_events FOR ALL TO authenticated
   USING (public.is_super_admin() OR public.is_org_member(org_id))
@@ -151,10 +153,7 @@ CREATE POLICY "org_member_all_receipt_history"
   USING (public.is_super_admin() OR public.is_org_member(org_id))
   WITH CHECK (public.is_super_admin() OR public.is_org_member(org_id));
 
--- =============================================================================
--- 3) org_id opcional: catálogo compartilhado (NULL) + linhas por org
--- =============================================================================
-
+-- org_id opcional (NULL = catálogo compartilhado)
 CREATE POLICY "org_member_all_consultants"
   ON public.consultants FOR ALL TO authenticated
   USING (
@@ -194,10 +193,7 @@ CREATE POLICY "org_member_all_cash_flow_projection"
     OR (org_id IS NULL)
   );
 
--- =============================================================================
--- 4) Sem org_id na tabela: escopo via orders.org_id
--- =============================================================================
-
+-- Sem org_id na tabela: via orders.org_id
 CREATE POLICY "org_member_all_order_workflow"
   ON public.order_workflow FOR ALL TO authenticated
   USING (

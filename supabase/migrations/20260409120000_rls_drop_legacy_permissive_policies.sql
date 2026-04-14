@@ -1,12 +1,12 @@
--- Substitui políticas RLS permissivas (USING true / ALL) por escopo de organização.
--- Padrão: is_super_admin() OU is_org_member(org_id) — alinhado ao app (troca de org no cliente).
--- Tabelas sem org_id usam EXISTS em public.orders pela FK (order_workflow.order_id, time_logs.order_id).
--- Linhas com org_id NULL em catálogos (payment_methods, consultants, cash_flow_projection) permanecem
--- visíveis a authenticated como no padrão org_id IS NULL do financeiro.
-
--- =============================================================================
--- 1) Remover políticas antigas (nomes exatos do linter / histórico)
--- =============================================================================
+-- RLS apenas (parte 1/2): DROP das políticas apontadas pelo Supabase Database Advisor
+-- (get_advisors type security), lint rls_policy_always_true (USING/WITH CHECK sempre true).
+-- Doc: https://supabase.com/docs/guides/database/database-linter?lint=0024_permissive_rls_policy
+-- Tabelas cobertas nesta rodada: accounts_payable_approval_events, ap_*, approval_tiers_ap,
+-- ar_*, bank_*, card_machine_configs, cash_closings, cash_flow_projection, consultants,
+-- cost_centers, customers, fin_accounting_entries, financial_notifications,
+-- monthly_financial_reports, order_workflow, orders, partner_withdrawals, payment_methods,
+-- receipt_history, time_logs.
+-- Próximo arquivo: 20260409120100_rls_create_org_member_policies.sql
 
 -- accounts_payable_approval_events
 DROP POLICY IF EXISTS "accounts_payable_approval_events_authenticated" ON public.accounts_payable_approval_events;
@@ -46,11 +46,11 @@ DROP POLICY IF EXISTS "card_machine_configs_authenticated" ON public.card_machin
 -- cash_closings
 DROP POLICY IF EXISTS "cash_closings_authenticated" ON public.cash_closings;
 
--- cash_flow_projection (SELECT + ALL de 20250819012429)
+-- cash_flow_projection
 DROP POLICY IF EXISTS "Authenticated users can manage cash flow projection" ON public.cash_flow_projection;
 DROP POLICY IF EXISTS "Authenticated users can view cash flow projection" ON public.cash_flow_projection;
 
--- consultants (development + 20250819012429 + 20250819193350)
+-- consultants
 DROP POLICY IF EXISTS "Allow all operations on consultants for development" ON public.consultants;
 DROP POLICY IF EXISTS "Enable all access for development" ON public.consultants;
 DROP POLICY IF EXISTS "Users can manage consultants" ON public.consultants;
@@ -61,7 +61,7 @@ DROP POLICY IF EXISTS "Users can manage consultants for their organization" ON p
 -- cost_centers
 DROP POLICY IF EXISTS "cost_centers_authenticated" ON public.cost_centers;
 
--- customers (development + migrações 20250819 e 20250819145850)
+-- customers (dev, migrações antigas, políticas por org no remoto)
 DROP POLICY IF EXISTS "Allow customers access for development" ON public.customers;
 DROP POLICY IF EXISTS "Enable all access for development" ON public.customers;
 DROP POLICY IF EXISTS "Users can manage own customers" ON public.customers;
@@ -73,6 +73,10 @@ DROP POLICY IF EXISTS "Users can view their own customers or admins can view all
 DROP POLICY IF EXISTS "Users can create customers" ON public.customers;
 DROP POLICY IF EXISTS "Users can update their own customers or admins can update all" ON public.customers;
 DROP POLICY IF EXISTS "Admins can delete customers" ON public.customers;
+DROP POLICY IF EXISTS "Users can view customers from their organization" ON public.customers;
+DROP POLICY IF EXISTS "Users can create customers for their organization" ON public.customers;
+DROP POLICY IF EXISTS "Users can update customers from their organization" ON public.customers;
+DROP POLICY IF EXISTS "Organization admins can delete customers" ON public.customers;
 
 -- fin_accounting_entries
 DROP POLICY IF EXISTS "fin_accounting_entries_authenticated" ON public.fin_accounting_entries;
@@ -83,11 +87,11 @@ DROP POLICY IF EXISTS "financial_notifications_authenticated" ON public.financia
 -- monthly_financial_reports
 DROP POLICY IF EXISTS "monthly_financial_reports_authenticated" ON public.monthly_financial_reports;
 
--- order_workflow (duas políticas)
+-- order_workflow
 DROP POLICY IF EXISTS "Allow order_workflow access for development" ON public.order_workflow;
 DROP POLICY IF EXISTS "Authenticated users can manage order workflow" ON public.order_workflow;
 
--- orders (development + 20250819012429 + seed antigo)
+-- orders
 DROP POLICY IF EXISTS "Allow orders access for development" ON public.orders;
 DROP POLICY IF EXISTS "Authenticated users can manage orders" ON public.orders;
 DROP POLICY IF EXISTS "Enable all access for development" ON public.orders;
@@ -96,7 +100,7 @@ DROP POLICY IF EXISTS "Users can manage orders" ON public.orders;
 -- partner_withdrawals
 DROP POLICY IF EXISTS "partner_withdrawals_authenticated" ON public.partner_withdrawals;
 
--- payment_methods (SELECT + ALL de 20250819012429)
+-- payment_methods
 DROP POLICY IF EXISTS "Authenticated users can manage payment methods" ON public.payment_methods;
 DROP POLICY IF EXISTS "Authenticated users can view payment methods" ON public.payment_methods;
 DROP POLICY IF EXISTS "Enable all access for development" ON public.payment_methods;
