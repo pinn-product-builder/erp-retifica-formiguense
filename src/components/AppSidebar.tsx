@@ -158,6 +158,11 @@ const inventoryItems = [
     icon: LayoutDashboard,
   },
   {
+    title: "Peças da OS",
+    url: "/compras/pecas-os",
+    icon: ShoppingCart,
+  },
+  {
     title: "Estoque/Peças",
     url: "/estoque",
     icon: Package,
@@ -197,6 +202,7 @@ const inventoryItems = [
     url: "/compras",
     icon: ShoppingCart,
   },
+
   {
     title: "Relatórios",
     url: "/relatorios-compras",
