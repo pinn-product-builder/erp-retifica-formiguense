@@ -11367,6 +11367,157 @@ export type Database = {
           },
         ]
       }
+      workshop_os_part_lines: {
+        Row: {
+          budget_id: string | null
+          budget_part_index: number | null
+          cancellation_reason: string | null
+          commercial_line_key: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_extra: boolean
+          last_movement_id: string | null
+          notes: string | null
+          order_id: string
+          org_id: string
+          part_code: string
+          part_id: string | null
+          part_name: string
+          price_basis: string
+          qty_cancelled: number
+          qty_noted: number
+          qty_released: number
+          replaces_line_id: string | null
+          reservation_id: string | null
+          section_name: string
+          source: string
+          unit_price_applied: number
+          unit_price_original_snapshot: number | null
+          updated_at: string
+        }
+        Insert: {
+          budget_id?: string | null
+          budget_part_index?: number | null
+          cancellation_reason?: string | null
+          commercial_line_key?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_extra?: boolean
+          last_movement_id?: string | null
+          notes?: string | null
+          order_id: string
+          org_id: string
+          part_code: string
+          part_id?: string | null
+          part_name: string
+          price_basis?: string
+          qty_cancelled?: number
+          qty_noted?: number
+          qty_released?: number
+          replaces_line_id?: string | null
+          reservation_id?: string | null
+          section_name?: string
+          source?: string
+          unit_price_applied?: number
+          unit_price_original_snapshot?: number | null
+          updated_at?: string
+        }
+        Update: {
+          budget_id?: string | null
+          budget_part_index?: number | null
+          cancellation_reason?: string | null
+          commercial_line_key?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_extra?: boolean
+          last_movement_id?: string | null
+          notes?: string | null
+          order_id?: string
+          org_id?: string
+          part_code?: string
+          part_id?: string | null
+          part_name?: string
+          price_basis?: string
+          qty_cancelled?: number
+          qty_noted?: number
+          qty_released?: number
+          replaces_line_id?: string | null
+          reservation_id?: string | null
+          section_name?: string
+          source?: string
+          unit_price_applied?: number
+          unit_price_original_snapshot?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workshop_os_part_lines_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "detailed_budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshop_os_part_lines_last_movement_id_fkey"
+            columns: ["last_movement_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshop_os_part_lines_last_movement_id_fkey"
+            columns: ["last_movement_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_movements_with_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshop_os_part_lines_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshop_os_part_lines_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshop_os_part_lines_part_id_fkey"
+            columns: ["part_id"]
+            isOneToOne: false
+            referencedRelation: "parts_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshop_os_part_lines_replaces_line_id_fkey"
+            columns: ["replaces_line_id"]
+            isOneToOne: false
+            referencedRelation: "workshop_os_part_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshop_os_part_lines_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "parts_reservations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workshop_os_part_lines_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_reservations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       inventory_movements_with_users: {
