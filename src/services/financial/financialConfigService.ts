@@ -145,4 +145,50 @@ export class FinancialConfigService {
       .eq('org_id', orgId);
     return { error: error ? new Error(error.message) : null };
   }
+
+  static async getLegacyCashAccountId(orgId: string): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('bank_accounts')
+      .select('id')
+      .eq('org_id', orgId)
+      .eq('account_number', 'LEGADO')
+      .eq('kind', 'cash')
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return (data as { id: string } | null)?.id ?? null;
+  }
+
+  static async findUserCashAccount(orgId: string, userId: string): Promise<BaRow | null> {
+    const { data, error } = await supabase
+      .from('bank_accounts')
+      .select('*')
+      .eq('org_id', orgId)
+      .eq('owner_user_id', userId)
+      .eq('kind', 'cash')
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return (data as BaRow | null) ?? null;
+  }
+
+  static async getOrCreateUserCashAccount(
+    orgId: string,
+    userId: string,
+    displayName: string
+  ): Promise<BaRow> {
+    const found = await this.findUserCashAccount(orgId, userId);
+    if (found) return found;
+    const short = userId.replace(/-/g, '').slice(0, 12);
+    const { data, error } = await this.createBankAccount({
+      org_id: orgId,
+      bank_name: '',
+      account_number: `CX-${short}`,
+      kind: 'cash',
+      name: `Caixa — ${displayName || 'Operador'}`,
+      is_active: true,
+      owner_user_id: userId,
+    });
+    if (error) throw error;
+    if (!data) throw new Error('Falha ao criar conta de caixa do usuário');
+    return data;
+  }
 }

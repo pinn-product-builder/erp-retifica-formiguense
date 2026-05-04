@@ -70,10 +70,12 @@ const PAGE_MODULE_MAPPING: Record<string, ModuleName> = {
   '/aprovacoes-pedidos': 'purchasing',
   '/financeiro': 'financial',
   '/contas-receber': 'financial',
+  '/posicao-cliente-cobranca': 'financial',
   '/contas-pagar': 'financial',
   '/fluxo-caixa': 'financial',
   '/dre': 'financial',
   '/fechamento-caixa': 'financial',
+  '/fechamento-caixa/consolidado': 'financial',
   '/conciliacao-bancaria': 'financial',
   '/fluxo-projetado': 'financial',
   '/config-financeiro': 'financial',
@@ -204,6 +206,11 @@ export const useProfilePermissions = () => {
     // Se não tem organização, permitir acesso ao dashboard para seleção de organização
     if (!currentOrganization) {
       return routePath === '/dashboard';
+    }
+
+    // Consolidado diário de caixa: gestores com leitura no módulo financeiro
+    if (routePath === '/fechamento-caixa/consolidado') {
+      return basePermissions.isManager() && basePermissions.canAccessModule('financial');
     }
 
     // Para páginas administrativas, sempre usar permissões de role

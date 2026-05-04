@@ -39,6 +39,8 @@ import {
   ClipboardCheck,
   Repeat,
   AlertTriangle,
+  ContactRound,
+  LayoutGrid,
 } from "lucide-react";
 
 import {
@@ -228,6 +230,11 @@ const financialItems = [
     icon: Receipt,
   },
   {
+    title: "Posição do cliente",
+    url: "/posicao-cliente-cobranca",
+    icon: ContactRound,
+  },
+  {
     title: "Contas a Pagar",
     url: "/contas-pagar",
     icon: CreditCard,
@@ -256,6 +263,11 @@ const financialItems = [
     title: "Fechamento de caixa",
     url: "/fechamento-caixa",
     icon: Wallet,
+  },
+  {
+    title: "Consolidado de caixa",
+    url: "/fechamento-caixa/consolidado",
+    icon: LayoutGrid,
   },
   {
     title: "Conciliação bancária",

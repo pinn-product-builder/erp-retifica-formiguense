@@ -7,13 +7,25 @@ export { FinancialKpiService } from '@/services/financial/financialKpiService';
 export { FinancialConfigService } from '@/services/financial/financialConfigService';
 export { CostCenterService } from '@/services/financial/costCenterService';
 export { CustomerLookupService } from '@/services/financial/customerLookupService';
+export { CustomerArPositionService } from '@/services/financial/customerArPositionService';
+export type {
+  OrganizationRef,
+  CustomerArMatch,
+  CustomerArLine,
+  CustomerArSummary,
+} from '@/services/financial/customerArPositionService';
 export { SupplierLookupService } from '@/services/financial/supplierLookupService';
 export { ApInvoiceFileService } from '@/services/financial/apInvoiceFileService';
 export { BudgetLookupService } from '@/services/financial/budgetLookupService';
 export { DreService } from '@/services/financial/dreService';
 export { DreCategorizedService } from '@/services/financial/dreCategorizedService';
 export { DreExportService } from '@/services/financial/dreExportService';
-export { CashClosingService } from '@/services/financial/cashClosingService';
+export {
+  CashClosingService,
+  type CashClosingConsolidatedLine,
+  type CashClosingConsolidatedEnrichedLine,
+} from '@/services/financial/cashClosingService';
+export { CashRegisterSessionService } from '@/services/financial/cashRegisterSessionService';
 export { BankReconciliationService } from '@/services/financial/bankReconciliationService';
 export { PartnerWithdrawalService } from '@/services/financial/partnerWithdrawalService';
 export { ProjectionService } from '@/services/financial/projectionService';

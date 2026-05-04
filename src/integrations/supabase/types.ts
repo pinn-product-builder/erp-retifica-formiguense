@@ -1115,7 +1115,10 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          kind: string
+          name: string
           org_id: string | null
+          owner_user_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1127,7 +1130,10 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          kind?: string
+          name?: string
           org_id?: string | null
+          owner_user_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1139,7 +1145,10 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          kind?: string
+          name?: string
           org_id?: string | null
+          owner_user_id?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1669,6 +1678,7 @@ export type Database = {
       }
       cash_closings: {
         Row: {
+          bank_account_id: string
           bank_balance: number | null
           closed_by: string | null
           closing_date: string
@@ -1688,6 +1698,7 @@ export type Database = {
           total_verified: number | null
         }
         Insert: {
+          bank_account_id: string
           bank_balance?: number | null
           closed_by?: string | null
           closing_date: string
@@ -1707,6 +1718,7 @@ export type Database = {
           total_verified?: number | null
         }
         Update: {
+          bank_account_id?: string
           bank_balance?: number | null
           closed_by?: string | null
           closing_date?: string
@@ -1727,7 +1739,74 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "cash_closings_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cash_closings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_register_sessions: {
+        Row: {
+          bank_account_id: string
+          business_date: string
+          closed_at: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          opening_balance: number
+          opened_at: string
+          org_id: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          bank_account_id: string
+          business_date: string
+          closed_at?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          opening_balance?: number
+          opened_at?: string
+          org_id: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          bank_account_id?: string
+          business_date?: string
+          closed_at?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          opening_balance?: number
+          opened_at?: string
+          org_id?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_register_sessions_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_sessions_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"

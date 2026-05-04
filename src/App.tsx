@@ -37,12 +37,14 @@ const Motores = lazy(() => import('@/pages/Motores'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 const Financeiro = lazy(() => import('@/pages/Financeiro'));
 const ContasReceber = lazy(() => import('@/pages/ContasReceber'));
+const PosicaoClienteCobranca = lazy(() => import('@/pages/PosicaoClienteCobranca'));
 const ContasPagar = lazy(() => import('@/pages/ContasPagar'));
 const ApRecorrentes = lazy(() => import('@/pages/ApRecorrentes'));
 const InadimplenciaAging = lazy(() => import('@/pages/InadimplenciaAging'));
 const FluxoCaixa = lazy(() => import('@/pages/FluxoCaixa'));
 const DRE = lazy(() => import('@/pages/DRE'));
 const FechamentoCaixa = lazy(() => import('@/pages/FechamentoCaixa'));
+const FechamentoCaixaConsolidado = lazy(() => import('@/pages/FechamentoCaixaConsolidado'));
 const ConciliacaoBancaria = lazy(() => import('@/pages/ConciliacaoBancaria'));
 const FluxoProjetado = lazy(() => import('@/pages/FluxoProjetado'));
 const ConfigFinanceiro = lazy(() => import('@/pages/ConfigFinanceiro'));
@@ -122,12 +124,14 @@ function AppContent() {
             <Route path="/configuracoes/operacoes" element={<ProfileProtectedRoute><Layout><ConfiguracoesOperacoes /></Layout></ProfileProtectedRoute>} />
             <Route path="/financeiro" element={<ProfileProtectedRoute><Layout><Financeiro /></Layout></ProfileProtectedRoute>} />
             <Route path="/contas-receber" element={<ProfileProtectedRoute><Layout><ContasReceber /></Layout></ProfileProtectedRoute>} />
+            <Route path="/posicao-cliente-cobranca" element={<ProfileProtectedRoute><Layout><PosicaoClienteCobranca /></Layout></ProfileProtectedRoute>} />
             <Route path="/contas-pagar" element={<ProfileProtectedRoute><Layout><ContasPagar /></Layout></ProfileProtectedRoute>} />
             <Route path="/ap-recorrentes" element={<ProfileProtectedRoute><Layout><ApRecorrentes /></Layout></ProfileProtectedRoute>} />
             <Route path="/inadimplencia-aging" element={<ProfileProtectedRoute><Layout><InadimplenciaAging /></Layout></ProfileProtectedRoute>} />
             <Route path="/fluxo-caixa" element={<ProfileProtectedRoute><Layout><FluxoCaixa /></Layout></ProfileProtectedRoute>} />
             <Route path="/dre" element={<ProfileProtectedRoute><Layout><DRE /></Layout></ProfileProtectedRoute>} />
             <Route path="/fechamento-caixa" element={<ProfileProtectedRoute><Layout><FechamentoCaixa /></Layout></ProfileProtectedRoute>} />
+            <Route path="/fechamento-caixa/consolidado" element={<ProfileProtectedRoute><Layout><FechamentoCaixaConsolidado /></Layout></ProfileProtectedRoute>} />
             <Route path="/conciliacao-bancaria" element={<ProfileProtectedRoute><Layout><ConciliacaoBancaria /></Layout></ProfileProtectedRoute>} />
             <Route path="/fluxo-projetado" element={<ProfileProtectedRoute><Layout><FluxoProjetado /></Layout></ProfileProtectedRoute>} />
             <Route path="/config-financeiro" element={<ProfileProtectedRoute><Layout><ConfigFinanceiro /></Layout></ProfileProtectedRoute>} />

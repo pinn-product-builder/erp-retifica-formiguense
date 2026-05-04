@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,6 +44,7 @@ const FALLBACK_CF_PM: Database['public']['Enums']['payment_method'][] = [
 
 export default function FluxoCaixa() {
   const { currentOrganization } = useOrganization();
+  const { user } = useAuth();
   const orgId = currentOrganization?.id ?? '';
   const orgIdReady = Boolean(orgId);
   const {
@@ -70,6 +72,8 @@ export default function FluxoCaixa() {
     start: format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd'),
     end: format(new Date(), 'yyyy-MM-dd'),
   });
+
+  const [myCashAccountId, setMyCashAccountId] = useState<string | undefined>();
 
   const [formData, setFormData] = useState<Partial<CashFlow>>({
     transaction_type: 'income',
@@ -109,10 +113,26 @@ export default function FluxoCaixa() {
   }, [orgId]);
 
   useEffect(() => {
+    if (!orgId || !user?.id) {
+      setMyCashAccountId(undefined);
+      return;
+    }
+    let cancelled = false;
+    void FinancialConfigService.getOrCreateUserCashAccount(orgId, user.id, user.email ?? 'Operador').then(
+      (ba) => {
+        if (!cancelled) setMyCashAccountId(ba.id);
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId, user?.id, user?.email]);
+
+  useEffect(() => {
     setPage(1);
   }, [dateFilter.start, dateFilter.end]);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setEditingId(null);
     setFormData({
       transaction_type: 'income',
@@ -120,13 +140,13 @@ export default function FluxoCaixa() {
       description: '',
       transaction_date: format(new Date(), 'yyyy-MM-dd'),
       payment_method: undefined,
-      bank_account_id: undefined,
+      bank_account_id: myCashAccountId,
       category_id: undefined,
       cost_center_id: undefined,
       notes: '',
       reconciled: false,
     });
-  };
+  }, [myCashAccountId]);
 
   const handleModalChange = (open: boolean) => {
     setIsModalOpen(open);

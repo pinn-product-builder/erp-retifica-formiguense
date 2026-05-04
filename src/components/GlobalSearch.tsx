@@ -32,6 +32,7 @@ import {
   Landmark,
   LineChart,
   SlidersHorizontal,
+  LayoutGrid,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,6 +79,7 @@ const allPages = [
   { title: "Fluxo de Caixa", url: "/fluxo-caixa", icon: PiggyBank, category: "Financeiro" },
   { title: "DRE Mensal", url: "/dre", icon: Calculator, category: "Financeiro" },
   { title: "Fechamento de caixa", url: "/fechamento-caixa", icon: Wallet, category: "Financeiro" },
+  { title: "Consolidado de caixa", url: "/fechamento-caixa/consolidado", icon: LayoutGrid, category: "Financeiro" },
   { title: "Conciliação bancária", url: "/conciliacao-bancaria", icon: Landmark, category: "Financeiro" },
   { title: "Fluxo projetado", url: "/fluxo-projetado", icon: LineChart, category: "Financeiro" },
   { title: "Config. financeiro", url: "/config-financeiro", icon: SlidersHorizontal, category: "Financeiro" },
