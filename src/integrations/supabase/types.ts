@@ -1825,6 +1825,7 @@ export type Database = {
           created_at: string | null
           description: string
           id: string
+          is_intercompany: boolean
           notes: string | null
           order_id: string | null
           org_id: string | null
@@ -1844,6 +1845,7 @@ export type Database = {
           created_at?: string | null
           description: string
           id?: string
+          is_intercompany?: boolean
           notes?: string | null
           order_id?: string | null
           org_id?: string | null
@@ -1863,6 +1865,7 @@ export type Database = {
           created_at?: string | null
           description?: string
           id?: string
+          is_intercompany?: boolean
           notes?: string | null
           order_id?: string | null
           org_id?: string | null

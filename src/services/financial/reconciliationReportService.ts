@@ -12,15 +12,18 @@ export class ReconciliationReportService {
     if (!br) throw new Error('Conciliação não encontrada');
     const end = String(br.statement_end_date);
     const bankBal = Number(br.statement_balance);
+    const bankScope = { includeIntercompany: true } as const;
     const erpNet = await CashFlowService.netBalanceForBankAccountThrough(
       params.orgId,
       br.bank_account_id,
-      end
+      end,
+      bankScope
     );
     const pendingErp = await CashFlowService.countUnreconciledForBankAccountThrough(
       params.orgId,
       br.bank_account_id,
-      end
+      end,
+      bankScope
     );
     let importLinesTotal = 0;
     let importLinesMatched = 0;

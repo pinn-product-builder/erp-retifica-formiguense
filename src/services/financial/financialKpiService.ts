@@ -12,6 +12,7 @@ export class FinancialKpiService {
         .from('cash_flow')
         .select('transaction_type, amount')
         .eq('org_id', orgId)
+        .eq('is_intercompany', false)
         .gte('transaction_date', monthStart),
       supabase.from('accounts_receivable').select('status, amount, due_date').eq('org_id', orgId),
       supabase.from('accounts_payable').select('status, amount, due_date').eq('org_id', orgId),

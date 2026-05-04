@@ -14,7 +14,19 @@ import { formatBRL, formatDateBR, paymentMethodLabel } from '@/lib/financialForm
 import { FinancialConfigService } from '@/services/financial/financialConfigService';
 import type { Database } from '@/integrations/supabase/types';
 import { Badge } from '@/components/ui/badge';
-import { Plus, TrendingUp, TrendingDown, DollarSign, Calendar, CheckCircle, Pencil, Trash2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import {
+  Plus,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Calendar,
+  CheckCircle,
+  Pencil,
+  Trash2,
+  Building2,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -74,6 +86,8 @@ export default function FluxoCaixa() {
   });
 
   const [myCashAccountId, setMyCashAccountId] = useState<string | undefined>();
+  /** Por padrão o fluxo oculta lançamentos intercompany (consolidados). */
+  const [showIntercompany, setShowIntercompany] = useState(false);
 
   const [formData, setFormData] = useState<Partial<CashFlow>>({
     transaction_type: 'income',
@@ -86,12 +100,13 @@ export default function FluxoCaixa() {
     cost_center_id: undefined,
     notes: '',
     reconciled: false,
+    is_intercompany: false,
   });
 
   const loadData = useCallback(async () => {
     const [cashFlowRes, m, bankAccountsData, categoriesData] = await Promise.all([
-      getCashFlow(dateFilter.start, dateFilter.end, page, PAGE_SIZE),
-      getCashFlowPeriodMetrics(dateFilter.start, dateFilter.end),
+      getCashFlow(dateFilter.start, dateFilter.end, page, PAGE_SIZE, showIntercompany),
+      getCashFlowPeriodMetrics(dateFilter.start, dateFilter.end, showIntercompany),
       getBankAccounts(),
       getExpenseCategories(),
     ]);
@@ -100,7 +115,16 @@ export default function FluxoCaixa() {
     setMetrics(m);
     setBankAccounts(bankAccountsData);
     setCategories(categoriesData);
-  }, [dateFilter.start, dateFilter.end, page, getCashFlow, getCashFlowPeriodMetrics, getBankAccounts, getExpenseCategories]);
+  }, [
+    dateFilter.start,
+    dateFilter.end,
+    page,
+    showIntercompany,
+    getCashFlow,
+    getCashFlowPeriodMetrics,
+    getBankAccounts,
+    getExpenseCategories,
+  ]);
 
   useEffect(() => {
     if (!orgIdReady) return;
@@ -130,7 +154,7 @@ export default function FluxoCaixa() {
 
   useEffect(() => {
     setPage(1);
-  }, [dateFilter.start, dateFilter.end]);
+  }, [dateFilter.start, dateFilter.end, showIntercompany]);
 
   const resetForm = useCallback(() => {
     setEditingId(null);
@@ -145,6 +169,7 @@ export default function FluxoCaixa() {
       cost_center_id: undefined,
       notes: '',
       reconciled: false,
+      is_intercompany: false,
     });
   }, [myCashAccountId]);
 
@@ -173,6 +198,7 @@ export default function FluxoCaixa() {
       cost_center_id: (row.cost_center_id as string) ?? undefined,
       notes: (row.notes as string) ?? '',
       reconciled: Boolean(row.reconciled),
+      is_intercompany: Boolean(row.is_intercompany),
     });
     setIsModalOpen(true);
   };
@@ -198,6 +224,7 @@ export default function FluxoCaixa() {
           cost_center_id: formData.cost_center_id || null,
           notes: formData.notes || null,
           reconciled: formData.reconciled ?? false,
+          is_intercompany: formData.is_intercompany ?? false,
         });
         if (!ok) return;
       } else {
@@ -263,7 +290,9 @@ export default function FluxoCaixa() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold sm:text-2xl md:text-3xl">Fluxo de Caixa</h1>
-          <p className="text-muted-foreground text-xs sm:text-sm">Entradas e saídas</p>
+          <p className="text-muted-foreground text-xs sm:text-sm">
+            Entradas e saídas. Lançamentos intercompany (consolidados) ficam fora do fluxo analítico por padrão.
+          </p>
         </div>
 
         <Dialog open={isModalOpen} onOpenChange={handleModalChange}>
@@ -427,6 +456,25 @@ export default function FluxoCaixa() {
                 id="cf-cost-center"
               />
 
+              <div className="flex items-start gap-3 rounded-md border p-3">
+                <Checkbox
+                  id="cf-intercompany"
+                  checked={Boolean(formData.is_intercompany)}
+                  onCheckedChange={(v) =>
+                    setFormData((prev) => ({ ...prev, is_intercompany: v === true }))
+                  }
+                />
+                <div className="grid gap-1">
+                  <Label htmlFor="cf-intercompany" className="cursor-pointer font-normal leading-tight">
+                    Intercompany (consolidado)
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    Marque para pagamentos/recebimentos entre empresas do grupo. Esses lançamentos não entram nos
+                    totais do fluxo nem nos KPIs, como na consolidação contábil.
+                  </p>
+                </div>
+              </div>
+
               <div>
                 <Label htmlFor="cf-notes">Observações</Label>
                 <Textarea
@@ -529,6 +577,17 @@ export default function FluxoCaixa() {
             className="h-8 w-auto min-w-0"
           />
         </div>
+        <div className="flex flex-wrap items-center gap-2 rounded-md border px-2 py-1.5 sm:px-3">
+          <Switch
+            id="cf-show-ic"
+            checked={showIntercompany}
+            onCheckedChange={(v) => setShowIntercompany(v)}
+            className="shrink-0"
+          />
+          <Label htmlFor="cf-show-ic" className="cursor-pointer text-xs font-normal sm:text-sm">
+            Mostrar lançamentos intercompany na lista e nos totais
+          </Label>
+        </div>
       </div>
 
       <Card>
@@ -567,6 +626,12 @@ export default function FluxoCaixa() {
 
                   <div className="flex flex-shrink-0 items-center justify-between gap-2 sm:justify-end">
                     <div className="flex items-center gap-1 sm:gap-2">
+                      {transaction.is_intercompany ? (
+                        <Badge variant="secondary" className="inline-flex items-center gap-1 text-xs">
+                          <Building2 className="h-3 w-3 shrink-0" />
+                          Intercompany
+                        </Badge>
+                      ) : null}
                       {transaction.reconciled ? (
                         <Badge variant="outline" className="border-success text-xs text-success">
                           Conciliado

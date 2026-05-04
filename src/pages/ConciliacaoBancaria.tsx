@@ -142,7 +142,9 @@ export default function ConciliacaoBancaria() {
       setCashFlows([]);
       return;
     }
-    const res = await CashFlowService.listPaginated(orgId, 1, 300);
+    const res = await CashFlowService.listPaginated(orgId, 1, 300, undefined, undefined, {
+      includeIntercompany: true,
+    });
     const filtered = res.data.filter(
       (r) => String(r.bank_account_id) === bankId && !r.reconciled
     );

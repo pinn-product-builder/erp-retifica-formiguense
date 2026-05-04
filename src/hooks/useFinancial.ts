@@ -243,11 +243,19 @@ export const useFinancial = () => {
   );
 
   const getCashFlow = useCallback(
-    async (startDate?: string, endDate?: string, page = 1, pageSize = 50) => {
+    async (
+      startDate?: string,
+      endDate?: string,
+      page = 1,
+      pageSize = 50,
+      includeIntercompany = false
+    ) => {
       if (!orgId) return { data: [], count: 0, page, pageSize, totalPages: 1 };
       try {
         setLoading(true);
-        return await CashFlowService.listPaginated(orgId, page, pageSize, startDate, endDate);
+        return await CashFlowService.listPaginated(orgId, page, pageSize, startDate, endDate, {
+          includeIntercompany,
+        });
       } catch (error) {
         handleError(error, 'Erro ao carregar fluxo de caixa');
         return { data: [], count: 0, page, pageSize, totalPages: 1 };
@@ -277,6 +285,7 @@ export const useFinancial = () => {
           cost_center_id: cashFlow.cost_center_id,
           notes: cashFlow.notes,
           reconciled: cashFlow.reconciled ?? false,
+          is_intercompany: (cashFlow as { is_intercompany?: boolean }).is_intercompany ?? false,
         });
         if (error) throw error;
         toast.success('Movimentação registrada com sucesso');
@@ -330,10 +339,12 @@ export const useFinancial = () => {
   );
 
   const getCashFlowPeriodMetrics = useCallback(
-    async (startDate?: string, endDate?: string) => {
+    async (startDate?: string, endDate?: string, includeIntercompany = false) => {
       if (!orgId) return { income: 0, expense: 0, reconciled: 0, pending: 0 };
       try {
-        return await CashFlowService.sumPeriodMetrics(orgId, startDate, endDate);
+        return await CashFlowService.sumPeriodMetrics(orgId, startDate, endDate, {
+          includeIntercompany,
+        });
       } catch (error) {
         handleError(error, 'Erro ao calcular totais do fluxo');
         return { income: 0, expense: 0, reconciled: 0, pending: 0 };

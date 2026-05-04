@@ -3,6 +3,7 @@ export { AccountsPayableService } from '@/services/financial/accountsPayableServ
 export { ReceiptHistoryService } from '@/services/financial/receiptHistoryService';
 export type { ReceivableSettlementSnapshot } from '@/services/financial/receiptHistoryService';
 export { CashFlowService } from '@/services/financial/cashFlowService';
+export type { CashFlowQueryOptions } from '@/services/financial/cashFlowService';
 export { FinancialKpiService } from '@/services/financial/financialKpiService';
 export { FinancialConfigService } from '@/services/financial/financialConfigService';
 export { CostCenterService } from '@/services/financial/costCenterService';

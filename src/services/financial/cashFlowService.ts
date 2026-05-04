@@ -5,6 +5,11 @@ import type { PaginatedResult } from '@/services/financial/types';
 
 type CfRow = Database['public']['Tables']['cash_flow']['Row'];
 
+/** Quando `includeIntercompany` é false (padrão), exclui movimentos intercompany do resultado. */
+export type CashFlowQueryOptions = {
+  includeIntercompany?: boolean;
+};
+
 async function dayHasCashClosingForAccount(
   orgId: string,
   ymd: string,
@@ -47,8 +52,10 @@ export class CashFlowService {
   static async sumPeriodMetrics(
     orgId: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    options?: CashFlowQueryOptions
   ): Promise<{ income: number; expense: number; reconciled: number; pending: number }> {
+    const includeIc = options?.includeIntercompany === true;
     const pageSize = 1000;
     let page = 1;
     let income = 0;
@@ -61,6 +68,7 @@ export class CashFlowService {
         .select('amount, transaction_type, reconciled')
         .eq('org_id', orgId)
         .order('transaction_date', { ascending: false });
+      if (!includeIc) qb = qb.eq('is_intercompany', false);
       if (startDate) qb = qb.gte('transaction_date', startDate);
       if (endDate) qb = qb.lte('transaction_date', endDate);
       const from = (page - 1) * pageSize;
@@ -89,8 +97,10 @@ export class CashFlowService {
     orgId: string,
     bankAccountId: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    options?: CashFlowQueryOptions
   ): Promise<{ income: number; expense: number; reconciled: number; pending: number }> {
+    const includeIc = options?.includeIntercompany === true;
     const pageSize = 1000;
     let page = 1;
     let income = 0;
@@ -104,6 +114,7 @@ export class CashFlowService {
         .eq('org_id', orgId)
         .eq('bank_account_id', bankAccountId)
         .order('transaction_date', { ascending: false });
+      if (!includeIc) qb = qb.eq('is_intercompany', false);
       if (startDate) qb = qb.gte('transaction_date', startDate);
       if (endDate) qb = qb.lte('transaction_date', endDate);
       const from = (page - 1) * pageSize;
@@ -128,20 +139,26 @@ export class CashFlowService {
     return { income, expense, reconciled, pending };
   }
 
-  static async netBalanceThrough(orgId: string, throughDateInclusive: string): Promise<number> {
+  static async netBalanceThrough(
+    orgId: string,
+    throughDateInclusive: string,
+    options?: CashFlowQueryOptions
+  ): Promise<number> {
+    const includeIc = options?.includeIntercompany === true;
     const pageSize = 1000;
     let page = 1;
     let net = 0;
     for (;;) {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
-      const { data, error } = await supabase
+      let qb = supabase
         .from('cash_flow')
         .select('amount, transaction_type')
         .eq('org_id', orgId)
         .lte('transaction_date', throughDateInclusive)
-        .order('transaction_date', { ascending: true })
-        .range(from, to);
+        .order('transaction_date', { ascending: true });
+      if (!includeIc) qb = qb.eq('is_intercompany', false);
+      const { data, error } = await qb.range(from, to);
       if (error) throw new Error(error.message);
       const rows = (data ?? []) as { amount: number; transaction_type: string }[];
       for (const r of rows) {
@@ -158,22 +175,25 @@ export class CashFlowService {
   static async netBalanceForBankAccountThrough(
     orgId: string,
     bankAccountId: string,
-    throughDateInclusive: string
+    throughDateInclusive: string,
+    options?: CashFlowQueryOptions
   ): Promise<number> {
+    const includeIc = options?.includeIntercompany === true;
     const pageSize = 1000;
     let page = 1;
     let net = 0;
     for (;;) {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
-      const { data, error } = await supabase
+      let qb = supabase
         .from('cash_flow')
         .select('amount, transaction_type')
         .eq('org_id', orgId)
         .eq('bank_account_id', bankAccountId)
         .lte('transaction_date', throughDateInclusive)
-        .order('transaction_date', { ascending: true })
-        .range(from, to);
+        .order('transaction_date', { ascending: true });
+      if (!includeIc) qb = qb.eq('is_intercompany', false);
+      const { data, error } = await qb.range(from, to);
       if (error) throw new Error(error.message);
       const rows = (data ?? []) as { amount: number; transaction_type: string }[];
       for (const r of rows) {
@@ -190,22 +210,25 @@ export class CashFlowService {
   static async countUnreconciledForBankAccountThrough(
     orgId: string,
     bankAccountId: string,
-    throughDateInclusive: string
+    throughDateInclusive: string,
+    options?: CashFlowQueryOptions
   ): Promise<number> {
+    const includeIc = options?.includeIntercompany === true;
     const pageSize = 1000;
     let page = 1;
     let n = 0;
     for (;;) {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
-      const { data, error } = await supabase
+      let qb = supabase
         .from('cash_flow')
         .select('id')
         .eq('org_id', orgId)
         .eq('bank_account_id', bankAccountId)
         .eq('reconciled', false)
-        .lte('transaction_date', throughDateInclusive)
-        .range(from, to);
+        .lte('transaction_date', throughDateInclusive);
+      if (!includeIc) qb = qb.eq('is_intercompany', false);
+      const { data, error } = await qb.range(from, to);
       if (error) throw new Error(error.message);
       const rows = data ?? [];
       n += rows.length;
@@ -220,8 +243,10 @@ export class CashFlowService {
     page: number,
     pageSize: number,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    options?: CashFlowQueryOptions
   ): Promise<PaginatedResult<CfRow & Record<string, unknown>>> {
+    const includeIc = options?.includeIntercompany === true;
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
@@ -235,6 +260,7 @@ export class CashFlowService {
       )
       .eq('org_id', orgId)
       .order('transaction_date', { ascending: false });
+    if (!includeIc) q = q.eq('is_intercompany', false);
 
     if (startDate) q = q.gte('transaction_date', startDate);
     if (endDate) q = q.lte('transaction_date', endDate);
@@ -282,6 +308,7 @@ export class CashFlowService {
       cost_center_id: v.cost_center_id ?? null,
       notes: v.notes ?? null,
       reconciled: v.reconciled ?? false,
+      is_intercompany: v.is_intercompany ?? false,
     };
     const { data, error } = await supabase.from('cash_flow').insert(row).select().single();
     return { data: data as CfRow | null, error: error ? new Error(error.message) : null };

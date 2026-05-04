@@ -93,6 +93,7 @@ export class AdvancedIndicatorsService {
       .from('cash_flow')
       .select('amount, transaction_type')
       .eq('org_id', orgId)
+      .eq('is_intercompany', false)
       .gte('transaction_date', start)
       .lt('transaction_date', end);
     let expenses = 0;
@@ -105,6 +106,7 @@ export class AdvancedIndicatorsService {
       .from('cash_flow')
       .select('amount, transaction_type, transaction_date')
       .eq('org_id', orgId)
+      .eq('is_intercompany', false)
       .lte('transaction_date', end)
       .order('transaction_date', { ascending: true });
     let balance = 0;

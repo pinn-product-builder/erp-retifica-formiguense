@@ -186,6 +186,8 @@ export const cashFlowCreateSchema = z.object({
   cost_center_id: z.string().uuid().optional().nullable(),
   notes: z.string().optional().nullable(),
   reconciled: z.boolean().optional(),
+  /** Intercompany / consolidado — omitido do fluxo analítico por padrão. */
+  is_intercompany: z.boolean().optional(),
 });
 
 export type AccountsReceivableCreateInput = z.infer<typeof accountsReceivableCreateSchema>;

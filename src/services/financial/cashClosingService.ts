@@ -114,10 +114,17 @@ export class CashClosingService {
     system_balance: number;
   }> {
     const prev = prevDayYmd(closingDate);
+    const icScope = { includeIntercompany: true } as const;
     const [opening, metrics, systemEnd] = await Promise.all([
-      CashFlowService.netBalanceForBankAccountThrough(orgId, bankAccountId, prev),
-      CashFlowService.sumPeriodMetricsForBankAccount(orgId, bankAccountId, closingDate, closingDate),
-      CashFlowService.netBalanceForBankAccountThrough(orgId, bankAccountId, closingDate),
+      CashFlowService.netBalanceForBankAccountThrough(orgId, bankAccountId, prev, icScope),
+      CashFlowService.sumPeriodMetricsForBankAccount(
+        orgId,
+        bankAccountId,
+        closingDate,
+        closingDate,
+        icScope
+      ),
+      CashFlowService.netBalanceForBankAccountThrough(orgId, bankAccountId, closingDate, icScope),
     ]);
     return {
       opening_balance: opening,

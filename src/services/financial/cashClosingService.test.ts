@@ -54,10 +54,11 @@ describe('CashClosingService.computePreview (por conta)', () => {
   });
 
   it('escopo por conta: abertura (dia anterior), entradas/saídas do dia e saldo no fim do dia', async () => {
+    const ic = { includeIntercompany: true };
     const p = await CashClosingService.computePreview('org1', '2026-05-04', 'ba1');
-    expect(mockNet).toHaveBeenCalledWith('org1', 'ba1', '2026-05-03');
-    expect(mockSum).toHaveBeenCalledWith('org1', 'ba1', '2026-05-04', '2026-05-04');
-    expect(mockNet).toHaveBeenCalledWith('org1', 'ba1', '2026-05-04');
+    expect(mockNet).toHaveBeenCalledWith('org1', 'ba1', '2026-05-03', ic);
+    expect(mockSum).toHaveBeenCalledWith('org1', 'ba1', '2026-05-04', '2026-05-04', ic);
+    expect(mockNet).toHaveBeenCalledWith('org1', 'ba1', '2026-05-04', ic);
     expect(p.opening_balance).toBe(100);
     expect(p.total_income).toBe(50);
     expect(p.total_expenses).toBe(20);
