@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { FinancialPageShell } from '@/components/financial/FinancialPageShell';
 import { CustomerPositionSummary } from '@/components/financial/customer-position/CustomerPositionSummary';
 import { CustomerPositionReceivableTable } from '@/components/financial/customer-position/CustomerPositionReceivableTable';
@@ -20,7 +21,7 @@ import {
 } from '@/hooks/useCustomerArPosition';
 import { CustomerArPositionService } from '@/services/financial/customerArPositionService';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
+import { Info, ArrowRight, PiggyBank, LayoutDashboard } from 'lucide-react';
 
 export default function PosicaoClienteCobranca() {
   const {
@@ -73,12 +74,28 @@ export default function PosicaoClienteCobranca() {
   return (
     <FinancialPageShell>
       <div className="space-y-4 sm:space-y-6 max-w-full min-w-0">
-        <div>
-          <h1 className="text-xl font-bold sm:text-2xl md:text-3xl">Posição do cliente</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            Contas a receber e recebimentos consolidados por CPF/CNPJ nas empresas às quais você tem
-            acesso.
-          </p>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 space-y-1">
+            <h1 className="text-xl font-bold sm:text-2xl md:text-3xl">Posição do cliente</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Contas a receber e recebimentos consolidados por CPF/CNPJ nas empresas às quais você tem acesso.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/financeiro" className="gap-1.5 inline-flex items-center">
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                Dashboard financeiro
+                <ArrowRight className="h-3.5 w-3.5 opacity-70" />
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/fluxo-caixa" className="gap-1.5 inline-flex items-center">
+                <PiggyBank className="h-3.5 w-3.5" />
+                Fluxo de caixa
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <Alert className="border-muted">
@@ -96,11 +113,11 @@ export default function PosicaoClienteCobranca() {
         )}
 
         <Card className="border">
-          <CardHeader className="p-4 sm:p-6 pb-2">
-            <CardTitle className="text-base sm:text-lg">Consulta</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
-              Digite CPF ou CNPJ (com ou sem máscara). A busca usa todas as organizações em que você tem
-              perfil.
+          <CardHeader className="p-4 sm:p-6 pb-2 space-y-2">
+            <CardTitle className="text-base sm:text-lg">Consulta por documento</CardTitle>
+            <CardDescription className="text-xs sm:text-sm leading-relaxed">
+              Digite CPF ou CNPJ (com ou sem máscara). A busca percorre todas as organizações em que você tem perfil e
+              agrega títulos do contas a receber e linhas de recebimento vinculadas ao mesmo cliente.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 space-y-4">

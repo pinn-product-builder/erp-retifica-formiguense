@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,13 +31,24 @@ import { useProfilePermissions } from '@/hooks/useProfilePermissions';
 import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { formatBRL, formatDateBR } from '@/lib/financialFormat';
-import { LayoutGrid } from 'lucide-react';
+import {
+  LayoutGrid,
+  Wallet,
+  TrendingUp,
+  TrendingDown,
+  Landmark,
+  CalendarClock,
+  History,
+} from 'lucide-react';
+import { StatCard } from '@/components/StatCard';
+import { Separator } from '@/components/ui/separator';
 
 type ClosingRow = Record<string, unknown>;
 type SessionRow = Database['public']['Tables']['cash_register_sessions']['Row'];
 
 export default function FechamentoCaixa() {
   const { currentOrganization } = useOrganization();
+  const orgLabel = currentOrganization?.name?.trim() ?? '';
   const { user } = useAuth();
   const profilePerms = useProfilePermissions();
   const orgId = currentOrganization?.id ?? '';
@@ -208,7 +219,16 @@ export default function FechamentoCaixa() {
     <FinancialPageShell>
       <div className="space-y-6 sm:space-y-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl font-bold sm:text-2xl md:text-3xl">Fechamento de caixa</h1>
+          <div className="min-w-0 space-y-1">
+            <h1 className="text-xl font-bold sm:text-2xl md:text-3xl">Fechamento de caixa</h1>
+            {orgLabel ? (
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">{orgLabel}</p>
+            ) : null}
+            <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
+              Movimentos e fechamento valem apenas para <span className="font-medium text-foreground">sua conta de caixa</span>
+              {myAccountLabel ? ` (${myAccountLabel})` : ''}. O consolidado da empresa soma todos os operadores.
+            </p>
+          </div>
           <div className="flex flex-wrap gap-2">
             {profilePerms.canAccessPage('/fechamento-caixa/consolidado') && (
               <Button type="button" variant="outline" size="sm" asChild className="w-full sm:w-auto">
@@ -256,12 +276,40 @@ export default function FechamentoCaixa() {
               Abrir caixa
             </Button>
           </div>
+          {openSession && (
+            <div className="rounded-lg border bg-muted/40 p-3 sm:p-4 space-y-2 text-xs sm:text-sm">
+              <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
+                <CalendarClock className="h-4 w-4 shrink-0" />
+                <span>
+                  Sessão aberta · movimento em{' '}
+                  <span className="font-medium text-foreground">{formatDateBR(openSession.business_date)}</span>
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-x-6 gap-y-1">
+                <span>
+                  Saldo na abertura:{' '}
+                  <span className="font-semibold tabular-nums text-foreground">
+                    {formatBRL(Number(openSession.opening_balance))}
+                  </span>
+                </span>
+                <span className="text-muted-foreground">
+                  Aberto em {new Date(openSession.opened_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                </span>
+              </div>
+            </div>
+          )}
         </Card>
 
         <Card className="border p-3 sm:p-4 space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <CardHeader className="p-0 space-y-1">
+            <CardTitle className="text-base sm:text-lg">Resumo do dia selecionado</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              Valores calculados pelo sistema a partir do fluxo de caixa da sua conta. Ajuste a data para conferir outro dia.
+            </CardDescription>
+          </CardHeader>
+          <div className="grid grid-cols-1 gap-2 sm:gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
-              <Label htmlFor="fc-date">Data</Label>
+              <Label htmlFor="fc-date">Data do fechamento</Label>
               <Input
                 id="fc-date"
                 type="date"
@@ -269,51 +317,64 @@ export default function FechamentoCaixa() {
                 onChange={(e) => setClosingDate(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Saldo abertura (dia anterior)</Label>
-              <p className="text-sm sm:text-base font-semibold whitespace-nowrap">
-                {preview != null ? formatBRL(preview.opening_balance) : '—'}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Entradas do dia</Label>
-              <p className="text-sm sm:text-base font-semibold whitespace-nowrap text-emerald-700 dark:text-emerald-400">
-                {preview != null ? formatBRL(preview.total_income) : '—'}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Saídas do dia</Label>
-              <p className="text-sm sm:text-base font-semibold whitespace-nowrap text-destructive">
-                {preview != null ? formatBRL(preview.total_expenses) : '—'}
-              </p>
-            </div>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-2 sm:col-span-2">
-              <Label>Saldo do sistema (seu caixa)</Label>
-              <p className="text-lg sm:text-xl md:text-2xl font-bold whitespace-nowrap">
-                {preview != null ? formatBRL(preview.system_balance) : '—'}
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+            <StatCard
+              title="Saldo abertura"
+              value={preview != null ? formatBRL(preview.opening_balance) : '—'}
+              icon={Wallet}
+              variant="default"
+              calculationInfo="Saldo esperado pelo sistema até o fim do dia anterior (movimentos da sua conta de caixa)."
+            />
+            <StatCard
+              title="Entradas do dia"
+              value={preview != null ? formatBRL(preview.total_income) : '—'}
+              icon={TrendingUp}
+              variant="success"
+            />
+            <StatCard
+              title="Saídas do dia"
+              value={preview != null ? formatBRL(preview.total_expenses) : '—'}
+              icon={TrendingDown}
+              variant="danger"
+            />
+            <StatCard
+              title="Saldo sistema (seu caixa)"
+              value={preview != null ? formatBRL(preview.system_balance) : '—'}
+              icon={Landmark}
+              variant="primary"
+              calculationInfo="Saldo que o sistema espera no fim do dia na sua conta, antes da sua contagem física."
+            />
+          </div>
+          <Separator />
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs sm:text-sm">Sua contagem</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Dinheiro em caixa e valor que você considera em &quot;banco&quot; para este fechamento.
               </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="fc-phys">Caixa físico contado</Label>
-              <Input
-                id="fc-phys"
-                inputMode="decimal"
-                value={physicalCash}
-                onChange={(e) => setPhysicalCash(e.target.value)}
-                placeholder="0,00"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="fc-bank">Saldo banco (contagem)</Label>
-              <Input
-                id="fc-bank"
-                inputMode="decimal"
-                value={bankBalance}
-                onChange={(e) => setBankBalance(e.target.value)}
-                placeholder="0,00"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl">
+              <div className="space-y-2">
+                <Label htmlFor="fc-phys">Caixa físico contado</Label>
+                <Input
+                  id="fc-phys"
+                  inputMode="decimal"
+                  value={physicalCash}
+                  onChange={(e) => setPhysicalCash(e.target.value)}
+                  placeholder="0,00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fc-bank">Saldo banco (contagem)</Label>
+                <Input
+                  id="fc-bank"
+                  inputMode="decimal"
+                  value={bankBalance}
+                  onChange={(e) => setBankBalance(e.target.value)}
+                  placeholder="0,00"
+                />
+              </div>
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-md border p-3">
@@ -359,7 +420,26 @@ export default function FechamentoCaixa() {
             Registrar fechamento
           </Button>
         </Card>
-        <Card className="border p-0 overflow-hidden">
+        <Card className="border overflow-hidden">
+          <CardHeader className="border-b bg-muted/30 p-3 sm:p-4 space-y-1">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <History className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0" />
+                <div>
+                  <CardTitle className="text-base sm:text-lg">Seus fechamentos recentes</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    Somente a conta de caixa vinculada a você nesta organização.
+                  </CardDescription>
+                </div>
+              </div>
+              {!accountLoading && myBankAccountId ? (
+                <Badge variant="outline" className="w-fit shrink-0">
+                  {rows.length} registro{rows.length !== 1 ? 's' : ''}
+                </Badge>
+              ) : null}
+            </div>
+          </CardHeader>
+          <div className="overflow-x-auto p-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -371,6 +451,13 @@ export default function FechamentoCaixa() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {rows.length === 0 && !accountLoading && myBankAccountId && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-10">
+                    Nenhum fechamento registrado ainda para esta conta. Use o formulário acima após contar o caixa.
+                  </TableCell>
+                </TableRow>
+              )}
               {rows.map((r) => (
                 <TableRow key={r.id as string}>
                   <TableCell>{formatDateBR(r.closing_date as string)}</TableCell>
@@ -394,6 +481,7 @@ export default function FechamentoCaixa() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </Card>
 
         <Dialog open={openDialog} onOpenChange={setOpenDialog}>
