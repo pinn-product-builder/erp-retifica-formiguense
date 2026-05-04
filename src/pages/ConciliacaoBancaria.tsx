@@ -142,7 +142,7 @@ export default function ConciliacaoBancaria() {
       setCashFlows([]);
       return;
     }
-    const res = await CashFlowService.listPaginated(orgId, 1, 300, undefined, undefined, {
+    const res = await CashFlowService.listPaginated([orgId], 1, 300, undefined, undefined, {
       includeIntercompany: true,
     });
     const filtered = res.data.filter(

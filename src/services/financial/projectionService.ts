@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { CashFlowService } from '@/services/financial/cashFlowService';
+import { applyOrgIdFilter } from '@/services/financial/orgScope';
 
 type Row = Database['public']['Tables']['cash_flow_projection']['Row'];
 
@@ -46,7 +47,7 @@ function scenarioFactors(s: ProjectionScenarioKey): { incomeFactor: number; expe
 
 export class ProjectionService {
   static async computeOnDemandFromArAp(
-    orgId: string,
+    orgIds: string[],
     horizonDays = 30
   ): Promise<OnDemandProjectionResult> {
     const today = new Date();
@@ -56,19 +57,18 @@ export class ProjectionService {
     end.setDate(end.getDate() + horizonDays - 1);
     const endIso = formatLocalYmd(end);
 
-    const openingBalance = await CashFlowService.netBalanceThrough(orgId, todayIso);
+    const openingBalance = await CashFlowService.netBalanceThrough(orgIds, todayIso);
 
     const [{ data: arData, error: arErr }, { data: apData, error: apErr }] = await Promise.all([
-      supabase
-        .from('accounts_receivable')
-        .select('amount, due_date, status')
-        .eq('org_id', orgId)
-        .in('status', ['pending', 'overdue', 'renegotiated']),
-      supabase
-        .from('accounts_payable')
-        .select('amount, due_date, status')
-        .eq('org_id', orgId)
-        .eq('status', 'pending'),
+      applyOrgIdFilter(
+        supabase.from('accounts_receivable').select('amount, due_date, status'),
+        'org_id',
+        orgIds
+      ).in('status', ['pending', 'overdue', 'renegotiated']),
+      applyOrgIdFilter(supabase.from('accounts_payable').select('amount, due_date, status'), 'org_id', orgIds).eq(
+        'status',
+        'pending'
+      ),
     ]);
     if (arErr) throw new Error(arErr.message);
     if (apErr) throw new Error(apErr.message);
@@ -123,12 +123,12 @@ export class ProjectionService {
   }
 
   static async computeScenario90dFromArAp(
-    orgId: string,
+    orgIds: string[],
     scenario: ProjectionScenarioKey,
     recommendedMinimum = 10000
   ): Promise<ScenarioProjectionResult> {
     const horizonDays = 90;
-    const base = await ProjectionService.computeOnDemandFromArAp(orgId, horizonDays);
+    const base = await ProjectionService.computeOnDemandFromArAp(orgIds, horizonDays);
     const f = scenarioFactors(scenario);
 
     const days: OnDemandProjectionDay[] = [];
@@ -173,14 +173,15 @@ export class ProjectionService {
     };
   }
 
-  static async listByOrg(orgId: string, days = 90): Promise<Row[]> {
+  static async listByOrg(orgIds: string[], days = 90): Promise<Row[]> {
     const start = new Date();
     const end = new Date();
     end.setDate(end.getDate() + days);
-    const { data, error } = await supabase
-      .from('cash_flow_projection')
-      .select('*')
-      .eq('org_id', orgId)
+    const { data, error } = await applyOrgIdFilter(
+      supabase.from('cash_flow_projection').select('*'),
+      'org_id',
+      orgIds
+    )
       .gte('projection_date', start.toISOString().slice(0, 10))
       .lte('projection_date', end.toISOString().slice(0, 10))
       .order('projection_date', { ascending: true });

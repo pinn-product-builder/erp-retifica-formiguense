@@ -10,6 +10,8 @@ import {
   BarChart3, Calendar, FileText, Download
 } from 'lucide-react';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useFinancialOrgScope } from '@/hooks/useFinancialOrgScope';
+import { FinancialOrgScopeSelect } from '@/components/financial/FinancialOrgScopeSelect';
 import { CostCenterSelect } from '@/components/financial/CostCenterSelect';
 import {
   DropdownMenu,
@@ -23,6 +25,16 @@ import type { DreCategorizedMonth } from '@/services/financial/dreCategorizedSer
 export default function DRE() {
   const { currentOrganization } = useOrganization();
   const orgId = currentOrganization?.id;
+  const {
+    groupOrgIds,
+    effectiveOrgIds,
+    scopeSelection,
+    setScopeSelection,
+    showGroupFilter,
+    isConsolidatedView,
+    orgLabel,
+  } = useFinancialOrgScope();
+  const singleOrgId = effectiveOrgIds.length === 1 ? effectiveOrgIds[0] : null;
   const [loading, setLoading] = useState(false);
   
   const [dreData, setDreData] = useState<Record<string, unknown>[]>([]);
@@ -38,31 +50,35 @@ export default function DRE() {
   const [dreCostCenterFilter, setDreCostCenterFilter] = useState('');
 
   useEffect(() => {
-    if (!orgId) return;
+    if (isConsolidatedView) setDreCostCenterFilter('');
+  }, [isConsolidatedView]);
+
+  useEffect(() => {
+    if (effectiveOrgIds.length === 0) return;
     void loadDREData();
-  }, [selectedYear, orgId, dreCostCenterFilter]);
+  }, [selectedYear, effectiveOrgIds, dreCostCenterFilter]);
 
   useEffect(() => {
-    if (!orgId) return;
+    if (effectiveOrgIds.length === 0) return;
     void loadMonthlyData();
-  }, [selectedMonth, selectedYear, orgId, dreCostCenterFilter]);
+  }, [selectedMonth, selectedYear, effectiveOrgIds, dreCostCenterFilter]);
 
   useEffect(() => {
-    if (!orgId) return;
+    if (effectiveOrgIds.length === 0) return;
     void DreCategorizedService.compareThreeMonths(
-      orgId,
+      effectiveOrgIds,
       selectedYear,
       selectedMonth,
       dreCostCenterFilter || null
     ).then(setCompareTriplet);
-  }, [orgId, selectedYear, selectedMonth, dreCostCenterFilter]);
+  }, [effectiveOrgIds, selectedYear, selectedMonth, dreCostCenterFilter]);
 
   const persistMonthlySnapshot = async () => {
-    if (!orgId || dreCostCenterFilter) return;
+    if (!singleOrgId || dreCostCenterFilter || isConsolidatedView) return;
     setSavingSnapshot(true);
     try {
       const { error } = await DreCategorizedService.persistMonthSnapshot(
-        orgId,
+        singleOrgId,
         selectedYear,
         selectedMonth
       );
@@ -74,10 +90,14 @@ export default function DRE() {
   };
 
   const loadDREData = async () => {
-    if (!orgId) return;
+    if (effectiveOrgIds.length === 0) return;
     setLoading(true);
     try {
-      const rows = await DreCategorizedService.computeYear(orgId, selectedYear, dreCostCenterFilter || null);
+      const rows = await DreCategorizedService.computeYear(
+        effectiveOrgIds,
+        selectedYear,
+        dreCostCenterFilter || null
+      );
       setDreData(rows as unknown as Record<string, unknown>[]);
     } finally {
       setLoading(false);
@@ -85,11 +105,11 @@ export default function DRE() {
   };
 
   const loadMonthlyData = async () => {
-    if (!orgId) return;
+    if (effectiveOrgIds.length === 0) return;
     setLoading(true);
     try {
-      const m = await DreCategorizedService.computeMonth(
-        orgId,
+      const m = await DreCategorizedService.computeMonthForScope(
+        effectiveOrgIds,
         selectedYear,
         selectedMonth,
         dreCostCenterFilter || null
@@ -209,26 +229,35 @@ export default function DRE() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">DRE - Demonstrativo de Resultado</h1>
           <p className="text-muted-foreground">Análise de receitas, custos e rentabilidade</p>
         </div>
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="w-full sm:w-auto" disabled={loading}>
-              <Download className="mr-2 h-4 w-4" />
-              Exportar
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={exportMonthlyCsv}>Excel (CSV) — mês atual</DropdownMenuItem>
-            <DropdownMenuItem onClick={exportYearlyCsv}>Excel (CSV) — evolução anual</DropdownMenuItem>
-            <DropdownMenuItem onClick={exportMonthlyPdf}>PDF (imprimir) — mês atual</DropdownMenuItem>
-            <DropdownMenuItem onClick={exportYearlyPdf}>PDF (imprimir) — anual</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 w-full sm:w-auto min-w-0">
+          {showGroupFilter ? (
+            <FinancialOrgScopeSelect
+              groupOrgIds={groupOrgIds}
+              scopeSelection={scopeSelection}
+              onScopeChange={setScopeSelection}
+              orgLabel={orgLabel}
+            />
+          ) : null}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full sm:w-auto" disabled={loading}>
+                <Download className="mr-2 h-4 w-4" />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={exportMonthlyCsv}>Excel (CSV) — mês atual</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportYearlyCsv}>Excel (CSV) — evolução anual</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportMonthlyPdf}>PDF (imprimir) — mês atual</DropdownMenuItem>
+              <DropdownMenuItem onClick={exportYearlyPdf}>PDF (imprimir) — anual</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Seletores de Período */}
@@ -264,14 +293,15 @@ export default function DRE() {
             </SelectContent>
           </Select>
         </div>
-        {orgId && (
+        {singleOrgId && (
           <div className="w-full sm:w-auto sm:min-w-[220px]">
             <CostCenterSelect
-              orgId={orgId}
+              orgId={singleOrgId}
               value={dreCostCenterFilter}
               onValueChange={setDreCostCenterFilter}
               label="Centro de custo (DRE)"
               id="dre-cc-filter"
+              disabled={isConsolidatedView}
             />
           </div>
         )}
@@ -293,7 +323,12 @@ export default function DRE() {
               type="button"
               variant="outline"
               size="sm"
-              disabled={savingSnapshot || !orgId || !!dreCostCenterFilter}
+              disabled={
+                savingSnapshot ||
+                !singleOrgId ||
+                !!dreCostCenterFilter ||
+                isConsolidatedView
+              }
               onClick={() => void persistMonthlySnapshot()}
             >
               {savingSnapshot ? 'Gravando…' : 'Gravar snapshot no banco'}

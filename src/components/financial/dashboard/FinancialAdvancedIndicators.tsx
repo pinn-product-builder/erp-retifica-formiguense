@@ -15,10 +15,10 @@ import {
 import { BarChart3, Gauge, Percent, Timer } from 'lucide-react';
 
 type Props = {
-  orgId: string;
+  orgIds: string[];
 };
 
-export function FinancialAdvancedIndicators({ orgId }: Props) {
+export function FinancialAdvancedIndicators({ orgIds }: Props) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -26,14 +26,18 @@ export function FinancialAdvancedIndicators({ orgId }: Props) {
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
+    if (orgIds.length === 0) {
+      setData(null);
+      return;
+    }
     setLoading(true);
     try {
-      const r = await AdvancedIndicatorsService.compute(orgId, year, month);
+      const r = await AdvancedIndicatorsService.compute(orgIds, year, month);
       setData(r);
     } finally {
       setLoading(false);
     }
-  }, [orgId, year, month]);
+  }, [orgIds, year, month]);
 
   useEffect(() => {
     void load();

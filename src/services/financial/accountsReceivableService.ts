@@ -8,6 +8,7 @@ import {
 } from '@/services/financial/schemas';
 import type { AccountsReceivableListFilters, PaginatedResult } from '@/services/financial/types';
 import { CostCenterService } from '@/services/financial/costCenterService';
+import { applyOrgIdFilter } from '@/services/financial/orgScope';
 
 type ArRow = Database['public']['Tables']['accounts_receivable']['Row'];
 
@@ -56,24 +57,27 @@ export class AccountsReceivableService {
   }
 
   static async listPaginated(
-    orgId: string,
+    orgIds: string[],
     page: number,
     pageSize: number,
     filters: AccountsReceivableListFilters = {}
   ): Promise<PaginatedResult<ArRow & Record<string, unknown>>> {
-    await this.refreshOverdue(orgId);
+    await Promise.all(orgIds.map((id) => this.refreshOverdue(id)));
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    let q = supabase
-      .from('accounts_receivable')
-      .select(
-        `*,
+    let q = applyOrgIdFilter(
+      supabase
+        .from('accounts_receivable')
+        .select(
+          `*,
           customers (id, name, document),
           orders (id, order_number)`,
-        { count: 'exact' }
-      )
-      .eq('org_id', orgId);
+          { count: 'exact' }
+        ),
+      'org_id',
+      orgIds
+    );
 
     if (filters.customerId) q = q.eq('customer_id', filters.customerId);
     if (filters.status) q = q.eq('status', filters.status);
@@ -118,11 +122,15 @@ export class AccountsReceivableService {
   }
 
   static async aggregateTotals(
-    orgId: string,
+    orgIds: string[],
     filters: AccountsReceivableListFilters = {}
   ): Promise<{ open: number; overdue: number; received: number }> {
-    await this.refreshOverdue(orgId);
-    let q = supabase.from('accounts_receivable').select('status, amount, due_date').eq('org_id', orgId);
+    await Promise.all(orgIds.map((id) => this.refreshOverdue(id)));
+    let q = applyOrgIdFilter(
+      supabase.from('accounts_receivable').select('status, amount, due_date'),
+      'org_id',
+      orgIds
+    );
     if (filters.customerId) q = q.eq('customer_id', filters.customerId);
     if (filters.paymentMethod) q = q.eq('payment_method', filters.paymentMethod);
     if (filters.orderId) q = q.eq('order_id', filters.orderId);

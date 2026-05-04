@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { cashFlowCreateSchema, type CashFlowCreateInput } from '@/services/financial/schemas';
 import type { PaginatedResult } from '@/services/financial/types';
+import { applyOrgIdFilter } from '@/services/financial/orgScope';
 
 type CfRow = Database['public']['Tables']['cash_flow']['Row'];
 
@@ -50,7 +51,7 @@ export class CashFlowService {
   }
 
   static async sumPeriodMetrics(
-    orgId: string,
+    orgIds: string[],
     startDate?: string,
     endDate?: string,
     options?: CashFlowQueryOptions
@@ -63,11 +64,11 @@ export class CashFlowService {
     let reconciled = 0;
     let pending = 0;
     for (;;) {
-      let qb = supabase
-        .from('cash_flow')
-        .select('amount, transaction_type, reconciled')
-        .eq('org_id', orgId)
-        .order('transaction_date', { ascending: false });
+      let qb = applyOrgIdFilter(
+        supabase.from('cash_flow').select('amount, transaction_type, reconciled'),
+        'org_id',
+        orgIds
+      ).order('transaction_date', { ascending: false });
       if (!includeIc) qb = qb.eq('is_intercompany', false);
       if (startDate) qb = qb.gte('transaction_date', startDate);
       if (endDate) qb = qb.lte('transaction_date', endDate);
@@ -140,7 +141,7 @@ export class CashFlowService {
   }
 
   static async netBalanceThrough(
-    orgId: string,
+    orgIds: string[],
     throughDateInclusive: string,
     options?: CashFlowQueryOptions
   ): Promise<number> {
@@ -151,10 +152,11 @@ export class CashFlowService {
     for (;;) {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
-      let qb = supabase
-        .from('cash_flow')
-        .select('amount, transaction_type')
-        .eq('org_id', orgId)
+      let qb = applyOrgIdFilter(
+        supabase.from('cash_flow').select('amount, transaction_type'),
+        'org_id',
+        orgIds
+      )
         .lte('transaction_date', throughDateInclusive)
         .order('transaction_date', { ascending: true });
       if (!includeIc) qb = qb.eq('is_intercompany', false);
@@ -239,7 +241,7 @@ export class CashFlowService {
   }
 
   static async listPaginated(
-    orgId: string,
+    orgIds: string[],
     page: number,
     pageSize: number,
     startDate?: string,
@@ -250,16 +252,18 @@ export class CashFlowService {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    let q = supabase
-      .from('cash_flow')
-      .select(
-        `*,
+    let q = applyOrgIdFilter(
+      supabase
+        .from('cash_flow')
+        .select(
+          `*,
         expense_categories (name),
         bank_accounts (*)`,
-        { count: 'exact' }
-      )
-      .eq('org_id', orgId)
-      .order('transaction_date', { ascending: false });
+          { count: 'exact' }
+        ),
+      'org_id',
+      orgIds
+    ).order('transaction_date', { ascending: false });
     if (!includeIc) q = q.eq('is_intercompany', false);
 
     if (startDate) q = q.gte('transaction_date', startDate);

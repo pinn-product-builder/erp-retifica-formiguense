@@ -27,6 +27,8 @@ import {
 } from '@/components/financial/FinancialAsyncCombobox';
 import { CostCenterSelect } from '@/components/financial/CostCenterSelect';
 import { useFinancial } from '@/hooks/useFinancial';
+import { useFinancialOrgScope } from '@/hooks/useFinancialOrgScope';
+import { FinancialOrgScopeSelect } from '@/components/financial/FinancialOrgScopeSelect';
 import { useOrganization } from '@/hooks/useOrganization';
 import { CustomerLookupService } from '@/services/financial/customerLookupService';
 import { OrderService, type OrderWithDetails } from '@/services/OrderService';
@@ -96,6 +98,17 @@ export default function ContasReceber() {
   const { currentOrganization } = useOrganization();
   const { user } = useAuth();
   const orgId = currentOrganization?.id ?? '';
+  const {
+    groupOrgIds,
+    effectiveOrgIds,
+    scopeSelection,
+    setScopeSelection,
+    showGroupFilter,
+    isConsolidatedView,
+    orgLabel,
+  } = useFinancialOrgScope();
+  const writeOrgId = effectiveOrgIds.length === 1 ? effectiveOrgIds[0] : '';
+  const lookupOrgId = writeOrgId || orgId;
   const {
     loading,
     getAccountsReceivable,
@@ -202,18 +215,18 @@ export default function ContasReceber() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!orgId) return;
-    void FinancialConfigService.listPaymentMethodsForContext(orgId, 'receivable').then(setPmCatalog);
-  }, [orgId]);
+    if (!lookupOrgId) return;
+    void FinancialConfigService.listPaymentMethodsForContext(lookupOrgId, 'receivable').then(setPmCatalog);
+  }, [lookupOrgId]);
 
   useEffect(() => {
-    if (!orgId) return;
+    if (effectiveOrgIds.length === 0) return;
     let cancelled = false;
     (async () => {
       const filters = buildFilters();
       const [listRes, t] = await Promise.all([
-        getAccountsReceivable(page, 10, filters),
-        getReceivableTotals(filters),
+        getAccountsReceivable(effectiveOrgIds, page, 10, filters),
+        getReceivableTotals(effectiveOrgIds, filters),
       ]);
       if (cancelled) return;
       if (listRes.totalPages >= 1 && page > listRes.totalPages) {
@@ -228,34 +241,34 @@ export default function ContasReceber() {
     return () => {
       cancelled = true;
     };
-  }, [orgId, page, buildFilters, listVersion, getAccountsReceivable, getReceivableTotals]);
+  }, [effectiveOrgIds, page, buildFilters, listVersion, getAccountsReceivable, getReceivableTotals]);
 
   useEffect(() => {
     const q = dialogOpen || installDialogOpen ? customerDialogInput : customerFilterInput;
-    if (!orgId || !q.trim()) {
+    if (!lookupOrgId || !q.trim()) {
       setCustomerOptions([]);
       return;
     }
     const t = setTimeout(() => {
       setCustomerLoading(true);
-      void CustomerLookupService.search(orgId, q, 1, 20).then((r) => {
+      void CustomerLookupService.search(lookupOrgId, q, 1, 20).then((r) => {
         setCustomerOptions(r.data);
         setCustomerLoading(false);
       });
     }, 300);
     return () => clearTimeout(t);
-  }, [customerFilterInput, customerDialogInput, dialogOpen, installDialogOpen, orgId]);
+  }, [customerFilterInput, customerDialogInput, dialogOpen, installDialogOpen, lookupOrgId]);
 
   useEffect(() => {
     const q = dialogOpen || installDialogOpen ? orderDialogInput : orderFilterInput;
-    if (!orgId || !q.trim()) {
+    if (!lookupOrgId || !q.trim()) {
       setOrderOptions([]);
       return;
     }
     const t = setTimeout(() => {
       setOrderLoading(true);
       void OrderService.searchOrders({
-        orgId,
+        orgId: lookupOrgId,
         searchTerm: q,
         page: 1,
         limit: 15,
@@ -265,32 +278,33 @@ export default function ContasReceber() {
       });
     }, 300);
     return () => clearTimeout(t);
-  }, [orderFilterInput, orderDialogInput, dialogOpen, installDialogOpen, orgId]);
+  }, [orderFilterInput, orderDialogInput, dialogOpen, installDialogOpen, lookupOrgId]);
 
   useEffect(() => {
     const q = dialogOpen || installDialogOpen ? budgetDialogInput : budgetFilterInput;
-    if (!orgId || !q.trim()) {
+    if (!lookupOrgId || !q.trim()) {
       setBudgetOptions([]);
       return;
     }
     const t = setTimeout(() => {
       setBudgetLoading(true);
-      void BudgetLookupService.search(orgId, q, 1, 15).then((r) => {
+      void BudgetLookupService.search(lookupOrgId, q, 1, 15).then((r) => {
         setBudgetOptions(r.data);
         setBudgetLoading(false);
       });
     }, 300);
     return () => clearTimeout(t);
-  }, [budgetFilterInput, budgetDialogInput, dialogOpen, installDialogOpen, orgId]);
+  }, [budgetFilterInput, budgetDialogInput, dialogOpen, installDialogOpen, lookupOrgId]);
 
   const openEdit = async (row: ArRow & Record<string, unknown>) => {
     if (row.status === 'paid' || row.status === 'cancelled') {
       toast.error('Não é possível editar título pago ou cancelado');
       return;
     }
-    if (!orgId) return;
+    const rowOrg = (row.org_id as string) || orgId;
+    if (!rowOrg) return;
     setSelectedRow(row);
-    const cust = await CustomerLookupService.getById(orgId, row.customer_id as string);
+    const cust = await CustomerLookupService.getById(rowOrg, row.customer_id as string);
     setDialogCustomerOpt(cust);
     setCustomerDialogInput(cust?.name ?? '');
     setDialogOrderOpt(null);
@@ -325,9 +339,10 @@ export default function ContasReceber() {
   };
 
   const submitRenegotiate = async () => {
-    if (!orgId || !selectedRow) return;
+    const rowOrg = (selectedRow?.org_id as string) || orgId;
+    if (!rowOrg || !selectedRow) return;
     const res = await ArRenegotiationService.rescheduleOpenBalance({
-      orgId,
+      orgId: rowOrg,
       userId: user?.id ?? null,
       receivableIds: [selectedRow.id as string],
       newInstallments: Number(renegForm.installments),
@@ -381,13 +396,21 @@ export default function ContasReceber() {
       cost_center_id: form.cost_center_id || null,
     };
     if (selectedRow) {
-      await updateAccountsReceivable(selectedRow.id as string, {
-        ...payload,
-        installment_number: (selectedRow.installment_number as number) ?? 1,
-        total_installments: (selectedRow.total_installments as number) ?? 1,
-      } as never);
+      await updateAccountsReceivable(
+        selectedRow.id as string,
+        {
+          ...payload,
+          installment_number: (selectedRow.installment_number as number) ?? 1,
+          total_installments: (selectedRow.total_installments as number) ?? 1,
+        } as never,
+        (selectedRow.org_id as string) || undefined
+      );
     } else {
-      await createAccountsReceivable(payload);
+      if (!writeOrgId) {
+        toast.error('Selecione uma empresa única para lançar.');
+        return;
+      }
+      await createAccountsReceivable(payload, writeOrgId);
     }
     setDialogOpen(false);
     if (!selectedRow) {
@@ -398,18 +421,25 @@ export default function ContasReceber() {
 
   const submitInstall = async () => {
     if (!dialogCustomerOpt) return;
-    const ok = await createInstallmentPlan({
-      customer_id: dialogCustomerOpt.id,
-      order_id: dialogOrderOpt?.id ?? null,
-      budget_id: dialogBudgetOpt?.id ?? null,
-      total_amount: Number(installForm.total_amount.replace(',', '.')),
-      first_due_date: installForm.first_due_date,
-      competence_date: installForm.competence_date || installForm.first_due_date,
-      installments: Number(installForm.installments),
-      payment_method: (form.payment_method || undefined) as Pm | undefined,
-      notes: form.notes || null,
-      cost_center_id: form.cost_center_id || null,
-    });
+    if (!writeOrgId) {
+      toast.error('Selecione uma empresa única para parcelar.');
+      return;
+    }
+    const ok = await createInstallmentPlan(
+      {
+        customer_id: dialogCustomerOpt.id,
+        order_id: dialogOrderOpt?.id ?? null,
+        budget_id: dialogBudgetOpt?.id ?? null,
+        total_amount: Number(installForm.total_amount.replace(',', '.')),
+        first_due_date: installForm.first_due_date,
+        competence_date: installForm.competence_date || installForm.first_due_date,
+        installments: Number(installForm.installments),
+        payment_method: (form.payment_method || undefined) as Pm | undefined,
+        notes: form.notes || null,
+        cost_center_id: form.cost_center_id || null,
+      },
+      writeOrgId
+    );
     if (ok) {
       setInstallDialogOpen(false);
       setPage(1);
@@ -419,14 +449,17 @@ export default function ContasReceber() {
 
   const openHistory = async (row: ArRow & Record<string, unknown>) => {
     setSelectedRow(row);
-    const h = await listReceiptHistory(row.id as string);
+    const h = await listReceiptHistory(row.id as string, (row.org_id as string) || undefined);
     setHistoryRows(h as unknown as Record<string, unknown>[]);
     setHistoryOpen(true);
   };
 
   const openPayment = async (row: ArRow & Record<string, unknown>) => {
     setSelectedRow(row);
-    const snap = await getReceivableSettlementSnapshot(row.id as string);
+    const snap = await getReceivableSettlementSnapshot(
+      row.id as string,
+      (row.org_id as string) || undefined
+    );
     setPaymentSnapshot(snap);
     const defaultAmt =
       snap && snap.remaining > 0 ? String(snap.remaining).replace('.', ',') : String(row.amount);
@@ -443,15 +476,18 @@ export default function ContasReceber() {
 
   const submitPayment = async () => {
     if (!selectedRow) return;
-    const ok = await recordReceiptPayment({
-      receivable_account_id: selectedRow.id as string,
-      amount_received: Number(payForm.amount_received.replace(',', '.')),
-      received_at: payForm.received_at,
-      payment_method: payForm.payment_method || null,
-      late_fee_charged: Number(payForm.late_fee_charged) || 0,
-      discount_applied: Number(payForm.discount_applied) || 0,
-      notes: payForm.notes || null,
-    });
+    const ok = await recordReceiptPayment(
+      {
+        receivable_account_id: selectedRow.id as string,
+        amount_received: Number(payForm.amount_received.replace(',', '.')),
+        received_at: payForm.received_at,
+        payment_method: payForm.payment_method || null,
+        late_fee_charged: Number(payForm.late_fee_charged) || 0,
+        discount_applied: Number(payForm.discount_applied) || 0,
+        notes: payForm.notes || null,
+      },
+      (selectedRow.org_id as string) || undefined
+    );
     if (ok) {
       setPaymentOpen(false);
       setListVersion((v) => v + 1);
@@ -461,6 +497,17 @@ export default function ContasReceber() {
   const fmt = (n: number) => formatBRL(n);
 
   const arColumns: ResponsiveTableColumn<ArRow & Record<string, unknown>>[] = [
+    ...(isConsolidatedView
+      ? [
+          {
+            key: 'org',
+            header: 'Empresa',
+            mobileLabel: 'Empresa',
+            priority: 1,
+            render: (row: ArRow & Record<string, unknown>) => orgLabel((row.org_id as string) ?? ''),
+          } satisfies ResponsiveTableColumn<ArRow & Record<string, unknown>>,
+        ]
+      : []),
       {
         key: 'customer',
         header: 'Cliente',
@@ -564,6 +611,7 @@ export default function ContasReceber() {
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 sm:h-8 sm:w-8"
+                    disabled={isConsolidatedView}
                     onClick={() => void openHistory(row)}
                   >
                     <History className="h-3 w-3 sm:h-4 sm:h-4" />
@@ -580,6 +628,7 @@ export default function ContasReceber() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 sm:h-8 sm:w-8"
+                        disabled={isConsolidatedView}
                         onClick={() => void openEdit(row)}
                       >
                         <Pencil className="h-3 w-3 sm:h-4 sm:h-4" />
@@ -594,6 +643,7 @@ export default function ContasReceber() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 sm:h-8 sm:w-8"
+                        disabled={isConsolidatedView}
                         onClick={() => openRenegotiate(row)}
                       >
                         <span className="text-xs font-semibold">R</span>
@@ -608,6 +658,7 @@ export default function ContasReceber() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 sm:h-8 sm:w-8"
+                        disabled={isConsolidatedView}
                         onClick={() => void openPayment(row)}
                       >
                         <Wallet className="h-3 w-3 sm:h-4 sm:h-4" />
@@ -648,11 +699,30 @@ export default function ContasReceber() {
               Filtros, totais e lançamentos vinculados a cliente, OS e orçamento
             </p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:w-auto">
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setInstallDialogOpen(true)}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:w-auto min-w-0">
+            {showGroupFilter ? (
+              <FinancialOrgScopeSelect
+                groupOrgIds={groupOrgIds}
+                scopeSelection={scopeSelection}
+                onScopeChange={setScopeSelection}
+                orgLabel={orgLabel}
+              />
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              disabled={isConsolidatedView || !writeOrgId}
+              onClick={() => setInstallDialogOpen(true)}
+            >
               Parcelar
             </Button>
-            <Button type="button" className="w-full sm:w-auto" onClick={openNew}>
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              disabled={isConsolidatedView || !writeOrgId}
+              onClick={openNew}
+            >
               Nova conta
             </Button>
           </div>
@@ -963,7 +1033,7 @@ export default function ContasReceber() {
               </div>
             </div>
             <CostCenterSelect
-              orgId={orgId}
+              orgId={lookupOrgId}
               value={form.cost_center_id}
               onValueChange={(id) => setForm((f) => ({ ...f, cost_center_id: id }))}
               id="ar-cost-center"

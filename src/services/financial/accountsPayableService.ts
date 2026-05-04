@@ -6,6 +6,7 @@ import { ApprovalApService } from '@/services/financial/approvalApService';
 import { CashFlowService } from '@/services/financial/cashFlowService';
 import { CostCenterService } from '@/services/financial/costCenterService';
 import { isAccountsPayableApprovedForPayment } from '@/services/financial/approvalApService';
+import { applyOrgIdFilter } from '@/services/financial/orgScope';
 
 type ApRow = Database['public']['Tables']['accounts_payable']['Row'];
 
@@ -28,7 +29,7 @@ export interface AccountsPayableOrgSummary {
 
 export class AccountsPayableService {
   static async listPaginated(
-    orgId: string,
+    orgIds: string[],
     page: number,
     pageSize: number,
     filters: AccountsPayableListFilters = {}
@@ -36,12 +37,15 @@ export class AccountsPayableService {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    let q = supabase
-      .from('accounts_payable')
-      .select(`*, expense_categories (name, category), suppliers:supplier_id (id, name, document)`, {
-        count: 'exact',
-      })
-      .eq('org_id', orgId);
+    let q = applyOrgIdFilter(
+      supabase
+        .from('accounts_payable')
+        .select(`*, expense_categories (name, category), suppliers:supplier_id (id, name, document)`, {
+          count: 'exact',
+        }),
+      'org_id',
+      orgIds
+    );
 
     if (filters.supplierId) q = q.eq('supplier_id', filters.supplierId);
     if (filters.status) q = q.eq('status', filters.status);
@@ -77,18 +81,28 @@ export class AccountsPayableService {
     };
   }
 
-  static async getOrgSummary(orgId: string): Promise<AccountsPayableOrgSummary> {
-    const { data, error } = await supabase.rpc('accounts_payable_org_summary', {
-      p_org_id: orgId,
-    });
-    if (error) throw new Error(error.message);
-    const j = data as Record<string, unknown> | null;
+  static async getOrgSummary(orgIds: string[]): Promise<AccountsPayableOrgSummary> {
+    if (orgIds.length === 1) {
+      const { data, error } = await supabase.rpc('accounts_payable_org_summary', {
+        p_org_id: orgIds[0],
+      });
+      if (error) throw new Error(error.message);
+      const j = data as Record<string, unknown> | null;
+      return {
+        all: Number(j?.all ?? 0),
+        pending: Number(j?.pending ?? 0),
+        overdue: Number(j?.overdue ?? 0),
+        paid: Number(j?.paid ?? 0),
+        pendingAmount: Number(j?.pending_amount ?? 0),
+      };
+    }
+    const parts = await Promise.all(orgIds.map((id) => this.getOrgSummary([id])));
     return {
-      all: Number(j?.all ?? 0),
-      pending: Number(j?.pending ?? 0),
-      overdue: Number(j?.overdue ?? 0),
-      paid: Number(j?.paid ?? 0),
-      pendingAmount: Number(j?.pending_amount ?? 0),
+      all: parts.reduce((s, p) => s + p.all, 0),
+      pending: parts.reduce((s, p) => s + p.pending, 0),
+      overdue: parts.reduce((s, p) => s + p.overdue, 0),
+      paid: parts.reduce((s, p) => s + p.paid, 0),
+      pendingAmount: parts.reduce((s, p) => s + p.pendingAmount, 0),
     };
   }
 

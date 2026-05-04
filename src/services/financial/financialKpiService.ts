@@ -1,21 +1,27 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { FinancialKpis } from '@/services/financial/types';
+import { applyOrgIdFilter } from '@/services/financial/orgScope';
 
 export class FinancialKpiService {
-  static async getKpis(orgId: string): Promise<FinancialKpis> {
+  static async getKpis(orgIds: string[]): Promise<FinancialKpis> {
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
     const monthStart = `${currentYear}-${String(currentMonth).padStart(2, '0')}-01`;
 
     const [cashFlowRes, receivableRes, payableRes] = await Promise.all([
-      supabase
-        .from('cash_flow')
-        .select('transaction_type, amount')
-        .eq('org_id', orgId)
+      applyOrgIdFilter(
+        supabase.from('cash_flow').select('transaction_type, amount'),
+        'org_id',
+        orgIds
+      )
         .eq('is_intercompany', false)
         .gte('transaction_date', monthStart),
-      supabase.from('accounts_receivable').select('status, amount, due_date').eq('org_id', orgId),
-      supabase.from('accounts_payable').select('status, amount, due_date').eq('org_id', orgId),
+      applyOrgIdFilter(
+        supabase.from('accounts_receivable').select('status, amount, due_date'),
+        'org_id',
+        orgIds
+      ),
+      applyOrgIdFilter(supabase.from('accounts_payable').select('status, amount, due_date'), 'org_id', orgIds),
     ]);
 
     const income =

@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { applyOrgIdFilter } from '@/services/financial/orgScope';
 
 export interface AdvancedFinancialIndicators {
   inadimplenciaPercent: number;
@@ -9,17 +10,17 @@ export interface AdvancedFinancialIndicators {
 }
 
 export class AdvancedIndicatorsService {
-  static async compute(orgId: string, year: number, month: number): Promise<AdvancedFinancialIndicators> {
+  static async compute(orgIds: string[], year: number, month: number): Promise<AdvancedFinancialIndicators> {
     const start = `${year}-${String(month).padStart(2, '0')}-01`;
     const nextM = month === 12 ? 1 : month + 1;
     const nextY = month === 12 ? year + 1 : year;
     const end = `${nextY}-${String(nextM).padStart(2, '0')}-01`;
 
-    const { data: arOpen } = await supabase
-      .from('accounts_receivable')
-      .select('amount, status, due_date')
-      .eq('org_id', orgId)
-      .in('status', ['pending', 'overdue', 'renegotiated']);
+    const { data: arOpen } = await applyOrgIdFilter(
+      supabase.from('accounts_receivable').select('amount, status, due_date'),
+      'org_id',
+      orgIds
+    ).in('status', ['pending', 'overdue', 'renegotiated']);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     let totalOpen = 0;
@@ -32,10 +33,11 @@ export class AdvancedIndicatorsService {
     }
     const inadimplenciaPercent = totalOpen > 0 ? (overdueOpen / totalOpen) * 100 : 0;
 
-    const { data: arPaid } = await supabase
-      .from('accounts_receivable')
-      .select('due_date, payment_date')
-      .eq('org_id', orgId)
+    const { data: arPaid } = await applyOrgIdFilter(
+      supabase.from('accounts_receivable').select('due_date, payment_date'),
+      'org_id',
+      orgIds
+    )
       .eq('status', 'paid')
       .not('payment_date', 'is', null)
       .gte('payment_date', start)
@@ -51,10 +53,11 @@ export class AdvancedIndicatorsService {
     }
     const pmrDays = pmrN > 0 ? Math.round(pmrSum / pmrN) : null;
 
-    const { data: apPaid } = await supabase
-      .from('accounts_payable')
-      .select('created_at, payment_date')
-      .eq('org_id', orgId)
+    const { data: apPaid } = await applyOrgIdFilter(
+      supabase.from('accounts_payable').select('created_at, payment_date'),
+      'org_id',
+      orgIds
+    )
       .eq('status', 'paid')
       .not('payment_date', 'is', null)
       .gte('payment_date', start)
@@ -72,16 +75,18 @@ export class AdvancedIndicatorsService {
     }
     const pmpDays = pmpN > 0 ? Math.round(pmpSum / pmpN) : null;
 
-    const { count: ordersDone } = await supabase
-      .from('orders')
-      .select('id', { count: 'exact', head: true })
-      .eq('org_id', orgId)
+    const { count: ordersDone } = await applyOrgIdFilter(
+      supabase.from('orders').select('id', { count: 'exact', head: true }),
+      'org_id',
+      orgIds
+    )
       .gte('updated_at', start)
       .lt('updated_at', end);
-    const { data: rev } = await supabase
-      .from('accounts_receivable')
-      .select('amount')
-      .eq('org_id', orgId)
+    const { data: rev } = await applyOrgIdFilter(
+      supabase.from('accounts_receivable').select('amount'),
+      'org_id',
+      orgIds
+    )
       .eq('status', 'paid')
       .gte('payment_date', start)
       .lt('payment_date', end);
@@ -89,10 +94,11 @@ export class AdvancedIndicatorsService {
     const ticketMedio =
       ordersDone && ordersDone > 0 ? Math.round((totalRev / ordersDone) * 100) / 100 : null;
 
-    const { data: cf } = await supabase
-      .from('cash_flow')
-      .select('amount, transaction_type')
-      .eq('org_id', orgId)
+    const { data: cf } = await applyOrgIdFilter(
+      supabase.from('cash_flow').select('amount, transaction_type'),
+      'org_id',
+      orgIds
+    )
       .eq('is_intercompany', false)
       .gte('transaction_date', start)
       .lt('transaction_date', end);
@@ -102,10 +108,11 @@ export class AdvancedIndicatorsService {
       if (row.transaction_type === 'expense') expenses += Number(row.amount);
     }
     const dailyExp = expenses / 30;
-    const { data: balRows } = await supabase
-      .from('cash_flow')
-      .select('amount, transaction_type, transaction_date')
-      .eq('org_id', orgId)
+    const { data: balRows } = await applyOrgIdFilter(
+      supabase.from('cash_flow').select('amount, transaction_type, transaction_date'),
+      'org_id',
+      orgIds
+    )
       .eq('is_intercompany', false)
       .lte('transaction_date', end)
       .order('transaction_date', { ascending: true });

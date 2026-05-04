@@ -14,6 +14,26 @@ export type DreCategorizedMonth = {
   profit_margin: number;
 };
 
+function mergeDreMonths(parts: DreCategorizedMonth[]): DreCategorizedMonth {
+  if (parts.length === 0) {
+    throw new Error('mergeDreMonths: lista vazia');
+  }
+  if (parts.length === 1) return parts[0];
+  const b: DreCategorizedMonth = { ...parts[0] };
+  for (let i = 1; i < parts.length; i++) {
+    const p = parts[i];
+    b.total_revenue += p.total_revenue;
+    b.direct_costs += p.direct_costs;
+    b.tax_expenses += p.tax_expenses;
+    b.operational_expenses += p.operational_expenses;
+    b.partner_withdrawals += p.partner_withdrawals;
+  }
+  b.gross_profit = b.total_revenue - b.direct_costs - b.tax_expenses;
+  b.net_profit = b.gross_profit - b.operational_expenses - b.partner_withdrawals;
+  b.profit_margin = b.total_revenue > 0 ? (b.net_profit / b.total_revenue) * 100 : 0;
+  return b;
+}
+
 function monthRange(year: number, month: number): { start: string; end: string } {
   const pad = (n: number) => String(n).padStart(2, '0');
   const start = `${year}-${pad(month)}-01`;
@@ -113,20 +133,36 @@ export class DreCategorizedService {
     };
   }
 
+  /** Um ou vários tenants: consolida somando linhas do DRE por empresa. */
+  static async computeMonthForScope(
+    orgIds: string[],
+    year: number,
+    month: number,
+    costCenterId?: string | null
+  ): Promise<DreCategorizedMonth> {
+    if (orgIds.length === 1) {
+      return this.computeMonth(orgIds[0], year, month, costCenterId);
+    }
+    const parts = await Promise.all(
+      orgIds.map((id) => this.computeMonth(id, year, month, costCenterId))
+    );
+    return mergeDreMonths(parts);
+  }
+
   static async computeYear(
-    orgId: string,
+    orgIds: string[],
     year: number,
     costCenterId?: string | null
   ): Promise<DreCategorizedMonth[]> {
     const out: DreCategorizedMonth[] = [];
     for (let m = 1; m <= 12; m++) {
-      out.push(await this.computeMonth(orgId, year, m, costCenterId));
+      out.push(await this.computeMonthForScope(orgIds, year, m, costCenterId));
     }
     return out;
   }
 
   static async compareThreeMonths(
-    orgId: string,
+    orgIds: string[],
     year: number,
     month: number,
     costCenterId?: string | null
@@ -138,9 +174,9 @@ export class DreCategorizedService {
     const pm = month === 1 ? 12 : month - 1;
     const py = month === 1 ? year - 1 : year;
     const [current, prevMonth, prevYearSame] = await Promise.all([
-      this.computeMonth(orgId, year, month, costCenterId),
-      this.computeMonth(orgId, py, pm, costCenterId),
-      this.computeMonth(orgId, year - 1, month, costCenterId),
+      this.computeMonthForScope(orgIds, year, month, costCenterId),
+      this.computeMonthForScope(orgIds, py, pm, costCenterId),
+      this.computeMonthForScope(orgIds, year - 1, month, costCenterId),
     ]);
     return { current, prevMonth, prevYearSame };
   }

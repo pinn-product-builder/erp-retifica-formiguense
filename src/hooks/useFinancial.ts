@@ -40,6 +40,15 @@ export type ExpenseCategory = Database['public']['Tables']['expense_categories']
 export type BankAccount = Database['public']['Tables']['bank_accounts']['Row'];
 export type MonthlyDRE = Database['public']['Tables']['monthly_dre']['Row'];
 
+function dedupeById<T extends { id: string }>(rows: T[]): T[] {
+  const seen = new Set<string>();
+  return rows.filter((r) => {
+    if (seen.has(r.id)) return false;
+    seen.add(r.id);
+    return true;
+  });
+}
+
 export const useFinancial = () => {
   const [loading, setLoading] = useState(false);
   const { currentOrganization } = useOrganization();
@@ -54,11 +63,17 @@ export const useFinancial = () => {
   }, []);
 
   const getAccountsReceivable = useCallback(
-    async (page = 1, pageSize = 20, filters: AccountsReceivableListFilters = {}) => {
-      if (!orgId) return { data: [], count: 0, page, pageSize, totalPages: 1 };
+    async (
+      scopeOrgIds: string[],
+      page = 1,
+      pageSize = 20,
+      filters: AccountsReceivableListFilters = {}
+    ) => {
+      if (scopeOrgIds.length === 0)
+        return { data: [], count: 0, page, pageSize, totalPages: 1 };
       try {
         setLoading(true);
-        return await AccountsReceivableService.listPaginated(orgId, page, pageSize, filters);
+        return await AccountsReceivableService.listPaginated(scopeOrgIds, page, pageSize, filters);
       } catch (error) {
         handleError(error, 'Erro ao carregar contas a receber');
         return { data: [], count: 0, page, pageSize, totalPages: 1 };
@@ -66,15 +81,15 @@ export const useFinancial = () => {
         setLoading(false);
       }
     },
-    [orgId, handleError]
+    [handleError]
   );
 
   const getReceivableTotals = useCallback(
-    async (filters: AccountsReceivableListFilters = {}) => {
-      if (!orgId) return { open: 0, overdue: 0, received: 0 };
+    async (scopeOrgIds: string[], filters: AccountsReceivableListFilters = {}) => {
+      if (scopeOrgIds.length === 0) return { open: 0, overdue: 0, received: 0 };
       try {
         setLoading(true);
-        return await AccountsReceivableService.aggregateTotals(orgId, filters);
+        return await AccountsReceivableService.aggregateTotals(scopeOrgIds, filters);
       } catch (error) {
         handleError(error, 'Erro ao calcular totais');
         return { open: 0, overdue: 0, received: 0 };
@@ -82,16 +97,20 @@ export const useFinancial = () => {
         setLoading(false);
       }
     },
-    [orgId, handleError]
+    [handleError]
   );
 
   const createAccountsReceivable = useCallback(
-    async (receivable: Omit<AccountsReceivable, 'org_id' | 'status'>) => {
-      if (!orgId) return null;
+    async (
+      receivable: Omit<AccountsReceivable, 'org_id' | 'status'>,
+      forOrgId?: string
+    ) => {
+      const targetOrg = forOrgId ?? orgId;
+      if (!targetOrg) return null;
       try {
         setLoading(true);
         const { data, error } = await AccountsReceivableService.create(
-          orgId,
+          targetOrg,
           {
             customer_id: receivable.customer_id as string,
             order_id: receivable.order_id,
@@ -123,11 +142,12 @@ export const useFinancial = () => {
   );
 
   const updateAccountsReceivable = useCallback(
-    async (id: string, updates: Partial<AccountsReceivable>) => {
-      if (!orgId) return null;
+    async (id: string, updates: Partial<AccountsReceivable>, rowOrgId?: string) => {
+      const targetOrg = rowOrgId ?? orgId;
+      if (!targetOrg) return null;
       try {
         setLoading(true);
-        const { data, error } = await AccountsReceivableService.update(orgId, id, updates, userId);
+        const { data, error } = await AccountsReceivableService.update(targetOrg, id, updates, userId);
         if (error) throw error;
         toast.success('Conta a receber atualizada com sucesso');
         return data;
@@ -142,11 +162,17 @@ export const useFinancial = () => {
   );
 
   const getAccountsPayable = useCallback(
-    async (page = 1, pageSize = 20, filters: AccountsPayableListFilters = {}) => {
-      if (!orgId) return { data: [], count: 0, page, pageSize, totalPages: 1 };
+    async (
+      scopeOrgIds: string[],
+      page = 1,
+      pageSize = 20,
+      filters: AccountsPayableListFilters = {}
+    ) => {
+      if (scopeOrgIds.length === 0)
+        return { data: [], count: 0, page, pageSize, totalPages: 1 };
       try {
         setLoading(true);
-        return await AccountsPayableService.listPaginated(orgId, page, pageSize, filters);
+        return await AccountsPayableService.listPaginated(scopeOrgIds, page, pageSize, filters);
       } catch (error) {
         handleError(error, 'Erro ao carregar contas a pagar');
         return { data: [], count: 0, page, pageSize, totalPages: 1 };
@@ -154,11 +180,11 @@ export const useFinancial = () => {
         setLoading(false);
       }
     },
-    [orgId, handleError]
+    [handleError]
   );
 
-  const getAccountsPayableOrgSummary = useCallback(async () => {
-    if (!orgId) {
+  const getAccountsPayableOrgSummary = useCallback(async (scopeOrgIds: string[]) => {
+    if (scopeOrgIds.length === 0) {
       return {
         all: 0,
         pending: 0,
@@ -168,7 +194,7 @@ export const useFinancial = () => {
       };
     }
     try {
-      return await AccountsPayableService.getOrgSummary(orgId);
+      return await AccountsPayableService.getOrgSummary(scopeOrgIds);
     } catch (error) {
       handleError(error, 'Erro ao carregar resumo de contas a pagar');
       return {
@@ -179,14 +205,15 @@ export const useFinancial = () => {
         pendingAmount: 0,
       };
     }
-  }, [orgId, handleError]);
+  }, [handleError]);
 
   const createAccountsPayable = useCallback(
-    async (payable: AccountsPayable) => {
-      if (!orgId) return null;
+    async (payable: AccountsPayable, forOrgId?: string) => {
+      const targetOrg = forOrgId ?? orgId;
+      if (!targetOrg) return null;
       try {
         setLoading(true);
-        const { data, error } = await AccountsPayableService.create(orgId, {
+        const { data, error } = await AccountsPayableService.create(targetOrg, {
           supplier_id: (payable as { supplier_id?: string | null }).supplier_id,
           supplier_name: payable.supplier_name,
           supplier_document: payable.supplier_document,
@@ -217,18 +244,19 @@ export const useFinancial = () => {
   );
 
   const updateAccountsPayable = useCallback(
-    async (id: string, updates: Partial<AccountsPayable>) => {
-      if (!orgId) return null;
+    async (id: string, updates: Partial<AccountsPayable>, rowOrgId?: string) => {
+      const targetOrg = rowOrgId ?? orgId;
+      if (!targetOrg) return null;
       try {
         setLoading(true);
         const patch = { ...updates } as Partial<AccountsPayable> & { approval_status?: string };
         if (typeof updates.amount === 'number' && updates.status !== 'paid') {
           patch.approval_status = await ApprovalApService.computeInitialApprovalStatus(
-            orgId,
+            targetOrg,
             updates.amount
           );
         }
-        const { data, error } = await AccountsPayableService.update(orgId, id, patch);
+        const { data, error } = await AccountsPayableService.update(targetOrg, id, patch);
         if (error) throw error;
         toast.success('Conta a pagar atualizada com sucesso');
         return data;
@@ -244,16 +272,18 @@ export const useFinancial = () => {
 
   const getCashFlow = useCallback(
     async (
+      scopeOrgIds: string[],
       startDate?: string,
       endDate?: string,
       page = 1,
       pageSize = 50,
       includeIntercompany = false
     ) => {
-      if (!orgId) return { data: [], count: 0, page, pageSize, totalPages: 1 };
+      if (scopeOrgIds.length === 0)
+        return { data: [], count: 0, page, pageSize, totalPages: 1 };
       try {
         setLoading(true);
-        return await CashFlowService.listPaginated(orgId, page, pageSize, startDate, endDate, {
+        return await CashFlowService.listPaginated(scopeOrgIds, page, pageSize, startDate, endDate, {
           includeIntercompany,
         });
       } catch (error) {
@@ -263,15 +293,16 @@ export const useFinancial = () => {
         setLoading(false);
       }
     },
-    [orgId, handleError]
+    [handleError]
   );
 
   const createCashFlow = useCallback(
-    async (cashFlow: Omit<CashFlow, 'org_id'>) => {
-      if (!orgId) return null;
+    async (cashFlow: Omit<CashFlow, 'org_id'>, forOrgId?: string) => {
+      const targetOrg = forOrgId ?? orgId;
+      if (!targetOrg) return null;
       try {
         setLoading(true);
-        const { data, error } = await CashFlowService.create(orgId, {
+        const { data, error } = await CashFlowService.create(targetOrg, {
           transaction_type: cashFlow.transaction_type as 'income' | 'expense',
           amount: cashFlow.amount as number,
           description: cashFlow.description as string,
@@ -301,11 +332,12 @@ export const useFinancial = () => {
   );
 
   const updateCashFlowEntry = useCallback(
-    async (id: string, patch: Partial<CashFlow>) => {
-      if (!orgId) return false;
+    async (id: string, patch: Partial<CashFlow>, rowOrgId?: string) => {
+      const targetOrg = rowOrgId ?? orgId;
+      if (!targetOrg) return false;
       try {
         setLoading(true);
-        const { error } = await CashFlowService.update(orgId, id, patch);
+        const { error } = await CashFlowService.update(targetOrg, id, patch);
         if (error) throw error;
         toast.success('Movimentação atualizada');
         return true;
@@ -320,11 +352,12 @@ export const useFinancial = () => {
   );
 
   const deleteCashFlowEntry = useCallback(
-    async (id: string) => {
-      if (!orgId) return false;
+    async (id: string, rowOrgId?: string) => {
+      const targetOrg = rowOrgId ?? orgId;
+      if (!targetOrg) return false;
       try {
         setLoading(true);
-        const { error } = await CashFlowService.remove(orgId, id);
+        const { error } = await CashFlowService.remove(targetOrg, id);
         if (error) throw error;
         toast.success('Movimentação excluída');
         return true;
@@ -339,10 +372,16 @@ export const useFinancial = () => {
   );
 
   const getCashFlowPeriodMetrics = useCallback(
-    async (startDate?: string, endDate?: string, includeIntercompany = false) => {
-      if (!orgId) return { income: 0, expense: 0, reconciled: 0, pending: 0 };
+    async (
+      scopeOrgIds: string[],
+      startDate?: string,
+      endDate?: string,
+      includeIntercompany = false
+    ) => {
+      if (scopeOrgIds.length === 0)
+        return { income: 0, expense: 0, reconciled: 0, pending: 0 };
       try {
-        return await CashFlowService.sumPeriodMetrics(orgId, startDate, endDate, {
+        return await CashFlowService.sumPeriodMetrics(scopeOrgIds, startDate, endDate, {
           includeIntercompany,
         });
       } catch (error) {
@@ -350,17 +389,21 @@ export const useFinancial = () => {
         return { income: 0, expense: 0, reconciled: 0, pending: 0 };
       }
     },
-    [orgId, handleError]
+    [handleError]
   );
 
   const getPaymentMethods = useCallback(
-    async (ctx?: PaymentMethodContext) => {
-      if (!orgId) return [];
+    async (scopeOrgIds: string[], ctx?: PaymentMethodContext) => {
+      if (scopeOrgIds.length === 0) return [];
       try {
         setLoading(true);
-        const rows = await FinancialConfigService.listPaymentMethods(orgId);
+        const lists = await Promise.all(
+          scopeOrgIds.map((id) => FinancialConfigService.listPaymentMethods(id))
+        );
+        let rows = dedupeById(lists.flat());
         if (!ctx) return rows;
-        return rows.filter((r) => paymentMethodMatchesContext(r.applies_to, ctx));
+        rows = rows.filter((r) => paymentMethodMatchesContext(r.applies_to, ctx));
+        return rows;
       } catch (error) {
         handleError(error, 'Erro ao carregar formas de pagamento');
         return [];
@@ -368,41 +411,47 @@ export const useFinancial = () => {
         setLoading(false);
       }
     },
-    [orgId, handleError]
+    [handleError]
   );
 
-  const getExpenseCategories = useCallback(async () => {
-    if (!orgId) return [];
+  const getExpenseCategories = useCallback(async (scopeOrgIds: string[]) => {
+    if (scopeOrgIds.length === 0) return [];
     try {
       setLoading(true);
-      return await FinancialConfigService.listExpenseCategories(orgId);
+      const lists = await Promise.all(
+        scopeOrgIds.map((id) => FinancialConfigService.listExpenseCategories(id))
+      );
+      return dedupeById(lists.flat());
     } catch (error) {
       handleError(error, 'Erro ao carregar categorias de despesas');
       return [];
     } finally {
       setLoading(false);
     }
-  }, [orgId, handleError]);
+  }, [handleError]);
 
-  const getBankAccounts = useCallback(async () => {
-    if (!orgId) return [];
+  const getBankAccounts = useCallback(async (scopeOrgIds: string[]) => {
+    if (scopeOrgIds.length === 0) return [];
     try {
       setLoading(true);
-      return await FinancialConfigService.listBankAccounts(orgId);
+      const lists = await Promise.all(
+        scopeOrgIds.map((id) => FinancialConfigService.listBankAccounts(id))
+      );
+      return dedupeById(lists.flat());
     } catch (error) {
       handleError(error, 'Erro ao carregar contas bancárias');
       return [];
     } finally {
       setLoading(false);
     }
-  }, [orgId, handleError]);
+  }, [handleError]);
 
   const getMonthlyDRE = useCallback(
-    async (year?: number) => {
-      if (!orgId) return [];
+    async (scopeOrgIds: string[], year?: number) => {
+      if (scopeOrgIds.length !== 1) return [];
       try {
         setLoading(true);
-        return await DreService.list(orgId, year);
+        return await DreService.list(scopeOrgIds[0], year);
       } catch (error) {
         handleError(error, 'Erro ao carregar DRE mensal');
         return [];
@@ -410,28 +459,29 @@ export const useFinancial = () => {
         setLoading(false);
       }
     },
-    [orgId, handleError]
+    [handleError]
   );
 
-  const getFinancialKPIs = useCallback(async () => {
-    if (!orgId) return null;
+  const getFinancialKPIs = useCallback(async (scopeOrgIds: string[]) => {
+    if (scopeOrgIds.length === 0) return null;
     try {
       setLoading(true);
-      return await FinancialKpiService.getKpis(orgId);
+      return await FinancialKpiService.getKpis(scopeOrgIds);
     } catch (error) {
       handleError(error, 'Erro ao carregar indicadores financeiros');
       return null;
     } finally {
       setLoading(false);
     }
-  }, [orgId, handleError]);
+  }, [handleError]);
 
   const getCustomers = useCallback(
-    async (search = '', page = 1, pageSize = 100) => {
-      if (!orgId) return [];
+    async (search = '', page = 1, pageSize = 100, lookupOrgId?: string) => {
+      const target = lookupOrgId ?? orgId;
+      if (!target) return [];
       try {
         setLoading(true);
-        const res = await CustomerLookupService.search(orgId, search, page, pageSize);
+        const res = await CustomerLookupService.search(target, search, page, pageSize);
         return res.data;
       } catch (error) {
         handleError(error, 'Erro ao carregar clientes');
@@ -444,9 +494,10 @@ export const useFinancial = () => {
   );
 
   const listReceiptHistory = useCallback(
-    async (receivableId: string) => {
-      if (!orgId) return [];
-      const { data, error } = await ReceiptHistoryService.listByReceivable(orgId, receivableId);
+    async (receivableId: string, rowOrgId?: string) => {
+      const target = rowOrgId ?? orgId;
+      if (!target) return [];
+      const { data, error } = await ReceiptHistoryService.listByReceivable(target, receivableId);
       if (error) {
         toast.error(error.message);
         return [];
@@ -457,12 +508,13 @@ export const useFinancial = () => {
   );
 
   const createInstallmentPlan = useCallback(
-    async (input: AccountsReceivableInstallmentsInput) => {
-      if (!orgId) return null;
+    async (input: AccountsReceivableInstallmentsInput, forOrgId?: string) => {
+      const target = forOrgId ?? orgId;
+      if (!target) return null;
       try {
         setLoading(true);
         const { data, error } = await AccountsReceivableService.createInstallmentPlan(
-          orgId,
+          target,
           input,
           userId
         );
@@ -480,11 +532,12 @@ export const useFinancial = () => {
   );
 
   const recordReceiptPayment = useCallback(
-    async (input: ReceiptRecordInput) => {
-      if (!orgId) return false;
+    async (input: ReceiptRecordInput, rowOrgId?: string) => {
+      const target = rowOrgId ?? orgId;
+      if (!target) return false;
       try {
         setLoading(true);
-        const { error } = await ReceiptHistoryService.recordPayment(orgId, input, userId);
+        const { error } = await ReceiptHistoryService.recordPayment(target, input, userId);
         if (error) throw error;
         toast.success('Recebimento registrado');
         return true;
@@ -499,10 +552,11 @@ export const useFinancial = () => {
   );
 
   const getReceivableSettlementSnapshot = useCallback(
-    async (receivableId: string): Promise<ReceivableSettlementSnapshot | null> => {
-      if (!orgId) return null;
+    async (receivableId: string, rowOrgId?: string): Promise<ReceivableSettlementSnapshot | null> => {
+      const target = rowOrgId ?? orgId;
+      if (!target) return null;
       try {
-        const { data, error } = await ReceiptHistoryService.getSettlementSnapshot(orgId, receivableId);
+        const { data, error } = await ReceiptHistoryService.getSettlementSnapshot(target, receivableId);
         if (error) throw error;
         return data;
       } catch (error) {
@@ -525,8 +579,8 @@ export const useFinancial = () => {
     }
   }, [orgId, handleError]);
 
-  const loadProjectionsDashboard = useCallback(async () => {
-    if (!orgId) {
+  const loadProjectionsDashboard = useCallback(async (scopeOrgIds: string[]) => {
+    if (scopeOrgIds.length === 0) {
       return {
         onDemand: {
           days: [],
@@ -541,10 +595,14 @@ export const useFinancial = () => {
     try {
       setLoading(true);
       const [onDemand, persisted] = await Promise.all([
-        ProjectionService.computeOnDemandFromArAp(orgId, 30),
-        ProjectionService.listByOrg(orgId, 90),
+        ProjectionService.computeOnDemandFromArAp(scopeOrgIds, 30),
+        ProjectionService.listByOrg(scopeOrgIds, 90),
       ]);
-      const scenarios90d = await ProjectionService.computeScenario90dFromArAp(orgId, 'realistic', 10000);
+      const scenarios90d = await ProjectionService.computeScenario90dFromArAp(
+        scopeOrgIds,
+        'realistic',
+        10000
+      );
       return { onDemand, scenarios90d, persisted };
     } catch (error) {
       handleError(error, 'Erro ao carregar projeções de caixa');
@@ -561,7 +619,7 @@ export const useFinancial = () => {
     } finally {
       setLoading(false);
     }
-  }, [orgId, handleError]);
+  }, [handleError]);
 
   return {
     loading,

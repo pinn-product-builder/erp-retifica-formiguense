@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useFinancial, AccountsPayable } from '@/hooks/useFinancial';
+import { useFinancialOrgScope } from '@/hooks/useFinancialOrgScope';
+import { FinancialOrgScopeSelect } from '@/components/financial/FinancialOrgScopeSelect';
 import { useOrganization } from '@/hooks/useOrganization';
 import { CostCenterSelect } from '@/components/financial/CostCenterSelect';
 import {
@@ -68,6 +70,17 @@ export default function ContasPagar() {
   const { currentOrganization } = useOrganization();
   const orgId = currentOrganization?.id ?? '';
   const {
+    groupOrgIds,
+    effectiveOrgIds,
+    scopeSelection,
+    setScopeSelection,
+    showGroupFilter,
+    isConsolidatedView,
+    orgLabel,
+  } = useFinancialOrgScope();
+  const writeOrgId = effectiveOrgIds.length === 1 ? effectiveOrgIds[0] : '';
+  const lookupOrgId = writeOrgId || orgId;
+  const {
     getAccountsPayable,
     getAccountsPayableOrgSummary,
     createAccountsPayable,
@@ -124,32 +137,32 @@ export default function ContasPagar() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!orgId) return;
+    if (effectiveOrgIds.length === 0) return;
     void (async () => {
-      const categoriesData = await getExpenseCategories();
+      const categoriesData = await getExpenseCategories(effectiveOrgIds);
       setCategories(categoriesData);
     })();
-  }, [orgId, getExpenseCategories]);
+  }, [effectiveOrgIds, getExpenseCategories]);
 
   useEffect(() => {
-    if (!orgId) return;
-    void FinancialConfigService.listPaymentMethodsForContext(orgId, 'payable').then(setPmCatalog);
-  }, [orgId]);
+    if (!lookupOrgId) return;
+    void FinancialConfigService.listPaymentMethodsForContext(lookupOrgId, 'payable').then(setPmCatalog);
+  }, [lookupOrgId]);
 
   useEffect(() => {
-    if (!orgId) return;
+    if (effectiveOrgIds.length === 0) return;
     void (async () => {
-      const s = await getAccountsPayableOrgSummary();
+      const s = await getAccountsPayableOrgSummary(effectiveOrgIds);
       setSummary(s);
     })();
-  }, [orgId, getAccountsPayableOrgSummary]);
+  }, [effectiveOrgIds, getAccountsPayableOrgSummary]);
 
   useEffect(() => {
-    if (!orgId) return;
+    if (effectiveOrgIds.length === 0) return;
     void (async () => {
       const statusFilter: Database['public']['Enums']['payment_status'] | undefined =
         selectedTab === 'all' ? undefined : (selectedTab as Database['public']['Enums']['payment_status']);
-      const payablesRes = await getAccountsPayable(currentPage, ITEMS_PER_PAGE, {
+      const payablesRes = await getAccountsPayable(effectiveOrgIds, currentPage, ITEMS_PER_PAGE, {
         status: statusFilter,
         search: debouncedSearch || undefined,
         ...(dueAlertFilter ? { dueOnDates: getDueAlertCalendarDates() } : {}),
@@ -157,36 +170,36 @@ export default function ContasPagar() {
       setPayables(payablesRes.data as unknown as ApPayableRow[]);
       setListMeta({ count: payablesRes.count, totalPages: payablesRes.totalPages });
     })();
-  }, [orgId, currentPage, selectedTab, debouncedSearch, dueAlertFilter, getAccountsPayable]);
+  }, [effectiveOrgIds, currentPage, selectedTab, debouncedSearch, dueAlertFilter, getAccountsPayable]);
 
   useEffect(() => {
     const q = isModalOpen ? supplierModalInput : '';
-    if (!orgId || !isModalOpen || !q.trim()) {
+    if (!lookupOrgId || !isModalOpen || !q.trim()) {
       if (!isModalOpen) return;
       if (!q.trim()) setSupplierOptions([]);
       return;
     }
     const t = setTimeout(() => {
       setSupplierLoading(true);
-      void SupplierLookupService.search(orgId, q, 1, 20).then((r) => {
+      void SupplierLookupService.search(lookupOrgId, q, 1, 20).then((r) => {
         setSupplierOptions(r.data);
         setSupplierLoading(false);
       });
     }, 300);
     return () => clearTimeout(t);
-  }, [supplierModalInput, isModalOpen, orgId]);
+  }, [supplierModalInput, isModalOpen, lookupOrgId]);
 
   const refreshAll = async () => {
-    if (!orgId) return;
+    if (effectiveOrgIds.length === 0) return;
     const statusFilter: Database['public']['Enums']['payment_status'] | undefined =
       selectedTab === 'all' ? undefined : (selectedTab as Database['public']['Enums']['payment_status']);
     const [payablesRes, s] = await Promise.all([
-      getAccountsPayable(currentPage, ITEMS_PER_PAGE, {
+      getAccountsPayable(effectiveOrgIds, currentPage, ITEMS_PER_PAGE, {
         status: statusFilter,
         search: debouncedSearch || undefined,
         ...(dueAlertFilter ? { dueOnDates: getDueAlertCalendarDates() } : {}),
       }),
-      getAccountsPayableOrgSummary(),
+      getAccountsPayableOrgSummary(effectiveOrgIds),
     ]);
     setPayables(payablesRes.data as unknown as ApPayableRow[]);
     setListMeta({ count: payablesRes.count, totalPages: payablesRes.totalPages });
@@ -271,8 +284,9 @@ export default function ContasPagar() {
 
     try {
       let invoicePath = (formData.invoice_file_url as string | undefined) ?? null;
-      if (invoiceFile && orgId) {
-        const up = await ApInvoiceFileService.upload(orgId, invoiceFile);
+      const uploadOrg = writeOrgId || orgId;
+      if (invoiceFile && uploadOrg) {
+        const up = await ApInvoiceFileService.upload(uploadOrg, invoiceFile);
         if (up.error) {
           toast.error(up.error.message);
           return;
@@ -296,10 +310,18 @@ export default function ContasPagar() {
       } as AccountsPayable;
 
       if (editingPayable) {
-        const updated = await updateAccountsPayable(editingPayable.id as string, payload);
+        const updated = await updateAccountsPayable(
+          editingPayable.id as string,
+          payload,
+          (editingPayable.org_id as string) || undefined
+        );
         if (!updated) return;
       } else {
-        const created = await createAccountsPayable(payload);
+        if (!writeOrgId) {
+          toast.error('Selecione uma empresa única para lançar.');
+          return;
+        }
+        const created = await createAccountsPayable(payload, writeOrgId);
         if (!created) return;
       }
 
@@ -314,10 +336,11 @@ export default function ContasPagar() {
   const handleEdit = async (payable: ApPayableRow) => {
     setEditingPayable(payable);
     const sid = payable.supplier_id as string | undefined;
+    const rowOrg = (payable.org_id as string) || orgId;
     let sup: SupplierRow | null = null;
-    if (sid && orgId) {
+    if (sid && rowOrg) {
       try {
-        sup = await SupplierLookupService.getById(orgId, sid);
+        sup = await SupplierLookupService.getById(rowOrg, sid);
       } catch {
         sup = null;
       }
@@ -350,10 +373,14 @@ export default function ContasPagar() {
       toast.error('Aprove o título antes de marcar como pago.');
       return;
     }
-    await updateAccountsPayable(payable.id as string, {
-      status: 'paid',
-      payment_date: new Date().toISOString().split('T')[0],
-    });
+    await updateAccountsPayable(
+      payable.id as string,
+      {
+        status: 'paid',
+        payment_date: new Date().toISOString().split('T')[0],
+      },
+      (payable.org_id as string) || undefined
+    );
     void refreshAll();
   };
 
@@ -382,6 +409,17 @@ export default function ContasPagar() {
   };
 
   const apColumns: ResponsiveTableColumn<ApPayableRow>[] = [
+    ...(isConsolidatedView
+      ? [
+          {
+            key: 'org',
+            header: 'Empresa',
+            mobileLabel: 'Empresa',
+            priority: 1,
+            render: (p: ApPayableRow) => orgLabel((p.org_id as string) ?? ''),
+          } satisfies ResponsiveTableColumn<ApPayableRow>,
+        ]
+      : []),
     {
       key: 'supplier',
       header: 'Fornecedor',
@@ -463,7 +501,14 @@ export default function ContasPagar() {
               NF
             </Button>
           ) : null}
-          <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => void handleEdit(p)}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs"
+            disabled={isConsolidatedView}
+            onClick={() => void handleEdit(p)}
+          >
             Editar
           </Button>
           {p.status === 'pending' &&
@@ -472,6 +517,7 @@ export default function ContasPagar() {
                 type="button"
                 size="sm"
                 className="h-8 bg-success text-xs hover:bg-success/90"
+                disabled={isConsolidatedView}
                 onClick={() => void handleMarkAsPaid(p)}
               >
                 <CheckCircle className="mr-1 h-3 w-3 sm:inline" />
@@ -503,10 +549,20 @@ export default function ContasPagar() {
           <p className="text-muted-foreground text-xs sm:text-sm">Fornecedores e despesas</p>
         </div>
 
+        <div className="flex flex-col gap-2 w-full sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:w-auto min-w-0">
+          {showGroupFilter ? (
+            <FinancialOrgScopeSelect
+              groupOrgIds={groupOrgIds}
+              scopeSelection={scopeSelection}
+              onScopeChange={setScopeSelection}
+              orgLabel={orgLabel}
+            />
+          ) : null}
         <Dialog open={isModalOpen} onOpenChange={handleModalChange}>
           <DialogTrigger asChild>
             <Button
               className="w-full sm:w-auto"
+              disabled={isConsolidatedView || !writeOrgId}
               onClick={() => {
                 setEditingPayable(null);
                 resetForm();
@@ -646,7 +702,7 @@ export default function ContasPagar() {
                   </Select>
                 </div>
                 <CostCenterSelect
-                  orgId={orgId}
+                  orgId={lookupOrgId}
                   value={(formData.cost_center_id as string) ?? ''}
                   onValueChange={(id) =>
                     setFormData((prev) => ({
@@ -710,6 +766,7 @@ export default function ContasPagar() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {dueAlertFilter && (

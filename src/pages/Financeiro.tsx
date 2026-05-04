@@ -6,6 +6,8 @@ import { useFinancial } from '@/hooks/useFinancial';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Clock } from 'lucide-react';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useFinancialOrgScope } from '@/hooks/useFinancialOrgScope';
+import { FinancialOrgScopeSelect } from '@/components/financial/FinancialOrgScopeSelect';
 import { useArDueAlertsPanel } from '@/hooks/useArDueAlertsPanel';
 import type { FinancialKpis } from '@/services/financial/types';
 import type { DueWindowSummary } from '@/services/financial';
@@ -33,6 +35,14 @@ type ReceivableTotals = { open: number; overdue: number; received: number };
 function FinanceiroDashboard() {
   const navigate = useNavigate();
   const { currentOrganization } = useOrganization();
+  const {
+    groupOrgIds,
+    effectiveOrgIds,
+    scopeSelection,
+    setScopeSelection,
+    showGroupFilter,
+    orgLabel,
+  } = useFinancialOrgScope();
   const {
     items: arDueItems,
     loading: arDueLoading,
@@ -75,11 +85,11 @@ function FinanceiroDashboard() {
     setBusy(true);
     try {
       const [kpisData, totals, receivablesRes, payablesRes, cashFlowRes, due] = await Promise.all([
-        getFinancialKPIs(),
-        getReceivableTotals(),
-        getAccountsReceivable(arPage, PAGE_SIZE),
-        getAccountsPayable(apPage, PAGE_SIZE),
-        getCashFlow(undefined, undefined, cfPage, PAGE_SIZE),
+        getFinancialKPIs(effectiveOrgIds),
+        getReceivableTotals(effectiveOrgIds),
+        getAccountsReceivable(effectiveOrgIds, arPage, PAGE_SIZE),
+        getAccountsPayable(effectiveOrgIds, apPage, PAGE_SIZE),
+        getCashFlow(effectiveOrgIds, undefined, undefined, cfPage, PAGE_SIZE),
         syncAndGetDueWindowSummary(),
       ]);
 
@@ -102,6 +112,7 @@ function FinanceiroDashboard() {
     arPage,
     apPage,
     cfPage,
+    effectiveOrgIds,
     getAccountsPayable,
     getAccountsReceivable,
     getCashFlow,
@@ -126,6 +137,15 @@ function FinanceiroDashboard() {
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Dashboard financeiro</h1>
           <p className="text-sm sm:text-base text-muted-foreground">Visão geral das finanças da empresa</p>
         </div>
+        {showGroupFilter ? (
+          <FinancialOrgScopeSelect
+            groupOrgIds={groupOrgIds}
+            scopeSelection={scopeSelection}
+            onScopeChange={setScopeSelection}
+            orgLabel={orgLabel}
+            className="sm:mr-auto"
+          />
+        ) : null}
         <Button
           type="button"
           onClick={() => void Promise.all([loadFinancialData(), canShowArDue ? arDueRefresh() : Promise.resolve()])}
@@ -138,8 +158,8 @@ function FinanceiroDashboard() {
 
       {kpis && <FinancialKpiCards kpis={kpis} />}
 
-      {currentOrganization?.id ? (
-        <FinancialAdvancedIndicators orgId={currentOrganization.id} />
+      {effectiveOrgIds.length > 0 ? (
+        <FinancialAdvancedIndicators orgIds={effectiveOrgIds} />
       ) : null}
 
       <FinancialDueAlertsCard summary={dueSummary} loading={busy && !dueSummary} />

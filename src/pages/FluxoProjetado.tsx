@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/table';
 import { FinancialPageShell } from '@/components/financial/FinancialPageShell';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useFinancialOrgScope } from '@/hooks/useFinancialOrgScope';
+import { FinancialOrgScopeSelect } from '@/components/financial/FinancialOrgScopeSelect';
 import { useFinancial } from '@/hooks/useFinancial';
 import { formatBRL, formatDateBR } from '@/lib/financialFormat';
 import type { OnDemandProjectionDay, ProjectionScenarioKey, ScenarioProjectionResult } from '@/services/financial/projectionService';
@@ -81,6 +83,14 @@ const onDemandColumns: ResponsiveTableColumn<OnDemandProjectionDay>[] = [
 export default function FluxoProjetado() {
   const { currentOrganization } = useOrganization();
   const orgId = currentOrganization?.id ?? '';
+  const {
+    groupOrgIds,
+    effectiveOrgIds,
+    scopeSelection,
+    setScopeSelection,
+    showGroupFilter,
+    orgLabel,
+  } = useFinancialOrgScope();
   const { loadProjectionsDashboard, loading } = useFinancial();
   const [onDemand, setOnDemand] = useState<{
     days: OnDemandProjectionDay[];
@@ -95,27 +105,32 @@ export default function FluxoProjetado() {
   const [persisted, setPersisted] = useState<PersistedProjectionRow[]>([]);
 
   const refresh = useCallback(async () => {
-    const bundle = await loadProjectionsDashboard();
+    if (effectiveOrgIds.length === 0) return;
+    const bundle = await loadProjectionsDashboard(effectiveOrgIds);
     setOnDemand(bundle.onDemand);
     setPersisted(bundle.persisted);
     setScenario90d(bundle.scenarios90d);
-  }, [loadProjectionsDashboard]);
+  }, [loadProjectionsDashboard, effectiveOrgIds]);
 
   const refreshScenario = useCallback(async () => {
-    if (!orgId) return;
-    const res = await ProjectionService.computeScenario90dFromArAp(orgId, scenarioKey, recMinNumber || 10000);
+    if (effectiveOrgIds.length === 0) return;
+    const res = await ProjectionService.computeScenario90dFromArAp(
+      effectiveOrgIds,
+      scenarioKey,
+      recMinNumber || 10000
+    );
     setScenario90d(res);
-  }, [orgId, scenarioKey, recMinNumber]);
+  }, [effectiveOrgIds, scenarioKey, recMinNumber]);
 
   useEffect(() => {
-    if (!orgId) return;
+    if (effectiveOrgIds.length === 0) return;
     void refresh();
-  }, [orgId, refresh]);
+  }, [effectiveOrgIds, refresh]);
 
   useEffect(() => {
-    if (!orgId) return;
+    if (effectiveOrgIds.length === 0) return;
     void refreshScenario();
-  }, [orgId, refreshScenario]);
+  }, [effectiveOrgIds, refreshScenario]);
 
   const scenarioLabel = (k: ProjectionScenarioKey) => {
     if (k === 'optimistic') return 'Otimista';
@@ -126,23 +141,33 @@ export default function FluxoProjetado() {
   return (
     <FinancialPageShell>
       <div className="space-y-4 sm:space-y-6 p-1 sm:p-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Fluxo de caixa projetado</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
               Projeção de 30 dias por vencimentos de contas a receber e a pagar; simulação 90 dias com cenários; série persistida (quando houver rotina gravando).
             </p>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-full sm:w-auto shrink-0"
-            disabled={loading || !orgId}
-            onClick={() => void refresh()}
-          >
-            {loading ? 'Atualizando…' : 'Recalcular'}
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 w-full sm:w-auto min-w-0">
+            {showGroupFilter ? (
+              <FinancialOrgScopeSelect
+                groupOrgIds={groupOrgIds}
+                scopeSelection={scopeSelection}
+                onScopeChange={setScopeSelection}
+                orgLabel={orgLabel}
+              />
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto shrink-0"
+              disabled={loading || effectiveOrgIds.length === 0}
+              onClick={() => void refresh()}
+            >
+              {loading ? 'Atualizando…' : 'Recalcular'}
+            </Button>
+          </div>
         </div>
 
         {!orgId && (
@@ -223,7 +248,7 @@ export default function FluxoProjetado() {
                   type="button"
                   variant="secondary"
                   className="w-full"
-                  disabled={!orgId}
+                  disabled={effectiveOrgIds.length === 0}
                   onClick={() => void refreshScenario()}
                 >
                   Recalcular cenário

@@ -33,6 +33,7 @@ export { ProjectionService } from '@/services/financial/projectionService';
 export { ApRecurringService } from '@/services/financial/apRecurringService';
 export { ApprovalApService } from '@/services/financial/approvalApService';
 export { FinancialReportService } from '@/services/financial/financialReportService';
+export { OrganizationGroupService } from '@/services/financial/organizationGroupService';
 export { CardMachineService } from '@/services/financial/cardMachineService';
 export { OrderBillingService } from '@/services/financial/orderBillingService';
 export { ReceivableFromBudgetService } from '@/services/financial/receivableFromBudgetService';

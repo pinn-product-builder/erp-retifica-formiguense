@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useFinancial, CashFlow } from '@/hooks/useFinancial';
+import { useFinancialOrgScope } from '@/hooks/useFinancialOrgScope';
+import { FinancialOrgScopeSelect } from '@/components/financial/FinancialOrgScopeSelect';
 import { useOrganization } from '@/hooks/useOrganization';
 import { CostCenterSelect } from '@/components/financial/CostCenterSelect';
 import { formatBRL, formatDateBR, paymentMethodLabel } from '@/lib/financialFormat';
@@ -58,7 +60,17 @@ export default function FluxoCaixa() {
   const { currentOrganization } = useOrganization();
   const { user } = useAuth();
   const orgId = currentOrganization?.id ?? '';
-  const orgIdReady = Boolean(orgId);
+  const {
+    groupOrgIds,
+    effectiveOrgIds,
+    scopeSelection,
+    setScopeSelection,
+    showGroupFilter,
+    isConsolidatedView,
+    orgLabel,
+  } = useFinancialOrgScope();
+  const writeOrgId = effectiveOrgIds.length === 1 ? effectiveOrgIds[0] : '';
+  const orgIdReady = Boolean(orgId) && effectiveOrgIds.length > 0;
   const {
     getCashFlow,
     getCashFlowPeriodMetrics,
@@ -80,6 +92,7 @@ export default function FluxoCaixa() {
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingOrgId, setEditingOrgId] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState({
     start: format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd'),
     end: format(new Date(), 'yyyy-MM-dd'),
@@ -104,11 +117,12 @@ export default function FluxoCaixa() {
   });
 
   const loadData = useCallback(async () => {
+    if (effectiveOrgIds.length === 0) return;
     const [cashFlowRes, m, bankAccountsData, categoriesData] = await Promise.all([
-      getCashFlow(dateFilter.start, dateFilter.end, page, PAGE_SIZE, showIntercompany),
-      getCashFlowPeriodMetrics(dateFilter.start, dateFilter.end, showIntercompany),
-      getBankAccounts(),
-      getExpenseCategories(),
+      getCashFlow(effectiveOrgIds, dateFilter.start, dateFilter.end, page, PAGE_SIZE, showIntercompany),
+      getCashFlowPeriodMetrics(effectiveOrgIds, dateFilter.start, dateFilter.end, showIntercompany),
+      getBankAccounts(effectiveOrgIds),
+      getExpenseCategories(effectiveOrgIds),
     ]);
     setCashFlow(cashFlowRes.data as unknown as CfRow[]);
     setListMeta({ count: cashFlowRes.count, totalPages: cashFlowRes.totalPages });
@@ -120,6 +134,7 @@ export default function FluxoCaixa() {
     dateFilter.end,
     page,
     showIntercompany,
+    effectiveOrgIds,
     getCashFlow,
     getCashFlowPeriodMetrics,
     getBankAccounts,
@@ -132,32 +147,35 @@ export default function FluxoCaixa() {
   }, [orgIdReady, loadData]);
 
   useEffect(() => {
-    if (!orgId) return;
-    void FinancialConfigService.listPaymentMethods(orgId).then(setPmCatalog);
-  }, [orgId]);
+    if (!writeOrgId) return;
+    void FinancialConfigService.listPaymentMethods(writeOrgId).then(setPmCatalog);
+  }, [writeOrgId]);
 
   useEffect(() => {
-    if (!orgId || !user?.id) {
+    if (!writeOrgId || !user?.id) {
       setMyCashAccountId(undefined);
       return;
     }
     let cancelled = false;
-    void FinancialConfigService.getOrCreateUserCashAccount(orgId, user.id, user.email ?? 'Operador').then(
-      (ba) => {
-        if (!cancelled) setMyCashAccountId(ba.id);
-      }
-    );
+    void FinancialConfigService.getOrCreateUserCashAccount(
+      writeOrgId,
+      user.id,
+      user.email ?? 'Operador'
+    ).then((ba) => {
+      if (!cancelled) setMyCashAccountId(ba.id);
+    });
     return () => {
       cancelled = true;
     };
-  }, [orgId, user?.id, user?.email]);
+  }, [writeOrgId, user?.id, user?.email]);
 
   useEffect(() => {
     setPage(1);
-  }, [dateFilter.start, dateFilter.end, showIntercompany]);
+  }, [dateFilter.start, dateFilter.end, showIntercompany, effectiveOrgIds.join(','), scopeSelection]);
 
   const resetForm = useCallback(() => {
     setEditingId(null);
+    setEditingOrgId(null);
     setFormData({
       transaction_type: 'income',
       amount: 0,
@@ -187,6 +205,7 @@ export default function FluxoCaixa() {
 
   const openEdit = (row: CfRow) => {
     setEditingId(row.id as string);
+    setEditingOrgId((row.org_id as string) ?? null);
     setFormData({
       transaction_type: row.transaction_type as 'income' | 'expense',
       amount: Number(row.amount),
@@ -213,22 +232,30 @@ export default function FluxoCaixa() {
 
     try {
       if (editingId) {
-        const ok = await updateCashFlowEntry(editingId, {
-          transaction_type: formData.transaction_type,
-          amount: formData.amount,
-          description: formData.description,
-          transaction_date: formData.transaction_date,
-          payment_method: formData.payment_method,
-          bank_account_id: formData.bank_account_id || null,
-          category_id: formData.category_id || null,
-          cost_center_id: formData.cost_center_id || null,
-          notes: formData.notes || null,
-          reconciled: formData.reconciled ?? false,
-          is_intercompany: formData.is_intercompany ?? false,
-        });
+        const ok = await updateCashFlowEntry(
+          editingId,
+          {
+            transaction_type: formData.transaction_type,
+            amount: formData.amount,
+            description: formData.description,
+            transaction_date: formData.transaction_date,
+            payment_method: formData.payment_method,
+            bank_account_id: formData.bank_account_id || null,
+            category_id: formData.category_id || null,
+            cost_center_id: formData.cost_center_id || null,
+            notes: formData.notes || null,
+            reconciled: formData.reconciled ?? false,
+            is_intercompany: formData.is_intercompany ?? false,
+          },
+          editingOrgId ?? undefined
+        );
         if (!ok) return;
       } else {
-        const c = await createCashFlow(formData as CashFlow);
+        if (!writeOrgId) {
+          toast.error('Selecione uma empresa única para lançar.');
+          return;
+        }
+        const c = await createCashFlow(formData as CashFlow, writeOrgId);
         if (!c) return;
       }
 
@@ -242,7 +269,7 @@ export default function FluxoCaixa() {
 
   const handleDelete = async (row: CfRow) => {
     if (!window.confirm('Excluir esta movimentação?')) return;
-    const ok = await deleteCashFlowEntry(row.id as string);
+    const ok = await deleteCashFlowEntry(row.id as string, (row.org_id as string) ?? undefined);
     if (ok) void loadData();
   };
 
@@ -295,9 +322,22 @@ export default function FluxoCaixa() {
           </p>
         </div>
 
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 sm:justify-end w-full sm:w-auto min-w-0">
+          {showGroupFilter ? (
+            <FinancialOrgScopeSelect
+              groupOrgIds={groupOrgIds}
+              scopeSelection={scopeSelection}
+              onScopeChange={setScopeSelection}
+              orgLabel={orgLabel}
+            />
+          ) : null}
         <Dialog open={isModalOpen} onOpenChange={handleModalChange}>
           <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto" onClick={openNew}>
+            <Button
+              className="w-full sm:w-auto"
+              onClick={openNew}
+              disabled={isConsolidatedView || !writeOrgId}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Nova movimentação
             </Button>
@@ -450,7 +490,7 @@ export default function FluxoCaixa() {
               </div>
 
               <CostCenterSelect
-                orgId={orgId}
+                orgId={writeOrgId || orgId}
                 value={(formData.cost_center_id as string) ?? ''}
                 onValueChange={(id) => setFormData((prev) => ({ ...prev, cost_center_id: id || undefined }))}
                 id="cf-cost-center"
@@ -496,6 +536,7 @@ export default function FluxoCaixa() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
@@ -620,6 +661,9 @@ export default function FluxoCaixa() {
                           <span>• {paymentMethodLabel(transaction.payment_method as string)}</span>
                         ) : null}
                         {bankLbl ? <span className="truncate">• {bankLbl}</span> : null}
+                        {isConsolidatedView && transaction.org_id ? (
+                          <span className="truncate">• {orgLabel(transaction.org_id as string)}</span>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -652,6 +696,7 @@ export default function FluxoCaixa() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
+                        disabled={isConsolidatedView}
                         onClick={() => openEdit(transaction)}
                       >
                         <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -661,6 +706,7 @@ export default function FluxoCaixa() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive"
+                        disabled={isConsolidatedView}
                         onClick={() => void handleDelete(transaction)}
                       >
                         <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />

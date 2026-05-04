@@ -5697,6 +5697,69 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_group_members: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "organization_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_group_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_groups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          slug: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          slug?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          slug?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       partner_withdrawals: {
         Row: {
           amount: number
@@ -12193,6 +12256,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_org_member: { Args: { org_id: string }; Returns: boolean }
+      org_ids_in_same_group: { Args: { p_org_id: string }; Returns: string[] }
       is_super_admin: { Args: never; Returns: boolean }
       is_user_super_admin: { Args: { user_id: string }; Returns: boolean }
       mark_all_notifications_as_read: {

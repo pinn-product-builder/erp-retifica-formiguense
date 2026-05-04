@@ -13,9 +13,14 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FinancialPageShell } from '@/components/financial/FinancialPageShell';
+import { FinancialOrgScopeSelect } from '@/components/financial/FinancialOrgScopeSelect';
 import { CostCenterSelect } from '@/components/financial/CostCenterSelect';
 import { useOrganization } from '@/hooks/useOrganization';
-import { FinancialReportService } from '@/services/financial/financialReportService';
+import { useFinancialOrgScope } from '@/hooks/useFinancialOrgScope';
+import {
+  FinancialReportService,
+  type AgingBucket,
+} from '@/services/financial/financialReportService';
 import { MonthlyReportService } from '@/services/financial/monthlyReportService';
 import { AccountsPayableService } from '@/services/financial/accountsPayableService';
 import { AccountsReceivableService } from '@/services/financial/accountsReceivableService';
@@ -42,9 +47,70 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 
+type CurveBundle = Awaited<ReturnType<typeof FinancialReportService.dueCurve>>;
+
+function mergeAgingBuckets(parts: AgingBucket[][]): AgingBucket[] {
+  const map = new Map<string, AgingBucket>();
+  for (const list of parts) {
+    for (const b of list) {
+      const cur = map.get(b.label) ?? { label: b.label, amount: 0, count: 0 };
+      cur.amount += b.amount;
+      cur.count += b.count;
+      map.set(b.label, cur);
+    }
+  }
+  return Array.from(map.values());
+}
+
+function mergeDueCurves(parts: CurveBundle[]): CurveBundle | null {
+  if (parts.length === 0) return null;
+  if (parts.length === 1) return parts[0];
+  const day = new Map<string, { receivables: number; payables: number }>();
+  for (const p of parts) {
+    for (const s of p.series) {
+      const v = day.get(s.date) ?? { receivables: 0, payables: 0 };
+      v.receivables += s.receivables;
+      v.payables += s.payables;
+      day.set(s.date, v);
+    }
+  }
+  const series = [...day.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, v]) => ({ date, ...v }));
+  const buck = new Map<string, { receivables: number; payables: number }>();
+  for (const p of parts) {
+    for (const b of p.buckets) {
+      const v = buck.get(b.label) ?? { receivables: 0, payables: 0 };
+      v.receivables += b.receivables;
+      v.payables += b.payables;
+      buck.set(b.label, v);
+    }
+  }
+  const buckets = [...buck.entries()].map(([label, v]) => ({ label, ...v }));
+  const overdue = parts.reduce(
+    (acc, p) => ({
+      receivables: acc.receivables + p.overdue.receivables,
+      payables: acc.payables + p.overdue.payables,
+    }),
+    { receivables: 0, payables: 0 }
+  );
+  return { series, buckets, overdue };
+}
+
 export default function RelatoriosFinanceiros() {
   const { currentOrganization } = useOrganization();
   const orgId = currentOrganization?.id ?? '';
+  const {
+    groupOrgIds,
+    effectiveOrgIds,
+    scopeSelection,
+    setScopeSelection,
+    showGroupFilter,
+    isConsolidatedView,
+    orgLabel,
+  } = useFinancialOrgScope();
+  const writeOrgId = effectiveOrgIds.length === 1 ? effectiveOrgIds[0] : '';
+  const ccOrgId = writeOrgId || orgId;
   const [tab, setTab] = useState('aging');
   const [aging, setAging] = useState<{ label: string; amount: number; count: number }[]>([]);
   const [curveHorizon, setCurveHorizon] = useState('90');
@@ -90,23 +156,50 @@ export default function RelatoriosFinanceiros() {
   } | null>(null);
 
   useEffect(() => {
-    if (!orgId) return;
-    void FinancialReportService.agingReceivables(orgId).then(setAging);
-    void FinancialReportService.upcomingAlerts(orgId, 14).then(setAlerts);
-    void MonthlyReportService.listByOrg(orgId, 24).then(setReportHistory);
-  }, [orgId]);
+    if (isConsolidatedView) setCurveCc('');
+  }, [isConsolidatedView]);
 
   useEffect(() => {
-    if (!orgId || tab !== 'curve') return;
+    if (effectiveOrgIds.length === 0) return;
+    void (async () => {
+      const agingParts = await Promise.all(
+        effectiveOrgIds.map((id) => FinancialReportService.agingReceivables(id))
+      );
+      setAging(mergeAgingBuckets(agingParts));
+      const alertParts = await Promise.all(
+        effectiveOrgIds.map((id) => FinancialReportService.upcomingAlerts(id, 14))
+      );
+      setAlerts(alertParts.flat().sort((a, b) => a.due_date.localeCompare(b.due_date)));
+      const histParts = await Promise.all(
+        effectiveOrgIds.map((id) => MonthlyReportService.listByOrg(id, 24))
+      );
+      const mergedHist = histParts
+        .flat()
+        .sort(
+          (a, b) =>
+            new Date(b.generated_at ?? 0).getTime() - new Date(a.generated_at ?? 0).getTime()
+        )
+        .slice(0, 24);
+      setReportHistory(mergedHist);
+    })();
+  }, [effectiveOrgIds]);
+
+  useEffect(() => {
+    if (effectiveOrgIds.length === 0 || tab !== 'curve') return;
     const h = Math.max(1, Math.min(365, Number(curveHorizon) || 90));
-    void FinancialReportService.dueCurve(orgId, h, curveCc || null).then(setCurveData);
-  }, [orgId, tab, curveHorizon, curveCc]);
+    void (async () => {
+      const parts = await Promise.all(
+        effectiveOrgIds.map((id) => FinancialReportService.dueCurve(id, h, curveCc || null))
+      );
+      setCurveData(mergeDueCurves(parts));
+    })();
+  }, [effectiveOrgIds, tab, curveHorizon, curveCc]);
 
   useEffect(() => {
-    if (!orgId || tab !== 'ap-ar') return;
+    if (effectiveOrgIds.length === 0 || tab !== 'ap-ar') return;
     const pageSize = 10;
     void (async () => {
-      const ap = await AccountsPayableService.listPaginated(orgId, apPage, pageSize, {
+      const ap = await AccountsPayableService.listPaginated(effectiveOrgIds, apPage, pageSize, {
         search: apSearch || undefined,
         status: (apStatus as Database['public']['Enums']['payment_status']) || undefined,
         dueFrom: apDueFrom || undefined,
@@ -114,13 +207,13 @@ export default function RelatoriosFinanceiros() {
       });
       setApData(ap);
     })();
-  }, [orgId, tab, apPage, apSearch, apStatus, apDueFrom, apDueTo]);
+  }, [effectiveOrgIds, tab, apPage, apSearch, apStatus, apDueFrom, apDueTo]);
 
   useEffect(() => {
-    if (!orgId || tab !== 'ap-ar') return;
+    if (effectiveOrgIds.length === 0 || tab !== 'ap-ar') return;
     const pageSize = 10;
     void (async () => {
-      const ar = await AccountsReceivableService.listPaginated(orgId, arPage, pageSize, {
+      const ar = await AccountsReceivableService.listPaginated(effectiveOrgIds, arPage, pageSize, {
         search: arSearch || undefined,
         status: (arStatus as Database['public']['Enums']['payment_status']) || undefined,
         dueFrom: arDueFrom || undefined,
@@ -128,7 +221,7 @@ export default function RelatoriosFinanceiros() {
       });
       setArData(ar);
     })();
-  }, [orgId, tab, arPage, arSearch, arStatus, arDueFrom, arDueTo]);
+  }, [effectiveOrgIds, tab, arPage, arSearch, arStatus, arDueFrom, arDueTo]);
 
   const exportCsv = () => {
     const lines = [
@@ -187,15 +280,20 @@ export default function RelatoriosFinanceiros() {
   };
 
   const generateMonthly = async () => {
-    if (!orgId) return;
+    const targetOrg = writeOrgId || orgId;
+    if (!targetOrg) return;
+    if (isConsolidatedView) {
+      toast.error('Escolha uma única empresa no seletor para gerar o relatório mensal.');
+      return;
+    }
     const m = Math.max(1, Math.min(12, Number(reportMonth) || 0));
     const y = Number(reportYear) || new Date().getFullYear();
     setReporting(true);
     try {
-      const payload = await MonthlyReportService.buildPayload(orgId, m, y);
+      const payload = await MonthlyReportService.buildPayload(targetOrg, m, y);
       MonthlyReportService.downloadTextReport(payload);
       const { error } = await MonthlyReportService.createRecord({
-        orgId,
+        orgId: targetOrg,
         month: m,
         year: y,
         generatedBy: null,
@@ -204,7 +302,7 @@ export default function RelatoriosFinanceiros() {
       });
       if (error) throw error;
       toast.success('Relatório gerado e registrado');
-      const hist = await MonthlyReportService.listByOrg(orgId, 24);
+      const hist = await MonthlyReportService.listByOrg(targetOrg, 24);
       setReportHistory(hist);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Falha ao gerar relatório');
@@ -222,6 +320,21 @@ export default function RelatoriosFinanceiros() {
   const apColumns: ResponsiveTableColumn<(Database['public']['Tables']['accounts_payable']['Row'] & Record<string, unknown>)>[] =
     useMemo(
       () => [
+        ...(isConsolidatedView
+          ? [
+              {
+                key: 'org',
+                header: 'Empresa',
+                priority: 0,
+                minWidth: 120,
+                render: (r: Database['public']['Tables']['accounts_payable']['Row'] & Record<string, unknown>) => (
+                  <span className="text-xs sm:text-sm">{orgLabel(String(r.org_id ?? ''))}</span>
+                ),
+              } satisfies ResponsiveTableColumn<
+                Database['public']['Tables']['accounts_payable']['Row'] & Record<string, unknown>
+              >,
+            ]
+          : []),
         {
           key: 'supplier',
           header: 'Fornecedor',
@@ -258,12 +371,27 @@ export default function RelatoriosFinanceiros() {
           render: (r) => <span className="text-xs sm:text-sm">{String(r.status ?? '—')}</span>,
         },
       ],
-      []
+      [isConsolidatedView, orgLabel]
     );
 
   const arColumns: ResponsiveTableColumn<(Database['public']['Tables']['accounts_receivable']['Row'] & Record<string, unknown>)>[] =
     useMemo(
       () => [
+        ...(isConsolidatedView
+          ? [
+              {
+                key: 'org',
+                header: 'Empresa',
+                priority: 0,
+                minWidth: 120,
+                render: (r: Database['public']['Tables']['accounts_receivable']['Row'] & Record<string, unknown>) => (
+                  <span className="text-xs sm:text-sm">{orgLabel(String(r.org_id ?? ''))}</span>
+                ),
+              } satisfies ResponsiveTableColumn<
+                Database['public']['Tables']['accounts_receivable']['Row'] & Record<string, unknown>
+              >,
+            ]
+          : []),
         {
           key: 'customer',
           header: 'Cliente',
@@ -304,17 +432,27 @@ export default function RelatoriosFinanceiros() {
           render: (r) => <span className="text-xs sm:text-sm">{String(r.status ?? '—')}</span>,
         },
       ],
-      []
+      [isConsolidatedView, orgLabel]
     );
 
   return (
     <FinancialPageShell>
       <div className="space-y-4 sm:space-y-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <h1 className="text-xl font-bold sm:text-2xl md:text-3xl">Relatórios financeiros</h1>
-          <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={exportCsv}>
-            Exportar alertas CSV
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 w-full sm:w-auto min-w-0">
+            {showGroupFilter ? (
+              <FinancialOrgScopeSelect
+                groupOrgIds={groupOrgIds}
+                scopeSelection={scopeSelection}
+                onScopeChange={setScopeSelection}
+                orgLabel={orgLabel}
+              />
+            ) : null}
+            <Button variant="outline" size="sm" className="w-full sm:w-auto shrink-0" onClick={exportCsv}>
+              Exportar alertas CSV
+            </Button>
+          </div>
         </div>
         <Tabs value={tab} onValueChange={setTab} className="w-full">
           <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 overflow-x-auto p-1">
@@ -373,11 +511,12 @@ export default function RelatoriosFinanceiros() {
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <CostCenterSelect
-                    orgId={orgId}
+                    orgId={ccOrgId}
                     value={curveCc}
                     onValueChange={setCurveCc}
                     label="Centro de custo (opcional)"
                     id="curve-cc"
+                    disabled={isConsolidatedView}
                   />
                 </div>
               </div>
