@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ERP Retífica Formiguense — Estado do módulo financeiro (baseline × atual)</title>
+  <meta name="description" content="Documentação do estágio anterior e atual do projeto no escopo financeiro, grupo econômico, caixa e contas a receber." />
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #0d9488;
+      --danger: #b91c1c;
+      --ok: #15803d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+      font-size: 1rem;
+      line-height: 1.55;
+      color: var(--text);
+      background: var(--bg);
+    }
+    .wrap {
+      max-width: 52rem;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+    header.doc-header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.5rem;
+    }
+    .meta {
+      font-size: 0.875rem;
+      color: var(--muted);
+    }
+    h2 {
+      font-size: 1.25rem;
+      margin: 2rem 0 0.75rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 2px solid var(--accent);
+      display: inline-block;
+    }
+    h3 {
+      font-size: 1.05rem;
+      margin: 1.25rem 0 0.5rem;
+    }
+    section {
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 1.25rem 1.5rem;
+      margin-top: 1rem;
+    }
+    .card.anterior { border-left: 4px solid var(--danger); }
+    .card.atual { border-left: 4px solid var(--ok); }
+    ul { margin: 0.5rem 0 0 1.1rem; padding: 0; }
+    li { margin: 0.35rem 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 0.75rem 0;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.65rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #f1f5f9; font-weight: 600; }
+    code, .path {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.82em;
+      background: #f1f5f9;
+      padding: 0.12em 0.35em;
+      border-radius: 0.25rem;
+    }
+    .note {
+      font-size: 0.875rem;
+      color: var(--muted);
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: #f1f5f9;
+      border-radius: 0.375rem;
+    }
+    nav.toc {
+      margin: 1.5rem 0;
+      padding: 1rem 1.25rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+    }
+    nav.toc ol { margin: 0; padding-left: 1.25rem; }
+    nav.toc a { color: var(--accent); text-decoration: none; }
+    nav.toc a:hover { text-decoration: underline; }
+    footer {
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="doc-header">
+      <h1>Estado do projeto — módulo financeiro e operações correlatas</h1>
+      <p class="meta">
+        Documento de referência: compara <strong>estágio anterior</strong> (baseline do ciclo de entregas tratado)
+        e <strong>estágio atual</strong> (após implementações e alinhamento operacional com Supabase).
+        Última atualização do conteúdo: <time datetime="2026-05-04">maio de 2026</time>.
+      </p>
+    </header>
+
+    <nav class="toc" aria-label="Índice">
+      <strong>Índice</strong>
+      <ol>
+        <li><a href="#contexto">Contexto</a></li>
+        <li><a href="#anterior">Estágio anterior</a></li>
+        <li><a href="#atual">Estágio atual</a></li>
+        <li><a href="#artefatos">Artefatos no repositório</a></li>
+        <li><a href="#deploy">Deploy do schema (Supabase)</a></li>
+      </ol>
+    </nav>
+
+    <section id="contexto">
+      <h2>1. Contexto</h2>
+      <p>
+        O frontend é <strong>Vite + React + TypeScript</strong>, com dados em <strong>Supabase</strong> (Postgres, RLS, Auth).
+        As regras de arquitetura do projeto exigem serviços para acesso ao banco, paginação no backend e telas responsivas.
+        Em vários ambientes, o histórico de migrations do repositório <strong>não coincide</strong> com o registrado no projeto
+        remoto do Supabase, o que impede <code>supabase db push</code> sem erros — daí o uso recorrente do <strong>SQL Editor</strong>
+        com scripts manuais idempotentes.
+      </p>
+    </section>
+
+    <section id="anterior">
+      <h2>2. Estágio anterior (baseline)</h2>
+      <p>
+        Situação consolidada <strong>antes</strong> de aplicar no banco remoto os scripts manuais e antes das últimas melhorias de código descritas abaixo.
+      </p>
+
+      <div class="card anterior">
+        <h3>Banco de dados (remoto)</h3>
+        <ul>
+          <li>
+            <strong>Grupo econômico:</strong> tabelas <code>organization_groups</code>,
+            <code>organization_group_members</code> e função <code>org_ids_in_same_group</code>
+            <strong>ausentes</strong> ou não aplicadas no projeto Supabase em uso pelo app — o código já esperava esse schema.
+          </li>
+          <li>
+            <strong>RLS financeiro:</strong> políticas antigas podiam depender de escopo por organização atual;
+            o modelo novo prevê <code>is_org_member(org_id)</code> para permitir consultas consolidadas com <code>.in('org_id', …)</code>.
+          </li>
+          <li>
+            <strong><code>cash_flow.is_intercompany</code>:</strong> coluna <strong>inexistente</strong> no remoto,
+            gerando erro nas queries do fluxo de caixa e dos KPIs que filtram intercompany.
+          </li>
+          <li>
+            <strong>Caixa por usuário:</strong> migration volumosa (<code>bank_accounts.owner_user_id</code>,
+            <code>cash_register_sessions</code>, <code>cash_closings.bank_account_id</code>, etc.)
+            podia estar <strong>parcialmente</strong> aplicada ou rerodada — exemplo típico de erro:
+            constraint <code>cash_closings_org_date_bank_account_key</code> já existente.
+          </li>
+        </ul>
+
+        <h3>Aplicação (código já no repositório)</h3>
+        <ul>
+          <li>
+            <strong>Visão consolidada por grupo econômico:</strong> hook <code>useFinancialOrgScope</code>,
+            seletor de escopo nas telas financeiras, serviços com <code>effectiveOrgIds</code> — funcional no código,
+            porém <strong>dependente do schema</strong> e RPC no banco.
+          </li>
+          <li>
+            <strong>Contas a receber:</strong> filtros existentes (status, datas, cliente por combobox, OS, orçamento);
+            busca textual genérica, quando existente, podia estar aplicada <strong>após</strong> paginação (inconsistente com a regra de paginar no backend).
+          </li>
+          <li>
+            <strong>Fechamento de caixa:</strong> fluxo de caixa por operador, abertura com saldo, fechamento com divergência —
+            já modelado no código; consolidado somando fechamentos por data.
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="atual">
+      <h2>3. Estágio atual</h2>
+      <p>
+        Situação após <strong>aplicar os SQLs manuais no Supabase</strong> (quando indicado) e após as <strong>alterações de código</strong> integradas ao repositório neste ciclo.
+      </p>
+
+      <div class="card atual">
+        <h3>Banco de dados (alvo operacional)</h3>
+        <ul>
+          <li>
+            <strong>Grupo econômico:</strong> schema criável via
+            <span class="path">supabase/migrations/20260508100000_organization_groups.sql</span>
+            ou <span class="path">supabase/manual/apply_organization_groups.sql</span>
+            (script manual idempotente).
+          </li>
+          <li>
+            <strong>RLS financeiro alinhado:</strong>
+            <span class="path">supabase/manual/apply_financial_rls_is_org_member.sql</span>
+            (complemento para <code>cash_flow</code>, contas, DRE, categorias, etc.).
+          </li>
+          <li>
+            <strong>Intercompany no fluxo:</strong> coluna <code>cash_flow.is_intercompany</code>
+            via <span class="path">supabase/manual/apply_cash_flow_is_intercompany.sql</span>.
+          </li>
+          <li>
+            <strong>Caixa por usuário:</strong>
+            <span class="path">supabase/manual/apply_cash_register_per_user.sql</span>
+            (espelha a migration; trecho da UNIQUE em <code>cash_closings</code> ajustado para rerodagem segura).
+          </li>
+        </ul>
+
+        <h3>Aplicação — comportamento esperado hoje</h3>
+        <ul>
+          <li>
+            <strong>Grupo econômico:</strong> com RPC e tabelas no banco, o usuário vê o seletor <strong>Empresa / Todas as empresas</strong>
+            nas telas financeiras quando há mais de uma organização acessível no mesmo grupo.
+          </li>
+          <li>
+            <strong>Contas a receber:</strong> filtros <strong>no backend</strong> — valor da parcela (igualdade com <code>amount</code>),
+            texto combinável (nome, CPF/CNPJ do cliente e número da NF), mais status, datas e demais filtros;
+            parser monetário BR em <span class="path">src/lib/parseMoneyBr.ts</span>.
+          </li>
+          <li>
+            <strong>Fluxo de caixa:</strong> lançamento pode ser marcado como <strong>Intercompany</strong>;
+            lista pode ocultar/exibir esses lançamentos; coluna persistida em <code>cash_flow</code>.
+          </li>
+          <li>
+            <strong>Fechamento de caixa:</strong> cada login usa conta de caixa própria (<code>getOrCreateUserCashAccount</code>);
+            abertura com saldo inicial; fechamento com cálculo de divergência; <strong>Consolidado de caixa</strong> soma fechamentos do dia
+            e passa a exibir também <strong>sessões de caixa ainda abertas</strong> por operador.
+          </li>
+          <li>
+            <strong>Testes automatizados:</strong> Vitest cobre utilitários (ex.: <code>parseMoneyBr</code>, <code>orgScope</code>,
+            <code>OrganizationGroupService</code> com mocks).
+          </li>
+        </ul>
+      </div>
+
+      <table aria-label="Resumo comparativo">
+        <caption style="caption-side:top;text-align:left;font-weight:600;padding-bottom:0.5rem">Resumo comparativo</caption>
+        <thead>
+          <tr>
+            <th>Tema</th>
+            <th>Estágio anterior</th>
+            <th>Estágio atual</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Schema grupo econômico no remoto</td>
+            <td>Ausente ou não aplicado</td>
+            <td>Aplicável via migrations + scripts manuais; app funcional quando RPC/tabelas existem</td>
+          </tr>
+          <tr>
+            <td><code>cash_flow.is_intercompany</code></td>
+            <td>Coluna inexistente → erro em runtime</td>
+            <td>Coluna criada; UI e serviços operacionais</td>
+          </tr>
+          <tr>
+            <td>Caixa por usuário (DB)</td>
+            <td>Migration possivelmente parcial / rerodagem com erro de constraint</td>
+            <td>Script manual idempotente; rerodagem sem falhar na UNIQUE se já existir</td>
+          </tr>
+          <tr>
+            <td>Contas a receber — busca por valor</td>
+            <td>Não havia fluxo dedicado com filtros combinados no backend</td>
+            <td>Valor da parcela + texto + status etc., paginação correta no Supabase</td>
+          </tr>
+          <tr>
+            <td>Consolidado de fechamento</td>
+            <td>Soma fechamentos por data</td>
+            <td>Mantém a soma + lista de <strong>sessões abertas</strong> na empresa</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="artefatos">
+      <h2>4. Artefatos no repositório (referência rápida)</h2>
+      <ul>
+        <li><span class="path">supabase/manual/</span> — scripts para SQL Editor (deploy quando <code>db push</code> não aplicável).</li>
+        <li><span class="path">supabase/migrations/</span> — versão versionada das mesmas mudanças (CI / ambientes alinhados).</li>
+        <li><span class="path">src/hooks/useFinancialOrgScope.ts</span> — escopo financeiro multi-org.</li>
+        <li><span class="path">src/services/financial/organizationGroupService.ts</span> — RPC <code>org_ids_in_same_group</code>.</li>
+        <li><span class="path">src/services/financial/accountsReceivableService.ts</span> — filtros de lista no backend.</li>
+        <li><span class="path">src/pages/FechamentoCaixaConsolidado.tsx</span> — consolidado + sessões abertas.</li>
+        <li><span class="path">.gitignore</span> — <code>supabase/.temp/</code> ignorado (estado local do CLI).</li>
+      </ul>
+    </section>
+
+    <section id="deploy">
+      <h2>5. Deploy do schema (Supabase)</h2>
+      <p>
+        Para novos ambientes ou após clonar o repositório: aplicar, na ordem que fizer sentido para o seu banco,
+        os scripts em <span class="path">supabase/manual/</span> conforme dependências (ex.: extensões e funções como
+        <code>update_updated_at_column</code>, <code>is_org_member</code> já devem existir).
+      </p>
+      <p class="note">
+        Este arquivo HTML é documentação de estado do produto e do repositório; não substitui o runbook interno de CI/CD nem a política
+        definitiva de <code>migration repair</code> do Supabase para alinhar histórico local e remoto.
+      </p>
+    </section>
+
+    <footer>
+      <p>Gerado para o projeto ERP Retífica Formiguense. Ajuste datas e commits em controles de versão conforme o fluxo do time.</p>
+    </footer>
+  </div>
+</body>
+</html>

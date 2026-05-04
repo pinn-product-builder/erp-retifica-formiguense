@@ -26,7 +26,10 @@ export {
   type CashClosingConsolidatedLine,
   type CashClosingConsolidatedEnrichedLine,
 } from '@/services/financial/cashClosingService';
-export { CashRegisterSessionService } from '@/services/financial/cashRegisterSessionService';
+export {
+  CashRegisterSessionService,
+  type CashRegisterOpenSessionEnriched,
+} from '@/services/financial/cashRegisterSessionService';
 export { BankReconciliationService } from '@/services/financial/bankReconciliationService';
 export { PartnerWithdrawalService } from '@/services/financial/partnerWithdrawalService';
 export { ProjectionService } from '@/services/financial/projectionService';

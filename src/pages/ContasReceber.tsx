@@ -39,6 +39,7 @@ import { formatBRL, formatDateBR, paymentMethodLabel } from '@/lib/financialForm
 import { FinancialConfigService } from '@/services/financial/financialConfigService';
 import { cn } from '@/lib/utils';
 import { getDueAlertCalendarDates } from '@/lib/dueAlertDates';
+import { parseMoneyBr } from '@/lib/parseMoneyBr';
 import { ArRenegotiationService } from '@/services/financial/arRenegotiationService';
 import type { ReceivableSettlementSnapshot } from '@/services/financial/receiptHistoryService';
 import { toast } from 'sonner';
@@ -131,6 +132,10 @@ export default function ContasReceber() {
   const [dueFrom, setDueFrom] = useState('');
   const [dueTo, setDueTo] = useState('');
   const [dueAlertFilter, setDueAlertFilter] = useState(false);
+  const [parcelAmountInput, setParcelAmountInput] = useState('');
+  const [debouncedParcelAmount, setDebouncedParcelAmount] = useState('');
+  const [customerSearchInput, setCustomerSearchInput] = useState('');
+  const [debouncedCustomerSearch, setDebouncedCustomerSearch] = useState('');
   const [pmCatalog, setPmCatalog] = useState<PmCatalogRow[]>([]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -207,12 +212,39 @@ export default function ContasReceber() {
     if (customerFilterOpt) f.customerId = customerFilterOpt.id;
     if (orderFilterOpt) f.orderId = orderFilterOpt.id;
     if (budgetFilterOpt) f.budgetId = budgetFilterOpt.id;
+    const parsedAmount = parseMoneyBr(debouncedParcelAmount);
+    if (parsedAmount != null) f.amountEquals = parsedAmount;
+    if (debouncedCustomerSearch) f.customerText = debouncedCustomerSearch;
     return f;
-  }, [statusFilter, dueFrom, dueTo, dueAlertFilter, customerFilterOpt, orderFilterOpt, budgetFilterOpt]);
+  }, [
+    statusFilter,
+    dueFrom,
+    dueTo,
+    dueAlertFilter,
+    customerFilterOpt,
+    orderFilterOpt,
+    budgetFilterOpt,
+    debouncedParcelAmount,
+    debouncedCustomerSearch,
+  ]);
 
   useEffect(() => {
     if (searchParams.get('dueAlerts') === '1') setDueAlertFilter(true);
   }, [searchParams]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedParcelAmount(parcelAmountInput.trim()), 350);
+    return () => window.clearTimeout(t);
+  }, [parcelAmountInput]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedCustomerSearch(customerSearchInput.trim()), 350);
+    return () => window.clearTimeout(t);
+  }, [customerSearchInput]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedParcelAmount, debouncedCustomerSearch]);
 
   useEffect(() => {
     if (!lookupOrgId) return;
@@ -696,7 +728,7 @@ export default function ContasReceber() {
           <div>
             <h1 className="text-xl font-bold sm:text-2xl md:text-3xl">Contas a receber</h1>
             <p className="text-muted-foreground text-xs sm:text-sm">
-              Filtros, totais e lançamentos vinculados a cliente, OS e orçamento
+              Filtros por valor da parcela (extrato), cliente/NF e status; totais e lançamentos por cliente, OS e orçamento
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:w-auto min-w-0">
@@ -817,6 +849,37 @@ export default function ContasReceber() {
               </Button>
             </div>
           </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="ar-parcel-amount">Valor da parcela (R$)</Label>
+              <Input
+                id="ar-parcel-amount"
+                inputMode="decimal"
+                placeholder="Ex.: 3429 ou 3.429,00"
+                value={parcelAmountInput}
+                onChange={(e) => setParcelAmountInput(e.target.value)}
+                autoComplete="off"
+              />
+              <p className="text-muted-foreground text-xs">
+                Busca duplicatas com esse valor (pendente, pago ou outro status).
+              </p>
+            </div>
+            <div className="space-y-2 sm:col-span-2 lg:col-span-2">
+              <Label htmlFor="ar-customer-search">Nome, CPF/CNPJ ou NF</Label>
+              <Input
+                id="ar-customer-search"
+                placeholder="Combina com valor e status; opcional se já escolheu o cliente abaixo"
+                value={customerSearchInput}
+                onChange={(e) => setCustomerSearchInput(e.target.value)}
+                autoComplete="off"
+              />
+              <p className="text-muted-foreground text-xs">
+                Cruza com nome ou documento do cadastro e com o número da nota fiscal no lançamento.
+              </p>
+            </div>
+          </div>
+
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
             <CustomerArCombobox
               label="Cliente"

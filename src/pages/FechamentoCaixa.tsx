@@ -225,8 +225,10 @@ export default function FechamentoCaixa() {
               <p className="text-xs sm:text-sm text-muted-foreground truncate">{orgLabel}</p>
             ) : null}
             <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
-              Movimentos e fechamento valem apenas para <span className="font-medium text-foreground">sua conta de caixa</span>
-              {myAccountLabel ? ` (${myAccountLabel})` : ''}. O consolidado da empresa soma todos os operadores.
+              Cada login tem <span className="font-medium text-foreground">uma conta de caixa própria</span>
+              {myAccountLabel ? ` (${myAccountLabel})` : ''}. Em Fluxo de caixa, novos lançamentos usam essa conta por
+              padrão. Abra o dia com saldo inicial opcional; ao fechar, informe contagem física + banco — o sistema
+              calcula divergência em relação ao saldo esperado. O consolidado da empresa soma todos os operadores.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

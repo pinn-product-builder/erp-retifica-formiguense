@@ -19,8 +19,21 @@ import {
   CashClosingService,
   type CashClosingConsolidatedEnrichedLine,
 } from '@/services/financial/cashClosingService';
+import {
+  CashRegisterSessionService,
+  type CashRegisterOpenSessionEnriched,
+} from '@/services/financial/cashRegisterSessionService';
 import { formatBRL, formatDateBR } from '@/lib/financialFormat';
-import { ArrowLeft, Building2, LayoutGrid, Scale, Users, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Building2,
+  LayoutGrid,
+  Scale,
+  Users,
+  AlertTriangle,
+  CheckCircle2,
+  Unlock,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { StatCard } from '@/components/StatCard';
 import { Separator } from '@/components/ui/separator';
@@ -31,15 +44,22 @@ export default function FechamentoCaixaConsolidado() {
   const orgLabel = currentOrganization?.name?.trim() ?? '';
   const [closingDate, setClosingDate] = useState(new Date().toISOString().slice(0, 10));
   const [lines, setLines] = useState<CashClosingConsolidatedEnrichedLine[]>([]);
+  const [openSessions, setOpenSessions] = useState<CashRegisterOpenSessionEnriched[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!orgId) return;
     let cancelled = false;
     setLoading(true);
-    void CashClosingService.listForConsolidatedDateEnriched(orgId, closingDate)
-      .then((data) => {
-        if (!cancelled) setLines(data);
+    void Promise.all([
+      CashClosingService.listForConsolidatedDateEnriched(orgId, closingDate),
+      CashRegisterSessionService.listOpenSessionsForOrgEnriched(orgId),
+    ])
+      .then(([dataLines, dataOpen]) => {
+        if (!cancelled) {
+          setLines(dataLines);
+          setOpenSessions(dataOpen);
+        }
       })
       .catch((e) => toast.error(e instanceof Error ? e.message : 'Erro ao carregar consolidado'))
       .finally(() => {
@@ -80,8 +100,8 @@ export default function FechamentoCaixaConsolidado() {
               </p>
             ) : null}
             <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
-              Visão gerencial: todos os caixas fechados na data, somando sistema, verificação e diferenças por
-              operador/conta.
+              Visão gerencial: fechamentos gravados na data (soma por operador/conta) e, abaixo, caixas com sessão ainda
+              aberta na empresa.
             </p>
           </div>
           <Button type="button" variant="outline" size="sm" asChild className="w-full sm:w-auto shrink-0">
@@ -107,6 +127,85 @@ export default function FechamentoCaixaConsolidado() {
                 coincide com o dia escolhido.
               </p>
             </div>
+          </div>
+        </Card>
+
+        <Card className="border overflow-hidden">
+          <CardHeader className="border-b bg-muted/30 p-3 sm:p-4 space-y-1">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-2 min-w-0">
+                <Unlock className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div>
+                  <CardTitle className="text-base sm:text-lg">Caixas com sessão aberta</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    Operadores que abriram o caixa e ainda não registraram fechamento neste fluxo (vários ao mesmo tempo
+                    são permitidos).
+                  </CardDescription>
+                </div>
+              </div>
+              {!loading && (
+                <Badge variant={openSessions.length > 0 ? 'default' : 'secondary'} className="w-fit shrink-0">
+                  {openSessions.length} sessão{openSessions.length !== 1 ? 'ões' : ''}
+                </Badge>
+              )}
+            </div>
+          </CardHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Operador</TableHead>
+                  <TableHead className="hidden sm:table-cell">Conta</TableHead>
+                  <TableHead>Data movimento</TableHead>
+                  <TableHead className="text-right">Saldo na abertura</TableHead>
+                  <TableHead className="hidden md:table-cell">Aberto em</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-muted-foreground text-sm py-8 text-center">
+                      Carregando…
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!loading && openSessions.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-muted-foreground text-sm py-8 text-center">
+                      Nenhuma sessão aberta — todos os caixas estão encerrados ou ninguém abriu o dia ainda.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!loading &&
+                  openSessions.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell className="font-medium text-xs sm:text-sm">
+                        {s.operator_name ?? '—'}
+                        <span className="sm:hidden block text-muted-foreground font-normal mt-1">
+                          {s.bank_accounts?.name ?? '—'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs sm:text-sm">
+                        {s.bank_accounts?.name ?? '—'}
+                      </TableCell>
+                      <TableCell className="text-xs sm:text-sm whitespace-nowrap">
+                        {formatDateBR(s.business_date)}
+                        {s.business_date === closingDate ? (
+                          <Badge variant="outline" className="ml-2 text-[10px] sm:text-xs">
+                            Ref.
+                          </Badge>
+                        ) : null}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap text-xs sm:text-sm">
+                        {formatBRL(Number(s.opening_balance))}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(s.opened_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
           </div>
         </Card>
 

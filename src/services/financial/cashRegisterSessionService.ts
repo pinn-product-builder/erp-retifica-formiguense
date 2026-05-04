@@ -4,7 +4,44 @@ import { CashFlowService } from '@/services/financial/cashFlowService';
 
 type SessionRow = Database['public']['Tables']['cash_register_sessions']['Row'];
 
+export type CashRegisterOpenSessionEnriched = SessionRow & {
+  bank_accounts: { id: string; name: string } | null;
+  operator_name: string | null;
+};
+
 export class CashRegisterSessionService {
+  /**
+   * Sessões de caixa ainda abertas na organização (vários operadores podem ter caixa aberto ao mesmo tempo).
+   * Útil no consolidado gerencial para ver quem ainda não fechou o dia.
+   */
+  static async listOpenSessionsForOrgEnriched(orgId: string): Promise<CashRegisterOpenSessionEnriched[]> {
+    const { data, error } = await supabase
+      .from('cash_register_sessions')
+      .select('*, bank_accounts (id, name)')
+      .eq('org_id', orgId)
+      .eq('status', 'open')
+      .order('opened_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as (SessionRow & { bank_accounts: { id: string; name: string } | null })[];
+    const userIds = [...new Set(rows.map((r) => r.user_id))];
+    if (userIds.length === 0) return [];
+    const { data: infos, error: infoErr } = await supabase
+      .from('user_basic_info')
+      .select('user_id, name, email')
+      .in('user_id', userIds);
+    if (infoErr) throw new Error(infoErr.message);
+    const map = new Map(
+      (infos ?? []).map((r) => [
+        r.user_id as string,
+        (r.name?.trim() || r.email || '').trim() || null,
+      ])
+    );
+    return rows.map((r) => ({
+      ...r,
+      operator_name: map.get(r.user_id) ?? null,
+    }));
+  }
+
   static async getOpenForUser(orgId: string, userId: string): Promise<SessionRow | null> {
     const { data, error } = await supabase
       .from('cash_register_sessions')

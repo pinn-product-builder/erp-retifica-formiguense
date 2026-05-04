@@ -9,6 +9,7 @@ import {
 import type { AccountsReceivableListFilters, PaginatedResult } from '@/services/financial/types';
 import { CostCenterService } from '@/services/financial/costCenterService';
 import { applyOrgIdFilter } from '@/services/financial/orgScope';
+import { escapeIlikePattern } from '@/lib/ilikeEscape';
 
 type ArRow = Database['public']['Tables']['accounts_receivable']['Row'];
 
@@ -49,6 +50,59 @@ async function attachAuditUserNames(
 }
 
 export class AccountsReceivableService {
+  private static async resolveCustomerIdsMatchingText(orgIds: string[], raw: string): Promise<string[]> {
+    const s = raw.trim();
+    if (!s || orgIds.length === 0) return [];
+    const esc = escapeIlikePattern(s);
+    const { data, error } = await supabase
+      .from('customers')
+      .select('id')
+      .in('org_id', orgIds)
+      .or(`name.ilike.%${esc}%,document.ilike.%${esc}%`);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r) => r.id as string);
+  }
+
+  /**
+   * Aplica filtros de lista/totais em uma query já restrita por `org_id` (`applyOrgIdFilter`).
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- encadeamento do client Supabase
+  private static async applyAccountsReceivableFilters(query: any, orgIds: string[], filters: AccountsReceivableListFilters): Promise<any> {
+    let q = query;
+    const mergedSearch = (filters.customerText ?? filters.search ?? '').trim();
+
+    if (filters.customerId) {
+      q = q.eq('customer_id', filters.customerId);
+      if (mergedSearch) {
+        const esc = escapeIlikePattern(mergedSearch);
+        q = q.ilike('invoice_number', `%${esc}%`);
+      }
+    } else if (mergedSearch) {
+      const ids = await AccountsReceivableService.resolveCustomerIdsMatchingText(orgIds, mergedSearch);
+      const esc = escapeIlikePattern(mergedSearch);
+      const parts: string[] = [`invoice_number.ilike.%${esc}%`];
+      if (ids.length > 0) parts.push(`customer_id.in.(${ids.join(',')})`);
+      q = q.or(parts.join(','));
+    }
+
+    if (filters.amountEquals != null && Number.isFinite(filters.amountEquals)) {
+      q = q.eq('amount', filters.amountEquals);
+    }
+
+    if (filters.status) q = q.eq('status', filters.status);
+    if (filters.paymentMethod) q = q.eq('payment_method', filters.paymentMethod);
+    if (filters.orderId) q = q.eq('order_id', filters.orderId);
+    if (filters.budgetId) q = q.eq('budget_id', filters.budgetId);
+    if (filters.costCenterId) q = q.eq('cost_center_id', filters.costCenterId);
+    if (filters.dueOnDates?.length) q = q.in('due_date', filters.dueOnDates);
+    else {
+      if (filters.dueFrom) q = q.gte('due_date', filters.dueFrom);
+      if (filters.dueTo) q = q.lte('due_date', filters.dueTo);
+    }
+
+    return q;
+  }
+
   static async refreshOverdue(orgId: string): Promise<{ error: Error | null }> {
     const { error } = await supabase.rpc('refresh_accounts_receivable_overdue', {
       p_org_id: orgId,
@@ -79,17 +133,7 @@ export class AccountsReceivableService {
       orgIds
     );
 
-    if (filters.customerId) q = q.eq('customer_id', filters.customerId);
-    if (filters.status) q = q.eq('status', filters.status);
-    if (filters.paymentMethod) q = q.eq('payment_method', filters.paymentMethod);
-    if (filters.orderId) q = q.eq('order_id', filters.orderId);
-    if (filters.budgetId) q = q.eq('budget_id', filters.budgetId);
-    if (filters.costCenterId) q = q.eq('cost_center_id', filters.costCenterId);
-    if (filters.dueOnDates?.length) q = q.in('due_date', filters.dueOnDates);
-    else {
-      if (filters.dueFrom) q = q.gte('due_date', filters.dueFrom);
-      if (filters.dueTo) q = q.lte('due_date', filters.dueTo);
-    }
+    q = await AccountsReceivableService.applyAccountsReceivableFilters(q, orgIds, filters);
 
     q = q
       .order('created_at', { ascending: false, nullsFirst: false })
@@ -100,14 +144,6 @@ export class AccountsReceivableService {
     if (error) throw new Error(error.message);
 
     let rows = (data ?? []) as (ArRow & Record<string, unknown>)[];
-    if (filters.search?.trim()) {
-      const t = filters.search.trim().toLowerCase();
-      rows = rows.filter((r) => {
-        const c = r.customers as { name?: string } | null;
-        const inv = (r.invoice_number as string | null) ?? '';
-        return (c?.name?.toLowerCase().includes(t) ?? false) || inv.toLowerCase().includes(t);
-      });
-    }
 
     rows = await attachAuditUserNames(rows);
 
@@ -131,16 +167,7 @@ export class AccountsReceivableService {
       'org_id',
       orgIds
     );
-    if (filters.customerId) q = q.eq('customer_id', filters.customerId);
-    if (filters.paymentMethod) q = q.eq('payment_method', filters.paymentMethod);
-    if (filters.orderId) q = q.eq('order_id', filters.orderId);
-    if (filters.budgetId) q = q.eq('budget_id', filters.budgetId);
-    if (filters.costCenterId) q = q.eq('cost_center_id', filters.costCenterId);
-    if (filters.dueOnDates?.length) q = q.in('due_date', filters.dueOnDates);
-    else {
-      if (filters.dueFrom) q = q.gte('due_date', filters.dueFrom);
-      if (filters.dueTo) q = q.lte('due_date', filters.dueTo);
-    }
+    q = await AccountsReceivableService.applyAccountsReceivableFilters(q, orgIds, filters);
 
     const { data, error } = await q;
     if (error) throw new Error(error.message);

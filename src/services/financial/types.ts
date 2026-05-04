@@ -31,6 +31,11 @@ export interface AccountsReceivableListFilters {
   dueFrom?: string;
   dueTo?: string;
   dueOnDates?: string[];
+  /** Texto em cliente (nome, documento) ou NF; combinável com valor e status */
+  customerText?: string;
+  /** Igualdade com `accounts_receivable.amount` (valor da parcela) */
+  amountEquals?: number;
+  /** @deprecated preferir `customerText`; mantido para compatibilidade */
   search?: string;
   costCenterId?: string;
 }
