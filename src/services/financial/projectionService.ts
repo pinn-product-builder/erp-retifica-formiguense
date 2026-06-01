@@ -2,8 +2,33 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { CashFlowService } from '@/services/financial/cashFlowService';
 import { applyOrgIdFilter } from '@/services/financial/orgScope';
+import { paymentMethodLabel } from '@/lib/financialFormat';
 
 type Row = Database['public']['Tables']['cash_flow_projection']['Row'];
+type ArRow = Database['public']['Tables']['accounts_receivable']['Row'];
+type ApRow = Database['public']['Tables']['accounts_payable']['Row'];
+
+export type OrganizationRef = { id: string; name: string };
+
+export type ProjectionDayEntry = {
+  id: string;
+  partyName: string;
+  amount: number;
+  paymentMethodLabel: string;
+  organizationName: string;
+  invoiceNumber: string | null;
+  description: string | null;
+  dueDate: string;
+  overdueFromBucketed: boolean;
+};
+
+export type ProjectionDayBreakdown = {
+  dateYmd: string;
+  receivables: ProjectionDayEntry[];
+  payables: ProjectionDayEntry[];
+  totalIncome: number;
+  totalExpense: number;
+};
 
 function formatLocalYmd(d: Date): string {
   const y = d.getFullYear();
@@ -39,9 +64,28 @@ export type ScenarioProjectionResult = {
   monthly: { month: string; income: number; expense: number; endBalance: number }[];
 };
 
-function scenarioFactors(s: ProjectionScenarioKey): { incomeFactor: number; expenseFactor: number } {
-  if (s === 'optimistic') return { incomeFactor: 1.05, expenseFactor: 0.98 };
-  if (s === 'pessimistic') return { incomeFactor: 0.95, expenseFactor: 1.05 };
+export type ProjectionScenarioConfig = {
+  optimistic_income_factor: number;
+  optimistic_expense_factor: number;
+  pessimistic_income_factor: number;
+  pessimistic_expense_factor: number;
+};
+
+const DEFAULT_SCENARIO_CONFIG: ProjectionScenarioConfig = {
+  optimistic_income_factor: 1.2,
+  optimistic_expense_factor: 0.98,
+  pessimistic_income_factor: 0.8,
+  pessimistic_expense_factor: 1.05,
+};
+
+function scenarioFactors(
+  s: ProjectionScenarioKey,
+  config: ProjectionScenarioConfig
+): { incomeFactor: number; expenseFactor: number } {
+  if (s === 'optimistic')
+    return { incomeFactor: config.optimistic_income_factor, expenseFactor: config.optimistic_expense_factor };
+  if (s === 'pessimistic')
+    return { incomeFactor: config.pessimistic_income_factor, expenseFactor: config.pessimistic_expense_factor };
   return { incomeFactor: 1.0, expenseFactor: 1.0 };
 }
 
@@ -122,14 +166,51 @@ export class ProjectionService {
     return { days, hasNegativeDay, minBalance, openingBalance };
   }
 
+  /**
+   * Carrega config de cenários de uma org (com fallback default).
+   * Em modo consolidado (múltiplas orgs), usa a config da primeira org como referência.
+   */
+  static async getScenarioConfig(orgIds: string[]): Promise<ProjectionScenarioConfig> {
+    if (orgIds.length === 0) return DEFAULT_SCENARIO_CONFIG;
+    const { data, error } = await supabase
+      .from('cash_flow_projection_config')
+      .select('optimistic_income_factor, optimistic_expense_factor, pessimistic_income_factor, pessimistic_expense_factor')
+      .in('org_id', orgIds)
+      .limit(1)
+      .maybeSingle();
+    if (error || !data) return DEFAULT_SCENARIO_CONFIG;
+    const row = data as Record<string, number | string | null>;
+    return {
+      optimistic_income_factor: Number(row.optimistic_income_factor ?? DEFAULT_SCENARIO_CONFIG.optimistic_income_factor),
+      optimistic_expense_factor: Number(row.optimistic_expense_factor ?? DEFAULT_SCENARIO_CONFIG.optimistic_expense_factor),
+      pessimistic_income_factor: Number(row.pessimistic_income_factor ?? DEFAULT_SCENARIO_CONFIG.pessimistic_income_factor),
+      pessimistic_expense_factor: Number(row.pessimistic_expense_factor ?? DEFAULT_SCENARIO_CONFIG.pessimistic_expense_factor),
+    };
+  }
+
+  static async upsertScenarioConfig(
+    orgId: string,
+    config: ProjectionScenarioConfig,
+    userId: string | null
+  ): Promise<void> {
+    const payload = { org_id: orgId, ...config, updated_by: userId } as Record<string, unknown>;
+    const { error } = await supabase
+      .from('cash_flow_projection_config')
+      .upsert(payload, { onConflict: 'org_id' });
+    if (error) throw new Error(error.message);
+  }
+
   static async computeScenario90dFromArAp(
     orgIds: string[],
     scenario: ProjectionScenarioKey,
     recommendedMinimum = 10000
   ): Promise<ScenarioProjectionResult> {
     const horizonDays = 90;
-    const base = await ProjectionService.computeOnDemandFromArAp(orgIds, horizonDays);
-    const f = scenarioFactors(scenario);
+    const [base, config] = await Promise.all([
+      ProjectionService.computeOnDemandFromArAp(orgIds, horizonDays),
+      ProjectionService.getScenarioConfig(orgIds),
+    ]);
+    const f = scenarioFactors(scenario, config);
 
     const days: OnDemandProjectionDay[] = [];
     let running = base.openingBalance;
@@ -171,6 +252,109 @@ export class ProjectionService {
       belowRecommended: minBalance < recommendedMinimum,
       monthly,
     };
+  }
+
+  /**
+   * Breakdown de um dia projetado: AR e AP que caem (ou foram empurrados) para a data informada.
+   *
+   * Regra alinhada com `computeOnDemandFromArAp`: títulos AR/AP vencidos ainda em aberto são
+   * empurrados para "hoje" — então `dateYmd === hoje` inclui os atrasados.
+   */
+  static async listDayBreakdownFromArAp(
+    orgs: OrganizationRef[],
+    dateYmd: string
+  ): Promise<ProjectionDayBreakdown> {
+    const orgIds = orgs.map((o) => o.id);
+    if (orgIds.length === 0 || !dateYmd) {
+      return { dateYmd, receivables: [], payables: [], totalIncome: 0, totalExpense: 0 };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayIso = formatLocalYmd(today);
+    const isToday = dateYmd === todayIso;
+    const orgNameById = new Map(orgs.map((o) => [o.id, o.name]));
+
+    const arQuery = applyOrgIdFilter(
+      supabase
+        .from('accounts_receivable')
+        .select('id, amount, due_date, status, payment_method, invoice_number, description, customer_id, org_id'),
+      'org_id',
+      orgIds
+    ).in('status', ['pending', 'overdue', 'renegotiated']);
+
+    const apQuery = applyOrgIdFilter(
+      supabase
+        .from('accounts_payable')
+        .select(
+          'id, amount, due_date, status, payment_method, invoice_number, description, supplier_name, org_id'
+        ),
+      'org_id',
+      orgIds
+    ).eq('status', 'pending');
+
+    if (isToday) {
+      arQuery.lte('due_date', dateYmd);
+      apQuery.lte('due_date', dateYmd);
+    } else {
+      arQuery.eq('due_date', dateYmd);
+      apQuery.eq('due_date', dateYmd);
+    }
+
+    const [{ data: arData, error: arErr }, { data: apData, error: apErr }] = await Promise.all([arQuery, apQuery]);
+    if (arErr) throw new Error(arErr.message);
+    if (apErr) throw new Error(apErr.message);
+
+    const customerIds = Array.from(
+      new Set(((arData ?? []) as Pick<ArRow, 'customer_id'>[]).map((r) => r.customer_id).filter(Boolean))
+    );
+    const customerNameById = new Map<string, string>();
+    if (customerIds.length > 0) {
+      const { data: custData, error: cErr } = await supabase
+        .from('customers')
+        .select('id, name')
+        .in('id', customerIds);
+      if (cErr) throw new Error(cErr.message);
+      for (const c of (custData ?? []) as { id: string; name: string }[]) {
+        customerNameById.set(c.id, c.name);
+      }
+    }
+
+    const receivables: ProjectionDayEntry[] = ((arData ?? []) as Array<
+      Pick<ArRow, 'id' | 'amount' | 'due_date' | 'payment_method' | 'invoice_number' | 'description' | 'customer_id' | 'org_id'>
+    >).map((r) => ({
+      id: r.id,
+      partyName: customerNameById.get(r.customer_id) ?? '—',
+      amount: Number(r.amount),
+      paymentMethodLabel: paymentMethodLabel(r.payment_method),
+      organizationName: orgNameById.get(r.org_id ?? '') ?? '—',
+      invoiceNumber: r.invoice_number,
+      description: r.description ?? null,
+      dueDate: String(r.due_date).slice(0, 10),
+      overdueFromBucketed: isToday && String(r.due_date).slice(0, 10) < todayIso,
+    }));
+
+    const payables: ProjectionDayEntry[] = ((apData ?? []) as Array<
+      Pick<ApRow, 'id' | 'amount' | 'due_date' | 'payment_method' | 'invoice_number' | 'description' | 'supplier_name' | 'org_id'>
+    >).map((p) => ({
+      id: p.id,
+      partyName: p.supplier_name ?? '—',
+      amount: Number(p.amount),
+      paymentMethodLabel: paymentMethodLabel(p.payment_method),
+      organizationName: orgNameById.get(p.org_id ?? '') ?? '—',
+      invoiceNumber: p.invoice_number,
+      description: p.description ?? null,
+      dueDate: String(p.due_date).slice(0, 10),
+      overdueFromBucketed: isToday && String(p.due_date).slice(0, 10) < todayIso,
+    }));
+
+    receivables.sort((a, b) => b.amount - a.amount);
+    payables.sort((a, b) => b.amount - a.amount);
+
+    const totalIncome = receivables.reduce((s, r) => s + r.amount, 0);
+    const totalExpense = payables.reduce((s, p) => s + p.amount, 0);
+
+    return { dateYmd, receivables, payables, totalIncome, totalExpense };
   }
 
   static async listByOrg(orgIds: string[], days = 90): Promise<Row[]> {

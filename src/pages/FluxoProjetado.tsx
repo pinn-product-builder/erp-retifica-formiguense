@@ -16,9 +16,17 @@ import { useFinancialOrgScope } from '@/hooks/useFinancialOrgScope';
 import { FinancialOrgScopeSelect } from '@/components/financial/FinancialOrgScopeSelect';
 import { useFinancial } from '@/hooks/useFinancial';
 import { formatBRL, formatDateBR } from '@/lib/financialFormat';
-import type { OnDemandProjectionDay, ProjectionScenarioKey, ScenarioProjectionResult } from '@/services/financial/projectionService';
+import type {
+  OnDemandProjectionDay,
+  ProjectionDayBreakdown,
+  ProjectionScenarioConfig,
+  ProjectionScenarioKey,
+  ScenarioProjectionResult,
+} from '@/services/financial/projectionService';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -30,58 +38,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ProjectionService } from '@/services/financial/projectionService';
+import { ProjectionDayBreakdownDialog } from '@/components/financial/projection/ProjectionDayBreakdownDialog';
 
 type PersistedProjectionRow = Database['public']['Tables']['cash_flow_projection']['Row'];
 
-const onDemandColumns: ResponsiveTableColumn<OnDemandProjectionDay>[] = [
-  {
-    key: 'date',
-    header: 'Data',
-    priority: 1,
-    minWidth: 100,
-    render: (r) => <span className="text-xs sm:text-sm whitespace-nowrap">{formatDateBR(r.projection_date)}</span>,
-  },
-  {
-    key: 'in',
-    header: 'Receitas projetadas',
-    priority: 2,
-    minWidth: 120,
-    render: (r) => (
-      <span className="text-xs sm:text-sm md:text-base whitespace-nowrap text-success">
-        {formatBRL(r.projected_income)}
-      </span>
-    ),
-  },
-  {
-    key: 'out',
-    header: 'Despesas projetadas',
-    priority: 3,
-    minWidth: 120,
-    render: (r) => (
-      <span className="text-xs sm:text-sm md:text-base whitespace-nowrap text-destructive">
-        {formatBRL(r.projected_expenses)}
-      </span>
-    ),
-  },
-  {
-    key: 'bal',
-    header: 'Saldo',
-    priority: 4,
-    minWidth: 110,
-    render: (r) => (
-      <span
-        className={`font-medium text-xs sm:text-sm md:text-base whitespace-nowrap ${
-          r.projected_balance < 0 ? 'text-destructive' : 'text-foreground'
-        }`}
-      >
-        {formatBRL(r.projected_balance)}
-      </span>
-    ),
-  },
-];
-
 export default function FluxoProjetado() {
-  const { currentOrganization } = useOrganization();
+  const { currentOrganization, userOrganizations } = useOrganization();
   const orgId = currentOrganization?.id ?? '';
   const {
     groupOrgIds,
@@ -104,6 +66,139 @@ export default function FluxoProjetado() {
   const recMinNumber = useMemo(() => Math.max(0, Number(recommendedMin.replace(',', '.')) || 0), [recommendedMin]);
   const [persisted, setPersisted] = useState<PersistedProjectionRow[]>([]);
 
+  const [breakdownDate, setBreakdownDate] = useState<string | null>(null);
+  const [breakdown, setBreakdown] = useState<ProjectionDayBreakdown | null>(null);
+  const [breakdownLoading, setBreakdownLoading] = useState(false);
+
+  const { user } = useAuth();
+  const [scenarioConfig, setScenarioConfig] = useState<ProjectionScenarioConfig | null>(null);
+  const [scenarioConfigDraft, setScenarioConfigDraft] = useState<ProjectionScenarioConfig | null>(null);
+  const [savingScenarioConfig, setSavingScenarioConfig] = useState(false);
+
+  useEffect(() => {
+    if (effectiveOrgIds.length === 0) return;
+    let cancelled = false;
+    ProjectionService.getScenarioConfig(effectiveOrgIds)
+      .then((cfg) => {
+        if (cancelled) return;
+        setScenarioConfig(cfg);
+        setScenarioConfigDraft(cfg);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setScenarioConfig(null);
+          setScenarioConfigDraft(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveOrgIds]);
+
+  const scenarioConfigDirty =
+    !!scenarioConfig &&
+    !!scenarioConfigDraft &&
+    (scenarioConfig.optimistic_income_factor !== scenarioConfigDraft.optimistic_income_factor ||
+      scenarioConfig.optimistic_expense_factor !== scenarioConfigDraft.optimistic_expense_factor ||
+      scenarioConfig.pessimistic_income_factor !== scenarioConfigDraft.pessimistic_income_factor ||
+      scenarioConfig.pessimistic_expense_factor !== scenarioConfigDraft.pessimistic_expense_factor);
+
+  const accessibleOrgsForBreakdown = useMemo(() => {
+    const effectiveSet = new Set(effectiveOrgIds);
+    return userOrganizations
+      .filter((o) => effectiveSet.has(o.id))
+      .map((o) => ({ id: o.id, name: o.name }));
+  }, [userOrganizations, effectiveOrgIds]);
+
+  const openDayBreakdown = useCallback(
+    async (dateYmd: string) => {
+      if (accessibleOrgsForBreakdown.length === 0) return;
+      setBreakdownDate(dateYmd);
+      setBreakdown(null);
+      setBreakdownLoading(true);
+      try {
+        const res = await ProjectionService.listDayBreakdownFromArAp(accessibleOrgsForBreakdown, dateYmd);
+        setBreakdown(res);
+      } finally {
+        setBreakdownLoading(false);
+      }
+    },
+    [accessibleOrgsForBreakdown]
+  );
+
+  const onDemandColumns = useMemo<ResponsiveTableColumn<OnDemandProjectionDay>[]>(
+    () => [
+      {
+        key: 'date',
+        header: 'Data',
+        priority: 1,
+        minWidth: 100,
+        render: (r) => (
+          <span className="text-xs sm:text-sm whitespace-nowrap">{formatDateBR(r.projection_date)}</span>
+        ),
+      },
+      {
+        key: 'in',
+        header: 'Receitas projetadas',
+        priority: 2,
+        minWidth: 120,
+        render: (r) => (
+          <span className="text-xs sm:text-sm md:text-base whitespace-nowrap text-success">
+            {formatBRL(r.projected_income)}
+          </span>
+        ),
+      },
+      {
+        key: 'out',
+        header: 'Despesas projetadas',
+        priority: 3,
+        minWidth: 120,
+        render: (r) => (
+          <span className="text-xs sm:text-sm md:text-base whitespace-nowrap text-destructive">
+            {formatBRL(r.projected_expenses)}
+          </span>
+        ),
+      },
+      {
+        key: 'bal',
+        header: 'Saldo',
+        priority: 4,
+        minWidth: 110,
+        render: (r) => (
+          <span
+            className={`font-medium text-xs sm:text-sm md:text-base whitespace-nowrap ${
+              r.projected_balance < 0 ? 'text-destructive' : 'text-foreground'
+            }`}
+          >
+            {formatBRL(r.projected_balance)}
+          </span>
+        ),
+      },
+      {
+        key: 'details',
+        header: '',
+        priority: 5,
+        minWidth: 108,
+        render: (r) => {
+          const hasMovement = (r.projected_income ?? 0) + (r.projected_expenses ?? 0) > 0;
+          return (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 sm:h-8 text-[10px] sm:text-xs gap-1"
+              disabled={!hasMovement || accessibleOrgsForBreakdown.length === 0}
+              onClick={() => void openDayBreakdown(r.projection_date)}
+            >
+              <Search className="h-3 w-3" /> Ver
+            </Button>
+          );
+        },
+      },
+    ],
+    [openDayBreakdown, accessibleOrgsForBreakdown.length]
+  );
+
   const refresh = useCallback(async () => {
     if (effectiveOrgIds.length === 0) return;
     const bundle = await loadProjectionsDashboard(effectiveOrgIds);
@@ -121,6 +216,21 @@ export default function FluxoProjetado() {
     );
     setScenario90d(res);
   }, [effectiveOrgIds, scenarioKey, recMinNumber]);
+
+  const saveScenarioConfig = useCallback(async () => {
+    if (!scenarioConfigDraft || !orgId) return;
+    setSavingScenarioConfig(true);
+    try {
+      await ProjectionService.upsertScenarioConfig(orgId, scenarioConfigDraft, user?.id ?? null);
+      setScenarioConfig(scenarioConfigDraft);
+      toast.success('Configuração de cenários salva');
+      await refreshScenario();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao salvar configuração');
+    } finally {
+      setSavingScenarioConfig(false);
+    }
+  }, [scenarioConfigDraft, orgId, user?.id, refreshScenario]);
 
   useEffect(() => {
     if (effectiveOrgIds.length === 0) return;
@@ -256,6 +366,106 @@ export default function FluxoProjetado() {
               </div>
             </div>
 
+            {scenarioConfigDraft && (
+              <div className="rounded-md border p-3 sm:p-4 space-y-3 bg-muted/30">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs sm:text-sm font-medium">
+                    Fatores dos cenários (configuráveis)
+                  </p>
+                  {scenarioConfigDirty && (
+                    <span className="text-[10px] sm:text-xs text-warning">
+                      Alterações não salvas — recalcule para preview
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] sm:text-xs text-success">Otimista — entradas (×)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={scenarioConfigDraft.optimistic_income_factor}
+                      onChange={(e) =>
+                        setScenarioConfigDraft((d) =>
+                          d ? { ...d, optimistic_income_factor: Number(e.target.value) || 0 } : d
+                        )
+                      }
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] sm:text-xs text-success">Otimista — saídas (×)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={scenarioConfigDraft.optimistic_expense_factor}
+                      onChange={(e) =>
+                        setScenarioConfigDraft((d) =>
+                          d ? { ...d, optimistic_expense_factor: Number(e.target.value) || 0 } : d
+                        )
+                      }
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] sm:text-xs text-destructive">Pessimista — entradas (×)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={scenarioConfigDraft.pessimistic_income_factor}
+                      onChange={(e) =>
+                        setScenarioConfigDraft((d) =>
+                          d ? { ...d, pessimistic_income_factor: Number(e.target.value) || 0 } : d
+                        )
+                      }
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] sm:text-xs text-destructive">Pessimista — saídas (×)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={scenarioConfigDraft.pessimistic_expense_factor}
+                      onChange={(e) =>
+                        setScenarioConfigDraft((d) =>
+                          d ? { ...d, pessimistic_expense_factor: Number(e.target.value) || 0 } : d
+                        )
+                      }
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 justify-end">
+                  {scenarioConfigDirty && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setScenarioConfigDraft(scenarioConfig)}
+                    >
+                      Reverter
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={!scenarioConfigDirty || savingScenarioConfig || !orgId}
+                    onClick={() => void saveScenarioConfig()}
+                  >
+                    {savingScenarioConfig ? 'Salvando…' : 'Salvar configuração'}
+                  </Button>
+                </div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Padrão: otimista +20% entradas / −2% saídas; pessimista −20% entradas / +5% saídas.
+                </p>
+              </div>
+            )}
+
             {scenario90d && scenario90d.belowRecommended && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -373,6 +583,19 @@ export default function FluxoProjetado() {
           </CardContent>
         </Card>
       </div>
+
+      <ProjectionDayBreakdownDialog
+        open={breakdownDate != null}
+        onOpenChange={(o) => {
+          if (!o) {
+            setBreakdownDate(null);
+            setBreakdown(null);
+          }
+        }}
+        breakdown={breakdown}
+        loading={breakdownLoading}
+        dateYmd={breakdownDate}
+      />
     </FinancialPageShell>
   );
 }
