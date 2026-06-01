@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ERP Retífica Formiguense — Arquitetura técnica detalhada</title>
+  <meta name="description" content="Documentação arquitetural em profundidade: C4, camadas, rotas, hooks, serviços, Supabase, Edge Functions, RPCs, segurança e IA." />
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #0e7490;
+      --accent-weak: #cffafe;
+      --teal: #0d9488;
+      --violet: #5b21b6;
+      --code-bg: #f1f5f9;
+      --diagram-bg: #0c1222;
+      --diagram-fg: #e2e8f0;
+      --mono: ui-monospace, "Cascadia Code", SFMono-Regular, Menlo, monospace;
+      --sidebar-w: 15.5rem;
+      --max: 56rem;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--bg);
+    }
+    .doc-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      min-height: 100vh;
+    }
+    @media (min-width: 1100px) {
+      .doc-layout {
+        grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+      }
+    }
+    .sidebar {
+      position: sticky;
+      top: 0;
+      align-self: start;
+      max-height: 100vh;
+      overflow-y: auto;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      padding: 1rem 0.75rem 2rem 1rem;
+      font-size: 0.8rem;
+    }
+    @media (min-width: 1100px) {
+      .sidebar {
+        border-right: 1px solid var(--border);
+        border-bottom: none;
+      }
+    }
+    .sidebar h2 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin: 1rem 0 0.4rem;
+      font-weight: 600;
+    }
+    .sidebar h2:first-child { margin-top: 0; }
+    .sidebar a {
+      display: block;
+      padding: 0.2rem 0.35rem;
+      color: var(--accent);
+      text-decoration: none;
+      border-radius: 0.25rem;
+    }
+    .sidebar a:hover { background: var(--accent-weak); }
+    .sidebar .sub { padding-left: 0.75rem; font-size: 0.78rem; }
+    .main {
+      padding: 1.5rem 1.15rem 4rem;
+      max-width: calc(var(--max) + 2rem);
+    }
+    @media (min-width: 1100px) {
+      .main { padding: 2rem 2.5rem 4rem 1.5rem; }
+    }
+    .doc-hero {
+      background: linear-gradient(135deg, #0c4a6e 0%, #0d9488 50%, #5b21b6 100%);
+      color: #fff;
+      padding: 2rem 1.25rem;
+      margin: -1.5rem -1.15rem 2rem;
+      border-radius: 0;
+    }
+    @media (min-width: 1100px) {
+      .doc-hero { margin: -2rem -2.5rem 2rem -1.5rem; padding: 2.25rem 2rem; border-radius: 0 0 0.75rem 0; }
+    }
+    .doc-hero h1 {
+      font-size: clamp(1.35rem, 2.5vw, 1.85rem);
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+    }
+    .doc-hero .lead {
+      opacity: 0.92;
+      font-size: 0.9rem;
+      max-width: 42rem;
+      margin: 0;
+    }
+    .badge-row { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.25rem 0.5rem;
+      background: rgba(255,255,255,0.2);
+      border-radius: 999px;
+    }
+    section {
+      margin-bottom: 2.5rem;
+      scroll-margin-top: 1rem;
+    }
+    section > h2 {
+      font-size: 1.35rem;
+      color: var(--accent);
+      margin: 0 0 0.75rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid var(--border);
+    }
+    section > h3 {
+      font-size: 1.05rem;
+      margin: 1.35rem 0 0.5rem;
+      color: var(--text);
+    }
+    section > h4 {
+      font-size: 0.92rem;
+      margin: 1rem 0 0.35rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    p { margin: 0.5rem 0 0.75rem; max-width: 52rem; }
+    ul, ol { margin: 0.4rem 0 0.75rem; padding-left: 1.2rem; max-width: 52rem; }
+    li { margin: 0.28rem 0; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 1rem 1.15rem;
+      margin: 0.85rem 0;
+      box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+    }
+    .grid-2 {
+      display: grid;
+      gap: 0.75rem;
+    }
+    @media (min-width: 720px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+    .grid-3 {
+      display: grid;
+      gap: 0.75rem;
+    }
+    @media (min-width: 900px) {
+      .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    }
+    .tile {
+      border: 1px solid var(--border);
+      border-radius: 0.45rem;
+      padding: 0.85rem 1rem;
+      background: #fafafa;
+      font-size: 0.88rem;
+    }
+    .tile strong { display: block; margin-bottom: 0.35rem; color: var(--teal); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      margin: 0.65rem 0;
+    }
+    table.data th, table.data td {
+      border: 1px solid var(--border);
+      padding: 0.4rem 0.5rem;
+      vertical-align: top;
+      text-align: left;
+    }
+    table.data th {
+      background: #f1f5f9;
+      font-weight: 600;
+    }
+    table.data.compact td { padding: 0.3rem 0.45rem; }
+    code, .path {
+      font-family: var(--mono);
+      font-size: 0.78em;
+      background: var(--code-bg);
+      padding: 0.08em 0.35em;
+      border-radius: 0.25rem;
+    }
+    pre.diagram, pre.codeblock {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      line-height: 1.38;
+      background: var(--diagram-bg);
+      color: var(--diagram-fg);
+      padding: 1rem 1.1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+      margin: 0.75rem 0;
+      border: 1px solid #1e293b;
+    }
+    pre.codeblock { background: #1e293b; font-size: 0.72rem; }
+    .note {
+      font-size: 0.85rem;
+      color: var(--muted);
+      border-left: 4px solid var(--teal);
+      padding: 0.6rem 1rem;
+      margin: 1rem 0;
+      background: #f0fdfa;
+      max-width: 52rem;
+    }
+    .warn {
+      border-left-color: #ea580c;
+      background: #fff7ed;
+    }
+    details.section-details {
+      margin: 0.75rem 0;
+      border: 1px solid var(--border);
+      border-radius: 0.45rem;
+      background: var(--surface);
+    }
+    details.section-details > summary {
+      cursor: pointer;
+      padding: 0.65rem 1rem;
+      font-weight: 600;
+      font-size: 0.88rem;
+      list-style: none;
+    }
+    details.section-details > summary::-webkit-details-marker { display: none; }
+    details.section-details[open] > summary {
+      border-bottom: 1px solid var(--border);
+      background: #f8fafc;
+    }
+    details.section-details .inner { padding: 0.75rem 1rem 1rem; font-size: 0.82rem; }
+    .meta-bar {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      margin-top: 0.75rem;
+    }
+    footer.doc-footer {
+      margin-top: 3rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.78rem;
+      color: var(--muted);
+      max-width: 52rem;
+    }
+    @media print {
+      .sidebar { display: none; }
+      .doc-layout { grid-template-columns: 1fr; }
+      .doc-hero { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="doc-layout">
+    <aside class="sidebar" aria-label="Navegação do documento">
+      <h2>Sumário</h2>
+      <a href="#doc-control">Controle do doc.</a>
+      <a href="#resumo">Resumo executivo</a>
+      <a href="#c4">Modelo C4</a>
+      <a href="#camadas-frontend">Camadas frontend</a>
+      <a href="#roteamento">Roteamento</a>
+      <a href="#hooks-apendice">Hooks (visão)</a>
+      <a href="#servicos">Serviços e domínios</a>
+      <a href="#fluxos">Fluxos de dados</a>
+      <a href="#supabase-plataforma">Plataforma Supabase</a>
+      <a href="#edge-functions">Edge Functions</a>
+      <a href="#rpc-catalogo">Catálogo RPC</a>
+      <a href="#storage">Storage</a>
+      <a href="#seguranca">Segurança / multi-tenant</a>
+      <a href="#ia">IA e automação</a>
+      <a href="#qualidade">Qualidade e build</a>
+      <a href="#glossario">Glossário</a>
+      <h2>Apêndices</h2>
+      <a href="#apendice-rotas">A · Rotas completas</a>
+      <a href="#apendice-hooks">B · Lista de hooks</a>
+      <a href="#apendice-financial">C · Pacote financeiro</a>
+    </aside>
+
+    <main class="main">
+      <header class="doc-hero">
+        <h1>Arquitetura técnica detalhada<br /><span style="font-weight:500;opacity:.95">ERP Retífica Formiguense</span></h1>
+        <p class="lead">
+          Descrição em profundidade da solução: padrões arquiteturais, divisão de responsabilidades,
+          integração com Supabase, funções serverless, contratos de dados e posicionamento sobre uso de IA.
+          Baseado na inspeção do repositório (<code>src/</code>, <code>supabase/</code>, dependências).
+        </p>
+        <div class="badge-row">
+          <span class="badge">React SPA</span>
+          <span class="badge">TypeScript</span>
+          <span class="badge">Vite</span>
+          <span class="badge">Supabase</span>
+          <span class="badge">PostgreSQL + RLS</span>
+          <span class="badge">Edge Deno</span>
+        </div>
+      </header>
+
+      <section id="doc-control">
+        <h2>Controle do documento</h2>
+        <div class="meta-bar">
+          <span><strong>Versão:</strong> 2.0 (documento expandido)</span>
+          <span><strong>Referência:</strong> maio de 2026</span>
+          <span><strong>Público:</strong> arquitetos, tech leads, onboarding de desenvolvedores</span>
+        </div>
+        <p>
+          Este HTML é autossuficiente (CSS embutido). Pode ser impresso (“Salvar como PDF”) para arquivo ou Wiki interna.
+          Caminhos de código usam a raiz do repositório como referência.
+        </p>
+      </section>
+
+      <section id="resumo">
+        <h2>Resumo executivo</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3 style="margin-top:0;font-size:1rem;">O que é o sistema</h3>
+            <p style="margin-bottom:0">
+              ERP multi-módulo para retífica de motores e operações correlatas: <strong>ordens de serviço</strong>,
+              <strong>orçamentos</strong>, <strong>compras</strong> (cotações, pedidos, recebimentos),
+              <strong>estoque</strong> (peças, lotes, alertas), <strong>financeiro</strong> completo,
+              <strong>fiscal</strong>, <strong>cadastros</strong>, <strong>dashboards</strong> e <strong>administração</strong> de usuários e perfis.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="margin-top:0;font-size:1rem;">Estilo arquitetural</h3>
+            <p style="margin-bottom:0">
+              <strong>Frontend:</strong> monólito SPA. <strong>Backend:</strong> não há API REST proprietária em servidor dedicado;
+              o backend é a plataforma <strong>Supabase</strong> (Postgres + Auth + Storage + Edge Functions).
+              Regras críticas residem em SQL (funções, triggers, RLS) e em serviços TypeScript no cliente.
+            </p>
+          </div>
+        </div>
+        <p class="note">
+          Não há cluster de microserviços autônomos (Kubernetes com N serviços independentes). As
+          <strong>Edge Functions</strong> são unidades deployadas à parte, mas compartilham projeto Supabase, segredos e banco.
+        </p>
+      </section>
+
+      <section id="c4">
+        <h2>Modelo C4 (adaptado)</h2>
+
+        <h3>Nível 1 — Contexto</h3>
+        <p>
+          Atores: <strong>usuários internos</strong> (operadores, compras, financeiro, gestão), eventualmente
+          <strong>super-admin</strong>. Sistema troca dados com <strong>Supabase Cloud</strong> (hospedagem Postgres, Auth, Storage, Functions).
+          Integrações auxiliares: <strong>e-mail transacional</strong> (fluxos de senha / hooks), possivelmente
+          <strong>SFTP/banco</strong> em rotinas de integração contábil/bancária conforme configuração do cliente (código em serviços financeiros).
+        </p>
+
+        <h3>Nível 2 — Contêineres</h3>
+        <pre class="diagram" role="img" aria-label="Diagrama C4 nível 2">
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  CONTEXTO: USUÁRIO (Browser)                                                      │
+└──────────────────────────────────────────────────────────────────────────────────┘
+         │ HTTPS
+         ▼
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  CONTÊINER: SPA React (Vite build → assets estáticos em CDN / hosting)            │
+│  · Router · Estado local · TanStack Query · Formulários · Permissões de perfil   │
+└──────────────────────────────────────────────────────────────────────────────────┘
+         │
+         │  JSON / HTTPS (mesma origem lógica: API Supabase)
+         ▼
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  CONTÊINER: Supabase (projeto gerenciado)                                         │
+│  ├─ PostgREST        → tabelas, views, RPC                                       │
+│  ├─ Auth (GoTrue)    → JWT, sessões                                              │
+│  ├─ Storage (S3-like)→ buckets, políticas por objeto                             │
+│  ├─ Edge Functions  → Deno, service_role onde necessário                         │
+│  └─ Realtime        → canais (uso pontual no app, ex. KPIs)                      │
+└──────────────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  PostgreSQL (único banco lógico) · RLS · extensões · funções · triggers         │
+└──────────────────────────────────────────────────────────────────────────────────┘
+        </pre>
+
+        <h3>Nível 3 — Componentes (frontend)</h3>
+        <div class="grid-3">
+          <div class="tile">
+            <strong>Apresentação</strong>
+            <code>src/pages/*.tsx</code> — telas; composição e hooks; sem regra de negócio pesada.
+          </div>
+          <div class="tile">
+            <strong>Feature UI</strong>
+            <code>src/components/&lt;domínio&gt;/</code> — blocos reutilizáveis (compras, financial, inventory, fiscal…).
+          </div>
+          <div class="tile">
+            <strong>Design system</strong>
+            <code>src/components/ui/</code> — Radix/shadcn, primitivos acessíveis.
+          </div>
+          <div class="tile">
+            <strong>Hooks</strong>
+            <code>src/hooks/</code> — estado, efeitos, orquestração fina; chamam serviços.
+          </div>
+          <div class="tile">
+            <strong>Serviços</strong>
+            <code>src/services/</code> — acesso Supabase, validação Zod, políticas de uso.
+          </div>
+          <div class="tile">
+            <strong>Integração</strong>
+            <code>src/integrations/supabase/</code> — client tipado, <code>types.ts</code> gerado do schema.
+          </div>
+        </div>
+      </section>
+
+      <section id="camadas-frontend">
+        <h2>Camadas do frontend (clean architecture do projeto)</h2>
+        <p>
+          Regra do repositório: <strong>pages → components → hooks → services</strong>.
+          Validação de entrada com <strong>Zod</strong> nos serviços/schemas. Listagens paginadas no backend (Supabase <code>.range</code>).
+        </p>
+        <table class="data">
+          <thead>
+            <tr><th>Camada</th><th>Responsabilidade</th><th>Onde</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Page</strong></td>
+              <td>Layout, rota, composição de componentes, chamada a hooks.</td>
+              <td><code>src/pages/</code> (~58 telas)</td>
+            </tr>
+            <tr>
+              <td><strong>Componente de feature</strong></td>
+              <td>UI específica do domínio (tabelas de compras, cards financeiros, formulários de OS).</td>
+              <td><code>src/components/purchasing/</code>, <code>financial/</code>, <code>inventory/</code>, …</td>
+            </tr>
+            <tr>
+              <td><strong>Hook</strong></td>
+              <td>Estado, debounce, loading/error; delega persistência ao service.</td>
+              <td><code>src/hooks/</code> (99 arquivos .ts/.tsx)</td>
+            </tr>
+            <tr>
+              <td><strong>Service</strong></td>
+              <td>Queries/mutations Supabase, regras de negócio, tipos; único lugar autorizado a falar com o client.</td>
+              <td><code>src/services/</code></td>
+            </tr>
+            <tr>
+              <td><strong>Config / lib</strong></td>
+              <td>Ambiente, formatação monetária, datas, utilitários puros.</td>
+              <td><code>src/config/</code>, <code>src/lib/</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Contextos globais</h3>
+        <ul>
+          <li><code>AuthProvider</code> — sessão do usuário.</li>
+          <li><code>OrganizationProvider</code> — organização atual (tenant operacional).</li>
+          <li><code>ConfirmDialogProvider</code> — diálogos de confirmação.</li>
+          <li>Tema: <code>next-themes</code> + tema MUI sincronizado (<code>useMuiTheme</code>).</li>
+        </ul>
+      </section>
+
+      <section id="roteamento">
+        <h2>Roteamento e proteção</h2>
+        <p>
+          Definido em <code>src/App.tsx</code> com <code>react-router-dom</code> v6. Lazy loading de todas as páginas para code-splitting.
+        </p>
+        <h4>Tipos de rota</h4>
+        <ul>
+          <li><strong>Públicas:</strong> <code>/</code> (landing), <code>/auth</code>, <code>/reset-password</code>.</li>
+          <li><strong>ProfileProtectedRoute:</strong> exige autenticação + permissões de perfil por rota (<code>useProfilePermissions</code>).</li>
+          <li><strong>AdminRoute:</strong> gestão de usuários e perfis.</li>
+          <li><strong>ProtectedRoute:</strong> autenticação genérica (ex.: super-admin, 404).</li>
+        </ul>
+        <p class="note">
+          Lista completa de paths no <a href="#apendice-rotas">Apêndice A</a>.
+        </p>
+      </section>
+
+      <section id="hooks-apendice">
+        <h2>Hooks — papel na arquitetura</h2>
+        <p>
+          Os hooks concentram estado de tela e efeitos colaterais; encapsulam chamadas a múltiplos serviços quando necessário.
+          Domínios espelhados na pasta: compras (<code>usePurchaseOrders</code>, <code>useQuotations</code>),
+          fiscal (<code>useFiscal</code>), financeiro (<code>useFinancial</code>, <code>useFinancialOrgScope</code>),
+          estoque, motores, workflow, super-admin, gamificação, etc.
+        </p>
+        <p class="note">
+          Enumeração arquivo a arquivo no <a href="#apendice-hooks">Apêndice B</a>.
+        </p>
+      </section>
+
+      <section id="servicos">
+        <h2>Serviços e domínios de negócio</h2>
+        <p>
+          A pasta <code>src/services</code> agrega ~90+ módulos TypeScript. Subconjunto principal:
+        </p>
+
+        <details class="section-details" open>
+          <summary>Operações e oficina</summary>
+          <div class="inner">
+            <ul>
+              <li><code>OrderService</code>, <code>WorkflowService</code>, <code>DiagnosticService</code>, <code>EngineService</code>, <code>EngineTemplateService</code></li>
+              <li><code>ReservationService</code> (RPC de reserva de peças), <code>BudgetFormService</code></li>
+              <li><code>workshopOsParts/WorkshopOsPartsService</code> — peças na OS</li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="section-details" open>
+          <summary>Compras e fornecedores</summary>
+          <div class="inner">
+            <ul>
+              <li><code>QuotationService</code>, <code>PurchaseOrderService</code>, <code>SupplierService</code>, <code>PurchaseInvoiceService</code></li>
+              <li><code>ComparisonService</code>, <code>NegotiationService</code>, <code>PurchasingReportsService</code></li>
+              <li><code>MaterialRequisitionService</code>, <code>SupplierReturnService</code>, <code>SupplierCreditService</code></li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="section-details" open>
+          <summary>Estoque e custos</summary>
+          <div class="inner">
+            <ul>
+              <li><code>InventoryService</code>, <code>StockMovementService</code>, <code>StockBatchService</code>, <code>StockAccountingService</code></li>
+              <li><code>InventoryCountService</code>, <code>StockConfigService</code>, <code>StockAlertService</code>, <code>CostMethodService</code></li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="section-details" open>
+          <summary>Financeiro (pacote exportado)</summary>
+          <div class="inner">
+            <p style="margin-top:0">Ver <a href="#apendice-financial">Apêndice C</a> — dezenas de serviços (contas a pagar/receber, fluxo de caixa, DRE, conciliação, projeções, grupo econômico, etc.).</p>
+          </div>
+        </details>
+
+        <details class="section-details">
+          <summary>Outros</summary>
+          <div class="inner">
+            <ul>
+              <li><code>ContractService</code>, <code>ConditionalOrderService</code>, <code>NotificationService</code>, <code>NFeXmlService</code></li>
+              <li><code>gamificationService</code>, <code>ApprovalThresholdService</code>, <code>BuyerDashboardService</code></li>
+            </ul>
+          </div>
+        </details>
+      </section>
+
+      <section id="fluxos">
+        <h2>Fluxos de dados (exemplos)</h2>
+
+        <h3>Autenticação e tenant</h3>
+        <ol>
+          <li>Usuário autentica via Supabase Auth (email/senha ou fluxo configurado).</li>
+          <li>JWT enviado em todas as requisições; RLS no Postgres usa claims / funções auxiliares (<code>is_org_member</code>, etc.).</li>
+          <li><code>OrganizationProvider</code> define <code>org_id</code> ativo; dados filtrados por organização e perfil.</li>
+        </ol>
+
+        <h3>Lançamento no fluxo de caixa</h3>
+        <ol>
+          <li>Página <code>FluxoCaixa</code> chama <code>FinancialConfigService.getOrCreateUserCashAccount</code> para conta de caixa do operador.</li>
+          <li><code>useFinancial</code> → <code>CashFlowService.create</code> insere em <code>cash_flow</code> (validações + bloqueio se dia já fechado para a conta).</li>
+          <li>Opcional: flag <code>is_intercompany</code> persistida na linha.</li>
+        </ol>
+
+        <h3>Aprovação de orçamento (fluxo pesado)</h3>
+        <ol>
+          <li>Hook <code>useDetailedBudgets</code> invoca Edge Function <code>process-budget-approval</code>.</li>
+          <li>Function (Deno + service role) orquestra atualização de orçamento/OS, reservas, necessidades de compra e alertas.</li>
+        </ol>
+
+        <h3>Relatório CSV</h3>
+        <ol>
+          <li><code>useReports</code> → <code>supabase.functions.invoke('generate-report')</code>.</li>
+          <li>Function monta datasets por <code>reportCode</code> e devolve CSV (ex.: vendas, produtividade).</li>
+        </ol>
+      </section>
+
+      <section id="supabase-plataforma">
+        <h2>Plataforma Supabase (detalhe)</h2>
+        <table class="data">
+          <thead>
+            <tr><th>Produto</th><th>Uso no projeto</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Postgres</td>
+              <td>Modelo relacional extenso (centenas de objetos nas migrations); integridade referencial; funções PL/pgSQL.</td>
+            </tr>
+            <tr>
+              <td>PostgREST</td>
+              <td>API REST automática: <code>.from('tabela')</code>, filtros, joins via foreign tables.</td>
+            </tr>
+            <tr>
+              <td>RPC</td>
+              <td><code>.rpc('nome', params)</code> para lógica transacional e relatórios parametrizados no banco.</td>
+            </tr>
+            <tr>
+              <td>Auth</td>
+              <td>Sessão no cliente; políticas RLS com <code>auth.uid()</code>; super-admin via funções dedicadas.</td>
+            </tr>
+            <tr>
+              <td>Storage</td>
+              <td>Buckets para fotos de OS (<code>order-photos</code>), NF, XML fiscal, arquivos de diagnóstico, etc.</td>
+            </tr>
+            <tr>
+              <td>Edge Functions</td>
+              <td>Ver seção dedicada; runtime Deno no Supabase.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="note warn">
+          Migrations em <code>supabase/migrations</code> são numerosas; em ambientes com histórico divergente no painel,
+          usa-se também <code>supabase/manual/*.sql</code> para alinhar schema manualmente.
+        </p>
+      </section>
+
+      <section id="edge-functions">
+        <h2>Edge Functions (catálogo detalhado)</h2>
+        <p>
+          Local: <code>supabase/functions/&lt;nome&gt;/index.ts</code>. CORS compartilhado em <code>_shared/cors.ts</code>.
+          Invocação no app: <code>supabase.functions.invoke('&lt;nome&gt;', { body })</code>.
+        </p>
+        <table class="data compact">
+          <thead>
+            <tr>
+              <th>Função</th>
+              <th>Responsabilidade</th>
+              <th>Chamada típica (frontend)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>generate-report</code></td>
+              <td>Monta relatórios (vários <code>reportCode</code>), agrega dados com service role, retorna CSV.</td>
+              <td><code>useReports.ts</code></td>
+            </tr>
+            <tr>
+              <td><code>process-budget-approval</code></td>
+              <td>Processa aprovação total/parcial de orçamento: partes, serviços, integração com OS e reservas.</td>
+              <td><code>useDetailedBudgets.ts</code></td>
+            </tr>
+            <tr>
+              <td><code>generate-obligation-file</code></td>
+              <td>Gera arquivo ligado a obrigações fiscais / armazenamento.</td>
+              <td><code>useFiscal.ts</code></td>
+            </tr>
+            <tr>
+              <td><code>create-user-admin</code></td>
+              <td>Criação de usuário com privilégios administrativos (service role).</td>
+              <td><code>useUserManagement.ts</code></td>
+            </tr>
+            <tr>
+              <td><code>delete-user</code></td>
+              <td>Remoção de usuário.</td>
+              <td><code>useUserManagement.ts</code></td>
+            </tr>
+            <tr>
+              <td><code>send-custom-email</code></td>
+              <td>Webhook de envio de e-mail com templates HTML (ex.: reset de senha branding Retífica).</td>
+              <td>Integração Auth / Supabase (fluxo de e-mail)</td>
+            </tr>
+            <tr>
+              <td><code>setup-demo-users</code></td>
+              <td>Utilitário para preparar usuários de demonstração.</td>
+              <td>Operação manual / admin</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="rpc-catalogo">
+        <h2>Catálogo de RPC (referência cruzada com o código)</h2>
+        <p>
+          Lista consolidada a partir de chamadas <code>supabase.rpc</code> no <code>src/</code>. O banco pode conter funções adicionais só usadas por triggers ou Edge Functions.
+        </p>
+        <table class="data compact">
+          <thead>
+            <tr><th>Função RPC</th><th>Onde é chamada (exemplo)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>org_ids_in_same_group</code></td><td><code>organizationGroupService.ts</code></td></tr>
+            <tr><td><code>refresh_accounts_receivable_overdue</code></td><td><code>accountsReceivableService.ts</code></td></tr>
+            <tr><td><code>accounts_payable_org_summary</code></td><td><code>accountsPayableService.ts</code></td></tr>
+            <tr><td><code>reserve_parts_from_budget</code>, <code>consume_reserved_parts</code>, <code>cancel_reservation</code>, <code>extend_reservation</code>, <code>separate_reserved_parts</code></td><td><code>ReservationService.ts</code></td></tr>
+            <tr><td><code>generate_conditional_number</code></td><td><code>ConditionalOrderService.ts</code></td></tr>
+            <tr><td><code>generate_contract_number</code></td><td><code>ContractService.ts</code></td></tr>
+            <tr><td><code>get_approval_level_for_value</code></td><td><code>ApprovalThresholdService.ts</code></td></tr>
+            <tr><td><code>generate_inventory_count_number</code>, <code>process_inventory_count_adjustments</code></td><td><code>InventoryCountService.ts</code></td></tr>
+            <tr><td><code>generate_receipt_number</code></td><td><code>usePurchaseReceipts.ts</code></td></tr>
+            <tr><td><code>generate_purchase_needs_from_alerts</code></td><td><code>usePurchaseNeeds.ts</code></td></tr>
+            <tr><td><code>suggest_suppliers_for_part</code></td><td><code>useSupplierEvaluation.ts</code></td></tr>
+            <tr><td><code>calculate_kpi_trend</code></td><td><code>useDashboard.ts</code>, <code>useRealtimeKPIs.ts</code></td></tr>
+            <tr><td><code>get_workflows_pending_checklists</code></td><td><code>useAlertsDashboard.ts</code></td></tr>
+            <tr><td><code>process_user_action</code></td><td><code>gamificationService.ts</code></td></tr>
+            <tr><td><code>is_super_admin</code>, <code>promote_user_to_super_admin</code>, <code>revoke_user_super_admin</code>, <code>get_all_super_admins</code></td><td><code>useSuperAdmin.ts</code>, <code>SuperAdmin.tsx</code>, <code>useUserManagement.ts</code>, <code>OrganizationContext.tsx</code></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="storage">
+        <h2>Storage (objetos)</h2>
+        <p>
+          Upload/download via <code>supabase.storage.from('&lt;bucket&gt;')</code>. Exemplos identificados no código:
+        </p>
+        <ul>
+          <li><strong><code>order-photos</code></strong> — fotos ligadas a OS (<code>useOrderPhotos.ts</code>).</li>
+          <li><strong>Buckets de NF / fiscal</strong> — conforme migrations (<code>invoices_storage_bucket</code>) e <code>useFiscal.ts</code>.</li>
+          <li><strong>Anexos diversos</strong> — orçamentos, diagnósticos, AP (<code>apInvoiceFileService</code>, <code>useOrderDocuments</code>, etc.).</li>
+        </ul>
+        <p class="note">
+          Políticas RLS de Storage são definidas nas migrations; o anon key só permite o que as policies liberarem.
+        </p>
+      </section>
+
+      <section id="seguranca">
+        <h2>Segurança, multi-tenant e permissões</h2>
+        <ul>
+          <li><strong>RLS:</strong> predominante em tabelas sensíveis; evolução para políticas baseadas em membro da organização (<code>is_org_member</code>) no financeiro.</li>
+          <li><strong>Tenant:</strong> coluna <code>org_id</code> nas entidades operacionais; troca de contexto no app.</li>
+          <li><strong>Perfis:</strong> <code>useProfilePermissions</code> restringe rotas e ações por página/configuração de sistema.</li>
+          <li><strong>Super-admin:</strong> funções RPC específicas; painel dedicado.</li>
+          <li><strong>Grupo econômico:</strong> visão consolidada opcional; RPC <code>org_ids_in_same_group</code> + tabelas de grupo.</li>
+        </ul>
+      </section>
+
+      <section id="ia">
+        <h2>Inteligência artificial e automação</h2>
+        <h3>Pacotes de modelo generativo (LLM)</h3>
+        <p>
+          <strong>Não há dependências</strong> de OpenAI, Anthropic, Google Gemini, LangChain ou similares no <code>package.json</code>
+          nem imports correspondentes no código de aplicação analisado. O ERP em produção <strong>não aciona modelos de linguagem</strong>
+          para decisões de negócio nas telas documentadas aqui.
+        </p>
+        <h3>Automação “inteligente” sem LLM</h3>
+        <ul>
+          <li><strong><code>suggest_suppliers_for_part</code>:</strong> ranking de fornecedores implementado em <strong>SQL</strong> no Postgres (histórico, critérios de negócio).</li>
+          <li><strong>KPIs e alertas:</strong> funções como <code>calculate_kpi_trend</code>, fluxos de workflow e gamificação — regras determinísticas.</li>
+        </ul>
+        <h3>Ferramentas de desenvolvimento</h3>
+        <p>
+          <code>lovable-tagger</code> (devDependency) relaciona-se ao fluxo de UI/Lovable no desenvolvimento, não a IA em runtime para usuários finais.
+        </p>
+      </section>
+
+      <section id="qualidade">
+        <h2>Qualidade, build e testes</h2>
+        <ul>
+          <li><strong>Build:</strong> <code>vite build</code> — bundle otimizado, lazy routes.</li>
+          <li><strong>Lint:</strong> ESLint 9 + TypeScript ESLint.</li>
+          <li><strong>Testes:</strong> Vitest em serviços e utilitários (financeiro, parse monetário, escopo de org, etc.).</li>
+          <li><strong>Tipagem:</strong> TypeScript estrito; tipos do banco em <code>types.ts</code> (regenerar quando schema mudar).</li>
+        </ul>
+      </section>
+
+      <section id="glossario">
+        <h2>Glossário</h2>
+        <table class="data compact">
+          <tbody>
+            <tr><td><strong>RLS</strong></td><td>Row Level Security — filtros automáticos por linha no Postgres.</td></tr>
+            <tr><td><strong>RPC</strong></td><td>Remote Procedure Call — função SQL exposta pela API Supabase.</td></tr>
+            <tr><td><strong>PostgREST</strong></td><td>Camada que transforma schema Postgres em REST.</td></tr>
+            <tr><td><strong>Edge Function</strong></td><td>Função serverless Deno rodando na infraestrutura Supabase.</td></tr>
+            <tr><td><strong>Tenant</strong></td><td>Neste projeto: organização (<code>organizations</code>) cujos dados são isolados por política.</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="apendice-rotas">
+        <h2>Apêndice A — Rotas (<code>src/App.tsx</code>)</h2>
+        <table class="data compact">
+          <thead><tr><th>Rota</th><th>Tela / lazy import</th></tr></thead>
+          <tbody>
+            <tr><td><code>/</code></td><td>Landing</td></tr>
+            <tr><td><code>/auth</code></td><td>Auth</td></tr>
+            <tr><td><code>/reset-password</code></td><td>ResetPassword</td></tr>
+            <tr><td><code>/dashboard</code></td><td>Dashboard</td></tr>
+            <tr><td><code>/clientes</code></td><td>Clientes</td></tr>
+            <tr><td><code>/consultores</code></td><td>Consultores</td></tr>
+            <tr><td><code>/coleta</code></td><td>Coleta</td></tr>
+            <tr><td><code>/workflow</code></td><td>Workflow</td></tr>
+            <tr><td><code>/checkin</code></td><td>CheckIn</td></tr>
+            <tr><td><code>/estoque</code></td><td>Estoque</td></tr>
+            <tr><td><code>/pcp</code></td><td>PCP</td></tr>
+            <tr><td><code>/ordens-servico</code></td><td>OrdensServico</td></tr>
+            <tr><td><code>/dashboard-compras</code></td><td>DashboardCompras</td></tr>
+            <tr><td><code>/compras</code></td><td>Compras</td></tr>
+            <tr><td><code>/compras/pecas-os</code></td><td>GestaoPecasOS</td></tr>
+            <tr><td><code>/relatorios-compras</code></td><td>RelatoriosCompras</td></tr>
+            <tr><td><code>/fornecedores</code></td><td>Fornecedores</td></tr>
+            <tr><td><code>/cotacoes</code></td><td>Cotacoes</td></tr>
+            <tr><td><code>/pedidos-compra</code></td><td>PedidosCompra</td></tr>
+            <tr><td><code>/condicionais</code></td><td>Condicionais</td></tr>
+            <tr><td><code>/recebimentos</code></td><td>Recebimentos</td></tr>
+            <tr><td><code>/contratos</code></td><td>Contratos</td></tr>
+            <tr><td><code>/configuracoes-compras</code></td><td>ConfiguracoesCompras</td></tr>
+            <tr><td><code>/gestao-funcionarios</code></td><td>GestaoFuncionarios</td></tr>
+            <tr><td><code>/funcionarios</code></td><td>Funcionarios</td></tr>
+            <tr><td><code>/diagnosticos</code></td><td>Diagnosticos</td></tr>
+            <tr><td><code>/motores</code></td><td>Motores</td></tr>
+            <tr><td><code>/gestao-usuarios</code></td><td>GestaoUsuarios (Admin)</td></tr>
+            <tr><td><code>/gestao-usuarios/perfis</code></td><td>GestaoPerfisusuarios (Admin)</td></tr>
+            <tr><td><code>/super-admin</code></td><td>SuperAdmin</td></tr>
+            <tr><td><code>/orcamentos</code></td><td>Orcamentos</td></tr>
+            <tr><td><code>/relatorios</code></td><td>Relatorios</td></tr>
+            <tr><td><code>/configuracoes</code></td><td>Configuracoes</td></tr>
+            <tr><td><code>/configuracoes/operacoes</code></td><td>ConfiguracoesOperacoes</td></tr>
+            <tr><td><code>/financeiro</code></td><td>Financeiro</td></tr>
+            <tr><td><code>/contas-receber</code></td><td>ContasReceber</td></tr>
+            <tr><td><code>/posicao-cliente-cobranca</code></td><td>PosicaoClienteCobranca</td></tr>
+            <tr><td><code>/contas-pagar</code></td><td>ContasPagar</td></tr>
+            <tr><td><code>/ap-recorrentes</code></td><td>ApRecorrentes</td></tr>
+            <tr><td><code>/inadimplencia-aging</code></td><td>InadimplenciaAging</td></tr>
+            <tr><td><code>/fluxo-caixa</code></td><td>FluxoCaixa</td></tr>
+            <tr><td><code>/dre</code></td><td>DRE</td></tr>
+            <tr><td><code>/fechamento-caixa</code></td><td>FechamentoCaixa</td></tr>
+            <tr><td><code>/fechamento-caixa/consolidado</code></td><td>FechamentoCaixaConsolidado</td></tr>
+            <tr><td><code>/conciliacao-bancaria</code></td><td>ConciliacaoBancaria</td></tr>
+            <tr><td><code>/fluxo-projetado</code></td><td>FluxoProjetado</td></tr>
+            <tr><td><code>/config-financeiro</code></td><td>ConfigFinanceiro</td></tr>
+            <tr><td><code>/relatorios-financeiros</code></td><td>RelatoriosFinanceiros</td></tr>
+            <tr><td><code>/aprovacao-contas-pagar</code></td><td>AprovacaoContasPagar</td></tr>
+            <tr><td><code>/retiradas-socios</code></td><td>RetiradasSocios</td></tr>
+            <tr><td><code>/integracao-contabil</code></td><td>IntegracaoContabil</td></tr>
+            <tr><td><code>/integracao-bancaria</code></td><td>IntegracaoBancaria</td></tr>
+            <tr><td><code>/modulo-fiscal</code></td><td>ModuloFiscal</td></tr>
+            <tr><td><code>*</code></td><td>NotFound (demais rotas não casadas)</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="apendice-hooks">
+        <h2>Apêndice B — Hooks em <code>src/hooks/</code> (lista completa)</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-top:0">
+          Um arquivo por hook (TypeScript/TSX). Total no snapshot deste documento: <strong>99 arquivos</strong> no diretório.
+        </p>
+        <pre class="codeblock">use-mobile.tsx
+use-toast.ts
+useAdditionalServices.ts
+useAlertsDashboard.ts
+useApprovalThresholds.ts
+useArDueAlertsPanel.ts
+useAudit.ts
+useAuth.tsx
+useBreakpoint.tsx
+useBudgetForm.ts
+useBudgetPDF.ts
+useBudgetReports.ts
+useBudgets.ts
+useBuyerDashboard.ts
+useComponentHelpers.ts
+useConditionalOrders.ts
+useConfirmDialog.tsx
+useConsultants.ts
+useContracts.ts
+useCostMethod.ts
+useCustomerArPosition.ts
+useCustomers.ts
+useDashboard.ts
+useDashboardPDF.ts
+useDashboardTabs.ts
+useDetailedBudgets.ts
+useDiagnosticChecklists.ts
+useEmployees.ts
+useEmployeesDirectory.ts
+useEngineCategories.ts
+useEngineComponents.ts
+useEngineModels.ts
+useEngineTemplates.ts
+useEngineTypes.ts
+useEngines.ts
+useEnvironment.ts
+useFinancial.ts
+useFinancialNotificationsPanel.ts
+useFinancialOrgScope.ts
+useFiscal.ts
+useGamification.ts
+useGlobalSearch.ts
+useInventoryCounts.ts
+useInventoryMovements.ts
+useJurisdictionConfig.ts
+useMacroComponents.ts
+useMaterialRequisitions.ts
+useNotifications.ts
+useOrderDocuments.ts
+useOrderMaterials.ts
+useOrderPhotos.ts
+useOrderTimeline.ts
+useOrderWarranty.ts
+useOrders.ts
+useOrganization.ts
+usePCP.ts
+usePartsInventory.ts
+usePasswordChange.ts
+usePermissions.ts
+usePriceHistory.ts
+usePrintOrder.ts
+useProfilePermissions.ts
+usePurchaseInvoices.ts
+usePurchaseNeeds.ts
+usePurchaseOrderApprovals.ts
+usePurchaseOrders.ts
+usePurchaseReceipts.ts
+usePurchasing.ts
+usePurchasingReports.ts
+useQuotationComparison.ts
+useQuotations.ts
+useQuotationsLegacy.ts
+useRealtimeKPIs.ts
+useReceivableGeneration.ts
+useReports.ts
+useReservations.ts
+useResponsive.tsx
+useRoleGuard.ts
+useSEO.tsx
+useStockAccounting.ts
+useStockAlerts.ts
+useStockBatches.ts
+useStockConfig.ts
+useSupabase.ts
+useSuperAdmin.ts
+useSupplierEvaluation.ts
+useSupplierProducts.ts
+useSupplierReturns.ts
+useSuppliers.ts
+useSystemConfig.ts
+useTableWidth.tsx
+useUserManagement.ts
+useUserProfiles.ts
+useViewport.tsx
+useWarehouses.ts
+useWorkflowHistory.ts
+useWorkflowStatusConfig.ts
+useWorkflowUpdate.ts
+useWorkshopOsParts.ts</pre>
+      </section>
+
+      <section id="apendice-financial">
+        <h2>Apêndice C — Exportações do pacote financeiro</h2>
+        <p>Fonte: <code>src/services/financial/index.ts</code>. Serviços e tipos expostos para o restante da aplicação:</p>
+        <pre class="codeblock">AccountsReceivableService, AccountsPayableService, ReceiptHistoryService
+CashFlowService, FinancialKpiService, FinancialConfigService, CostCenterService
+CustomerLookupService, CustomerArPositionService, SupplierLookupService
+ApInvoiceFileService, BudgetLookupService
+DreService, DreCategorizedService, DreExportService
+CashClosingService, CashRegisterSessionService, BankReconciliationService
+PartnerWithdrawalService, ProjectionService, ApRecurringService, ApprovalApService
+FinancialReportService, OrganizationGroupService, CardMachineService
+OrderBillingService, ReceivableFromBudgetService, StatementImportService
+ReconciliationMatchingService, ApPaymentHistoryService, FinancialNotificationService
+ArDueAlertService, ReconciliationHintsService, ArLateFeeService, AdvancedIndicatorsService
+ArAgingService, MonthlyReportService, ReconciliationReportService
+FinAccountingIntegrationService, BankTransmissionService, ArRenegotiationService
+(+ re-export schemas e types financeiros)</pre>
+      </section>
+
+      <footer class="doc-footer">
+        <p>
+          Documento gerado para documentação interna. Evoluções futuras: acrescentar diagrama de entidade-relacionamento (DER)
+          reduzido por domínio e inventário de tabelas gerado a partir de <code>supabase/migrations</code> ou ferramenta de schema dump.
+        </p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>
