@@ -18,6 +18,7 @@ import {
   type FinancialAsyncComboboxProps,
 } from '@/components/financial/FinancialAsyncCombobox';
 import { AccountsPayableListTable } from '@/components/financial/accounts-payable/AccountsPayableListTable';
+import { ResolveForecastDialog } from '@/components/financial/accounts-payable/ResolveForecastDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, AlertTriangle, DollarSign, Building2, CheckCircle, Clock, Filter } from 'lucide-react';
 import { toast } from 'sonner';
@@ -108,6 +109,15 @@ export default function ContasPagar() {
   const [supplierLoading, setSupplierLoading] = useState(false);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
 
+  const [forecastDialogOpen, setForecastDialogOpen] = useState(false);
+  const [forecastDialogPayable, setForecastDialogPayable] = useState<ApPayableRow | null>(null);
+  const [listVersion, setListVersion] = useState(0);
+
+  const openResolveForecast = (p: ApPayableRow) => {
+    setForecastDialogPayable(p);
+    setForecastDialogOpen(true);
+  };
+
   const [formData, setFormData] = useState<Partial<AccountsPayable>>({
     supplier_name: '',
     description: '',
@@ -170,7 +180,7 @@ export default function ContasPagar() {
       setPayables(payablesRes.data as unknown as ApPayableRow[]);
       setListMeta({ count: payablesRes.count, totalPages: payablesRes.totalPages });
     })();
-  }, [effectiveOrgIds, currentPage, selectedTab, debouncedSearch, dueAlertFilter, getAccountsPayable]);
+  }, [effectiveOrgIds, currentPage, selectedTab, debouncedSearch, dueAlertFilter, getAccountsPayable, listVersion]);
 
   useEffect(() => {
     const q = isModalOpen ? supplierModalInput : '';
@@ -463,11 +473,21 @@ export default function ContasPagar() {
       header: 'Status',
       mobileLabel: 'Status',
       priority: 6,
-      render: (p) => (
-        <Badge className={cn('text-xs', getStatusColor(p.status as string))}>
-          {getStatusText(p.status as string)}
-        </Badge>
-      ),
+      render: (p) => {
+        const isForecast = Boolean(p.is_forecast) && !p.forecast_resolved_at;
+        return (
+          <div className="flex flex-wrap items-center gap-1">
+            <Badge className={cn('text-xs', getStatusColor(p.status as string))}>
+              {getStatusText(p.status as string)}
+            </Badge>
+            {isForecast && (
+              <Badge variant="outline" className="text-[10px] sm:text-xs border-warning text-warning">
+                Previsto
+              </Badge>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'approval',
@@ -511,6 +531,18 @@ export default function ContasPagar() {
           >
             Editar
           </Button>
+          {Boolean(p.is_forecast) && !p.forecast_resolved_at && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-8 text-xs"
+              disabled={isConsolidatedView}
+              onClick={() => openResolveForecast(p)}
+            >
+              Confirmar NF
+            </Button>
+          )}
           {p.status === 'pending' &&
             isAccountsPayableApprovedForPayment(p.approval_status as string) && (
               <Button
@@ -904,6 +936,26 @@ export default function ContasPagar() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ResolveForecastDialog
+        open={forecastDialogOpen}
+        onOpenChange={setForecastDialogOpen}
+        payableId={(forecastDialogPayable?.id as string) ?? null}
+        orgId={(forecastDialogPayable?.org_id as string) ?? null}
+        forecastSnapshot={
+          forecastDialogPayable
+            ? {
+                supplierName: (forecastDialogPayable.supplier_name as string) ?? '—',
+                predictedAmount: Number(forecastDialogPayable.amount ?? 0),
+                dueDate: (forecastDialogPayable.due_date as string) ?? '',
+                description: (forecastDialogPayable.description as string) ?? '',
+              }
+            : null
+        }
+        onResolved={() => {
+          setListVersion((v) => v + 1);
+        }}
+      />
     </div>
   );
 }
