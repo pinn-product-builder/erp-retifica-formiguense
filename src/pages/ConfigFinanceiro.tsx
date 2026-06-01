@@ -38,6 +38,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { CollectionRulesManager } from '@/components/financial/collection-rules/CollectionRulesManager';
 
 type BankAccountRow = Database['public']['Tables']['bank_accounts']['Row'];
 type TierRow = Database['public']['Tables']['approval_tiers_ap']['Row'];
@@ -493,6 +494,9 @@ export default function ConfigFinanceiro() {
             <TabsTrigger value="tiers" className="text-xs sm:text-sm flex-shrink-0">
               Alçadas AP
             </TabsTrigger>
+            <TabsTrigger value="collection" className="text-xs sm:text-sm flex-shrink-0">
+              Régua de cobrança
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="categories" className="mt-4">
@@ -797,8 +801,20 @@ export default function ConfigFinanceiro() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base sm:text-lg">Contas bancárias e caixas físicos</CardTitle>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  As contas cadastradas aqui ficam vinculadas à empresa{' '}
+                  <span className="font-medium text-foreground">
+                    {currentOrganization?.name ?? '— selecione uma empresa'}
+                  </span>
+                  . Na baixa de Contas a Receber, somente as contas desta empresa aparecem.
+                </p>
               </CardHeader>
               <CardContent className="space-y-4">
+                {!orgId && (
+                  <p className="text-sm text-destructive">
+                    Selecione uma empresa no topo da página antes de cadastrar contas.
+                  </p>
+                )}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
                   <div className="space-y-2 sm:col-span-2">
                     <Label htmlFor="ba-name">Nome de exibição</Label>
@@ -1182,6 +1198,10 @@ export default function ConfigFinanceiro() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="collection" className="mt-4">
+            <CollectionRulesManager />
           </TabsContent>
         </Tabs>
       </div>

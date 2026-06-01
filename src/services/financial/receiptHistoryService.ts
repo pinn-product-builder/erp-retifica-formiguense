@@ -88,6 +88,20 @@ export class ReceiptHistoryService {
       };
     }
 
+    const { data: bankAcc, error: baErr } = await supabase
+      .from('bank_accounts')
+      .select('id, org_id, is_active')
+      .eq('id', v.bank_account_id)
+      .eq('org_id', orgId)
+      .maybeSingle();
+    if (baErr) return { error: new Error(baErr.message) };
+    if (!bankAcc) {
+      return { error: new Error('Conta bancária/caixa não encontrada nesta organização') };
+    }
+    if ((bankAcc as { is_active: boolean | null }).is_active === false) {
+      return { error: new Error('Conta bancária/caixa está inativa') };
+    }
+
     const { error: insErr } = await supabase.from('receipt_history').insert({
       org_id: orgId,
       receivable_account_id: v.receivable_account_id,
@@ -98,6 +112,7 @@ export class ReceiptHistoryService {
       discount_applied: v.discount_applied ?? 0,
       notes: v.notes ?? null,
       registered_by: userId,
+      bank_account_id: v.bank_account_id,
     });
     if (insErr) return { error: new Error(insErr.message) };
 
@@ -146,7 +161,7 @@ export class ReceiptHistoryService {
       description: `Recebimento ${arRowCf.invoice_number?.trim() ? `NF ${arRowCf.invoice_number}` : 'conta a receber'}`,
       transaction_date: v.received_at,
       payment_method: v.payment_method ?? arRowCf.payment_method ?? null,
-      bank_account_id: null,
+      bank_account_id: v.bank_account_id,
       accounts_receivable_id: v.receivable_account_id,
       accounts_payable_id: null,
       order_id: null,

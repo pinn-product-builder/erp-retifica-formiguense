@@ -119,6 +119,7 @@ export const receiptRecordSchema = z.object({
   late_fee_charged: z.number().min(0).optional(),
   discount_applied: z.number().min(0).optional(),
   notes: z.string().optional().nullable(),
+  bank_account_id: z.string().uuid({ message: 'Informe a conta bancária ou caixa de origem do pagamento' }),
 });
 
 export const accountsPayableCreateSchema = z

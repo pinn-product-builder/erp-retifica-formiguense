@@ -16,10 +16,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { History, Pencil, Wallet } from 'lucide-react';
+import { History, Pencil, Wallet, Handshake } from 'lucide-react';
 import { FinancialPageShell } from '@/components/financial/FinancialPageShell';
 import { AccountsReceivableListTable } from '@/components/financial/accounts-receivable/AccountsReceivableListTable';
 import { RenegotiationDialog } from '@/components/financial/accounts-receivable/RenegotiationDialog';
+import { NegotiationDialog } from '@/components/financial/accounts-receivable/NegotiationDialog';
+import { ArNegotiationService, type ArNegotiationState } from '@/services/financial/arNegotiationService';
 import { ResponsiveTable, type ResponsiveTableColumn } from '@/components/ui/responsive-table';
 import {
   FinancialAsyncCombobox,
@@ -53,6 +55,7 @@ import {
 type ArRow = Database['public']['Tables']['accounts_receivable']['Row'];
 type CustomerRow = Database['public']['Tables']['customers']['Row'];
 type Pm = Database['public']['Enums']['payment_method'];
+type BankAccountRow = Database['public']['Tables']['bank_accounts']['Row'];
 
 function CustomerArCombobox(props: FinancialAsyncComboboxProps<CustomerRow>) {
   return <FinancialAsyncCombobox {...props} />;
@@ -191,7 +194,15 @@ export default function ContasReceber() {
     late_fee_charged: '0',
     discount_applied: '0',
     notes: '',
+    bank_account_id: '',
   });
+
+  const [paymentBankAccounts, setPaymentBankAccounts] = useState<BankAccountRow[]>([]);
+  const [paymentBankAccountsLoading, setPaymentBankAccountsLoading] = useState(false);
+
+  const [negotiationOpen, setNegotiationOpen] = useState(false);
+  const [negotiationRow, setNegotiationRow] = useState<(ArRow & Record<string, unknown>) | null>(null);
+  const [negotiationState, setNegotiationState] = useState<ArNegotiationState | null>(null);
 
   const [renegOpen, setRenegOpen] = useState(false);
   const [renegForm, setRenegForm] = useState({
@@ -502,12 +513,41 @@ export default function ContasReceber() {
       late_fee_charged: '0',
       discount_applied: '0',
       notes: '',
+      bank_account_id: '',
     });
     setPaymentOpen(true);
+    const rowOrgId = (row.org_id as string) || orgId;
+    if (rowOrgId) {
+      setPaymentBankAccountsLoading(true);
+      try {
+        const list = await FinancialConfigService.listBankAccounts(rowOrgId, true);
+        setPaymentBankAccounts(list);
+        if (list.length === 1) {
+          setPayForm((f) => ({ ...f, bank_account_id: list[0].id }));
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Erro ao carregar contas bancárias');
+        setPaymentBankAccounts([]);
+      } finally {
+        setPaymentBankAccountsLoading(false);
+      }
+    } else {
+      setPaymentBankAccounts([]);
+    }
+  };
+
+  const openNegotiation = (row: ArRow & Record<string, unknown>) => {
+    setNegotiationRow(row);
+    setNegotiationState(ArNegotiationService.stateFromRow(row));
+    setNegotiationOpen(true);
   };
 
   const submitPayment = async () => {
     if (!selectedRow) return;
+    if (!payForm.bank_account_id) {
+      toast.error('Informe a conta bancária ou caixa de origem do pagamento');
+      return;
+    }
     const ok = await recordReceiptPayment(
       {
         receivable_account_id: selectedRow.id as string,
@@ -517,6 +557,7 @@ export default function ContasReceber() {
         late_fee_charged: Number(payForm.late_fee_charged) || 0,
         discount_applied: Number(payForm.discount_applied) || 0,
         notes: payForm.notes || null,
+        bank_account_id: payForm.bank_account_id,
       },
       (selectedRow.org_id as string) || undefined
     );
@@ -556,11 +597,50 @@ export default function ContasReceber() {
       },
       {
         key: 'amount',
-        header: 'Valor',
-        mobileLabel: 'Valor',
+        header: 'Valor original',
+        mobileLabel: 'Original',
         priority: 2,
         minWidth: 110,
         render: (row) => <span className="whitespace-nowrap font-medium">{fmt(Number(row.amount))}</span>,
+      },
+      {
+        key: 'paid',
+        header: 'Pago',
+        mobileLabel: 'Pago',
+        priority: 3,
+        minWidth: 100,
+        render: (row) => {
+          const received = Number((row as { total_received?: number }).total_received ?? 0);
+          return (
+            <span className={cn('whitespace-nowrap', received > 0 ? 'text-success' : 'text-muted-foreground')}>
+              {fmt(received)}
+            </span>
+          );
+        },
+      },
+      {
+        key: 'remaining',
+        header: 'Pendente',
+        mobileLabel: 'Pendente',
+        priority: 3,
+        minWidth: 100,
+        render: (row) => {
+          const remaining = Number(
+            (row as { remaining_amount?: number }).remaining_amount ??
+              Number(row.amount) + Number((row as { late_fee?: number | null }).late_fee ?? 0)
+          );
+          const isPaid = (row.status as string) === 'paid';
+          return (
+            <span
+              className={cn(
+                'whitespace-nowrap font-medium',
+                isPaid || remaining === 0 ? 'text-muted-foreground' : 'text-destructive'
+              )}
+            >
+              {fmt(remaining)}
+            </span>
+          );
+        },
       },
       {
         key: 'due',
@@ -682,6 +762,27 @@ export default function ContasReceber() {
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Renegociar</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant={
+                          ArNegotiationService.stateFromRow(row).isActive ? 'default' : 'ghost'
+                        }
+                        size="icon"
+                        className="h-7 w-7 sm:h-8 sm:w-8"
+                        disabled={isConsolidatedView}
+                        onClick={() => openNegotiation(row)}
+                      >
+                        <Handshake className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {ArNegotiationService.stateFromRow(row).isActive
+                        ? 'Em negociação (régua pausada)'
+                        : 'Negociação individual'}
+                    </TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1327,6 +1428,51 @@ export default function ContasReceber() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="pay-bank-account">
+                Origem do pagamento <span className="text-destructive">*</span>
+              </Label>
+              <Select
+                value={payForm.bank_account_id || '__none__'}
+                onValueChange={(v) =>
+                  setPayForm((f) => ({ ...f, bank_account_id: v === '__none__' ? '' : v }))
+                }
+                disabled={paymentBankAccountsLoading}
+              >
+                <SelectTrigger id="pay-bank-account">
+                  <SelectValue
+                    placeholder={
+                      paymentBankAccountsLoading
+                        ? 'Carregando contas…'
+                        : paymentBankAccounts.length === 0
+                        ? 'Sem contas cadastradas para esta empresa'
+                        : 'Selecione banco ou caixa'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__" disabled>
+                    —
+                  </SelectItem>
+                  {paymentBankAccounts.map((ba) => {
+                    const isCash = ba.kind === 'cash';
+                    const label = isCash
+                      ? `Caixa · ${ba.name || ba.account_number}`
+                      : `${ba.bank_name}${ba.name ? ` · ${ba.name}` : ''}${ba.agency || ba.account_number ? ` (ag. ${ba.agency ?? '—'} · cc ${ba.account_number})` : ''}`;
+                    return (
+                      <SelectItem key={ba.id} value={ba.id}>
+                        {label}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {paymentBankAccounts.length === 0 && !paymentBankAccountsLoading && (
+                <p className="text-xs text-destructive">
+                  Cadastre uma conta bancária ou caixa em Configuração financeira antes de registrar recebimentos.
+                </p>
+              )}
+            </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="pay-late">Juros/multa</Label>
@@ -1376,6 +1522,18 @@ export default function ContasReceber() {
             : undefined
         }
         onSubmit={submitRenegotiate}
+      />
+
+      <NegotiationDialog
+        open={negotiationOpen}
+        onOpenChange={setNegotiationOpen}
+        receivableId={(negotiationRow?.id as string) ?? null}
+        orgId={(negotiationRow?.org_id as string) ?? null}
+        initialState={negotiationState}
+        userId={user?.id ?? null}
+        onChanged={() => {
+          setListVersion((v) => v + 1);
+        }}
       />
     </FinancialPageShell>
   );

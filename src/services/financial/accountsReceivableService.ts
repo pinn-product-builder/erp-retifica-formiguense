@@ -13,6 +13,30 @@ import { escapeIlikePattern } from '@/lib/ilikeEscape';
 
 type ArRow = Database['public']['Tables']['accounts_receivable']['Row'];
 
+async function attachReceiptTotals(
+  rows: (ArRow & Record<string, unknown>)[]
+): Promise<(ArRow & Record<string, unknown>)[]> {
+  if (rows.length === 0) return rows;
+  const ids = rows.map((r) => r.id as string);
+  const { data, error } = await supabase
+    .from('receipt_history')
+    .select('receivable_account_id, amount_received')
+    .in('receivable_account_id', ids);
+  if (error || !data) {
+    return rows.map((r) => ({ ...r, total_received: 0, remaining_amount: Number(r.amount) + Number((r as { late_fee?: number | null }).late_fee ?? 0) }));
+  }
+  const totals = new Map<string, number>();
+  for (const h of data as { receivable_account_id: string; amount_received: number }[]) {
+    totals.set(h.receivable_account_id, (totals.get(h.receivable_account_id) ?? 0) + Number(h.amount_received));
+  }
+  return rows.map((r) => {
+    const received = totals.get(r.id as string) ?? 0;
+    const totalDue = Number(r.amount) + Number((r as { late_fee?: number | null }).late_fee ?? 0);
+    const remaining = Math.max(0, Math.round((totalDue - received) * 100) / 100);
+    return { ...r, total_received: received, remaining_amount: remaining };
+  });
+}
+
 async function attachAuditUserNames(
   rows: (ArRow & Record<string, unknown>)[]
 ): Promise<(ArRow & Record<string, unknown>)[]> {
@@ -146,6 +170,7 @@ export class AccountsReceivableService {
     let rows = (data ?? []) as (ArRow & Record<string, unknown>)[];
 
     rows = await attachAuditUserNames(rows);
+    rows = await attachReceiptTotals(rows);
 
     const total = count ?? 0;
     return {
