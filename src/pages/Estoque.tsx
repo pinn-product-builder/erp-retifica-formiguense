@@ -47,7 +47,10 @@ import {
   Warehouse,
   Layers,
   Calculator,
+  ScanLine,
 } from 'lucide-react';
+import { PartTraceabilityDialog } from '@/components/inventory/PartTraceabilityDialog';
+import { useOrganization } from '@/hooks/useOrganization';
 import { StatCard } from '@/components/StatCard';
 import { usePartsInventory, type PartInventory } from '@/hooks/usePartsInventory';
 import { PartForm } from '@/components/inventory/PartForm';
@@ -75,6 +78,7 @@ const formatCurrency = (value: number): string =>
 
 const Estoque = () => {
   const { parts, pagination, loading, deletePart, fetchParts, clonePart } = usePartsInventory();
+  const { currentOrganization } = useOrganization();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('todos');
@@ -84,6 +88,8 @@ const Estoque = () => {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPart, setSelectedPart] = useState<PartInventory | null>(null);
+  const [traceabilityOpen, setTraceabilityOpen] = useState(false);
+  const [traceabilityPartId, setTraceabilityPartId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const handleSearch = useCallback(() => {
@@ -487,6 +493,18 @@ const Estoque = () => {
                           variant="ghost"
                           size="sm"
                           className="h-7 w-7 p-0"
+                          title="Rastreio analítico"
+                          onClick={() => {
+                            setTraceabilityPartId((part as { id: string }).id);
+                            setTraceabilityOpen(true);
+                          }}
+                        >
+                          <ScanLine className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
                           onClick={() => {
                             setSelectedPart(part);
                             setIsDeleteDialogOpen(true);
@@ -645,8 +663,19 @@ const Estoque = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <PartTraceabilityDialog
+        open={traceabilityOpen}
+        onOpenChange={(o) => {
+          setTraceabilityOpen(o);
+          if (!o) setTraceabilityPartId(null);
+        }}
+        orgId={currentOrganization?.id ?? null}
+        partId={traceabilityPartId}
+      />
     </div>
   );
 };
 
 export default Estoque;
+

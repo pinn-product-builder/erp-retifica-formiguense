@@ -492,6 +492,9 @@ export function WorkshopOsPartsManager() {
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     if (!printWindow) return;
 
+    const lineTotal = (line: WorkshopPartLine) =>
+      Math.max(0, line.qtyNoted - line.qtyCancelled) * Number(line.unitPriceApplied ?? 0);
+
     const buildRows = (lines: WorkshopPartLine[]) =>
       lines
         .map(
@@ -504,6 +507,7 @@ export function WorkshopOsPartsManager() {
               <td style="padding:8px;border:1px solid #ddd;text-align:right;">${line.qtyReleased}</td>
               <td style="padding:8px;border:1px solid #ddd;text-align:right;">${line.qtyCancelled}</td>
               <td style="padding:8px;border:1px solid #ddd;text-align:right;">${formatCurrency(line.unitPriceApplied)}</td>
+              <td style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:bold;">${formatCurrency(lineTotal(line))}</td>
             </tr>`
         )
         .join('');
@@ -515,8 +519,19 @@ export function WorkshopOsPartsManager() {
 <th style="padding:8px;border:1px solid #ddd;">Qtd anotada</th>
 <th style="padding:8px;border:1px solid #ddd;">Qtd baixada</th>
 <th style="padding:8px;border:1px solid #ddd;">Qtd cancelada</th>
-<th style="padding:8px;border:1px solid #ddd;">Valor</th>
+<th style="padding:8px;border:1px solid #ddd;">Valor unit.</th>
+<th style="padding:8px;border:1px solid #ddd;">Total linha</th>
 </tr></thead>`;
+
+    const totalOriginals = originals.reduce((s, l) => s + lineTotal(l), 0);
+    const totalExtras = extras.reduce((s, l) => s + lineTotal(l), 0);
+    const totalGeral = totalOriginals + totalExtras;
+
+    const footerRow = (label: string, value: number, highlight = false) => `
+      <tfoot><tr>
+        <td colspan="7" style="padding:8px;border:1px solid #ddd;text-align:right;${highlight ? 'background:#f3f4f6;' : ''}font-weight:bold;">${label}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:right;${highlight ? 'background:#f3f4f6;' : ''}font-weight:bold;">${formatCurrency(value)}</td>
+      </tr></tfoot>`;
 
     printWindow.document.write(`
       <html>
@@ -528,11 +543,19 @@ export function WorkshopOsPartsManager() {
           <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
             ${tableHead}
             <tbody>${buildRows(originals)}</tbody>
+            ${footerRow('Subtotal originais', totalOriginals)}
           </table>
-          <h3>Peças extras — conferência comercial</h3>
-          <table style="width:100%;border-collapse:collapse;">
+          <h3 style="color:#92400e;">Peças extras — pendente de cobrança / conferência comercial</h3>
+          <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
             ${tableHead}
             <tbody>${buildRows(extras)}</tbody>
+            ${footerRow('Subtotal extras (a cobrar)', totalExtras)}
+          </table>
+          <table style="width:100%;border-collapse:collapse;margin-top:16px;">
+            <tr>
+              <td style="padding:12px 8px;border:2px solid #111;text-align:right;font-weight:bold;background:#fef3c7;">TOTAL GERAL DA OS</td>
+              <td style="padding:12px 8px;border:2px solid #111;text-align:right;font-weight:bold;background:#fef3c7;font-size:18px;">${formatCurrency(totalGeral)}</td>
+            </tr>
           </table>
         </body>
       </html>
@@ -1103,16 +1126,72 @@ export function WorkshopOsPartsManager() {
                     },
                     {
                       key: 'value',
-                      header: 'Valor aplicado',
+                      header: 'Valor unit. aplicado',
                       render: (item) => (
                         <span className="whitespace-nowrap">{formatCurrency(item.unitPriceApplied)}</span>
                       ),
                       priority: 2,
                       minWidth: 120,
                     },
+                    {
+                      key: 'lineTotal',
+                      header: 'Total da linha',
+                      render: (item) => {
+                        const effectiveQty = Math.max(0, item.qtyNoted - item.qtyCancelled);
+                        const total = effectiveQty * Number(item.unitPriceApplied ?? 0);
+                        return <span className="whitespace-nowrap font-medium">{formatCurrency(total)}</span>;
+                      },
+                      priority: 3,
+                      minWidth: 120,
+                    },
                   ]}
                 />
               </TooltipProvider>
+
+              {/* Resumo financeiro da OS — task ClickUp 86agmy9kk (acesso Almoxarifado) */}
+              {(() => {
+                const lines = data?.workshopLines ?? [];
+                const lineTotal = (l: { qtyNoted: number; qtyCancelled: number; unitPriceApplied: number }) =>
+                  Math.max(0, l.qtyNoted - l.qtyCancelled) * Number(l.unitPriceApplied ?? 0);
+                const totalOriginal = lines
+                  .filter((l) => !l.isExtra)
+                  .reduce((s, l) => s + lineTotal(l), 0);
+                const totalExtra = lines
+                  .filter((l) => l.isExtra)
+                  .reduce((s, l) => s + lineTotal(l), 0);
+                const totalGeral = totalOriginal + totalExtra;
+                if (lines.length === 0) return null;
+                return (
+                  <Card className="border-2">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                        <div>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">Peças originais</p>
+                          <p className="text-sm sm:text-lg font-semibold whitespace-nowrap">
+                            {formatCurrency(totalOriginal)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">Peças extras</p>
+                          <p className="text-sm sm:text-lg font-semibold text-amber-700 dark:text-amber-500 whitespace-nowrap">
+                            {formatCurrency(totalExtra)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">Itens</p>
+                          <p className="text-sm sm:text-lg font-semibold">{lines.length}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">Total geral da OS</p>
+                          <p className="text-base sm:text-xl font-bold whitespace-nowrap">
+                            {formatCurrency(totalGeral)}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })()}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                 <Card>
