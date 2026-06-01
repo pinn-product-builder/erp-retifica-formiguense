@@ -17,7 +17,12 @@ import { useEngineTypes } from "@/hooks/useEngineTypes";
 import { useEngineComponents } from "@/hooks/useEngineComponents";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useEngineModels } from "@/hooks/useEngineModels";
+import { useOrganization } from "@/hooks/useOrganization";
+import { CustomerPendingService } from "@/services/financial/customerPendingService";
+import { CustomerPendingDialog } from "@/components/financial/customer-pending/CustomerPendingDialog";
 import { Autocomplete, TextField, Box, Typography } from '@mui/material';
+
+const MANAGER_ROLES = new Set(['super_admin', 'owner', 'admin', 'manager']);
 
 export default function CheckIn() {
   const { engineTypes, fetchEngineTypes } = useEngineTypes();
@@ -69,6 +74,12 @@ export default function CheckIn() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { createEngine, createOrder, uploadPhoto } = useSupabase();
+  const { currentOrganization, userRole } = useOrganization();
+
+  const [pendingDialogOpen, setPendingDialogOpen] = useState(false);
+  const [pendingResult, setPendingResult] = useState(null);
+  const [pendingCustomerName, setPendingCustomerName] = useState(null);
+  const [pendingOverrideReason, setPendingOverrideReason] = useState(null);
 
   useEffect(() => {
     fetchEngineTypes();
@@ -228,6 +239,30 @@ export default function CheckIn() {
       return;
     }
 
+    // Validação de pendências financeiras do cliente (task ClickUp 86agymx3a)
+    const customerId = coletaData?.customer_id;
+    const customerName = coletaData?.customerName ?? coletaData?.customer_name ?? null;
+    const orgId = currentOrganization?.id ?? null;
+    if (customerId && orgId) {
+      try {
+        const pend = await CustomerPendingService.check(orgId, customerId);
+        if (pend.hasPending) {
+          setPendingResult(pend);
+          setPendingCustomerName(customerName);
+          setPendingOverrideReason(null);
+          setPendingDialogOpen(true);
+          return; // aguarda dialog → onAuthorize chama proceedCreateOrder(authReason)
+        }
+      } catch (err) {
+        console.error('Erro ao checar pendências do cliente:', err);
+        // não bloqueia abertura se a checagem falhar
+      }
+    }
+
+    await proceedCreateOrder(null);
+  };
+
+  const proceedCreateOrder = async (authReason) => {
     setIsSubmitting(true);
 
     try {
@@ -257,10 +292,14 @@ export default function CheckIn() {
       }
 
       // Criar ordem de serviço
+      const baseObservations = formData.observacoes || '';
+      const observationsWithAuth = authReason
+        ? `${baseObservations ? baseObservations + '\n\n' : ''}[Autorização do gestor — pendências financeiras]\n${authReason}`
+        : baseObservations || undefined;
       const orderData = {
         ...coletaData,
         engine_id: engine.id,
-        initial_observations: formData.observacoes || undefined,
+        initial_observations: observationsWithAuth,
       };
 
       const order = await createOrder(orderData);
@@ -768,6 +807,26 @@ export default function CheckIn() {
           </Button>
         </div>
       </form>
+
+      <CustomerPendingDialog
+        open={pendingDialogOpen}
+        onOpenChange={(o) => {
+          setPendingDialogOpen(o);
+          if (!o) {
+            setPendingResult(null);
+            setPendingCustomerName(null);
+          }
+        }}
+        result={pendingResult}
+        customerName={pendingCustomerName}
+        contextLabel="A abertura desta OS"
+        canOverride={MANAGER_ROLES.has(userRole ?? '')}
+        onAuthorize={async (reason) => {
+          setPendingDialogOpen(false);
+          setPendingOverrideReason(reason);
+          await proceedCreateOrder(reason);
+        }}
+      />
     </div>
   );
 }
