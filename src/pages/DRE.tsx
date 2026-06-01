@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DreCategorizedService } from '@/services/financial/dreCategorizedService';
 import { DreExportService } from '@/services/financial/dreExportService';
-import { 
-  Calculator, TrendingUp, TrendingDown, DollarSign, 
-  BarChart3, Calendar, FileText, Download
+import { DreService, type PaymentTermIndicators } from '@/services/financial/dreService';
+import {
+  Calculator, TrendingUp, TrendingDown, DollarSign,
+  BarChart3, Calendar, FileText, Download, Clock, ClockArrowUp
 } from 'lucide-react';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useFinancialOrgScope } from '@/hooks/useFinancialOrgScope';
@@ -48,6 +49,25 @@ export default function DRE() {
   } | null>(null);
   const [savingSnapshot, setSavingSnapshot] = useState(false);
   const [dreCostCenterFilter, setDreCostCenterFilter] = useState('');
+  const [paymentTerms, setPaymentTerms] = useState<PaymentTermIndicators | null>(null);
+
+  useEffect(() => {
+    if (!singleOrgId || isConsolidatedView) {
+      setPaymentTerms(null);
+      return;
+    }
+    let cancelled = false;
+    DreService.paymentTermIndicators(singleOrgId, selectedYear)
+      .then((res) => {
+        if (!cancelled) setPaymentTerms(res);
+      })
+      .catch(() => {
+        if (!cancelled) setPaymentTerms(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [singleOrgId, isConsolidatedView, selectedYear]);
 
   useEffect(() => {
     if (isConsolidatedView) setDreCostCenterFilter('');
@@ -377,7 +397,7 @@ export default function DRE() {
       )}
 
       {/* KPIs Anuais */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-4 xl:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Receita Anual</CardTitle>
@@ -423,6 +443,38 @@ export default function DRE() {
             <div className={`text-2xl font-bold ${yearlyProfitMargin >= 0 ? 'text-success' : 'text-destructive'}`}>
               {formatPercentage(yearlyProfitMargin)}
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">PMR</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {paymentTerms?.pmr != null ? `${paymentTerms.pmr} d` : '—'}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {paymentTerms?.pmrSampleCount ?? 0} título(s) recebidos
+              {isConsolidatedView && ' · selecione 1 empresa'}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">PMP</CardTitle>
+            <ClockArrowUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {paymentTerms?.pmp != null ? `${paymentTerms.pmp} d` : '—'}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {paymentTerms?.pmpSampleCount ?? 0} título(s) pagos
+              {isConsolidatedView && ' · selecione 1 empresa'}
+            </p>
           </CardContent>
         </Card>
       </div>
