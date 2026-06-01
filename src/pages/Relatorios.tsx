@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Download, Calendar, TrendingUp, Users, DollarSign, Package, BarChart3 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import InventoryPerformanceReports from "@/components/reports/InventoryPerformanceReports";
+import { ReportBuilder } from "@/components/reports/ReportBuilder";
 
 const Relatorios = () => {
   const [tipoRelatorio, setTipoRelatorio] = useState('');
@@ -68,12 +69,18 @@ const Relatorios = () => {
         </div>
       </div>
 
-      <Tabs defaultValue="performance" className="space-y-6">
-        <TabsList className="w-full overflow-x-auto flex md:grid md:grid-cols-3">
+      <Tabs defaultValue="builder" className="space-y-6">
+        <TabsList className="w-full overflow-x-auto flex md:grid md:grid-cols-4">
+          <TabsTrigger value="builder" className="flex-shrink-0">Construtor</TabsTrigger>
           <TabsTrigger value="performance" className="flex-shrink-0">Performance de Estoque</TabsTrigger>
           <TabsTrigger value="operational" className="flex-shrink-0">Relatórios Operacionais</TabsTrigger>
           <TabsTrigger value="financial" className="flex-shrink-0">Relatórios Financeiros</TabsTrigger>
         </TabsList>
+
+        {/* Aba Construtor (novo gerador configurável) */}
+        <TabsContent value="builder">
+          <ReportBuilder />
+        </TabsContent>
 
         {/* Aba Performance de Estoque */}
         <TabsContent value="performance">
@@ -231,24 +238,9 @@ const Relatorios = () => {
       </Card>
         </TabsContent>
 
-        {/* Aba Relatórios Financeiros */}
+        {/* Aba Relatórios Financeiros — agora usa o Construtor */}
         <TabsContent value="financial" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5" />
-                Relatórios Financeiros
-              </CardTitle>
-              <CardDescription>
-                Relatórios financeiros e de faturamento em desenvolvimento
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                Esta seção será implementada nas próximas versões do sistema.
-              </p>
-            </CardContent>
-          </Card>
+          <ReportBuilder />
         </TabsContent>
       </Tabs>
     </div>
