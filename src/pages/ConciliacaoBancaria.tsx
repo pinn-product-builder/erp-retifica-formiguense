@@ -36,6 +36,7 @@ import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { formatBRL, formatDateBR } from '@/lib/financialFormat';
 import { Building2, FileText, Landmark, Upload } from 'lucide-react';
+import { TwoColumnReconciliation } from '@/components/financial/reconciliation/TwoColumnReconciliation';
 
 type BankAccountRow = Database['public']['Tables']['bank_accounts']['Row'];
 type BslRow = Database['public']['Tables']['bank_statement_lines']['Row'];
@@ -607,6 +608,16 @@ export default function ConciliacaoBancaria() {
             </CardContent>
           </Card>
         )}
+
+        <TwoColumnReconciliation
+          reconciliationId={activeReconciliationId || null}
+          statementLines={lines}
+          cashFlows={cashFlows}
+          userId={user?.id ?? null}
+          onMatched={() => {
+            void loadLines(selectedImportId);
+          }}
+        />
 
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">

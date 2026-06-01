@@ -120,6 +120,50 @@ export class BankReconciliationService {
     return { error: cErr ? new Error(cErr.message) : null };
   }
 
+  /**
+   * Concilia N linhas de extrato com 1 único cash_flow (ex: 2 pagamentos cobrem 1 título).
+   * Task ClickUp 86agymxzt.
+   */
+  static async confirmGroupedMatch(params: {
+    reconciliationId: string;
+    statementLineIds: string[];
+    cashFlowId: string;
+    matchedAmounts: number[];
+    userId: string | null;
+  }): Promise<{ error: Error | null }> {
+    const { reconciliationId, statementLineIds, cashFlowId, matchedAmounts, userId } = params;
+    if (statementLineIds.length === 0) {
+      return { error: new Error('Selecione ao menos uma linha de extrato') };
+    }
+    if (statementLineIds.length !== matchedAmounts.length) {
+      return { error: new Error('Quantidade de linhas e valores inconsistente') };
+    }
+
+    const items = statementLineIds.map((slId, idx) => ({
+      reconciliation_id: reconciliationId,
+      statement_line_id: slId,
+      cash_flow_id: cashFlowId,
+      matched_amount: matchedAmounts[idx],
+      status: 'matched' as const,
+      confirmed_by: userId,
+      confirmed_at: new Date().toISOString(),
+    }));
+
+    const { error: iErr } = await supabase.from('bank_reconciliation_items').insert(items);
+    if (iErr) return { error: new Error(iErr.message) };
+
+    for (const slId of statementLineIds) {
+      const { error: lErr } = await this.matchLineToCashFlow(slId, cashFlowId);
+      if (lErr) return { error: lErr };
+    }
+
+    const { error: cErr } = await supabase
+      .from('cash_flow')
+      .update({ reconciled: true })
+      .eq('id', cashFlowId);
+    return { error: cErr ? new Error(cErr.message) : null };
+  }
+
   static async markAdjusted(params: {
     reconciliationId: string;
     statementLineId: string;
