@@ -24,9 +24,13 @@ export type Database = {
           description: string
           due_date: string
           expense_category_id: string | null
+          forecast_original_amount: number | null
+          forecast_recurring_schedule_id: string | null
+          forecast_resolved_at: string | null
           id: string
           invoice_file_url: string | null
           invoice_number: string | null
+          is_forecast: boolean
           notes: string | null
           org_id: string | null
           payment_date: string | null
@@ -47,9 +51,13 @@ export type Database = {
           description: string
           due_date: string
           expense_category_id?: string | null
+          forecast_original_amount?: number | null
+          forecast_recurring_schedule_id?: string | null
+          forecast_resolved_at?: string | null
           id?: string
           invoice_file_url?: string | null
           invoice_number?: string | null
+          is_forecast?: boolean
           notes?: string | null
           org_id?: string | null
           payment_date?: string | null
@@ -70,9 +78,13 @@ export type Database = {
           description?: string
           due_date?: string
           expense_category_id?: string | null
+          forecast_original_amount?: number | null
+          forecast_recurring_schedule_id?: string | null
+          forecast_resolved_at?: string | null
           id?: string
           invoice_file_url?: string | null
           invoice_number?: string | null
+          is_forecast?: boolean
           notes?: string | null
           org_id?: string | null
           payment_date?: string | null
@@ -191,6 +203,11 @@ export type Database = {
           is_renegotiated: boolean
           last_late_fee_date: string | null
           late_fee: number | null
+          negotiation_notes: string | null
+          negotiation_owner_user_id: string | null
+          negotiation_paused_at: string | null
+          negotiation_promised_date: string | null
+          negotiation_resolved_at: string | null
           notes: string | null
           order_id: string | null
           org_id: string | null
@@ -219,6 +236,11 @@ export type Database = {
           is_renegotiated?: boolean
           last_late_fee_date?: string | null
           late_fee?: number | null
+          negotiation_notes?: string | null
+          negotiation_owner_user_id?: string | null
+          negotiation_paused_at?: string | null
+          negotiation_promised_date?: string | null
+          negotiation_resolved_at?: string | null
           notes?: string | null
           order_id?: string | null
           org_id?: string | null
@@ -247,6 +269,11 @@ export type Database = {
           is_renegotiated?: boolean
           last_late_fee_date?: string | null
           late_fee?: number | null
+          negotiation_notes?: string | null
+          negotiation_owner_user_id?: string | null
+          negotiation_paused_at?: string | null
+          negotiation_promised_date?: string | null
+          negotiation_resolved_at?: string | null
           notes?: string | null
           order_id?: string | null
           org_id?: string | null
@@ -7870,6 +7897,7 @@ export type Database = {
       receipt_history: {
         Row: {
           amount_received: number
+          bank_account_id: string | null
           created_at: string | null
           discount_applied: number | null
           id: string
@@ -7883,6 +7911,7 @@ export type Database = {
         }
         Insert: {
           amount_received: number
+          bank_account_id?: string | null
           created_at?: string | null
           discount_applied?: number | null
           id?: string
@@ -7896,6 +7925,7 @@ export type Database = {
         }
         Update: {
           amount_received?: number
+          bank_account_id?: string | null
           created_at?: string | null
           discount_applied?: number | null
           id?: string
@@ -7908,6 +7938,13 @@ export type Database = {
           registered_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "receipt_history_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "receipt_history_org_id_fkey"
             columns: ["org_id"]
