@@ -1,11 +1,12 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Wrench, ClipboardList, GitBranch, CheckCircle, Cog, FolderTree, Package } from "lucide-react";
+import { Settings, Wrench, ClipboardList, GitBranch, CheckCircle, Cog, FolderTree, Package, ShieldCheck } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 import { EngineTypesConfig } from "@/components/operations/EngineTypesConfig";
 import { EngineCategoriesConfig } from "@/components/operations/EngineCategoriesConfig";
 import DiagnosticChecklistsConfig from "@/components/operations/DiagnosticChecklistsConfig";
+import { PartsChangeRulesConfig } from "@/components/operations/PartsChangeRulesConfig";
 import { WorkflowStatusConfigAdmin } from "@/components/admin/WorkflowStatusConfigAdmin";
 import { MacroComponentsAdmin } from "@/components/admin/MacroComponentsAdmin";
 import { AdditionalServicesAdmin } from "@/components/admin/AdditionalServicesAdmin";
@@ -75,7 +76,7 @@ const ConfiguracoesOperacoes = () => {
       {/* Tabs de configurações */}
       <Tabs defaultValue="categorias" className="space-y-4 sm:space-y-6">
         <div className="overflow-x-auto">
-          <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full min-w-[800px] sm:min-w-0">
+          <TabsList className="grid grid-cols-3 sm:grid-cols-7 w-full min-w-[900px] sm:min-w-0">
             <TabsTrigger value="categorias" className="flex items-center gap-2 text-xs sm:text-sm">
               <FolderTree className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Categorias</span>
@@ -105,6 +106,11 @@ const ConfiguracoesOperacoes = () => {
               <GitBranch className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Status Workflow</span>
               <span className="sm:hidden">Status</span>
+            </TabsTrigger>
+            <TabsTrigger value="parts-rules" className="flex items-center gap-2 text-xs sm:text-sm">
+              <ShieldCheck className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Regras de Peças</span>
+              <span className="sm:hidden">Peças</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -278,6 +284,23 @@ const ConfiguracoesOperacoes = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Aba Regras de Peças em OS aprovada */}
+        <TabsContent value="parts-rules" className="space-y-4 sm:space-y-6">
+          <PermissionGate
+            module="settings"
+            level="admin"
+            fallback={
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  Apenas administradores podem configurar regras de alteração de peças.
+                </p>
+              </div>
+            }
+          >
+            <PartsChangeRulesConfig />
+          </PermissionGate>
+        </TabsContent>
       </Tabs>
 
       {/* Informações adicionais */}
@@ -296,6 +319,7 @@ const ConfiguracoesOperacoes = () => {
                 <p>• <strong>Serviços:</strong> Configure serviços disponíveis para diagnósticos</p>
                 <p>• <strong>Checklists:</strong> Defina checklists personalizados para diagnóstico por componente</p>
                 <p>• <strong>Status de Workflow:</strong> Personalize os status do fluxo operacional</p>
+                <p>• <strong>Regras de Peças:</strong> Defina se o almoxarifado pode alterar peças em OS aprovadas e o valor máximo automático</p>
               </div>
               <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
                 <p className="text-xs text-amber-800">

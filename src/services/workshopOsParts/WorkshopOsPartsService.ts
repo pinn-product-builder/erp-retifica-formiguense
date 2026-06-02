@@ -14,6 +14,7 @@ import {
   type ReleaseStockInput,
   type SubstituteLineInput,
 } from './schemas';
+import { PartsChangeRulesService } from './partsChangeRulesService';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DbClient = any;
@@ -209,6 +210,75 @@ async function fetchLineOrThrow(client: DbClient, lineId: string, orgId: string)
   return data;
 }
 
+/**
+ * Aplica a regra "alteração de peças em OS após aprovação" (task 86agmy9k7).
+ * Lê o status da OS e a regra da org; bloqueia com mensagem amigável quando
+ * a alteração não cabe na política.
+ */
+async function assertCanChangeParts(
+  client: DbClient,
+  orgId: string,
+  orderId: string,
+  changeAmount: number
+): Promise<void> {
+  const { data: order, error } = await client
+    .from('orders')
+    .select('status')
+    .eq('org_id', orgId)
+    .eq('id', orderId)
+    .single();
+
+  if (error || !order) {
+    throw new Error('OS não encontrada ou sem permissão para alterar peças');
+  }
+
+  const rule = await PartsChangeRulesService.get(orgId);
+  const decision = PartsChangeRulesService.evaluateChange(
+    String(order.status),
+    Math.max(0, Number(changeAmount) || 0),
+    rule
+  );
+
+  if (decision.allowed) return;
+
+  if (decision.reason === 'rule_disabled') {
+    throw new Error(
+      'Alteração de peças bloqueada: esta OS já foi aprovada e a regra de alteração pelo almoxarifado está desativada para esta organização. Solicite ao gestor habilitar em Configurações > Operações.'
+    );
+  }
+  const limit = decision.threshold ?? 0;
+  throw new Error(
+    `Alteração bloqueada: o valor da operação (R$ ${changeAmount.toFixed(2)}) excede o limite automático configurado (R$ ${limit.toFixed(2)}). Solicite revisão do orçamento ao comercial.`
+  );
+}
+
+/** Grava operação em audit_log (não-bloqueante — falhas só logam no console). */
+async function writeAuditLog(
+  client: DbClient,
+  params: {
+    orgId: string;
+    userId: string;
+    recordId: string;
+    operation: 'INSERT' | 'UPDATE' | 'DELETE';
+    oldValues?: Record<string, unknown> | null;
+    newValues?: Record<string, unknown> | null;
+  }
+): Promise<void> {
+  try {
+    await client.from('audit_log').insert({
+      org_id: params.orgId,
+      table_name: 'workshop_os_part_lines',
+      record_id: params.recordId,
+      operation: params.operation,
+      old_values: params.oldValues ?? null,
+      new_values: params.newValues ?? null,
+      user_id: params.userId,
+    });
+  } catch (err) {
+    console.error('audit_log write failed for workshop_os_part_lines:', err);
+  }
+}
+
 async function fetchPartStockOrThrow(client: DbClient, orgId: string, partCode: string, partId?: string | null) {
   if (partId) {
     const byId = await client
@@ -385,7 +455,12 @@ export class WorkshopOsPartsService {
 
   static async addExtraLine(orgId: string, userId: string, input: AddExtraLineInput): Promise<WorkshopPartLine> {
     const parsed = addExtraLineSchema.parse(input);
-    const { data, error } = await db()
+    const client = db();
+
+    const changeAmount = Number(parsed.quantity) * Number(parsed.unitPriceApplied);
+    await assertCanChangeParts(client, orgId, parsed.orderId, changeAmount);
+
+    const { data, error } = await client
       .from('workshop_os_part_lines')
       .insert({
         org_id: orgId,
@@ -409,6 +484,14 @@ export class WorkshopOsPartsService {
     if (error || !data) {
       throw new Error(`Erro ao incluir peça extra: ${error?.message ?? 'erro desconhecido'}`);
     }
+
+    await writeAuditLog(client, {
+      orgId,
+      userId,
+      recordId: String(data.id),
+      operation: 'INSERT',
+      newValues: { ...data, change_amount: changeAmount, action: 'add_extra' },
+    });
 
     return normalizeDbLine(data);
   }
@@ -518,6 +601,15 @@ export class WorkshopOsPartsService {
     }
 
     const qtyToSubstitute = Math.min(parsed.quantity, remaining);
+
+    // Mede o impacto da substituição (diferença entre novo total e original
+    // que está sendo cancelado) e aplica a regra pós-aprovação.
+    const originalUnit = Number(line.unit_price_applied ?? 0);
+    const newTotal = qtyToSubstitute * Number(parsed.newUnitPrice ?? 0);
+    const originalTotal = qtyToSubstitute * originalUnit;
+    const changeAmount = Math.abs(newTotal - originalTotal);
+    await assertCanChangeParts(client, orgId, String(line.order_id), changeAmount);
+
     const { error: cancelError } = await client
       .from('workshop_os_part_lines')
       .update({
@@ -558,6 +650,15 @@ export class WorkshopOsPartsService {
       throw new Error(`Erro ao criar linha de substituição: ${error?.message ?? 'erro desconhecido'}`);
     }
 
+    await writeAuditLog(client, {
+      orgId,
+      userId,
+      recordId: String(data.id),
+      operation: 'INSERT',
+      oldValues: { line_id: String(line.id), original_unit_price: originalUnit },
+      newValues: { ...data, change_amount: changeAmount, action: 'substitute', replaces_line_id: String(line.id) },
+    });
+
     return normalizeDbLine(data);
   }
 
@@ -574,6 +675,10 @@ export class WorkshopOsPartsService {
     if (parsed.quantity > availableToCancel) {
       throw new Error(`Quantidade para cancelamento excede o elegível (${availableToCancel})`);
     }
+
+    // Cancelamento parcial reduz a composição da OS — aplica a regra pós-aprovação.
+    const changeAmount = parsed.quantity * Number(line.unit_price_applied ?? 0);
+    await assertCanChangeParts(client, orgId, String(line.order_id), changeAmount);
 
     const qtyReleased = Number(line.qty_released ?? 0);
     const qtyToReverse = Math.min(parsed.quantity, qtyReleased);
@@ -654,6 +759,20 @@ export class WorkshopOsPartsService {
       ].join('\n');
     }
 
+    await writeAuditLog(client, {
+      orgId,
+      userId,
+      recordId: String(line.id),
+      operation: 'UPDATE',
+      oldValues: { qty_cancelled: Number(line.qty_cancelled), qty_released: Number(line.qty_released) },
+      newValues: {
+        qty_cancelled: Number(line.qty_cancelled) + parsed.quantity,
+        change_amount: changeAmount,
+        action: 'cancel_partial',
+        reason: parsed.reason,
+      },
+    });
+
     return { line: normalizeDbLine(data), receipt };
   }
 
@@ -672,6 +791,31 @@ export class WorkshopOsPartsService {
     }
 
     if (workshopIds.length > 0) {
+      // Snapshot pra (a) calcular impacto financeiro da remoção e (b) auditar.
+      const { data: linesToRemove, error: snapErr } = await client
+        .from('workshop_os_part_lines')
+        .select('id, order_id, qty_noted, qty_cancelled, qty_released, unit_price_applied, part_code, part_name')
+        .eq('org_id', orgId)
+        .in('id', workshopIds);
+
+      if (snapErr) {
+        throw new Error(`Erro ao validar peças para remoção: ${snapErr.message}`);
+      }
+
+      // Aplica a regra por OS afetada (agregando valor das linhas dessa OS).
+      const byOrder = new Map<string, number>();
+      for (const l of linesToRemove ?? []) {
+        const remaining = Math.max(
+          0,
+          Number(l.qty_noted) - Number(l.qty_cancelled) - Number(l.qty_released)
+        );
+        const value = remaining * Number(l.unit_price_applied ?? 0);
+        byOrder.set(String(l.order_id), (byOrder.get(String(l.order_id)) ?? 0) + value);
+      }
+      for (const [orderId, totalChange] of byOrder.entries()) {
+        await assertCanChangeParts(client, orgId, orderId, totalChange);
+      }
+
       const { error } = await client
         .from('workshop_os_part_lines')
         .delete()
@@ -680,6 +824,17 @@ export class WorkshopOsPartsService {
 
       if (error) {
         throw new Error(`Erro ao remover peça(s) da OS: ${error.message}`);
+      }
+
+      for (const l of linesToRemove ?? []) {
+        await writeAuditLog(client, {
+          orgId,
+          userId,
+          recordId: String(l.id),
+          operation: 'DELETE',
+          oldValues: l as Record<string, unknown>,
+          newValues: { action: 'remove' },
+        });
       }
     }
 
