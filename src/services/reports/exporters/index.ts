@@ -1,16 +1,11 @@
-import { CsvExporter } from './csvExporter';
-import { XlsxExporter } from './xlsxExporter';
-import { PdfExporter } from './pdfExporter';
 import type { ReportExporter, ReportExportFormat } from '../types';
 
-const exporters: Record<ReportExportFormat, ReportExporter> = {
-  csv: CsvExporter,
-  xlsx: XlsxExporter,
-  pdf: PdfExporter,
+const loaders: Record<ReportExportFormat, () => Promise<ReportExporter>> = {
+  csv: () => import('./csvExporter').then((m) => m.CsvExporter),
+  xlsx: () => import('./xlsxExporter').then((m) => m.XlsxExporter),
+  pdf: () => import('./pdfExporter').then((m) => m.PdfExporter),
 };
 
-export function getExporter(format: ReportExportFormat): ReportExporter {
-  return exporters[format];
+export function getExporter(format: ReportExportFormat): Promise<ReportExporter> {
+  return loaders[format]();
 }
-
-export { CsvExporter, XlsxExporter, PdfExporter };

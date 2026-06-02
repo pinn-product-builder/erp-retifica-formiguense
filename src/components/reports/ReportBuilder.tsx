@@ -412,7 +412,7 @@ export function ReportBuilder() {
     }
     setExporting(format);
     try {
-      const exporter = getExporter(format);
+      const exporter = await getExporter(format);
       const stamp = new Date().toISOString().slice(0, 10);
       await exporter.export({
         filename: `${definition.id}-${stamp}`,
