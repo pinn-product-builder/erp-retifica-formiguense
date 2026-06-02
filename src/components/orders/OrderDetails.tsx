@@ -35,7 +35,13 @@ import { OrderDocumentsTab } from './OrderDocumentsTab';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useOrganization } from '@/hooks/useOrganization';
 import { EngineTypeSelect } from '@/components/ui/EngineTypeSelect';
+import {
+  CustomerPendingService,
+  type CustomerPendingResult,
+} from '@/services/financial/customerPendingService';
+import { CustomerPendingDialog } from '@/components/financial/customer-pending/CustomerPendingDialog';
 import {
   Dialog,
   DialogContent,
@@ -79,6 +85,8 @@ const PRIORITY_LABELS = {
   3: 'Urgente'
 };
 
+const MANAGER_ROLES = new Set(['super_admin', 'owner', 'admin', 'manager']);
+
 export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,6 +110,11 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
   const { toast } = useToast();
   const permissions = usePermissions();
   const canEditSensitiveData = permissions.canEditOrderIdentity();
+  const { userRole } = useOrganization();
+
+  const [pendingDialogOpen, setPendingDialogOpen] = useState(false);
+  const [pendingResult, setPendingResult] = useState<CustomerPendingResult | null>(null);
+  const [pendingCustomerName, setPendingCustomerName] = useState<string | null>(null);
 
   useEffect(() => {
     const loadOrderDetails = async () => {
@@ -133,16 +146,20 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
     setOrder(updated);
   }, [fetchOrderDetails, orderId]);
 
-  const handleMarkAsDelivered = async () => {
+  const proceedMarkAsDelivered = async (authReason: string | null) => {
     if (!order) return;
 
     setMarkingAsDelivered(true);
     try {
-      const success = await markOrderAsDelivered(orderId, deliveryNotes || undefined);
+      const baseNotes = deliveryNotes.trim();
+      const combinedNotes = authReason
+        ? `${baseNotes ? baseNotes + '\n\n' : ''}[Autorização do gestor — pendências financeiras]\n${authReason}`
+        : baseNotes || undefined;
+
+      const success = await markOrderAsDelivered(orderId, combinedNotes);
       if (success) {
         setShowDeliveryDialog(false);
         setDeliveryNotes('');
-        // Recarregar detalhes da ordem
         const orderData = await fetchOrderDetails(orderId);
         setOrder(orderData);
       }
@@ -151,6 +168,30 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
     } finally {
       setMarkingAsDelivered(false);
     }
+  };
+
+  const handleMarkAsDelivered = async () => {
+    if (!order) return;
+
+    // Validação de pendências financeiras do cliente (ClickUp 86agymx5z)
+    const customerId = order.customer?.id ?? order.customer_id;
+    const orgId = order.org_id;
+    if (customerId && orgId) {
+      try {
+        const pend = await CustomerPendingService.check(orgId, customerId);
+        if (pend.hasPending) {
+          setPendingResult(pend);
+          setPendingCustomerName(order.customer?.name ?? null);
+          setPendingDialogOpen(true);
+          return;
+        }
+      } catch (err) {
+        console.error('Erro ao checar pendências do cliente:', err);
+        // não bloqueia entrega se a checagem falhar — registro fica no log
+      }
+    }
+
+    await proceedMarkAsDelivered(null);
   };
 
   const canMarkAsDelivered = order && 
@@ -650,6 +691,25 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CustomerPendingDialog
+        open={pendingDialogOpen}
+        onOpenChange={(o) => {
+          setPendingDialogOpen(o);
+          if (!o) {
+            setPendingResult(null);
+            setPendingCustomerName(null);
+          }
+        }}
+        result={pendingResult}
+        customerName={pendingCustomerName}
+        contextLabel="A confirmação de entrega desta OS"
+        canOverride={MANAGER_ROLES.has(userRole ?? '')}
+        onAuthorize={async (reason) => {
+          setPendingDialogOpen(false);
+          await proceedMarkAsDelivered(reason);
+        }}
+      />
     </div>
   );
 }
