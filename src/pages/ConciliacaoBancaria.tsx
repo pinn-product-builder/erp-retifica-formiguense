@@ -35,7 +35,9 @@ import { CardMachineService } from '@/services/financial/cardMachineService';
 import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { formatBRL, formatDateBR } from '@/lib/financialFormat';
-import { Building2, FileText, Landmark, Upload } from 'lucide-react';
+import { Building2, FileText, Landmark, Upload, Target } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import { TwoColumnReconciliation } from '@/components/financial/reconciliation/TwoColumnReconciliation';
 
 type BankAccountRow = Database['public']['Tables']['bank_accounts']['Row'];
@@ -379,6 +381,14 @@ export default function ConciliacaoBancaria() {
     }
   };
 
+  const effectiveness = useMemo(() => {
+    const total = lines.length;
+    if (total === 0) return null;
+    const matched = lines.filter((l) => Boolean(l.matched_cash_flow_id)).length;
+    const pct = Math.round((matched / total) * 1000) / 10;
+    return { total, matched, pending: total - matched, pct };
+  }, [lines]);
+
   const machineCfgByMethod = useMemo(() => {
     const m = new Map<string, CardMachineRow>();
     for (const c of machineConfigs) {
@@ -476,6 +486,40 @@ export default function ConciliacaoBancaria() {
             </div>
           </CardContent>
         </Card>
+
+        {effectiveness && (
+          <Card>
+            <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
+              <Target className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+              <CardTitle className="text-base sm:text-lg">Efetividade da conciliação</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Badge variant="secondary" className="font-medium">
+                    {effectiveness.matched} de {effectiveness.total} casadas
+                  </Badge>
+                  {effectiveness.pending > 0 && (
+                    <Badge variant="outline" className="text-amber-700 border-amber-300">
+                      {effectiveness.pending} pendentes
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-2xl font-bold tabular-nums">
+                  {effectiveness.pct.toFixed(1)}%
+                </div>
+              </div>
+              <Progress value={effectiveness.pct} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                {effectiveness.pct >= 90
+                  ? 'Excelente — pronto para fechar a sessão.'
+                  : effectiveness.pct >= 60
+                    ? 'Bom andamento — revise pendências e use Conciliar automático.'
+                    : 'Início da conciliação — use Conciliar automático para casar pelo valor e data.'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {selectedImportId && lines.length > 0 && (
           <Card>

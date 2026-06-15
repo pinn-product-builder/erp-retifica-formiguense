@@ -62,15 +62,14 @@ export class StatementImportService {
       }
 
       const importId = imp.id as string;
-      const inserts: Database['public']['Tables']['bank_statement_lines']['Insert'][] = lines.map(
-        (l) => ({
-          import_id: importId,
-          transaction_date: l.transaction_date,
-          amount: l.amount,
-          description: l.description,
-          balance_after: l.balance_after,
-        })
-      );
+      const inserts = lines.map((l) => ({
+        import_id: importId,
+        transaction_date: l.transaction_date,
+        amount: l.amount,
+        description: l.description,
+        balance_after: l.balance_after,
+        external_id: l.external_id,
+      })) as unknown as Database['public']['Tables']['bank_statement_lines']['Insert'][];
 
       const { error: lErr } = await BankReconciliationService.addStatementLines(inserts);
       if (lErr) {
