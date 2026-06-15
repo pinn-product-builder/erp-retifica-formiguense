@@ -41,6 +41,7 @@ import {
   AlertTriangle,
   ContactRound,
   LayoutGrid,
+  ArrowRightLeft,
 } from "lucide-react";
 
 import {
@@ -273,6 +274,11 @@ const financialItems = [
     title: "Conciliação bancária",
     url: "/conciliacao-bancaria",
     icon: Landmark,
+  },
+  {
+    title: "Transferência entre contas",
+    url: "/transferencias",
+    icon: ArrowRightLeft,
   },
   {
     title: "Fluxo projetado",

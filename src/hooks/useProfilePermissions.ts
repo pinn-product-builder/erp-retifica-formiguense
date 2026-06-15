@@ -77,6 +77,7 @@ const PAGE_MODULE_MAPPING: Record<string, ModuleName> = {
   '/fechamento-caixa': 'financial',
   '/fechamento-caixa/consolidado': 'financial',
   '/conciliacao-bancaria': 'financial',
+  '/transferencias': 'financial',
   '/fluxo-projetado': 'financial',
   '/config-financeiro': 'financial',
   '/relatorios-financeiros': 'financial',
