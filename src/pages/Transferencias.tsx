@@ -217,7 +217,7 @@ export default function Transferencias() {
     setIsModalOpen(false);
     resetForm();
     void loadTransfers();
-    console.log('transfer created', data);
+    void data;
   };
 
   const orgAccounts = useMemo(
