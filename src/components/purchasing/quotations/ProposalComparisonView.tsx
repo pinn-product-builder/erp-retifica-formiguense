@@ -56,6 +56,19 @@ function ItemComparisonTable({
   const fmtCurrency = (v: number) =>
     v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+  // Realce de coluna: a melhor cotação (menor preço) fica destacada em verde
+  // em toda a coluna; a proposta selecionada mantém um verde mais suave.
+  const cellBg = (p: ProposalRow) =>
+    p.is_best_price ? 'bg-green-50 dark:bg-green-950/25'
+    : p.is_selected ? 'bg-green-50/50 dark:bg-green-950/10'
+    : '';
+
+  const headBg = (p: ProposalRow) =>
+    p.is_best_price ? 'bg-green-100 dark:bg-green-950/40 ring-2 ring-inset ring-green-500'
+    : p.is_selected ? 'bg-green-50 dark:bg-green-950/20'
+    : recommended?.proposal_id === p.proposal_id ? 'bg-amber-50/60 dark:bg-amber-950/10'
+    : '';
+
   return (
     <div className="border rounded-lg overflow-hidden">
       {/* Cabeçalho do item */}
@@ -82,11 +95,14 @@ function ItemComparisonTable({
                 </th>
                 {proposals.map(p => (
                   <th key={p.proposal_id}
-                    className={`text-center px-3 py-2 font-medium min-w-[9rem]
-                      ${p.is_selected ? 'bg-green-50 dark:bg-green-950/20' :
-                        recommended?.proposal_id === p.proposal_id ? 'bg-amber-50/60 dark:bg-amber-950/10' : ''}`}>
+                    className={`text-center px-3 py-2 font-medium min-w-[9rem] ${headBg(p)}`}>
                     <div className="flex flex-col items-center gap-1">
-                      <span className="truncate max-w-[8rem]">{p.supplier_name}</span>
+                      {p.is_best_price && (
+                        <Badge className="text-[10px] bg-green-600 text-white border-green-700 gap-0.5 mb-0.5">
+                          <Trophy className="w-2.5 h-2.5" />Melhor cotação
+                        </Badge>
+                      )}
+                      <span className={`truncate max-w-[8rem] ${p.is_best_price ? 'text-green-800 dark:text-green-300 font-semibold' : ''}`}>{p.supplier_name}</span>
                       {p.supplier_rating != null && (
                         <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
                           <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
@@ -106,8 +122,8 @@ function ItemComparisonTable({
                 {proposals.map(p => (
                   <td key={p.proposal_id}
                     className={`text-center px-3 py-2 whitespace-nowrap font-semibold
-                      ${p.is_selected ? 'bg-green-50/50 dark:bg-green-950/10' : ''}
-                      ${p.is_best_price ? 'text-green-700' : ''}`}>
+                      ${cellBg(p)}
+                      ${p.is_best_price ? 'text-green-700 dark:text-green-400 text-sm' : ''}`}>
                     {fmtCurrency(p.unit_price)}
                   </td>
                 ))}
@@ -117,8 +133,7 @@ function ItemComparisonTable({
                 <td className="px-3 py-2 font-medium text-muted-foreground">Total</td>
                 {proposals.map(p => (
                   <td key={p.proposal_id}
-                    className={`text-center px-3 py-2 whitespace-nowrap
-                      ${p.is_selected ? 'bg-green-50/50 dark:bg-green-950/10' : ''}`}>
+                    className={`text-center px-3 py-2 whitespace-nowrap ${cellBg(p)}`}>
                     {fmtCurrency(p.total_price)}
                   </td>
                 ))}
@@ -129,7 +144,7 @@ function ItemComparisonTable({
                 {proposals.map(p => (
                   <td key={p.proposal_id}
                     className={`text-center px-3 py-2 whitespace-nowrap
-                      ${p.is_selected ? 'bg-green-50/50 dark:bg-green-950/10' : ''}
+                      ${cellBg(p)}
                       ${p.is_best_lead_time ? 'text-blue-700 font-semibold' : ''}`}>
                     {p.lead_time_days}d
                   </td>
@@ -140,7 +155,7 @@ function ItemComparisonTable({
                 <td className="px-3 py-2 font-medium text-muted-foreground">Pagamento</td>
                 {proposals.map(p => (
                   <td key={p.proposal_id}
-                    className={`text-center px-3 py-2 ${p.is_selected ? 'bg-green-50/50 dark:bg-green-950/10' : ''}`}>
+                    className={`text-center px-3 py-2 ${cellBg(p)}`}>
                     {p.payment_terms ?? '—'}
                   </td>
                 ))}
@@ -158,7 +173,7 @@ function ItemComparisonTable({
                 {proposals.map((p, idx) => (
                   <td key={p.proposal_id}
                     className={`text-center px-3 py-2 font-bold
-                      ${p.is_selected ? 'bg-green-50/50 dark:bg-green-950/10' : ''}
+                      ${cellBg(p)}
                       ${idx === 0 ? 'text-amber-600' : ''}`}>
                     <span className="flex items-center justify-center gap-1">
                       {idx === 0 && <Trophy className="w-3 h-3 text-amber-500" />}
@@ -172,7 +187,7 @@ function ItemComparisonTable({
                 <td className="px-3 py-2 text-muted-foreground font-medium">Decisão</td>
                 {proposals.map(p => (
                   <td key={p.proposal_id}
-                    className={`text-center px-3 py-2 ${p.is_selected ? 'bg-green-50 dark:bg-green-950/20' : ''}`}>
+                    className={`text-center px-3 py-2 ${cellBg(p)}`}>
                     {p.is_selected ? (
                       <span className="flex items-center justify-center gap-1 text-green-700 font-medium">
                         <CheckCircle2 className="w-4 h-4" />Selecionada

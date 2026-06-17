@@ -97,7 +97,9 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
   const [selectedEngineTypeId, setSelectedEngineTypeId] = useState<string | undefined>(undefined);
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [savingEngine, setSavingEngine] = useState(false);
-  const { fetchOrderDetails, markOrderAsDelivered, updateOrderCustomerData, updateOrderEngineType } = useOrders();
+  const [observations, setObservations] = useState('');
+  const [savingObs, setSavingObs] = useState(false);
+  const { fetchOrderDetails, markOrderAsDelivered, updateOrderCustomerData, updateOrderEngineType, updateOrder } = useOrders();
   const { printOrder } = usePrintOrder();
   const { toast } = useToast();
   const permissions = usePermissions();
@@ -127,6 +129,10 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
       setSelectedEngineTypeId(order.engine.engine_type_id || undefined);
     }
   }, [order?.customer, order?.engine]);
+
+  useEffect(() => {
+    setObservations(order?.observations || '');
+  }, [order?.id, order?.observations]);
 
   const refreshOrderDetails = useCallback(async () => {
     const updated = await fetchOrderDetails(orderId);
@@ -175,6 +181,18 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
       setCustomerDialogOpen(false);
     }
   };
+
+  const handleSaveObservations = async () => {
+    if (!order) return;
+    setSavingObs(true);
+    const success = await updateOrder(order.id, { observations: observations.trim() || null });
+    setSavingObs(false);
+    if (success) {
+      await refreshOrderDetails();
+    }
+  };
+
+  const observationsDirty = (order?.observations || '') !== observations;
 
   const handleSaveEngineType = async () => {
     if (!order?.engine?.id || !selectedEngineTypeId) {
@@ -446,6 +464,39 @@ export function OrderDetails({ orderId, onBack, onEdit }: OrderDetailsProps) {
               </CardContent>
             </Card>
           </div>
+
+          {/* Observações da OS */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Observações
+              </CardTitle>
+              {observationsDirty && (
+                <Button
+                  size="sm"
+                  onClick={handleSaveObservations}
+                  disabled={savingObs}
+                >
+                  {savingObs ? 'Salvando...' : 'Salvar'}
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={observations}
+                onChange={(e) => setObservations(e.target.value)}
+                placeholder="Anote aqui qualquer informação relevante sobre esta OS — combinações com o cliente, detalhes do serviço, pendências, etc."
+                rows={5}
+                className="resize-y"
+              />
+              {observationsDirty && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Alterações não salvas. Clique em "Salvar" para registrar.
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="timeline">

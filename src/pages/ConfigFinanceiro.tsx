@@ -38,6 +38,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { ChartOfAccountsTab } from '@/components/financial/ChartOfAccountsTab';
 
 type BankAccountRow = Database['public']['Tables']['bank_accounts']['Row'];
 type TierRow = Database['public']['Tables']['approval_tiers_ap']['Row'];
@@ -474,7 +475,10 @@ export default function ConfigFinanceiro() {
         </div>
 
         <Tabs defaultValue="categories" className="w-full">
-          <TabsList className="flex w-full overflow-x-auto justify-start lg:grid lg:grid-cols-6 h-auto p-1 gap-1">
+          <TabsList className="flex w-full overflow-x-auto justify-start lg:grid lg:grid-cols-7 h-auto p-1 gap-1">
+            <TabsTrigger value="chart" className="text-xs sm:text-sm flex-shrink-0">
+              Plano de Contas
+            </TabsTrigger>
             <TabsTrigger value="categories" className="text-xs sm:text-sm flex-shrink-0">
               Categorias
             </TabsTrigger>
@@ -494,6 +498,10 @@ export default function ConfigFinanceiro() {
               Alçadas AP
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="chart" className="mt-4">
+            <ChartOfAccountsTab />
+          </TabsContent>
 
           <TabsContent value="categories" className="mt-4">
             <Card>

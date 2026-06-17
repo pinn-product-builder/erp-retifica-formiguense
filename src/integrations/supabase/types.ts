@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      chart_of_accounts: {
+        Row: {
+          id: string
+          org_id: string
+          conta_contabil: string
+          grupo: string | null
+          nivel: string | null
+          tipo: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          conta_contabil: string
+          grupo?: string | null
+          nivel?: string | null
+          tipo?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          conta_contabil?: string
+          grupo?: string | null
+          nivel?: string | null
+          tipo?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts_payable: {
         Row: {
           amount: number
@@ -5456,6 +5500,7 @@ export type Database = {
           final_observations: string | null
           id: string
           initial_observations: string | null
+          observations: string | null
           order_number: string
           org_id: string
           priority: number | null
@@ -5479,6 +5524,7 @@ export type Database = {
           final_observations?: string | null
           id?: string
           initial_observations?: string | null
+          observations?: string | null
           order_number: string
           org_id: string
           priority?: number | null
@@ -5502,6 +5548,7 @@ export type Database = {
           final_observations?: string | null
           id?: string
           initial_observations?: string | null
+          observations?: string | null
           order_number?: string
           org_id?: string
           priority?: number | null
@@ -8908,6 +8955,8 @@ export type Database = {
       supplier_contracts: {
         Row: {
           auto_renew: boolean
+          contract_file_name: string | null
+          contract_file_path: string | null
           contract_number: string
           created_at: string
           created_by: string | null
@@ -8928,6 +8977,8 @@ export type Database = {
         }
         Insert: {
           auto_renew?: boolean
+          contract_file_name?: string | null
+          contract_file_path?: string | null
           contract_number: string
           created_at?: string
           created_by?: string | null
@@ -8948,6 +8999,8 @@ export type Database = {
         }
         Update: {
           auto_renew?: boolean
+          contract_file_name?: string | null
+          contract_file_path?: string | null
           contract_number?: string
           created_at?: string
           created_by?: string | null

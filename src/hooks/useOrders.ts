@@ -56,6 +56,7 @@ export interface Order {
   collection_time?: string;
   collection_location?: string;
   driver_name?: string;
+  observations?: string | null;
   customer?: {
     id: string;
     name: string;

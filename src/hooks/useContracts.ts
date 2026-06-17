@@ -51,7 +51,11 @@ export function useContracts(opts: UseContractsOptions = {}) {
   }, [fetchContracts]);
 
   const createContract = async (
-    payload: ContractFormData & { items?: Array<{ part_code?: string; part_name: string; agreed_price: number; min_quantity?: number; max_quantity?: number }> },
+    payload: ContractFormData & {
+      items?: Array<{ part_code?: string; part_name: string; agreed_price: number; min_quantity?: number; max_quantity?: number }>;
+      contract_file_path?: string | null;
+      contract_file_name?: string | null;
+    },
   ): Promise<boolean> => {
     if (!currentOrganization?.id || !user?.id) return false;
     setIsSaving(true);
