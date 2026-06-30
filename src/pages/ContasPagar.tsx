@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useFinancial, AccountsPayable } from '@/hooks/useFinancial';
@@ -131,6 +132,7 @@ export default function ContasPagar() {
     cost_center_id: undefined,
     invoice_file_url: undefined,
     supplier_id: undefined,
+    freeze_competence: false,
   });
 
   useEffect(() => {
@@ -260,6 +262,7 @@ export default function ContasPagar() {
       cost_center_id: undefined,
       invoice_file_url: undefined,
       supplier_id: undefined,
+      freeze_competence: false,
     });
     setEditingPayable(null);
     setSupplierOpt(null);
@@ -372,6 +375,7 @@ export default function ContasPagar() {
       notes: (payable.notes as string) || '',
       cost_center_id: (payable.cost_center_id as string | null) ?? undefined,
       invoice_file_url: (payable.invoice_file_url as string) ?? undefined,
+      freeze_competence: Boolean((payable as { freeze_competence?: boolean }).freeze_competence),
     });
     setInvoiceFile(null);
     setIsModalOpen(true);
@@ -668,7 +672,20 @@ export default function ContasPagar() {
                     type="date"
                     min={!editingPayable ? todayMin : undefined}
                     value={formData.due_date}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, due_date: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => {
+                        const nextDue = e.target.value;
+                        const currentComp = (prev.competence_date as string) || '';
+                        const shouldFollow =
+                          !prev.freeze_competence &&
+                          (!currentComp || currentComp === (prev.due_date as string));
+                        return {
+                          ...prev,
+                          due_date: nextDue,
+                          competence_date: shouldFollow ? nextDue : currentComp,
+                        };
+                      })
+                    }
                     required
                   />
                 </div>
@@ -775,6 +792,25 @@ export default function ContasPagar() {
                         ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="flex items-start gap-2 rounded-md border p-3">
+                <Checkbox
+                  id="ap-freeze"
+                  checked={Boolean(formData.freeze_competence)}
+                  onCheckedChange={(v) =>
+                    setFormData((prev) => ({ ...prev, freeze_competence: v === true }))
+                  }
+                  className="mt-0.5"
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="ap-freeze" className="cursor-pointer">
+                    Manter competência fixa
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    Quando marcado, a competência não acompanha o vencimento se este for alterado.
+                  </p>
+                </div>
               </div>
 
               <div>

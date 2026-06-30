@@ -33,6 +33,8 @@ export const accountsReceivableCreateSchema = z
     installment_number: z.number().int().min(1).optional().nullable(),
     total_installments: z.number().int().min(1).optional().nullable(),
     cost_center_id: z.string().uuid().optional().nullable(),
+    expense_category_id: z.string().uuid().optional().nullable(),
+    freeze_competence: z.boolean().optional(),
     source: z.enum(['budget', 'order', 'manual']).optional().nullable(),
     source_id: z.string().uuid().optional().nullable(),
   })
@@ -80,6 +82,8 @@ export const accountsReceivableInstallmentsSchema = z
     source: z.enum(['budget', 'order', 'manual']).optional().nullable(),
     source_id: z.string().uuid().optional().nullable(),
     cost_center_id: z.string().uuid().optional().nullable(),
+    expense_category_id: z.string().uuid().optional().nullable(),
+    freeze_competence: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     const due = parseISODateLocal(data.first_due_date);
@@ -139,6 +143,7 @@ export const accountsPayableCreateSchema = z
     purchase_order_id: z.string().uuid().optional().nullable(),
     approval_status: z.string().optional(),
     invoice_file_url: z.string().optional().nullable(),
+    freeze_competence: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     const due = parseISODateLocal(data.due_date);

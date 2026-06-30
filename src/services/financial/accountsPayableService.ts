@@ -167,6 +167,7 @@ export class AccountsPayableService {
       approval_status: approvalStatus,
       status: 'pending',
       invoice_file_url: v.invoice_file_url?.trim() || null,
+      freeze_competence: v.freeze_competence ?? false,
     };
 
     const { data, error } = await supabase.from('accounts_payable').insert(row).select().single();

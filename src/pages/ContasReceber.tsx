@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -56,6 +57,7 @@ type ArRow = Database['public']['Tables']['accounts_receivable']['Row'];
 type CustomerRow = Database['public']['Tables']['customers']['Row'];
 type Pm = Database['public']['Enums']['payment_method'];
 type BankAccountRow = Database['public']['Tables']['bank_accounts']['Row'];
+type ExpenseCategoryOpt = { id: string; name: string };
 
 function CustomerArCombobox(props: FinancialAsyncComboboxProps<CustomerRow>) {
   return <FinancialAsyncCombobox {...props} />;
@@ -178,6 +180,8 @@ export default function ContasReceber() {
     notes: '',
     invoice_number: '',
     cost_center_id: '',
+    expense_category_id: '',
+    freeze_competence: false,
   });
 
   const [installForm, setInstallForm] = useState({
@@ -185,7 +189,11 @@ export default function ContasReceber() {
     installments: '2',
     first_due_date: '',
     competence_date: '',
+    expense_category_id: '',
+    freeze_competence: false,
   });
+
+  const [categoryOptions, setCategoryOptions] = useState<ExpenseCategoryOpt[]>([]);
 
   const [payForm, setPayForm] = useState({
     amount_received: '',
@@ -260,6 +268,18 @@ export default function ContasReceber() {
   useEffect(() => {
     if (!lookupOrgId) return;
     void FinancialConfigService.listPaymentMethodsForContext(lookupOrgId, 'receivable').then(setPmCatalog);
+  }, [lookupOrgId]);
+
+  useEffect(() => {
+    if (!lookupOrgId) {
+      setCategoryOptions([]);
+      return;
+    }
+    void FinancialConfigService.listExpenseCategories(lookupOrgId).then((cats) => {
+      setCategoryOptions(
+        (cats as { id: string; name: string }[]).map((c) => ({ id: c.id, name: c.name }))
+      );
+    });
   }, [lookupOrgId]);
 
   useEffect(() => {
@@ -362,6 +382,8 @@ export default function ContasReceber() {
       notes: (row.notes as string) || '',
       invoice_number: (row.invoice_number as string) || '',
       cost_center_id: (row.cost_center_id as string) || '',
+      expense_category_id: (row.expense_category_id as string) || '',
+      freeze_competence: Boolean((row as { freeze_competence?: boolean }).freeze_competence),
     });
     setDialogOpen(true);
   };
@@ -418,6 +440,8 @@ export default function ContasReceber() {
       notes: '',
       invoice_number: '',
       cost_center_id: '',
+      expense_category_id: '',
+      freeze_competence: false,
     });
     setDialogOpen(true);
   };
@@ -437,6 +461,8 @@ export default function ContasReceber() {
       installment_number: 1,
       total_installments: 1,
       cost_center_id: form.cost_center_id || null,
+      expense_category_id: form.expense_category_id || null,
+      freeze_competence: form.freeze_competence,
     };
     if (selectedRow) {
       await updateAccountsReceivable(
@@ -480,6 +506,8 @@ export default function ContasReceber() {
         payment_method: (form.payment_method || undefined) as Pm | undefined,
         notes: form.notes || null,
         cost_center_id: form.cost_center_id || null,
+        expense_category_id: installForm.expense_category_id || null,
+        freeze_competence: installForm.freeze_competence,
       },
       writeOrgId
     );
@@ -1144,7 +1172,18 @@ export default function ContasReceber() {
                   type="date"
                   min={isCreatingAr ? todayMin : undefined}
                   value={form.due_date}
-                  onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => {
+                      const nextDue = e.target.value;
+                      const shouldFollow =
+                        !f.freeze_competence && (!f.competence_date || f.competence_date === f.due_date);
+                      return {
+                        ...f,
+                        due_date: nextDue,
+                        competence_date: shouldFollow ? nextDue : f.competence_date,
+                      };
+                    })
+                  }
                   required
                 />
               </div>
@@ -1196,12 +1235,53 @@ export default function ContasReceber() {
                 />
               </div>
             </div>
-            <CostCenterSelect
-              orgId={lookupOrgId}
-              value={form.cost_center_id}
-              onValueChange={(id) => setForm((f) => ({ ...f, cost_center_id: id }))}
-              id="ar-cost-center"
-            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <CostCenterSelect
+                orgId={lookupOrgId}
+                value={form.cost_center_id}
+                onValueChange={(id) => setForm((f) => ({ ...f, cost_center_id: id }))}
+                id="ar-cost-center"
+              />
+              <div className="space-y-2">
+                <Label htmlFor="ar-category">Categoria (plano de contas)</Label>
+                <Select
+                  value={form.expense_category_id || '__none__'}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, expense_category_id: v === '__none__' ? '' : v }))
+                  }
+                >
+                  <SelectTrigger id="ar-category">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">—</SelectItem>
+                    {categoryOptions.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-start gap-2 rounded-md border p-3">
+              <Checkbox
+                id="ar-freeze"
+                checked={form.freeze_competence}
+                onCheckedChange={(v) =>
+                  setForm((f) => ({ ...f, freeze_competence: v === true }))
+                }
+                className="mt-0.5"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="ar-freeze" className="cursor-pointer">
+                  Manter competência fixa
+                </Label>
+                <p className="text-muted-foreground text-xs">
+                  Quando marcado, a competência não acompanha o vencimento se este for alterado.
+                </p>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="ar-notes">Observações</Label>
               <Textarea
@@ -1286,7 +1366,19 @@ export default function ContasReceber() {
                   type="date"
                   min={todayMin}
                   value={installForm.first_due_date}
-                  onChange={(e) => setInstallForm((f) => ({ ...f, first_due_date: e.target.value }))}
+                  onChange={(e) =>
+                    setInstallForm((f) => {
+                      const nextDue = e.target.value;
+                      const shouldFollow =
+                        !f.freeze_competence &&
+                        (!f.competence_date || f.competence_date === f.first_due_date);
+                      return {
+                        ...f,
+                        first_due_date: nextDue,
+                        competence_date: shouldFollow ? nextDue : f.competence_date,
+                      };
+                    })
+                  }
                   required
                 />
               </div>
@@ -1299,6 +1391,45 @@ export default function ContasReceber() {
                   value={installForm.competence_date}
                   onChange={(e) => setInstallForm((f) => ({ ...f, competence_date: e.target.value }))}
                 />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="inst-category">Categoria (plano de contas)</Label>
+              <Select
+                value={installForm.expense_category_id || '__none__'}
+                onValueChange={(v) =>
+                  setInstallForm((f) => ({ ...f, expense_category_id: v === '__none__' ? '' : v }))
+                }
+              >
+                <SelectTrigger id="inst-category">
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">—</SelectItem>
+                  {categoryOptions.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-start gap-2 rounded-md border p-3">
+              <Checkbox
+                id="inst-freeze"
+                checked={installForm.freeze_competence}
+                onCheckedChange={(v) =>
+                  setInstallForm((f) => ({ ...f, freeze_competence: v === true }))
+                }
+                className="mt-0.5"
+              />
+              <div className="space-y-1">
+                <Label htmlFor="inst-freeze" className="cursor-pointer">
+                  Manter competência fixa para todas as parcelas
+                </Label>
+                <p className="text-muted-foreground text-xs">
+                  Quando marcado, a competência não acompanha o 1º vencimento se este for alterado.
+                </p>
               </div>
             </div>
             <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">

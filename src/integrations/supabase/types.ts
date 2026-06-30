@@ -27,6 +27,7 @@ export type Database = {
           forecast_original_amount: number | null
           forecast_recurring_schedule_id: string | null
           forecast_resolved_at: string | null
+          freeze_competence: boolean
           id: string
           invoice_file_url: string | null
           invoice_number: string | null
@@ -54,6 +55,7 @@ export type Database = {
           forecast_original_amount?: number | null
           forecast_recurring_schedule_id?: string | null
           forecast_resolved_at?: string | null
+          freeze_competence?: boolean
           id?: string
           invoice_file_url?: string | null
           invoice_number?: string | null
@@ -81,6 +83,7 @@ export type Database = {
           forecast_original_amount?: number | null
           forecast_recurring_schedule_id?: string | null
           forecast_resolved_at?: string | null
+          freeze_competence?: boolean
           id?: string
           invoice_file_url?: string | null
           invoice_number?: string | null
@@ -197,6 +200,8 @@ export type Database = {
           customer_id: string
           discount: number | null
           due_date: string
+          expense_category_id: string | null
+          freeze_competence: boolean
           id: string
           installment_number: number | null
           invoice_number: string | null
@@ -230,6 +235,8 @@ export type Database = {
           customer_id: string
           discount?: number | null
           due_date: string
+          expense_category_id?: string | null
+          freeze_competence?: boolean
           id?: string
           installment_number?: number | null
           invoice_number?: string | null
@@ -263,6 +270,8 @@ export type Database = {
           customer_id?: string
           discount?: number | null
           due_date?: string
+          expense_category_id?: string | null
+          freeze_competence?: boolean
           id?: string
           installment_number?: number | null
           invoice_number?: string | null
@@ -299,6 +308,13 @@ export type Database = {
             columns: ["cost_center_id"]
             isOneToOne: false
             referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_expense_category_id_fkey"
+            columns: ["expense_category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
             referencedColumns: ["id"]
           },
           {
