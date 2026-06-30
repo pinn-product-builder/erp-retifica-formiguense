@@ -161,13 +161,15 @@ export default function ConciliacaoBancaria() {
       setCashFlows([]);
       return;
     }
-    const res = await CashFlowService.listPaginated([orgId], 1, 300, undefined, undefined, {
-      includeIntercompany: true,
-    });
-    const filtered = res.data.filter(
-      (r) => String(r.bank_account_id) === bankId && !r.reconciled
-    );
-    setCashFlows(filtered);
+    try {
+      const list = await CashFlowService.listPendingForBankAccount(orgId, bankId, {
+        includeIntercompany: true,
+      });
+      setCashFlows(list);
+    } catch (e) {
+      console.error('Erro ao carregar lançamentos da conta', e);
+      setCashFlows([]);
+    }
   }, [orgId, bankId]);
 
   useEffect(() => {

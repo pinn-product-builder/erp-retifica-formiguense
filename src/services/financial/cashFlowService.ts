@@ -68,12 +68,13 @@ export class CashFlowService {
         supabase.from('cash_flow').select('amount, transaction_type, reconciled'),
         'org_id',
         orgIds
-      ).order('transaction_date', { ascending: false });
+      );
       if (!includeIc) qb = qb.eq('is_intercompany', false);
       if (startDate) qb = qb.gte('transaction_date', startDate);
       if (endDate) qb = qb.lte('transaction_date', endDate);
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
+      const ordered = qb.order('transaction_date', { ascending: false });
       const { data, error } = await qb.range(from, to);
       if (error) throw new Error(error.message);
       const rows = (data ?? []) as {
@@ -113,14 +114,14 @@ export class CashFlowService {
         .from('cash_flow')
         .select('amount, transaction_type, reconciled')
         .eq('org_id', orgId)
-        .eq('bank_account_id', bankAccountId)
-        .order('transaction_date', { ascending: false });
+        .eq('bank_account_id', bankAccountId);
       if (!includeIc) qb = qb.eq('is_intercompany', false);
       if (startDate) qb = qb.gte('transaction_date', startDate);
       if (endDate) qb = qb.lte('transaction_date', endDate);
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
-      const { data, error } = await qb.range(from, to);
+      const ordered = qb.order('transaction_date', { ascending: false });
+      const { data, error } = await ordered.range(from, to);
       if (error) throw new Error(error.message);
       const rows = (data ?? []) as {
         amount: number;
@@ -156,11 +157,10 @@ export class CashFlowService {
         supabase.from('cash_flow').select('amount, transaction_type'),
         'org_id',
         orgIds
-      )
-        .lte('transaction_date', throughDateInclusive)
-        .order('transaction_date', { ascending: true });
+      ).lte('transaction_date', throughDateInclusive);
       if (!includeIc) qb = qb.eq('is_intercompany', false);
-      const { data, error } = await qb.range(from, to);
+      const ordered = qb.order('transaction_date', { ascending: true });
+      const { data, error } = await ordered.range(from, to);
       if (error) throw new Error(error.message);
       const rows = (data ?? []) as { amount: number; transaction_type: string }[];
       for (const r of rows) {
@@ -192,10 +192,10 @@ export class CashFlowService {
         .select('amount, transaction_type')
         .eq('org_id', orgId)
         .eq('bank_account_id', bankAccountId)
-        .lte('transaction_date', throughDateInclusive)
-        .order('transaction_date', { ascending: true });
+        .lte('transaction_date', throughDateInclusive);
       if (!includeIc) qb = qb.eq('is_intercompany', false);
-      const { data, error } = await qb.range(from, to);
+      const ordered = qb.order('transaction_date', { ascending: true });
+      const { data, error } = await ordered.range(from, to);
       if (error) throw new Error(error.message);
       const rows = (data ?? []) as { amount: number; transaction_type: string }[];
       for (const r of rows) {
@@ -240,6 +240,30 @@ export class CashFlowService {
     return n;
   }
 
+  /**
+   * Lista lançamentos PENDENTES de conciliação para uma conta bancária específica.
+   * Filtra no DB (não em JS) e não tem cap de paginação fixa — pra conciliação que
+   * precisa enxergar todos os não-conciliados.
+   */
+  static async listPendingForBankAccount(
+    orgId: string,
+    bankAccountId: string,
+    options?: CashFlowQueryOptions
+  ): Promise<(CfRow & Record<string, unknown>)[]> {
+    const includeIc = options?.includeIntercompany === true;
+    let q = supabase
+      .from('cash_flow')
+      .select('*, expense_categories (name), bank_accounts (*)')
+      .eq('org_id', orgId)
+      .eq('bank_account_id', bankAccountId)
+      .eq('reconciled', false);
+    if (!includeIc) q = q.eq('is_intercompany', false);
+    const ordered = q.order('transaction_date', { ascending: false });
+    const { data, error } = await ordered;
+    if (error) throw new Error(error.message);
+    return (data ?? []) as (CfRow & Record<string, unknown>)[];
+  }
+
   static async listPaginated(
     orgIds: string[],
     page: number,
@@ -263,15 +287,16 @@ export class CashFlowService {
         ),
       'org_id',
       orgIds
-    ).order('transaction_date', { ascending: false });
+    );
     if (!includeIc) q = q.eq('is_intercompany', false);
 
     if (startDate) q = q.gte('transaction_date', startDate);
     if (endDate) q = q.lte('transaction_date', endDate);
 
-    q = q.range(from, to);
+    const ordered = q.order('transaction_date', { ascending: false });
+    const ranged = ordered.range(from, to);
 
-    const { data, error, count } = await q;
+    const { data, error, count } = await ranged;
     if (error) throw new Error(error.message);
 
     const total = count ?? 0;
