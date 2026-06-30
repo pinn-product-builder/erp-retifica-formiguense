@@ -1,9 +1,11 @@
 import React from 'react';
-import { DialogContent, DialogContentProps } from '@/components/ui/dialog';
+import { DialogContent } from '@/components/ui/dialog';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { cn } from '@/lib/utils';
 
 export type ModalSize = 'sm' | 'default' | 'lg' | 'xl' | '2xl' | 'full';
+
+type DialogContentProps = React.ComponentPropsWithoutRef<typeof DialogContent>;
 
 export interface ResponsiveModalContentProps extends Omit<DialogContentProps, 'className'> {
   size?: ModalSize;

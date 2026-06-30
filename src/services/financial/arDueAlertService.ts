@@ -66,7 +66,7 @@ export class ArDueAlertService {
   }
 
   static async listWithDetails(orgId: string, limit = 50): Promise<ArDueAlertWithDetails[]> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('ar_due_alerts')
       .select(
         `
@@ -89,7 +89,7 @@ export class ArDueAlertService {
   }
 
   static async countActive(orgId: string): Promise<number> {
-    const { count, error } = await supabase
+    const { count, error } = await (supabase as any)
       .from('ar_due_alerts')
       .select('id', { count: 'exact', head: true })
       .eq('org_id', orgId)
@@ -99,7 +99,7 @@ export class ArDueAlertService {
   }
 
   static async markRead(orgId: string, id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('ar_due_alerts')
       .update({ is_read: true, status: 'read' })
       .eq('org_id', orgId)
@@ -108,7 +108,7 @@ export class ArDueAlertService {
   }
 
   static async markAllRead(orgId: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('ar_due_alerts')
       .update({ is_read: true, status: 'read' })
       .eq('org_id', orgId)
@@ -117,7 +117,7 @@ export class ArDueAlertService {
   }
 
   static async setInNegotiation(orgId: string, id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('ar_due_alerts')
       .update({ status: 'in_negotiation', is_read: false })
       .eq('org_id', orgId)

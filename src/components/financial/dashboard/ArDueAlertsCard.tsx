@@ -53,7 +53,8 @@ export function ArDueAlertsCard({ items, loading, onMarkRead, onNegotiate }: ArD
           <p className="text-sm text-muted-foreground py-2">Nenhum alerta ativo no momento.</p>
         ) : (
           <ul className="space-y-2 sm:space-y-3">
-            {items.map((row) => {
+            {items.map((rowRaw) => {
+              const row = rowRaw as any;
               const ar = row.accounts_receivable;
               const amt = ar?.amount ?? 0;
               const due = ar?.due_date;

@@ -271,7 +271,7 @@ export function useSupabase() {
             engine:engines(*)
           )
         `)
-        .eq('component', component)
+        .eq('component', component as any)
         .eq('order.org_id', currentOrganization.id)
         .order('updated_at', { ascending: false });
 

@@ -4,14 +4,15 @@ const EMPTY_ORG_SENTINEL = '00000000-0000-0000-0000-000000000001';
 /**
  * Restringe uma query Supabase por uma ou várias organizations (`eq` vs `in`).
  */
-export function applyOrgIdFilter<T extends { eq: (c: string, v: string) => T; in: (c: string, v: string[]) => T }>(
+export function applyOrgIdFilter<T = any>(
   query: T,
   column: string,
   orgIds: readonly string[]
 ): T {
-  if (orgIds.length === 0) return query.eq(column, EMPTY_ORG_SENTINEL);
-  if (orgIds.length === 1) return query.eq(column, orgIds[0]);
-  return query.in(column, [...orgIds]);
+  const q = query as any;
+  if (orgIds.length === 0) return q.eq(column, EMPTY_ORG_SENTINEL);
+  if (orgIds.length === 1) return q.eq(column, orgIds[0]);
+  return q.in(column, [...orgIds]);
 }
 
 /** Mutações financeiras exigem exatamente uma organization por lançamento. */

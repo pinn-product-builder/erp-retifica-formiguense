@@ -182,7 +182,7 @@ export function NotificationsPanel() {
                         <div
                           key={row.id}
                           className={`p-4 rounded-lg border-l-4 ${
-                            row.status === 'in_negotiation'
+                            (row as any).status === 'in_negotiation'
                               ? 'bg-amber-500/10 border-l-amber-500'
                               : 'bg-muted/50 border-l-muted-foreground/20'
                           }`}

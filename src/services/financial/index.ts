@@ -1,5 +1,6 @@
 export { AccountsReceivableService } from '@/services/financial/accountsReceivableService';
 export { AccountsPayableService } from '@/services/financial/accountsPayableService';
+export type { AccountsPayableListFilters } from '@/services/financial/accountsPayableService';
 export { ReceiptHistoryService } from '@/services/financial/receiptHistoryService';
 export type { ReceivableSettlementSnapshot } from '@/services/financial/receiptHistoryService';
 export { CashFlowService } from '@/services/financial/cashFlowService';

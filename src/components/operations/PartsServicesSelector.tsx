@@ -129,7 +129,7 @@ export function PartsServicesSelector({
             label: `${ts.service?.description || ''} - R$ ${effectiveValue.toFixed(2)}`
           };
         });
-      setFilteredServices(templateServices);
+      setFilteredServices(templateServices as any);
       return;
     }
 
