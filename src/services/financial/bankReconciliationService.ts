@@ -99,8 +99,16 @@ export class BankReconciliationService {
     cashFlowId: string;
     matchedAmount: number;
     userId: string | null;
+    chartOfAccountId?: string | null;
   }): Promise<{ error: Error | null }> {
-    const { reconciliationId, statementLineId, cashFlowId, matchedAmount, userId } = params;
+    const {
+      reconciliationId,
+      statementLineId,
+      cashFlowId,
+      matchedAmount,
+      userId,
+      chartOfAccountId,
+    } = params;
 
     const { error: iErr } = await supabase.from('bank_reconciliation_items').insert({
       reconciliation_id: reconciliationId,
@@ -116,7 +124,11 @@ export class BankReconciliationService {
     const { error: lErr } = await this.matchLineToCashFlow(statementLineId, cashFlowId);
     if (lErr) return { error: lErr };
 
-    const { error: cErr } = await supabase.from('cash_flow').update({ reconciled: true }).eq('id', cashFlowId);
+    const cfPatch: { reconciled: boolean; chart_of_account_id?: string | null } = {
+      reconciled: true,
+    };
+    if (chartOfAccountId !== undefined) cfPatch.chart_of_account_id = chartOfAccountId;
+    const { error: cErr } = await supabase.from('cash_flow').update(cfPatch).eq('id', cashFlowId);
     return { error: cErr ? new Error(cErr.message) : null };
   }
 

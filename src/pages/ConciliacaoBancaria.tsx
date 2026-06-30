@@ -32,6 +32,7 @@ import {
 } from '@/services/financial/reconciliationHintsService';
 import { ReconciliationReportService } from '@/services/financial/reconciliationReportService';
 import { CardMachineService } from '@/services/financial/cardMachineService';
+import { ChartOfAccountsService, type ChartAccountRow } from '@/services/financial/chartOfAccountsService';
 import type { Database } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 import { formatBRL, formatDateBR } from '@/lib/financialFormat';
@@ -92,6 +93,8 @@ export default function ConciliacaoBancaria() {
   const [activeReconciliationId, setActiveReconciliationId] = useState<string>('');
   const [closingId, setClosingId] = useState<string | null>(null);
   const [machineConfigs, setMachineConfigs] = useState<CardMachineRow[]>([]);
+  const [chartAccounts, setChartAccounts] = useState<ChartAccountRow[]>([]);
+  const [coaByLine, setCoaByLine] = useState<Record<string, string>>({});
 
   const loadReconciliations = useCallback(async () => {
     if (!orgId) return;
@@ -120,6 +123,19 @@ export default function ConciliacaoBancaria() {
     if (!orgId) return;
     const list = await CardMachineService.list(orgId);
     setMachineConfigs(list.filter((c) => c.is_active));
+  }, [orgId]);
+
+  const loadChartAccounts = useCallback(async () => {
+    if (!orgId) {
+      setChartAccounts([]);
+      return;
+    }
+    try {
+      const list = await ChartOfAccountsService.list(orgId);
+      setChartAccounts(list.filter((c) => c.is_active));
+    } catch {
+      setChartAccounts([]);
+    }
   }, [orgId]);
 
   const loadImports = useCallback(async () => {
@@ -159,7 +175,8 @@ export default function ConciliacaoBancaria() {
     void loadAccounts();
     void loadImports();
     void loadMachines();
-  }, [orgId, loadReconciliations, loadAccounts, loadImports, loadMachines]);
+    void loadChartAccounts();
+  }, [orgId, loadReconciliations, loadAccounts, loadImports, loadMachines, loadChartAccounts]);
 
   useEffect(() => {
     void loadLines(selectedImportId);
@@ -315,6 +332,7 @@ export default function ConciliacaoBancaria() {
       cashFlowId: cfId,
       matchedAmount: Number(ln.amount),
       userId: user?.id ?? null,
+      chartOfAccountId: coaByLine[lineId] || null,
     });
     if (error) toast.error(error.message);
     else {
@@ -322,6 +340,11 @@ export default function ConciliacaoBancaria() {
       void loadLines(selectedImportId);
       void loadCashFlowsForBank();
       setCfByLine((prev) => {
+        const next = { ...prev };
+        delete next[lineId];
+        return next;
+      });
+      setCoaByLine((prev) => {
         const next = { ...prev };
         delete next[lineId];
         return next;
@@ -535,6 +558,7 @@ export default function ConciliacaoBancaria() {
                       <TableHead className="text-right">Valor</TableHead>
                       <TableHead className="hidden md:table-cell">Descrição</TableHead>
                       <TableHead>Vínculo</TableHead>
+                      <TableHead>Plano de contas</TableHead>
                       <TableHead className="text-right">Ação</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -611,6 +635,36 @@ export default function ConciliacaoBancaria() {
                                     <span className="truncate">
                                       {formatDateBR(String(cf.transaction_date))}{' '}
                                       {formatBRL(Number(cf.amount))} {String(cf.description).slice(0, 24)}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs sm:text-sm">
+                          {!ln.matched_cash_flow_id && (
+                            <Select
+                              value={coaByLine[ln.id] ?? ''}
+                              onValueChange={(v) =>
+                                setCoaByLine((prev) => ({ ...prev, [ln.id]: v }))
+                              }
+                              disabled={chartAccounts.length === 0}
+                            >
+                              <SelectTrigger className="h-8 text-xs w-full min-w-[140px]">
+                                <SelectValue
+                                  placeholder={
+                                    chartAccounts.length === 0 ? 'Sem plano' : 'Plano de contas'
+                                  }
+                                />
+                              </SelectTrigger>
+                              <SelectContent className="z-[2000] max-h-60">
+                                {chartAccounts.map((coa) => (
+                                  <SelectItem key={coa.id} value={coa.id}>
+                                    <span className="truncate">
+                                      {coa.tipo ? `[${coa.tipo}] ` : ''}
+                                      {coa.conta_contabil}
+                                      {coa.grupo ? ` · ${coa.grupo}` : ''}
                                     </span>
                                   </SelectItem>
                                 ))}
