@@ -60,7 +60,7 @@ export class ReconciliationReportService {
     userId: string | null,
     snapshot: Record<string, unknown>
   ): Promise<string | null> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('bank_reconciliation_reports')
       .insert({
         org_id: orgId,

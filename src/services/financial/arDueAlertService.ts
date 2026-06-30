@@ -66,7 +66,7 @@ export class ArDueAlertService {
   }
 
   static async listWithDetails(orgId: string, limit = 50): Promise<ArDueAlertWithDetails[]> {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('ar_due_alerts')
       .select(
         `
