@@ -208,9 +208,9 @@ const Clientes = () => {
       };
       
       if (editingClient) {
-        await updateCustomer(editingClient.id, dataToSave);
+        await updateCustomer(editingClient.id, dataToSave as any);
       } else {
-        await createCustomer(dataToSave);
+        await createCustomer(dataToSave as any);
       }
       
       setIsDialogOpen(false);

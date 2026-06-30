@@ -21,7 +21,7 @@ const Funcionarios = () => {
   // Filtrar funcionários
   const funcionariosFiltrados = employees.filter(employee => {
     const matchesSearch = 
-      employee.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (employee as any).name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.position?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.department?.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -209,7 +209,7 @@ const Funcionarios = () => {
                   
                   return (
                     <TableRow key={employee.id}>
-                      <TableCell className="font-medium">{employee.name || 'Sem nome'}</TableCell>
+                      <TableCell className="font-medium">{(employee as any).name || 'Sem nome'}</TableCell>
                       <TableCell>{employee.position || '-'}</TableCell>
                       <TableCell>{employee.department || '-'}</TableCell>
                       <TableCell>

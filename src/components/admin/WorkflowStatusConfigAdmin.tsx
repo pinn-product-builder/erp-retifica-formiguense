@@ -52,7 +52,7 @@ export const WorkflowStatusConfigAdmin = () => {
   const { toast } = useToast();
   const { confirm } = useConfirmDialog();
   const { currentOrganization } = useOrganization();
-  const isFixedStatusKey = (statusKey: string) => FIXED_STATUS_SET.has(statusKey);
+  const isFixedStatusKey = (statusKey: string) => (FIXED_STATUS_SET as Set<string>).has(statusKey);
   
   const [editingStatus, setEditingStatus] = useState<WorkflowStatusConfig | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -913,7 +913,7 @@ Tem certeza que deseja continuar?`,
                               {entry.from_status} → {entry.to_status}
                             </Badge>
                             <span className="text-sm text-muted-foreground">
-                              {new Date(entry.created_at).toLocaleString()}
+                              {new Date((entry as any).created_at).toLocaleString()}
                             </span>
                           </div>
                         </div>

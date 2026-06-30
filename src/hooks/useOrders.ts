@@ -231,7 +231,7 @@ export function useOrders() {
 
       const { error } = await supabase
         .from('orders')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', orderId)
         .eq('org_id', currentOrganization.id);
 
