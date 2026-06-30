@@ -206,7 +206,7 @@ export const SupplierService = {
     if (error) throw error;
 
     return {
-      data: (data ?? []) as Supplier[],
+      data: (data ?? []) as unknown as Supplier[],
       count: count ?? 0,
       page,
       pageSize,
@@ -223,7 +223,7 @@ export const SupplierService = {
       .single();
 
     if (error) throw error;
-    return data as Supplier | null;
+    return data as unknown as Supplier | null;
   },
 
   async getAllActive(orgId: string): Promise<Supplier[]> {
@@ -306,7 +306,7 @@ export const SupplierService = {
       .single();
 
     if (error) throw error;
-    return data as Supplier;
+    return data as unknown as Supplier;
   },
 
   async updateSupplier(
@@ -355,7 +355,7 @@ export const SupplierService = {
       .single();
 
     if (error) throw error;
-    return data as Supplier;
+    return data as unknown as Supplier;
   },
 
   async toggleActive(id: string, orgId: string, isActive: boolean): Promise<void> {

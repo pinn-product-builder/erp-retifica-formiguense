@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +44,9 @@ import {
   Loader2,
   XCircle,
   Package,
+  Upload,
+  Sparkles,
+  Download,
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -66,6 +69,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useSuppliersList } from '@/hooks/useSuppliers';
+import { useOrganization } from '@/hooks/useOrganization';
+import { useToast } from '@/hooks/use-toast';
+import { ContractExtractionService } from '@/services/contractExtractionService';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -115,6 +121,87 @@ export default function Contratos() {
   });
   const [newFormItems, setNewFormItems] = useState<Array<{ part_code: string; part_name: string; agreed_price: string }>>([]);
 
+  // Upload + extração por IA do arquivo do contrato
+  const { currentOrganization } = useOrganization();
+  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [extracting, setExtracting] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<{ path: string; name: string } | null>(null);
+
+  const normalizeDigits = (v?: string | null) => (v || '').replace(/\D/g, '');
+
+  const resetNewForm = () => {
+    setNewForm({ supplier_id: '', start_date: '', end_date: '', payment_days: '30', discount_percentage: '', renewal_notice_days: '30', auto_renew: false, notes: '' });
+    setNewFormItems([]);
+    setUploadedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleContractFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentOrganization?.id) return;
+
+    setExtracting(true);
+    try {
+      // 1) Extrai os dados via IA e 2) sobe o arquivo em paralelo
+      const [extracted, uploaded] = await Promise.all([
+        ContractExtractionService.extract(file),
+        ContractExtractionService.upload(currentOrganization.id, file),
+      ]);
+
+      setUploadedFile(uploaded);
+
+      // Tenta casar o fornecedor extraído com um cadastrado (por CNPJ, senão por nome)
+      let matchedSupplierId = '';
+      const extractedCnpj = normalizeDigits(extracted.supplier_cnpj);
+      const extractedName = (extracted.supplier_name || '').trim().toLowerCase();
+      if (extractedCnpj || extractedName) {
+        const match = activeSuppliers.find((s) => {
+          const sCnpj = normalizeDigits((s as { cnpj?: string }).cnpj);
+          if (extractedCnpj && sCnpj && sCnpj === extractedCnpj) return true;
+          const sName = (s.name || '').trim().toLowerCase();
+          return extractedName && sName && (sName === extractedName || sName.includes(extractedName) || extractedName.includes(sName));
+        });
+        if (match) matchedSupplierId = match.id;
+      }
+
+      setNewForm((prev) => ({
+        ...prev,
+        supplier_id: matchedSupplierId || prev.supplier_id,
+        start_date: extracted.start_date || prev.start_date,
+        end_date: extracted.end_date || prev.end_date,
+        payment_days: extracted.payment_days != null ? String(extracted.payment_days) : prev.payment_days,
+        discount_percentage: extracted.discount_percentage != null ? String(extracted.discount_percentage) : prev.discount_percentage,
+        notes: extracted.notes || prev.notes,
+      }));
+
+      if (extracted.items?.length) {
+        setNewFormItems(
+          extracted.items.map((i) => ({
+            part_code: i.part_code || '',
+            part_name: i.part_name,
+            agreed_price: i.agreed_price != null ? String(i.agreed_price) : '',
+          })),
+        );
+      }
+
+      toast({
+        title: 'Contrato lido com sucesso',
+        description: matchedSupplierId
+          ? 'Campos pré-preenchidos. Revise antes de salvar.'
+          : `Campos pré-preenchidos. ${extracted.supplier_name ? `Selecione o fornecedor "${extracted.supplier_name}".` : 'Selecione o fornecedor.'}`,
+      });
+    } catch (err) {
+      toast({
+        title: 'Não foi possível ler o contrato',
+        description: err instanceof Error ? err.message : 'Tente novamente ou preencha manualmente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setExtracting(false);
+    }
+  };
+
   const handleCreateContract = async () => {
     if (!newForm.supplier_id || !newForm.start_date || !newForm.end_date) return;
     const itemsPayload = newFormItems
@@ -134,11 +221,12 @@ export default function Contratos() {
       auto_renew: newForm.auto_renew,
       notes: newForm.notes || null,
       items: itemsPayload,
+      contract_file_path: uploadedFile?.path ?? null,
+      contract_file_name: uploadedFile?.name ?? null,
     });
     if (ok) {
       setNewModalOpen(false);
-      setNewForm({ supplier_id: '', start_date: '', end_date: '', payment_days: '30', discount_percentage: '', renewal_notice_days: '30', auto_renew: false, notes: '' });
-      setNewFormItems([]);
+      resetNewForm();
     }
   };
 
@@ -171,6 +259,15 @@ export default function Contratos() {
   const handleView = (contract: ContractRow) => {
     setSelectedContract(contract);
     setDetailsOpen(true);
+  };
+
+  const handleDownloadContractFile = async (path: string) => {
+    const url = await ContractExtractionService.getSignedUrl(path);
+    if (url) {
+      window.open(url, '_blank');
+    } else {
+      toast({ title: 'Não foi possível abrir o arquivo do contrato', variant: 'destructive' });
+    }
   };
 
   const handleTabChange = (tab: string) => {
@@ -511,6 +608,18 @@ export default function Contratos() {
                 ))}
               </div>
 
+              {selectedContract.contract_file_path && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  onClick={() => handleDownloadContractFile(selectedContract.contract_file_path!)}
+                >
+                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                  Baixar contrato{selectedContract.contract_file_name ? ` (${selectedContract.contract_file_name})` : ''}
+                </Button>
+              )}
+
               {selectedContract.items.length > 0 && (
                 <div>
                   <p className="text-sm font-medium mb-2">Itens do Contrato</p>
@@ -589,12 +698,60 @@ export default function Contratos() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={newModalOpen} onOpenChange={setNewModalOpen}>
+      <Dialog open={newModalOpen} onOpenChange={(o) => { setNewModalOpen(o); if (!o) resetNewForm(); }}>
         <DialogContent className="max-w-[95vw] sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Contrato de Fornecimento</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {/* Subir contrato → IA pré-preenche os campos */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf,image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={handleContractFileSelected}
+            />
+            <div className="rounded-lg border border-dashed bg-muted/30 p-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-primary/10 p-2 shrink-0">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">Subir contrato (PDF ou imagem)</p>
+                  <p className="text-xs text-muted-foreground">
+                    A IA lê o documento e pré-preenche os campos abaixo. Revise antes de salvar.
+                  </p>
+                  {uploadedFile && !extracting && (
+                    <p className="text-xs text-green-700 mt-1 flex items-center gap-1 truncate">
+                      <CheckCircle className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{uploadedFile.name}</span>
+                    </p>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={extracting}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="shrink-0"
+                >
+                  {extracting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Lendo...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      {uploadedFile ? 'Trocar' : 'Enviar'}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Fornecedor</Label>
               <Select value={newForm.supplier_id} onValueChange={(v) => setNewForm({ ...newForm, supplier_id: v })}>

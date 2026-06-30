@@ -46,6 +46,8 @@ export interface ContractRow {
   maximum_order?: number | null;
   total_value: number;
   notes?: string | null;
+  contract_file_path?: string | null;
+  contract_file_name?: string | null;
   created_by?: string | null;
   created_at: string;
   updated_at: string;
@@ -103,7 +105,7 @@ export const ContractService = {
     let query = supabase
       .from('supplier_contracts')
       .select(
-        'id, org_id, contract_number, supplier_id, start_date, end_date, status, auto_renew, renewal_notice_days, payment_days, discount_percentage, minimum_order, maximum_order, total_value, notes, created_by, created_at, updated_at, supplier:suppliers(name, cnpj), items:supplier_contract_items(id, contract_id, part_code, part_name, agreed_price, min_quantity, max_quantity, created_at)',
+        'id, org_id, contract_number, supplier_id, start_date, end_date, status, auto_renew, renewal_notice_days, payment_days, discount_percentage, minimum_order, maximum_order, total_value, notes, contract_file_path, contract_file_name, created_by, created_at, updated_at, supplier:suppliers(name, cnpj), items:supplier_contract_items(id, contract_id, part_code, part_name, agreed_price, min_quantity, max_quantity, created_at)',
         { count: 'exact' },
       )
       .eq('org_id', orgId)
@@ -168,7 +170,11 @@ export const ContractService = {
   async create(
     orgId: string,
     userId: string,
-    payload: ContractFormData & { items?: Array<{ part_code?: string; part_name: string; agreed_price: number; min_quantity?: number; max_quantity?: number }> },
+    payload: ContractFormData & {
+      items?: Array<{ part_code?: string; part_name: string; agreed_price: number; min_quantity?: number; max_quantity?: number }>;
+      contract_file_path?: string | null;
+      contract_file_name?: string | null;
+    },
   ): Promise<ContractRow> {
     const contractNumber = await this.generateNumber(orgId);
 
@@ -187,6 +193,8 @@ export const ContractService = {
         minimum_order: payload.minimum_order ?? null,
         maximum_order: payload.maximum_order ?? null,
         notes: payload.notes ?? null,
+        contract_file_path: payload.contract_file_path ?? null,
+        contract_file_name: payload.contract_file_name ?? null,
         created_by: userId,
         status: 'draft',
       })
@@ -314,7 +322,7 @@ export const ContractService = {
     const { data, error } = await supabase
       .from('supplier_contracts')
       .select(
-        'id, org_id, contract_number, supplier_id, start_date, end_date, status, auto_renew, renewal_notice_days, payment_days, discount_percentage, minimum_order, maximum_order, total_value, notes, created_by, created_at, updated_at, supplier:suppliers(name, cnpj), items:supplier_contract_items(id, contract_id, part_code, part_name, agreed_price, min_quantity, max_quantity, created_at)',
+        'id, org_id, contract_number, supplier_id, start_date, end_date, status, auto_renew, renewal_notice_days, payment_days, discount_percentage, minimum_order, maximum_order, total_value, notes, contract_file_path, contract_file_name, created_by, created_at, updated_at, supplier:suppliers(name, cnpj), items:supplier_contract_items(id, contract_id, part_code, part_name, agreed_price, min_quantity, max_quantity, created_at)',
       )
       .eq('id', contractId)
       .single();

@@ -265,7 +265,7 @@ const Orcamentos = () => {
     const result = await reopenBudget(budget.id);
     if (result) {
       refetch();
-      setEditingBudget(result);
+      setEditingBudget(result as any);
       setIsFormOpen(true);
     }
   };

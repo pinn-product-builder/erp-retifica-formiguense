@@ -37,12 +37,12 @@ export class AccountsPayableService {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    let q = applyOrgIdFilter(
+    let q: any = applyOrgIdFilter(
       supabase
         .from('accounts_payable')
         .select(`*, expense_categories (name, category), suppliers:supplier_id (id, name, document)`, {
           count: 'exact',
-        }),
+        }) as any,
       'org_id',
       orgIds
     );

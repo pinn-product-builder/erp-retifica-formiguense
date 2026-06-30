@@ -56,6 +56,7 @@ export interface Order {
   collection_time?: string;
   collection_location?: string;
   driver_name?: string;
+  observations?: string | null;
   customer?: {
     id: string;
     name: string;
@@ -230,7 +231,7 @@ export function useOrders() {
 
       const { error } = await supabase
         .from('orders')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', orderId)
         .eq('org_id', currentOrganization.id);
 

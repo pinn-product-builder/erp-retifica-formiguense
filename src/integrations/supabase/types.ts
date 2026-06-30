@@ -14,6 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_transfers: {
+        Row: {
+          amount: number
+          cash_flow_in_id: string | null
+          cash_flow_out_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          from_bank_account_id: string
+          id: string
+          notes: string | null
+          org_id: string
+          to_bank_account_id: string
+          transfer_date: string
+        }
+        Insert: {
+          amount: number
+          cash_flow_in_id?: string | null
+          cash_flow_out_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          from_bank_account_id: string
+          id?: string
+          notes?: string | null
+          org_id: string
+          to_bank_account_id: string
+          transfer_date: string
+        }
+        Update: {
+          amount?: number
+          cash_flow_in_id?: string | null
+          cash_flow_out_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          from_bank_account_id?: string
+          id?: string
+          notes?: string | null
+          org_id?: string
+          to_bank_account_id?: string
+          transfer_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_transfers_cash_flow_in_id_fkey"
+            columns: ["cash_flow_in_id"]
+            isOneToOne: false
+            referencedRelation: "cash_flow"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_transfers_cash_flow_out_id_fkey"
+            columns: ["cash_flow_out_id"]
+            isOneToOne: false
+            referencedRelation: "cash_flow"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_transfers_from_bank_account_id_fkey"
+            columns: ["from_bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_transfers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_transfers_to_bank_account_id_fkey"
+            columns: ["to_bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts_payable: {
         Row: {
           amount: number
@@ -322,6 +403,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_expense_category_id_fkey"
+            columns: ["expense_category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
             referencedColumns: ["id"]
           },
           {
@@ -1154,7 +1242,7 @@ export type Database = {
           account_type: string | null
           agency: string | null
           balance: number | null
-          bank_name: string
+          bank_name: string | null
           created_at: string | null
           id: string
           is_active: boolean | null
@@ -1169,12 +1257,12 @@ export type Database = {
           account_type?: string | null
           agency?: string | null
           balance?: number | null
-          bank_name: string
+          bank_name?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
           kind?: string
-          name?: string
+          name: string
           org_id?: string | null
           owner_user_id?: string | null
           updated_at?: string | null
@@ -1184,7 +1272,7 @@ export type Database = {
           account_type?: string | null
           agency?: string | null
           balance?: number | null
-          bank_name?: string
+          bank_name?: string | null
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -1408,6 +1496,7 @@ export type Database = {
           bank_transaction_id: string | null
           created_at: string | null
           description: string | null
+          external_id: string | null
           id: string
           import_id: string
           import_status: string
@@ -1420,6 +1509,7 @@ export type Database = {
           bank_transaction_id?: string | null
           created_at?: string | null
           description?: string | null
+          external_id?: string | null
           id?: string
           import_id: string
           import_status?: string
@@ -1432,6 +1522,7 @@ export type Database = {
           bank_transaction_id?: string | null
           created_at?: string | null
           description?: string | null
+          external_id?: string | null
           id?: string
           import_id?: string
           import_status?: string
@@ -1797,66 +1888,6 @@ export type Database = {
           },
         ]
       }
-      cash_register_sessions: {
-        Row: {
-          bank_account_id: string
-          business_date: string
-          closed_at: string | null
-          created_at: string | null
-          id: string
-          notes: string | null
-          opening_balance: number
-          opened_at: string
-          org_id: string
-          status: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          bank_account_id: string
-          business_date: string
-          closed_at?: string | null
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          opening_balance?: number
-          opened_at?: string
-          org_id: string
-          status?: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          bank_account_id?: string
-          business_date?: string
-          closed_at?: string | null
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          opening_balance?: number
-          opened_at?: string
-          org_id?: string
-          status?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "cash_register_sessions_bank_account_id_fkey"
-            columns: ["bank_account_id"]
-            isOneToOne: false
-            referencedRelation: "bank_accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cash_register_sessions_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       cash_flow: {
         Row: {
           accounts_payable_id: string | null
@@ -2016,6 +2047,110 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "cash_flow_projection_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_register_sessions: {
+        Row: {
+          bank_account_id: string
+          business_date: string
+          closed_at: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          opened_at: string
+          opening_balance: number
+          org_id: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          bank_account_id: string
+          business_date: string
+          closed_at?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opening_balance?: number
+          org_id: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          bank_account_id?: string
+          business_date?: string
+          closed_at?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opening_balance?: number
+          org_id?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_register_sessions_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_sessions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chart_of_accounts: {
+        Row: {
+          conta_contabil: string
+          created_at: string
+          grupo: string | null
+          id: string
+          is_active: boolean
+          nivel: string | null
+          org_id: string
+          tipo: string | null
+          updated_at: string
+        }
+        Insert: {
+          conta_contabil: string
+          created_at?: string
+          grupo?: string | null
+          id?: string
+          is_active?: boolean
+          nivel?: string | null
+          org_id: string
+          tipo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          conta_contabil?: string
+          created_at?: string
+          grupo?: string | null
+          id?: string
+          is_active?: boolean
+          nivel?: string | null
+          org_id?: string
+          tipo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -5499,6 +5634,7 @@ export type Database = {
           final_observations: string | null
           id: string
           initial_observations: string | null
+          observations: string | null
           order_number: string
           org_id: string
           priority: number | null
@@ -5522,6 +5658,7 @@ export type Database = {
           final_observations?: string | null
           id?: string
           initial_observations?: string | null
+          observations?: string | null
           order_number: string
           org_id: string
           priority?: number | null
@@ -5545,6 +5682,7 @@ export type Database = {
           final_observations?: string | null
           id?: string
           initial_observations?: string | null
+          observations?: string | null
           order_number?: string
           org_id?: string
           priority?: number | null
@@ -5598,6 +5736,69 @@ export type Database = {
           last_seq?: number
           org_id?: string
           year_month?: string
+        }
+        Relationships: []
+      }
+      organization_group_members: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "organization_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_group_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_groups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          slug: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          slug?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          slug?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -5736,69 +5937,6 @@ export type Database = {
           name?: string
           settings?: Json | null
           slug?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      organization_group_members: {
-        Row: {
-          created_at: string
-          group_id: string
-          id: string
-          organization_id: string
-        }
-        Insert: {
-          created_at?: string
-          group_id: string
-          id?: string
-          organization_id: string
-        }
-        Update: {
-          created_at?: string
-          group_id?: string
-          id?: string
-          organization_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organization_group_members_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "organization_groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "organization_group_members_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: true
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      organization_groups: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: string
-          name: string
-          slug: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          name: string
-          slug?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          name?: string
-          slug?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -8961,6 +9099,8 @@ export type Database = {
       supplier_contracts: {
         Row: {
           auto_renew: boolean
+          contract_file_name: string | null
+          contract_file_path: string | null
           contract_number: string
           created_at: string
           created_by: string | null
@@ -8981,6 +9121,8 @@ export type Database = {
         }
         Insert: {
           auto_renew?: boolean
+          contract_file_name?: string | null
+          contract_file_path?: string | null
           contract_number: string
           created_at?: string
           created_by?: string | null
@@ -9001,6 +9143,8 @@ export type Database = {
         }
         Update: {
           auto_renew?: boolean
+          contract_file_name?: string | null
+          contract_file_path?: string | null
           contract_number?: string
           created_at?: string
           created_by?: string | null
@@ -12191,6 +12335,18 @@ export type Database = {
         Args: { p_org_id: string; p_user_id: string }
         Returns: number
       }
+      create_account_transfer: {
+        Args: {
+          p_amount: number
+          p_description: string
+          p_from_bank_account_id: string
+          p_notes?: string
+          p_org_id: string
+          p_to_bank_account_id: string
+          p_transfer_date: string
+        }
+        Returns: string
+      }
       create_approval_workflow: {
         Args: {
           p_approval_reason?: string
@@ -12309,7 +12465,6 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_org_member: { Args: { org_id: string }; Returns: boolean }
-      org_ids_in_same_group: { Args: { p_org_id: string }; Returns: string[] }
       is_super_admin: { Args: never; Returns: boolean }
       is_user_super_admin: { Args: { user_id: string }; Returns: boolean }
       mark_all_notifications_as_read: {
@@ -12328,6 +12483,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      org_ids_in_same_group: { Args: { p_org_id: string }; Returns: string[] }
       process_inventory_count_adjustments: {
         Args: { p_count_id: string }
         Returns: undefined
@@ -12512,6 +12668,7 @@ export type Database = {
         | "salary"
         | "equipment"
         | "maintenance"
+        | "transfer"
       filing_status: "rascunho" | "gerado" | "validado" | "enviado" | "erro"
       jurisdiction: "federal" | "estadual" | "municipal"
       operation_type: "venda" | "compra" | "prestacao_servico"
@@ -12798,6 +12955,7 @@ export const Constants = {
         "salary",
         "equipment",
         "maintenance",
+        "transfer",
       ],
       filing_status: ["rascunho", "gerado", "validado", "enviado", "erro"],
       jurisdiction: ["federal", "estadual", "municipal"],

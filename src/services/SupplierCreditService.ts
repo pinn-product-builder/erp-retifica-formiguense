@@ -15,7 +15,7 @@ export interface SupplierCredit {
   supplier?:        { name: string };
 }
 
-const db = () => supabase as unknown as { from: (t: string) => ReturnType<typeof supabase.from> };
+const db = () => supabase as any;
 
 export const SupplierCreditService = {
   async listByOrg(orgId: string): Promise<SupplierCredit[]> {

@@ -7,7 +7,7 @@ type MovementRow = Database['public']['Tables']['inventory_movements']['Row'];
 export type MovementType = 'entrada' | 'saida' | 'ajuste' | 'transferencia' | 'reserva' | 'baixa';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
-export interface InventoryMovement extends MovementRow {
+export interface InventoryMovement extends Omit<MovementRow, 'movement_type' | 'approval_status' | 'approved_by' | 'approved_at' | 'rejection_reason' | 'requires_approval'> {
   movement_type: MovementType;
   created_by_name?: string;
   approved_by_name?: string;
@@ -80,7 +80,7 @@ class StockMovementService {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    let query = (supabase as unknown as { from: (t: string) => ReturnType<typeof supabase.from> })
+    let query: any = (supabase as any)
       .from('inventory_movements_with_users')
       .select('*', { count: 'exact' })
       .eq('org_id', orgId)
@@ -157,7 +157,7 @@ class StockMovementService {
       avgCost = newQtyAfter > 0 ? (currentValue + incomingValue) / newQtyAfter : input.unit_cost;
     }
 
-    const { data: movement, error: movError } = await supabase
+    const { data: movement, error: movError } = await (supabase as any)
       .from('inventory_movements')
       .insert([
         {
@@ -174,7 +174,7 @@ class StockMovementService {
           metadata: input.metadata ?? null,
           org_id: orgId,
           created_by: userId,
-        } as unknown,
+        },
       ])
       .select()
       .single();

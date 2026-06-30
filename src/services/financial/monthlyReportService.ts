@@ -18,7 +18,7 @@ type ReportRow = Database['public']['Tables']['monthly_financial_reports']['Row'
 export class MonthlyReportService {
   static async buildPayload(orgId: string, month: number, year: number): Promise<MonthlyReportPayload> {
     const dre = await DreCategorizedService.computeMonth(orgId, year, month);
-    const ind = await AdvancedIndicatorsService.compute(orgId, year, month);
+    const ind = await AdvancedIndicatorsService.compute([orgId], year, month);
     const startM = `${year}-${String(month).padStart(2, '0')}-01`;
     const endM =
       month === 12

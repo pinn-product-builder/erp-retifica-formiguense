@@ -431,7 +431,7 @@ export class DiagnosticService {
       .from('diagnostic_checklist_responses')
       .select('id')
       .eq('order_id', params.orderId)
-      .eq('component', params.component)
+      .eq('component', params.component as any)
       .eq('org_id', params.orgId)
       .maybeSingle();
 
