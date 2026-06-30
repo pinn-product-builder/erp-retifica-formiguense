@@ -36,25 +36,32 @@ export default defineConfig(({ mode }) => ({
             return undefined;
           }
 
+          // Libs SEM dependência de React — chunks dedicados são seguros.
           if (id.includes('@supabase/')) return 'vendor-supabase';
-          if (id.includes('@tanstack/react-query')) return 'vendor-query';
-          if (id.includes('@mui/')) return 'vendor-mui';
-          if (id.includes('@emotion/')) return 'vendor-emotion';
-          if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
-          if (id.includes('framer-motion')) return 'vendor-motion';
-          if (id.includes('@radix-ui/')) return 'vendor-radix';
-          if (id.includes('@hello-pangea/dnd')) return 'vendor-dnd';
           if (id.includes('node_modules/zod/')) return 'vendor-zod';
           if (id.includes('date-fns') || id.includes('dayjs')) return 'vendor-date';
-          if (id.includes('lucide-react')) return 'vendor-icons';
-          if (id.includes('react-hook-form') || id.includes('@hookform/')) return 'vendor-forms';
-          if (id.includes('react-router')) return 'vendor-router';
+
+          // Tudo que importa React vai pro mesmo chunk dele —
+          // separar causa race condition em runtime (forwardRef undefined).
           if (
             id.includes('node_modules/react/') ||
             id.includes('node_modules/react-dom/') ||
-            id.includes('scheduler')
-          )
+            id.includes('scheduler') ||
+            id.includes('@radix-ui/') ||
+            id.includes('react-router') ||
+            id.includes('react-hook-form') ||
+            id.includes('@hookform/') ||
+            id.includes('framer-motion') ||
+            id.includes('recharts') ||
+            id.includes('d3-') ||
+            id.includes('lucide-react') ||
+            id.includes('@tanstack/react-query') ||
+            id.includes('@hello-pangea/dnd') ||
+            id.includes('@mui/') ||
+            id.includes('@emotion/')
+          ) {
             return 'vendor-react';
+          }
 
           return 'vendor-misc';
         },
