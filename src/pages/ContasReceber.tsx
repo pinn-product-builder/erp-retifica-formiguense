@@ -136,6 +136,9 @@ export default function ContasReceber() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dueFrom, setDueFrom] = useState('');
   const [dueTo, setDueTo] = useState('');
+  const [competenceFrom, setCompetenceFrom] = useState('');
+  const [competenceTo, setCompetenceTo] = useState('');
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('');
   const [dueAlertFilter, setDueAlertFilter] = useState(false);
   const [parcelAmountInput, setParcelAmountInput] = useState('');
   const [debouncedParcelAmount, setDebouncedParcelAmount] = useState('');
@@ -234,6 +237,9 @@ export default function ContasReceber() {
     const parsedAmount = parseMoneyBr(debouncedParcelAmount);
     if (parsedAmount != null) f.amountEquals = parsedAmount;
     if (debouncedCustomerSearch) f.customerText = debouncedCustomerSearch;
+    if (competenceFrom) f.competenceFrom = competenceFrom;
+    if (competenceTo) f.competenceTo = competenceTo;
+    if (expenseCategoryFilter) f.expenseCategoryId = expenseCategoryFilter;
     return f;
   }, [
     statusFilter,
@@ -245,6 +251,9 @@ export default function ContasReceber() {
     budgetFilterOpt,
     debouncedParcelAmount,
     debouncedCustomerSearch,
+    competenceFrom,
+    competenceTo,
+    expenseCategoryFilter,
   ]);
 
   useEffect(() => {
@@ -971,6 +980,43 @@ export default function ContasReceber() {
                 disabled={dueAlertFilter}
                 onChange={(e) => setDueTo(e.target.value)}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ar-comp-from">Competência de</Label>
+              <Input
+                id="ar-comp-from"
+                type="date"
+                value={competenceFrom}
+                onChange={(e) => setCompetenceFrom(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ar-comp-to">Competência até</Label>
+              <Input
+                id="ar-comp-to"
+                type="date"
+                value={competenceTo}
+                onChange={(e) => setCompetenceTo(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ar-cat-filter">Categoria (plano de contas)</Label>
+              <Select
+                value={expenseCategoryFilter || '__all__'}
+                onValueChange={(v) => setExpenseCategoryFilter(v === '__all__' ? '' : v)}
+              >
+                <SelectTrigger id="ar-cat-filter">
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Todas</SelectItem>
+                  {categoryOptions.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-end">
               <Button type="button" variant="outline" className="h-10 w-full" onClick={() => setPage(1)}>

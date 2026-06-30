@@ -124,6 +124,10 @@ export class AccountsReceivableService {
       if (filters.dueTo) q = q.lte('due_date', filters.dueTo);
     }
 
+    if (filters.competenceFrom) q = q.gte('competence_date', filters.competenceFrom);
+    if (filters.competenceTo) q = q.lte('competence_date', filters.competenceTo);
+    if (filters.expenseCategoryId) q = q.eq('expense_category_id', filters.expenseCategoryId);
+
     return q;
   }
 

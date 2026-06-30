@@ -51,7 +51,20 @@ export class FinancialConfigService {
       .eq('is_active', true)
       .order('name');
     if (error) throw new Error(error.message);
-    return (data as EcRow[]) ?? [];
+    const rows = (data as EcRow[]) ?? [];
+    // Dedup por nome (case-insensitive) — categoria do org sobrepõe a global de mesmo nome.
+    const byName = new Map<string, EcRow>();
+    for (const r of rows) {
+      const key = String(r.name ?? '').trim().toLowerCase();
+      if (!key) continue;
+      const existing = byName.get(key);
+      if (!existing || (existing.org_id == null && r.org_id != null)) {
+        byName.set(key, r);
+      }
+    }
+    return Array.from(byName.values()).sort((a, b) =>
+      String(a.name ?? '').localeCompare(String(b.name ?? ''))
+    );
   }
 
   static async createExpenseCategory(

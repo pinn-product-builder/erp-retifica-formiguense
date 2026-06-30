@@ -38,6 +38,11 @@ export interface AccountsReceivableListFilters {
   /** @deprecated preferir `customerText`; mantido para compatibilidade */
   search?: string;
   costCenterId?: string;
+  /** Faixa de data de competência (competence_date) */
+  competenceFrom?: string;
+  competenceTo?: string;
+  /** Filtro por categoria do plano de contas (expense_category_id) */
+  expenseCategoryId?: string;
 }
 
 export interface FinancialKpis {
