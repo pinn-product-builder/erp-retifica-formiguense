@@ -89,7 +89,7 @@ export class ArDueAlertService {
   }
 
   static async countActive(orgId: string): Promise<number> {
-    const { count, error } = await supabase
+    const { count, error } = await (supabase as any)
       .from('ar_due_alerts')
       .select('id', { count: 'exact', head: true })
       .eq('org_id', orgId)
