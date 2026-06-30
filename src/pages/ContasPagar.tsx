@@ -102,6 +102,9 @@ export default function ContasPagar() {
   const [summary, setSummary] = useState<AccountsPayableOrgSummary>(emptySummary);
   const [editingPayable, setEditingPayable] = useState<ApPayableRow | null>(null);
   const [dueAlertFilter, setDueAlertFilter] = useState(false);
+  const [competenceFrom, setCompetenceFrom] = useState('');
+  const [competenceTo, setCompetenceTo] = useState('');
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('');
   const [pmCatalog, setPmCatalog] = useState<PmCatalogRow[]>([]);
 
   const [supplierOpt, setSupplierOpt] = useState<SupplierRow | null>(null);
@@ -182,12 +185,26 @@ export default function ContasPagar() {
       const payablesRes = await getAccountsPayable(effectiveOrgIds, currentPage, ITEMS_PER_PAGE, {
         status: statusFilter,
         search: debouncedSearch || undefined,
+        competenceFrom: competenceFrom || undefined,
+        competenceTo: competenceTo || undefined,
+        expenseCategoryId: expenseCategoryFilter || undefined,
         ...(dueAlertFilter ? { dueOnDates: getDueAlertCalendarDates() } : {}),
       });
       setPayables(payablesRes.data as unknown as ApPayableRow[]);
       setListMeta({ count: payablesRes.count, totalPages: payablesRes.totalPages });
     })();
-  }, [effectiveOrgIds, currentPage, selectedTab, debouncedSearch, dueAlertFilter, getAccountsPayable, listVersion]);
+  }, [
+    effectiveOrgIds,
+    currentPage,
+    selectedTab,
+    debouncedSearch,
+    dueAlertFilter,
+    competenceFrom,
+    competenceTo,
+    expenseCategoryFilter,
+    getAccountsPayable,
+    listVersion,
+  ]);
 
   useEffect(() => {
     const q = isModalOpen ? supplierModalInput : '';
@@ -1001,8 +1018,8 @@ export default function ContasPagar() {
         </Card>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-4">
-        <div className="relative max-w-sm flex-1">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="relative">
           <Input
             placeholder="Buscar fornecedor ou descrição..."
             value={searchTerm}
@@ -1010,6 +1027,51 @@ export default function ContasPagar() {
             className="pl-9 text-sm"
           />
           <Filter className="absolute left-3 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground sm:h-4 sm:w-4" />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="ap-comp-from" className="text-xs">
+            Competência de
+          </Label>
+          <Input
+            id="ap-comp-from"
+            type="date"
+            value={competenceFrom}
+            onChange={(e) => setCompetenceFrom(e.target.value)}
+            className="h-9 text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="ap-comp-to" className="text-xs">
+            Competência até
+          </Label>
+          <Input
+            id="ap-comp-to"
+            type="date"
+            value={competenceTo}
+            onChange={(e) => setCompetenceTo(e.target.value)}
+            className="h-9 text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="ap-cat-filter" className="text-xs">
+            Categoria (plano de contas)
+          </Label>
+          <Select
+            value={expenseCategoryFilter || '__all__'}
+            onValueChange={(v) => setExpenseCategoryFilter(v === '__all__' ? '' : v)}
+          >
+            <SelectTrigger id="ap-cat-filter" className="h-9 text-sm">
+              <SelectValue placeholder="Todas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todas</SelectItem>
+              {(categories as { id: string; name: string }[]).map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

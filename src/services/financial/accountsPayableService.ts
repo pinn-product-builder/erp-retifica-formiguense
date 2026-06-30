@@ -17,6 +17,11 @@ export interface AccountsPayableListFilters {
   dueTo?: string;
   dueOnDates?: string[];
   search?: string;
+  /** Faixa de data de competência (competence_date) */
+  competenceFrom?: string;
+  competenceTo?: string;
+  /** Filtro por categoria do plano de contas (expense_category_id) */
+  expenseCategoryId?: string;
 }
 
 export interface AccountsPayableOrgSummary {
@@ -63,6 +68,10 @@ export class AccountsPayableService {
         q = q.or(`description.ilike.${wrapped},supplier_name.ilike.${wrapped}`);
       }
     }
+
+    if (filters.competenceFrom) q = q.gte('competence_date', filters.competenceFrom);
+    if (filters.competenceTo) q = q.lte('competence_date', filters.competenceTo);
+    if (filters.expenseCategoryId) q = q.eq('expense_category_id', filters.expenseCategoryId);
 
     q = q.order('due_date', { ascending: true }).range(from, to);
 
