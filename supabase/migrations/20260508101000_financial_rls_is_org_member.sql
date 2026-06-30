@@ -7,7 +7,10 @@ DROP POLICY IF EXISTS "Users can insert cash flow for their organization" ON pub
 DROP POLICY IF EXISTS "Users can update cash flow for their organization" ON public.cash_flow;
 DROP POLICY IF EXISTS "Users can delete cash flow for their organization" ON public.cash_flow;
 
+DROP POLICY IF EXISTS "org_member_all_cash_flow" ON public.cash_flow;
+
 CREATE POLICY "org_member_all_cash_flow"
+
   ON public.cash_flow
   FOR ALL
   TO authenticated
@@ -19,7 +22,10 @@ DROP POLICY IF EXISTS "Users can manage bank accounts for their organization" ON
 DROP POLICY IF EXISTS "Authenticated users can view bank accounts" ON public.bank_accounts;
 DROP POLICY IF EXISTS "Authenticated users can manage bank accounts" ON public.bank_accounts;
 
+DROP POLICY IF EXISTS "org_member_all_bank_accounts" ON public.bank_accounts;
+
 CREATE POLICY "org_member_all_bank_accounts"
+
   ON public.bank_accounts
   FOR ALL
   TO authenticated
@@ -31,7 +37,10 @@ DROP POLICY IF EXISTS "Users can manage accounts payable for their organization"
 DROP POLICY IF EXISTS "Authenticated users can view accounts payable" ON public.accounts_payable;
 DROP POLICY IF EXISTS "Authenticated users can manage accounts payable" ON public.accounts_payable;
 
+DROP POLICY IF EXISTS "org_member_all_accounts_payable" ON public.accounts_payable;
+
 CREATE POLICY "org_member_all_accounts_payable"
+
   ON public.accounts_payable
   FOR ALL
   TO authenticated
@@ -44,7 +53,10 @@ DROP POLICY IF EXISTS "Users can manage accounts receivable" ON public.accounts_
 DROP POLICY IF EXISTS "Authenticated users can view accounts receivable" ON public.accounts_receivable;
 DROP POLICY IF EXISTS "Authenticated users can manage accounts receivable" ON public.accounts_receivable;
 
+DROP POLICY IF EXISTS "org_member_all_accounts_receivable" ON public.accounts_receivable;
+
 CREATE POLICY "org_member_all_accounts_receivable"
+
   ON public.accounts_receivable
   FOR ALL
   TO authenticated
@@ -55,7 +67,10 @@ CREATE POLICY "org_member_all_accounts_receivable"
 DROP POLICY IF EXISTS "Authenticated users can view monthly DRE" ON public.monthly_dre;
 DROP POLICY IF EXISTS "Authenticated users can manage monthly DRE" ON public.monthly_dre;
 
+DROP POLICY IF EXISTS "org_member_all_monthly_dre" ON public.monthly_dre;
+
 CREATE POLICY "org_member_all_monthly_dre"
+
   ON public.monthly_dre
   FOR ALL
   TO authenticated
@@ -71,7 +86,10 @@ DROP POLICY IF EXISTS "Admins can manage expense categories for their organizati
 DROP POLICY IF EXISTS "Authenticated users can view expense categories" ON public.expense_categories;
 DROP POLICY IF EXISTS "Authenticated users can manage expense categories" ON public.expense_categories;
 
+DROP POLICY IF EXISTS "org_member_expense_categories_select" ON public.expense_categories;
+
 CREATE POLICY "org_member_expense_categories_select"
+
   ON public.expense_categories
   FOR SELECT
   TO authenticated
@@ -81,7 +99,10 @@ CREATE POLICY "org_member_expense_categories_select"
     OR public.is_org_member(org_id)
   );
 
+DROP POLICY IF EXISTS "org_member_expense_categories_insert" ON public.expense_categories;
+
 CREATE POLICY "org_member_expense_categories_insert"
+
   ON public.expense_categories
   FOR INSERT
   TO authenticated
@@ -90,7 +111,10 @@ CREATE POLICY "org_member_expense_categories_insert"
     OR (org_id IS NOT NULL AND public.is_org_member(org_id))
   );
 
+DROP POLICY IF EXISTS "org_member_expense_categories_update" ON public.expense_categories;
+
 CREATE POLICY "org_member_expense_categories_update"
+
   ON public.expense_categories
   FOR UPDATE
   TO authenticated
@@ -105,7 +129,10 @@ CREATE POLICY "org_member_expense_categories_update"
     OR (org_id IS NULL AND public.is_super_admin())
   );
 
+DROP POLICY IF EXISTS "org_member_expense_categories_delete" ON public.expense_categories;
+
 CREATE POLICY "org_member_expense_categories_delete"
+
   ON public.expense_categories
   FOR DELETE
   TO authenticated

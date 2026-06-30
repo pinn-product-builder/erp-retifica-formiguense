@@ -59,6 +59,7 @@ COMMENT ON TABLE public.account_transfers IS
 ALTER TABLE public.account_transfers ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "org_member_all_account_transfers" ON public.account_transfers;
+DROP POLICY IF EXISTS "org_member_all_account_transfers" ON public.account_transfers;
 CREATE POLICY "org_member_all_account_transfers"
   ON public.account_transfers
   FOR ALL

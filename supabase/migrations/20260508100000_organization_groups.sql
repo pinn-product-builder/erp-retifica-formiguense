@@ -26,6 +26,7 @@ CREATE INDEX IF NOT EXISTS idx_organization_group_members_group_id
 CREATE INDEX IF NOT EXISTS idx_organization_group_members_organization_id
   ON public.organization_group_members (organization_id);
 
+DROP TRIGGER IF EXISTS update_organization_groups_updated_at ON public.organization_groups;
 CREATE TRIGGER update_organization_groups_updated_at
   BEFORE UPDATE ON public.organization_groups
   FOR EACH ROW
@@ -35,6 +36,7 @@ ALTER TABLE public.organization_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.organization_group_members ENABLE ROW LEVEL SECURITY;
 
 -- Leitura: usuário vê grupo se for membro de alguma organization listada no grupo
+DROP POLICY IF EXISTS "org_group_select_if_member_of_child_org" ON public.organization_groups;
 CREATE POLICY "org_group_select_if_member_of_child_org"
   ON public.organization_groups
   FOR SELECT
@@ -50,26 +52,36 @@ CREATE POLICY "org_group_select_if_member_of_child_org"
   );
 
 -- Manutenção de grupos: super-admin ou admin/owner de alguma org (cadastro incremental)
+DROP POLICY IF EXISTS "org_group_insert_authenticated" ON public.organization_groups;
 CREATE POLICY "org_group_insert_authenticated"
   ON public.organization_groups
   FOR INSERT
   TO authenticated
   WITH CHECK (public.is_super_admin());
 
+DROP POLICY IF EXISTS "org_group_update_super" ON public.organization_groups;
+
 CREATE POLICY "org_group_update_super"
+
   ON public.organization_groups
   FOR UPDATE
   TO authenticated
   USING (public.is_super_admin())
   WITH CHECK (public.is_super_admin());
 
+DROP POLICY IF EXISTS "org_group_delete_super" ON public.organization_groups;
+
 CREATE POLICY "org_group_delete_super"
+
   ON public.organization_groups
   FOR DELETE
   TO authenticated
   USING (public.is_super_admin());
 
+DROP POLICY IF EXISTS "org_group_members_select_if_group_visible" ON public.organization_group_members;
+
 CREATE POLICY "org_group_members_select_if_group_visible"
+
   ON public.organization_group_members
   FOR SELECT
   TO authenticated
@@ -84,7 +96,10 @@ CREATE POLICY "org_group_members_select_if_group_visible"
     )
   );
 
+DROP POLICY IF EXISTS "org_group_members_insert_admin" ON public.organization_group_members;
+
 CREATE POLICY "org_group_members_insert_admin"
+
   ON public.organization_group_members
   FOR INSERT
   TO authenticated
@@ -96,7 +111,10 @@ CREATE POLICY "org_group_members_insert_admin"
     )
   );
 
+DROP POLICY IF EXISTS "org_group_members_delete_admin" ON public.organization_group_members;
+
 CREATE POLICY "org_group_members_delete_admin"
+
   ON public.organization_group_members
   FOR DELETE
   TO authenticated

@@ -16,12 +16,14 @@ CREATE TABLE IF NOT EXISTS public.cash_flow_projection_config (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS update_cash_flow_projection_config_updated_at ON public.cash_flow_projection_config;
 CREATE TRIGGER update_cash_flow_projection_config_updated_at
 BEFORE UPDATE ON public.cash_flow_projection_config
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 ALTER TABLE public.cash_flow_projection_config ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "cfpc_org_access" ON public.cash_flow_projection_config;
 DROP POLICY IF EXISTS "cfpc_org_access" ON public.cash_flow_projection_config;
 CREATE POLICY "cfpc_org_access"
   ON public.cash_flow_projection_config FOR ALL TO authenticated

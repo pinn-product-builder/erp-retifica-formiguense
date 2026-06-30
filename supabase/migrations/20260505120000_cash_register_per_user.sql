@@ -100,6 +100,7 @@ WHERE opening_balance IS NULL OR status IS NULL;
 ALTER TABLE public.cash_closings ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "cash_closings_authenticated" ON public.cash_closings;
+DROP POLICY IF EXISTS "cash_closings_authenticated" ON public.cash_closings;
 CREATE POLICY "cash_closings_authenticated"
   ON public.cash_closings FOR ALL TO authenticated
   USING (true)
@@ -125,6 +126,9 @@ ALTER TABLE public.cash_closings
 
 ALTER TABLE public.cash_closings
   DROP CONSTRAINT IF EXISTS cash_closings_org_id_closing_date_key;
+
+ALTER TABLE public.cash_closings
+  DROP CONSTRAINT IF EXISTS cash_closings_org_date_bank_account_key;
 
 ALTER TABLE public.cash_closings
   ADD CONSTRAINT cash_closings_org_date_bank_account_key UNIQUE (org_id, closing_date, bank_account_id);
@@ -156,6 +160,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_cash_register_sessions_one_open_per_user
 CREATE INDEX IF NOT EXISTS idx_cash_register_sessions_org_date ON public.cash_register_sessions (org_id, business_date);
 CREATE INDEX IF NOT EXISTS idx_cash_register_sessions_account ON public.cash_register_sessions (bank_account_id);
 
+DROP TRIGGER IF EXISTS update_cash_register_sessions_updated_at ON public.cash_register_sessions;
 CREATE TRIGGER update_cash_register_sessions_updated_at
   BEFORE UPDATE ON public.cash_register_sessions
   FOR EACH ROW
@@ -163,6 +168,7 @@ CREATE TRIGGER update_cash_register_sessions_updated_at
 
 ALTER TABLE public.cash_register_sessions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "org_member_all_cash_register_sessions" ON public.cash_register_sessions;
 DROP POLICY IF EXISTS "org_member_all_cash_register_sessions" ON public.cash_register_sessions;
 CREATE POLICY "org_member_all_cash_register_sessions"
   ON public.cash_register_sessions FOR ALL TO authenticated

@@ -24,12 +24,14 @@ CREATE TABLE IF NOT EXISTS public.workshop_parts_change_rules (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS update_workshop_parts_change_rules_updated_at ON public.workshop_parts_change_rules;
 CREATE TRIGGER update_workshop_parts_change_rules_updated_at
 BEFORE UPDATE ON public.workshop_parts_change_rules
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 ALTER TABLE public.workshop_parts_change_rules ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "wpcr_org_access" ON public.workshop_parts_change_rules;
 DROP POLICY IF EXISTS "wpcr_org_access" ON public.workshop_parts_change_rules;
 CREATE POLICY "wpcr_org_access"
   ON public.workshop_parts_change_rules FOR ALL TO authenticated

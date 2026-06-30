@@ -54,10 +54,12 @@ CREATE INDEX IF NOT EXISTS idx_ar_collection_rule_steps_org_id
 -- =====================================================
 -- Triggers para updated_at
 -- =====================================================
+DROP TRIGGER IF EXISTS update_ar_collection_rules_updated_at ON public.ar_collection_rules;
 CREATE TRIGGER update_ar_collection_rules_updated_at
 BEFORE UPDATE ON public.ar_collection_rules
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_ar_collection_rule_steps_updated_at ON public.ar_collection_rule_steps;
 CREATE TRIGGER update_ar_collection_rule_steps_updated_at
 BEFORE UPDATE ON public.ar_collection_rule_steps
 FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
@@ -69,11 +71,13 @@ ALTER TABLE public.ar_collection_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ar_collection_rule_steps ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "ar_collection_rules_org_access" ON public.ar_collection_rules;
+DROP POLICY IF EXISTS "ar_collection_rules_org_access" ON public.ar_collection_rules;
 CREATE POLICY "ar_collection_rules_org_access"
   ON public.ar_collection_rules FOR ALL TO authenticated
   USING (public.is_super_admin() OR public.is_org_member(org_id))
   WITH CHECK (public.is_super_admin() OR public.is_org_member(org_id));
 
+DROP POLICY IF EXISTS "ar_collection_rule_steps_org_access" ON public.ar_collection_rule_steps;
 DROP POLICY IF EXISTS "ar_collection_rule_steps_org_access" ON public.ar_collection_rule_steps;
 CREATE POLICY "ar_collection_rule_steps_org_access"
   ON public.ar_collection_rule_steps FOR ALL TO authenticated
