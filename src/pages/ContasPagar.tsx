@@ -119,6 +119,11 @@ export default function ContasPagar() {
     setForecastDialogOpen(true);
   };
 
+  const [tipoLancamento, setTipoLancamento] = useState<'avista' | 'parcelado' | 'recorrente'>(
+    'avista'
+  );
+  const [installmentsCount, setInstallmentsCount] = useState('2');
+
   const [formData, setFormData] = useState<Partial<AccountsPayable>>({
     supplier_name: '',
     description: '',
@@ -268,6 +273,8 @@ export default function ContasPagar() {
     setSupplierOpt(null);
     setSupplierModalInput('');
     setInvoiceFile(null);
+    setTipoLancamento('avista');
+    setInstallmentsCount('2');
   };
 
   const handleModalChange = (open: boolean) => {
@@ -313,28 +320,70 @@ export default function ContasPagar() {
       const supplierDocument = supplierOpt?.document ?? formData.supplier_document ?? null;
       const supplierId = supplierOpt?.id ?? (formData.supplier_id as string | undefined) ?? null;
 
-      const payload: AccountsPayable = {
+      const isRecorrente = !editingPayable && tipoLancamento === 'recorrente';
+      const isParcelado = !editingPayable && tipoLancamento === 'parcelado';
+
+      const basePayload: AccountsPayable = {
         ...formData,
         supplier_id: supplierId,
         supplier_name: supplierName,
         supplier_document: supplierDocument,
         competence_date: (formData.competence_date as string) || (formData.due_date as string),
         invoice_file_url: invoicePath,
+        freeze_competence: isRecorrente
+          ? true
+          : (formData.freeze_competence as boolean | undefined) ?? false,
       } as AccountsPayable;
 
       if (editingPayable) {
         const updated = await updateAccountsPayable(
           editingPayable.id as string,
-          payload,
+          basePayload,
           (editingPayable.org_id as string) || undefined
         );
         if (!updated) return;
+      } else if (isParcelado) {
+        if (!writeOrgId) {
+          toast.error('Selecione uma empresa única para parcelar.');
+          return;
+        }
+        const n = Math.max(2, Math.min(120, Number(installmentsCount) || 2));
+        const total = Number(formData.amount) || 0;
+        const each = Math.round((total / n) * 100) / 100;
+        // Última parcela ajusta diferença de centavos.
+        const last = Math.round((total - each * (n - 1)) * 100) / 100;
+        const baseDue = String(formData.due_date);
+        const baseComp = String(basePayload.competence_date);
+        const stepMonth = (iso: string, addMonths: number): string => {
+          const [y, m, d] = iso.split('-').map(Number);
+          const dt = new Date(Date.UTC(y, m - 1 + addMonths, d));
+          return dt.toISOString().slice(0, 10);
+        };
+        for (let i = 0; i < n; i++) {
+          const amount = i === n - 1 ? last : each;
+          const due = stepMonth(baseDue, i);
+          const comp = basePayload.freeze_competence ? baseComp : stepMonth(baseComp, i);
+          const desc = `${formData.description ?? ''} (${i + 1}/${n})`;
+          const partPayload: AccountsPayable = {
+            ...basePayload,
+            amount,
+            due_date: due,
+            competence_date: comp,
+            description: desc,
+          } as AccountsPayable;
+          const created = await createAccountsPayable(partPayload, writeOrgId);
+          if (!created) {
+            toast.error(`Falha ao criar parcela ${i + 1}`);
+            return;
+          }
+        }
+        toast.success(`${n} parcelas criadas`);
       } else {
         if (!writeOrgId) {
           toast.error('Selecione uma empresa única para lançar.');
           return;
         }
-        const created = await createAccountsPayable(payload, writeOrgId);
+        const created = await createAccountsPayable(basePayload, writeOrgId);
         if (!created) return;
       }
 
@@ -652,6 +701,56 @@ export default function ContasPagar() {
                   required
                 />
               </div>
+
+              {!editingPayable && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="ap-tipo">Tipo de lançamento</Label>
+                    <Select
+                      value={tipoLancamento}
+                      onValueChange={(v) => {
+                        const next = v as 'avista' | 'parcelado' | 'recorrente';
+                        setTipoLancamento(next);
+                        if (next === 'recorrente') {
+                          setFormData((prev) => ({ ...prev, freeze_competence: true }));
+                        }
+                      }}
+                    >
+                      <SelectTrigger id="ap-tipo">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="avista">À vista (1x)</SelectItem>
+                        <SelectItem value="parcelado">Parcelado</SelectItem>
+                        <SelectItem value="recorrente">Recorrente / Fixo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {tipoLancamento === 'parcelado' && (
+                    <div>
+                      <Label htmlFor="ap-installments">Quantidade de parcelas</Label>
+                      <Input
+                        id="ap-installments"
+                        type="number"
+                        min={2}
+                        max={120}
+                        value={installmentsCount}
+                        onChange={(e) => setInstallmentsCount(e.target.value)}
+                      />
+                      <p className="text-muted-foreground text-xs mt-1">
+                        Divide o valor total em N parcelas mensais a partir do vencimento.
+                      </p>
+                    </div>
+                  )}
+                  {tipoLancamento === 'recorrente' && (
+                    <div className="flex items-end">
+                      <p className="text-muted-foreground text-xs">
+                        Recorrente: competência mantida fixa em todas as repetições.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>

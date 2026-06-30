@@ -185,6 +185,10 @@ export default function ContasReceber() {
     cost_center_id: '',
     expense_category_id: '',
     freeze_competence: false,
+    /** Tipo de lançamento: à vista (1x), parcelado (N parcelas), ou recorrente (1x com manter competência). */
+    tipo: 'avista' as 'avista' | 'parcelado' | 'recorrente',
+    /** Qtd de parcelas quando tipo='parcelado'. */
+    installments_count: '2',
   });
 
   const [installForm, setInstallForm] = useState({
@@ -393,6 +397,8 @@ export default function ContasReceber() {
       cost_center_id: (row.cost_center_id as string) || '',
       expense_category_id: (row.expense_category_id as string) || '',
       freeze_competence: Boolean((row as { freeze_competence?: boolean }).freeze_competence),
+      tipo: 'avista',
+      installments_count: '2',
     });
     setDialogOpen(true);
   };
@@ -451,12 +457,49 @@ export default function ContasReceber() {
       cost_center_id: '',
       expense_category_id: '',
       freeze_competence: false,
+      tipo: 'avista',
+      installments_count: '2',
     });
     setDialogOpen(true);
   };
 
   const submitForm = async () => {
     if (!dialogCustomerOpt) return;
+
+    // Parcelado: criar plano de parcelas em vez de lançamento único.
+    if (!selectedRow && form.tipo === 'parcelado') {
+      if (!writeOrgId) {
+        toast.error('Selecione uma empresa única para parcelar.');
+        return;
+      }
+      const installments = Math.max(2, Number(form.installments_count) || 2);
+      const ok = await createInstallmentPlan(
+        {
+          customer_id: dialogCustomerOpt.id,
+          order_id: dialogOrderOpt?.id ?? null,
+          budget_id: dialogBudgetOpt?.id ?? null,
+          total_amount: Number(form.amount.replace(',', '.')),
+          first_due_date: form.due_date,
+          competence_date: form.competence_date || form.due_date,
+          installments,
+          payment_method: (form.payment_method || undefined) as Pm | undefined,
+          notes: form.notes || null,
+          cost_center_id: form.cost_center_id || null,
+          expense_category_id: form.expense_category_id || null,
+          freeze_competence: form.freeze_competence,
+        },
+        writeOrgId
+      );
+      if (ok) {
+        setDialogOpen(false);
+        setPage(1);
+        setListVersion((v) => v + 1);
+      }
+      return;
+    }
+
+    // À vista ou Recorrente: lançamento único. Recorrente força freeze_competence.
+    const isRecorrente = !selectedRow && form.tipo === 'recorrente';
     const payload = {
       customer_id: dialogCustomerOpt.id,
       order_id: dialogOrderOpt?.id ?? null,
@@ -471,7 +514,7 @@ export default function ContasReceber() {
       total_installments: 1,
       cost_center_id: form.cost_center_id || null,
       expense_category_id: form.expense_category_id || null,
-      freeze_competence: form.freeze_competence,
+      freeze_competence: isRecorrente ? true : form.freeze_competence,
     };
     if (selectedRow) {
       await updateAccountsReceivable(
@@ -1172,6 +1215,57 @@ export default function ContasReceber() {
               loading={customerLoading}
               getOptionLabel={(o) => o.name}
             />
+            {!selectedRow && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="ar-tipo">Tipo de lançamento</Label>
+                  <Select
+                    value={form.tipo}
+                    onValueChange={(v) =>
+                      setForm((f) => ({
+                        ...f,
+                        tipo: v as 'avista' | 'parcelado' | 'recorrente',
+                        freeze_competence: v === 'recorrente' ? true : f.freeze_competence,
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="ar-tipo">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="avista">À vista (1x)</SelectItem>
+                      <SelectItem value="parcelado">Parcelado</SelectItem>
+                      <SelectItem value="recorrente">Recorrente / Fixo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.tipo === 'parcelado' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="ar-installments">Quantidade de parcelas</Label>
+                    <Input
+                      id="ar-installments"
+                      type="number"
+                      min={2}
+                      max={120}
+                      value={form.installments_count}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, installments_count: e.target.value }))
+                      }
+                    />
+                    <p className="text-muted-foreground text-xs">
+                      Será dividido o valor total em N parcelas mensais a partir do vencimento.
+                    </p>
+                  </div>
+                )}
+                {form.tipo === 'recorrente' && (
+                  <div className="flex items-end">
+                    <p className="text-muted-foreground text-xs">
+                      Recorrente: a competência será mantida fixa em todas as repetições.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <OrderArCombobox
                 label="OS (opcional)"
