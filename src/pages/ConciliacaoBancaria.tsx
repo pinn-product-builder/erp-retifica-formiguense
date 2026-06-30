@@ -310,6 +310,59 @@ export default function ConciliacaoBancaria() {
     }
   };
 
+  /** Cria um cash_flow novo a partir da linha do extrato e já vincula. */
+  const createAndMatch = async (lineId: string) => {
+    if (!orgId || !bankId) {
+      toast.error('Selecione a conta bancária antes de criar');
+      return;
+    }
+    if (!activeReconciliationId) {
+      toast.error('Selecione uma conciliação (sessão) no histórico para registrar');
+      return;
+    }
+    const ln = lines.find((l) => l.id === lineId);
+    if (!ln) {
+      toast.error('Linha não encontrada');
+      return;
+    }
+    const amt = Number(ln.amount);
+    const tx_type = amt < 0 ? ('expense' as const) : ('income' as const);
+    const desc = (ln.description as string) || `Extrato ${formatDateBR(ln.transaction_date)}`;
+    const { data, error: cErr } = await CashFlowService.create(orgId, {
+      transaction_type: tx_type,
+      amount: Math.abs(amt),
+      description: desc,
+      transaction_date: String(ln.transaction_date),
+      bank_account_id: bankId,
+      reconciled: false,
+      is_intercompany: false,
+    });
+    if (cErr || !data) {
+      toast.error(cErr?.message ?? 'Falha ao criar lançamento');
+      return;
+    }
+    const { error: mErr } = await BankReconciliationService.confirmMatch({
+      reconciliationId: activeReconciliationId,
+      statementLineId: lineId,
+      cashFlowId: data.id,
+      matchedAmount: Math.abs(amt),
+      userId: user?.id ?? null,
+      chartOfAccountId: coaByLine[lineId] || null,
+    });
+    if (mErr) {
+      toast.error(`Lançamento criado mas falhou ao vincular: ${mErr.message}`);
+      return;
+    }
+    toast.success('Lançamento criado e vinculado');
+    void loadLines(selectedImportId);
+    void loadCashFlowsForBank();
+    setCoaByLine((prev) => {
+      const next = { ...prev };
+      delete next[lineId];
+      return next;
+    });
+  };
+
   const manualMatch = async (lineId: string) => {
     const cfId = cfByLine[lineId];
     if (!cfId) {
@@ -676,7 +729,7 @@ export default function ConciliacaoBancaria() {
                         </TableCell>
                         <TableCell className="text-right">
                           {!ln.matched_cash_flow_id && (
-                            <div className="flex justify-end gap-2">
+                            <div className="flex justify-end gap-1 flex-wrap">
                               <Button
                                 type="button"
                                 size="sm"
@@ -685,6 +738,15 @@ export default function ConciliacaoBancaria() {
                                 onClick={() => void manualMatch(ln.id)}
                               >
                                 Vincular
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                className="text-xs"
+                                onClick={() => void createAndMatch(ln.id)}
+                              >
+                                Criar
                               </Button>
                               <Button
                                 type="button"
