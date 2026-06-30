@@ -14,11 +14,12 @@ import {
   Typography,
   TextField,
   Box,
-  Grid,
+  Grid as GridBase,
   Chip,
   Alert,
   CircularProgress,
 } from '@mui/material';
+const Grid = GridBase as any;
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
