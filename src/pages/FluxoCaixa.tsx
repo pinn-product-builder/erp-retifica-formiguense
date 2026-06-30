@@ -14,6 +14,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { CostCenterSelect } from '@/components/financial/CostCenterSelect';
 import { formatBRL, formatDateBR, paymentMethodLabel } from '@/lib/financialFormat';
 import { FinancialConfigService } from '@/services/financial/financialConfigService';
+import { CashFlowService } from '@/services/financial/cashFlowService';
 import type { Database } from '@/integrations/supabase/types';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -101,6 +102,20 @@ export default function FluxoCaixa() {
   const [myCashAccountId, setMyCashAccountId] = useState<string | undefined>();
   /** Por padrão o fluxo oculta lançamentos intercompany (consolidados). */
   const [showIntercompany, setShowIntercompany] = useState(false);
+  const [summaryByCoa, setSummaryByCoa] = useState<
+    {
+      chartOfAccountId: string | null;
+      label: string;
+      grupo: string | null;
+      tipo: string | null;
+      income: number;
+      expense: number;
+      net: number;
+      count: number;
+    }[]
+  >([]);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [showSummary, setShowSummary] = useState(true);
 
   const [formData, setFormData] = useState<Partial<CashFlow>>({
     transaction_type: 'income',
@@ -145,6 +160,41 @@ export default function FluxoCaixa() {
     if (!orgIdReady) return;
     void loadData();
   }, [orgIdReady, loadData]);
+
+  // Resumo por plano de contas
+  useEffect(() => {
+    if (!orgIdReady || !showSummary) return;
+    let cancelled = false;
+    setSummaryLoading(true);
+    void CashFlowService.summaryByChartOfAccount(
+      effectiveOrgIds,
+      dateFilter.start,
+      dateFilter.end,
+      { includeIntercompany: showIntercompany }
+    )
+      .then((res) => {
+        if (!cancelled) setSummaryByCoa(res);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error('Erro ao carregar resumo por plano de contas', err);
+          setSummaryByCoa([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setSummaryLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    orgIdReady,
+    showSummary,
+    effectiveOrgIds,
+    dateFilter.start,
+    dateFilter.end,
+    showIntercompany,
+  ]);
 
   useEffect(() => {
     if (!writeOrgId) return;
@@ -630,6 +680,104 @@ export default function FluxoCaixa() {
           </Label>
         </div>
       </div>
+
+      <Card>
+        <CardHeader className="p-3 sm:p-4 flex flex-row items-center justify-between gap-2 space-y-0">
+          <div>
+            <CardTitle className="text-base sm:text-lg">Resumo por plano de contas</CardTitle>
+            <p className="text-muted-foreground text-xs sm:text-sm mt-1">
+              Agrupado no período {formatDateBR(dateFilter.start)} — {formatDateBR(dateFilter.end)}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Label htmlFor="cf-show-summary" className="cursor-pointer text-xs font-normal">
+              Mostrar
+            </Label>
+            <Switch
+              id="cf-show-summary"
+              checked={showSummary}
+              onCheckedChange={setShowSummary}
+            />
+          </div>
+        </CardHeader>
+        {showSummary && (
+          <CardContent className="p-0 sm:p-4 sm:pt-0">
+            {summaryLoading ? (
+              <p className="p-4 text-sm text-muted-foreground">Carregando resumo…</p>
+            ) : summaryByCoa.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">
+                Sem lançamentos no período. Categorize lançamentos com plano de contas em
+                conciliação para ver o resumo.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs sm:text-sm">
+                  <thead className="bg-muted/40 text-muted-foreground">
+                    <tr>
+                      <th className="text-left p-2 sm:p-3">Plano de contas</th>
+                      <th className="text-left p-2 sm:p-3 hidden md:table-cell">Grupo</th>
+                      <th className="text-right p-2 sm:p-3">Entradas</th>
+                      <th className="text-right p-2 sm:p-3">Saídas</th>
+                      <th className="text-right p-2 sm:p-3">Saldo</th>
+                      <th className="text-right p-2 sm:p-3 hidden sm:table-cell">Qtd</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summaryByCoa.map((row) => (
+                      <tr key={row.chartOfAccountId ?? '__none__'} className="border-t">
+                        <td className="p-2 sm:p-3">
+                          {row.tipo && (
+                            <Badge variant="outline" className="text-[10px] mr-1">
+                              {row.tipo}
+                            </Badge>
+                          )}
+                          {row.label}
+                        </td>
+                        <td className="p-2 sm:p-3 hidden md:table-cell text-muted-foreground">
+                          {row.grupo ?? '—'}
+                        </td>
+                        <td className="p-2 sm:p-3 text-right font-medium text-success tabular-nums">
+                          {row.income > 0 ? formatBRL(row.income) : '—'}
+                        </td>
+                        <td className="p-2 sm:p-3 text-right font-medium text-destructive tabular-nums">
+                          {row.expense > 0 ? formatBRL(row.expense) : '—'}
+                        </td>
+                        <td
+                          className={`p-2 sm:p-3 text-right font-semibold tabular-nums ${
+                            row.net >= 0 ? 'text-foreground' : 'text-destructive'
+                          }`}
+                        >
+                          {formatBRL(row.net)}
+                        </td>
+                        <td className="p-2 sm:p-3 text-right text-muted-foreground hidden sm:table-cell">
+                          {row.count}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="border-t bg-muted/20 font-semibold">
+                      <td className="p-2 sm:p-3" colSpan={2}>
+                        Total
+                      </td>
+                      <td className="p-2 sm:p-3 text-right text-success tabular-nums">
+                        {formatBRL(summaryByCoa.reduce((s, r) => s + r.income, 0))}
+                      </td>
+                      <td className="p-2 sm:p-3 text-right text-destructive tabular-nums">
+                        {formatBRL(summaryByCoa.reduce((s, r) => s + r.expense, 0))}
+                      </td>
+                      <td className="p-2 sm:p-3 text-right tabular-nums">
+                        {formatBRL(summaryByCoa.reduce((s, r) => s + r.net, 0))}
+                      </td>
+                      <td className="p-2 sm:p-3 text-right text-muted-foreground hidden sm:table-cell">
+                        {summaryByCoa.reduce((s, r) => s + r.count, 0)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
 
       <Card>
         <CardHeader className="p-3 sm:p-4">

@@ -241,6 +241,101 @@ export class CashFlowService {
   }
 
   /**
+   * Resumo do fluxo de caixa agrupado por plano de contas (chart_of_account_id)
+   * no período. Retorna nome da conta + total entradas + total saídas + saldo.
+   * Inclui linha "Sem categoria" para lançamentos sem chart_of_account_id.
+   */
+  static async summaryByChartOfAccount(
+    orgIds: string[],
+    startDate: string,
+    endDate: string,
+    options?: CashFlowQueryOptions
+  ): Promise<
+    {
+      chartOfAccountId: string | null;
+      label: string;
+      grupo: string | null;
+      tipo: string | null;
+      income: number;
+      expense: number;
+      net: number;
+      count: number;
+    }[]
+  > {
+    if (orgIds.length === 0) return [];
+    const includeIc = options?.includeIntercompany === true;
+    const pageSize = 1000;
+    type Row = {
+      amount: number;
+      transaction_type: string;
+      chart_of_account_id: string | null;
+      chart_of_accounts: {
+        id: string;
+        conta_contabil: string;
+        grupo: string | null;
+        tipo: string | null;
+      } | null;
+    };
+    type Bucket = {
+      chartOfAccountId: string | null;
+      label: string;
+      grupo: string | null;
+      tipo: string | null;
+      income: number;
+      expense: number;
+      count: number;
+    };
+    const buckets = new Map<string, Bucket>();
+    let page = 1;
+    for (;;) {
+      let q = applyOrgIdFilter(
+        supabase
+          .from('cash_flow')
+          .select(
+            'amount, transaction_type, chart_of_account_id, chart_of_accounts ( id, conta_contabil, grupo, tipo )'
+          ),
+        'org_id',
+        orgIds
+      )
+        .gte('transaction_date', startDate)
+        .lte('transaction_date', endDate);
+      if (!includeIc) q = q.eq('is_intercompany', false);
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error } = await q.range(from, to);
+      if (error) throw new Error(error.message);
+      const rows = (data ?? []) as unknown as Row[];
+      for (const r of rows) {
+        const key = r.chart_of_account_id ?? '__none__';
+        const existing = buckets.get(key);
+        const bucket: Bucket = existing ?? {
+          chartOfAccountId: r.chart_of_account_id,
+          label: r.chart_of_accounts?.conta_contabil ?? 'Sem categoria',
+          grupo: r.chart_of_accounts?.grupo ?? null,
+          tipo: r.chart_of_accounts?.tipo ?? null,
+          income: 0,
+          expense: 0,
+          count: 0,
+        };
+        const a = Number(r.amount) || 0;
+        if (r.transaction_type === 'income') bucket.income += a;
+        else bucket.expense += a;
+        bucket.count += 1;
+        buckets.set(key, bucket);
+      }
+      if (rows.length < pageSize) break;
+      page += 1;
+    }
+    return Array.from(buckets.values())
+      .map((b) => ({ ...b, net: b.income - b.expense }))
+      .sort((a, b) => {
+        const tipoOrder = (t: string | null) => (t === 'Entradas' ? 0 : t === 'Saídas' ? 1 : 2);
+        if (tipoOrder(a.tipo) !== tipoOrder(b.tipo)) return tipoOrder(a.tipo) - tipoOrder(b.tipo);
+        return a.label.localeCompare(b.label);
+      });
+  }
+
+  /**
    * Lista lançamentos PENDENTES de conciliação para uma conta bancária específica.
    * Filtra no DB (não em JS) e não tem cap de paginação fixa — pra conciliação que
    * precisa enxergar todos os não-conciliados.
