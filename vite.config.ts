@@ -41,29 +41,10 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('node_modules/zod/')) return 'vendor-zod';
           if (id.includes('date-fns') || id.includes('dayjs')) return 'vendor-date';
 
-          // Tudo que importa React vai pro mesmo chunk dele —
-          // separar causa race condition em runtime (forwardRef undefined).
-          if (
-            id.includes('node_modules/react/') ||
-            id.includes('node_modules/react-dom/') ||
-            id.includes('scheduler') ||
-            id.includes('@radix-ui/') ||
-            id.includes('react-router') ||
-            id.includes('react-hook-form') ||
-            id.includes('@hookform/') ||
-            id.includes('framer-motion') ||
-            id.includes('recharts') ||
-            id.includes('d3-') ||
-            id.includes('lucide-react') ||
-            id.includes('@tanstack/react-query') ||
-            id.includes('@hello-pangea/dnd') ||
-            id.includes('@mui/') ||
-            id.includes('@emotion/')
-          ) {
-            return 'vendor-react';
-          }
-
-          return 'vendor-misc';
+          // Tudo o mais (React e qualquer lib que possa importar React) vai
+          // pro mesmo chunk. Separar React de qualquer dependente causa race
+          // condition em runtime (forwardRef/createContext undefined).
+          return 'vendor-react';
         },
       },
     },
