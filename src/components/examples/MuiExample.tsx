@@ -34,7 +34,7 @@ export function MuiExample() {
 
       <Grid container spacing={3} sx={{ mt: 2 }}>
         {/* Card de exemplo */}
-        <Grid item xs={12} md={6}>
+        <Grid {...({item: true} as any)} xs={12} md={6}>
           <Card>
             <CardHeader title="Card do Material UI" />
             <CardContent>
@@ -57,7 +57,7 @@ export function MuiExample() {
         </Grid>
 
         {/* Formulário de exemplo */}
-        <Grid item xs={12} md={6}>
+        <Grid {...({item: true} as any)} xs={12} md={6}>
           <Card>
             <CardHeader title="Formulário Material UI" />
             <CardContent>
@@ -85,7 +85,7 @@ export function MuiExample() {
         </Grid>
 
         {/* Alertas e outros */}
-        <Grid item xs={12}>
+        <Grid {...({item: true} as any)} xs={12}>
           <Card>
             <CardHeader title="Alertas e Indicadores" />
             <CardContent>
