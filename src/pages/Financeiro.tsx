@@ -21,6 +21,7 @@ import {
   FinancialReceivablePayableSummary,
   FinancialAdvancedIndicators,
   ArDueAlertsCard,
+  BankAccountsBalanceCard,
 } from '@/components/financial/dashboard';
 import type {
   FinancialDashboardApRow,
@@ -157,6 +158,10 @@ function FinanceiroDashboard() {
       </div>
 
       {kpis && <FinancialKpiCards kpis={kpis} />}
+
+      {effectiveOrgIds.length > 0 ? (
+        <BankAccountsBalanceCard orgIds={effectiveOrgIds} />
+      ) : null}
 
       {effectiveOrgIds.length > 0 ? (
         <FinancialAdvancedIndicators orgIds={effectiveOrgIds} />

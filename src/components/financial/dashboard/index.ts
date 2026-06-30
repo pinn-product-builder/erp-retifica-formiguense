@@ -7,3 +7,4 @@ export { FinancialDashboardArTable } from '@/components/financial/dashboard/Fina
 export { FinancialDashboardApTable } from '@/components/financial/dashboard/FinancialDashboardApTable';
 export { FinancialDashboardCashFlowTable } from '@/components/financial/dashboard/FinancialDashboardCashFlowTable';
 export { FinancialAdvancedIndicators } from '@/components/financial/dashboard/FinancialAdvancedIndicators';
+export { BankAccountsBalanceCard } from '@/components/financial/dashboard/BankAccountsBalanceCard';
