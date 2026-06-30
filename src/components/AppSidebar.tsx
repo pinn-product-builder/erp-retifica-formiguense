@@ -205,6 +205,11 @@ const inventoryItems = [
     url: "/compras",
     icon: ShoppingCart,
   },
+  {
+    title: "Importar XML (estoque)",
+    url: "/importar-xml",
+    icon: FileText,
+  },
 
   {
     title: "Relatórios",

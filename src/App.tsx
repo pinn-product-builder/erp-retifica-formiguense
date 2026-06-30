@@ -27,6 +27,7 @@ const Coleta = lazy(() => import('@/pages/Coleta'));
 const Workflow = lazy(() => import('@/pages/Workflow'));
 const CheckIn = lazy(() => import('@/pages/CheckIn'));
 const Estoque = lazy(() => import('@/pages/Estoque'));
+const ImportarXmlEstoque = lazy(() => import('@/pages/ImportarXmlEstoque'));
 const Funcionarios = lazy(() => import('@/pages/Funcionarios'));
 const Orcamentos = lazy(() => import('@/pages/Orcamentos'));
 const Diagnosticos = lazy(() => import('@/pages/Diagnosticos'));
@@ -99,6 +100,7 @@ function AppContent() {
             <Route path="/workflow" element={<ProfileProtectedRoute><Layout><Workflow /></Layout></ProfileProtectedRoute>} />
             <Route path="/checkin" element={<ProfileProtectedRoute><Layout><CheckIn /></Layout></ProfileProtectedRoute>} />
             <Route path="/estoque" element={<ProfileProtectedRoute><Layout><Estoque /></Layout></ProfileProtectedRoute>} />
+            <Route path="/importar-xml" element={<ProfileProtectedRoute><Layout><ImportarXmlEstoque /></Layout></ProfileProtectedRoute>} />
             <Route path="/pcp" element={<ProfileProtectedRoute><Layout><PCP /></Layout></ProfileProtectedRoute>} />
             <Route path="/ordens-servico" element={<ProfileProtectedRoute><Layout><OrdensServico /></Layout></ProfileProtectedRoute>} />
             <Route path="/dashboard-compras" element={<ProfileProtectedRoute><Layout><DashboardCompras /></Layout></ProfileProtectedRoute>} />
