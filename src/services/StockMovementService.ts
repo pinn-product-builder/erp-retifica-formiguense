@@ -7,7 +7,7 @@ type MovementRow = Database['public']['Tables']['inventory_movements']['Row'];
 export type MovementType = 'entrada' | 'saida' | 'ajuste' | 'transferencia' | 'reserva' | 'baixa';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
-export interface InventoryMovement extends Omit<MovementRow, 'movement_type' | 'approval_status' | 'approved_by' | 'approved_at' | 'rejection_reason'> {
+export interface InventoryMovement extends Omit<MovementRow, 'movement_type' | 'approval_status' | 'approved_by' | 'approved_at' | 'rejection_reason' | 'requires_approval'> {
   movement_type: MovementType;
   created_by_name?: string;
   approved_by_name?: string;
